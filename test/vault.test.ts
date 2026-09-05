@@ -7,10 +7,31 @@ import type { FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createScan } from '../src/scan.ts';
 import { demoCycles } from '../src/demo.ts';
-import { exportScan } from '../src/vault.ts';
+import { buildAgentRequest, createAgentRun } from '../src/agent.ts';
+import { exportScan, exportThesis } from '../src/vault.ts';
 
 async function temporary() {
   return mkdtemp('/private/tmp/falconos-test-');
+}
+
+async function fixtureThesis(directory: string) {
+  const now = new Date('2026-09-05T13:59:00.000Z');
+  const scanAt = new Date('2026-09-05T13:58:00.000Z');
+  const scan = createScan(demoCycles('100000000', scanAt), 'demo', scanAt);
+  const evidence = JSON.stringify(scan, null, 2) + '\n';
+  const evidencePath = join(directory, 'runs', `${scan.id}.json`);
+  await mkdir(join(directory, 'runs'), {recursive: true});
+  await writeFile(evidencePath, evidence);
+  const bundle = await buildAgentRequest({
+    dataDirectory: directory,
+    evidencePath: `runs/${scan.id}.json`,
+    expectedEvidenceSha256: createHash('sha256').update(evidence).digest('hex'),
+    route: 'base-solana',
+    task: 'Explain the selected route and its limits.',
+    cutoff: 'now',
+    now: () => now,
+  });
+  return createAgentRun(bundle, 'fixture', undefined, undefined, () => now);
 }
 
 async function stopExportAfterEvidence(scan: ReturnType<typeof createScan>, directory: string, vault: string) {
@@ -200,4 +221,34 @@ test('F4: completed evidence survives Markdown failure and restart preserves not
   assert.deepEqual((await readdir(join(directory, 'runs'))).sort(), [
     `${firstScan.id}.json`, `${secondScan.id}.json`,
   ].sort());
+});
+
+test('P1-T07: publish a canonical thesis JSON record and linked fixture note', async t => {
+  const directory = await temporary();
+  t.after(() => rm(directory, {recursive: true, force: true}));
+  const vault = join(directory, 'vault');
+  const record = await fixtureThesis(directory);
+  const paths = await exportThesis(record, directory, vault);
+  const canonical = await readFile(paths.thesisPath, 'utf8');
+  assert.deepEqual(JSON.parse(canonical), record);
+  assert.equal(createHash('sha256').update(canonical).digest('hex'), paths.thesisSha256);
+  const note = await readFile(paths.notePath, 'utf8');
+  assert.match(note, /Fixture research thesis/);
+  assert.match(note, /Fixture transport\. No model call occurred/);
+  assert.match(note, new RegExp(`\\[\\[FalconOS/Runs/${record.request.evidence[0]!.scan.id}\\]\\]`));
+  assert.match(note, /execution_ready: false/);
+  await assert.rejects(exportThesis(record, directory, vault), /EEXIST/);
+  assert.equal(await readFile(paths.notePath, 'utf8'), note);
+});
+
+test('P1-T07: canonical thesis survives a blocked Markdown path', async t => {
+  const directory = await temporary();
+  t.after(() => rm(directory, {recursive: true, force: true}));
+  const vault = join(directory, 'vault');
+  const record = await fixtureThesis(directory);
+  const blocked = join(vault, 'FalconOS', 'Theses', `${record.request.requestId}.md`);
+  await mkdir(blocked, {recursive: true});
+  await assert.rejects(exportThesis(record, directory, vault), /EEXIST/);
+  assert.deepEqual(JSON.parse(await readFile(join(directory, 'theses', `${record.request.requestId}.json`), 'utf8')), record);
+  assert.deepEqual(await readdir(join(directory, 'theses')), [`${record.request.requestId}.json`]);
 });

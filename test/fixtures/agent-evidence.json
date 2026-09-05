@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "id": "22222222-2222-4222-8222-222222222222",
+  "mode": "demo",
+  "assessedAt": "2026-09-05T13:58:00.000Z",
+  "cycles": [
+    {
+      "sourceChain": "solana",
+      "destinationChain": "base",
+      "legs": [
+        {
+          "request": {
+            "chain": "solana",
+            "inputAsset": "USDC",
+            "outputAsset": "EURC",
+            "amount": "100000000"
+          },
+          "requestUrl": "demo:synthetic-quote",
+          "startedAt": "2026-09-05T13:58:00.000Z",
+          "receivedAt": "2026-09-05T13:58:00.000Z",
+          "httpStatus": null,
+          "raw": {
+            "synthetic": true,
+            "purpose": "Demonstrate evidence export and incomplete-cost decisions"
+          },
+          "quote": {
+            "inAmount": "100000000",
+            "outAmount": "86000000",
+            "gasUsd": null,
+            "l1FeeUsd": null,
+            "providerTimestamp": null,
+            "expiresAt": null
+          },
+          "error": null
+        },
+        {
+          "request": {
+            "chain": "base",
+            "inputAsset": "EURC",
+            "outputAsset": "USDC",
+            "amount": "86000000"
+          },
+          "requestUrl": "demo:synthetic-quote",
+          "startedAt": "2026-09-05T13:58:00.000Z",
+          "receivedAt": "2026-09-05T13:58:00.000Z",
+          "httpStatus": null,
+          "raw": {
+            "synthetic": true,
+            "purpose": "Demonstrate evidence export and incomplete-cost decisions"
+          },
+          "quote": {
+            "inAmount": "86000000",
+            "outAmount": "99900000",
+            "gasUsd": "0.004234",
+            "l1FeeUsd": null,
+            "providerTimestamp": null,
+            "expiresAt": null
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "sourceChain": "base",
+      "destinationChain": "solana",
+      "legs": [
+        {
+          "request": {
+            "chain": "base",
+            "inputAsset": "USDC",
+            "outputAsset": "EURC",
+            "amount": "100000000"
+          },
+          "requestUrl": "demo:synthetic-quote",
+          "startedAt": "2026-09-05T13:58:00.000Z",
+          "receivedAt": "2026-09-05T13:58:00.000Z",
+          "httpStatus": null,
+          "raw": {
+            "synthetic": true,
+            "purpose": "Demonstrate evidence export and incomplete-cost decisions"
+          },
+          "quote": {
+            "inAmount": "100000000",
+            "outAmount": "86000000",
+            "gasUsd": "0.004234",
+            "l1FeeUsd": null,
+            "providerTimestamp": null,
+            "expiresAt": null
+          },
+          "error": null
+        },
+        {
+          "request": {
+            "chain": "solana",
+            "inputAsset": "EURC",
+            "outputAsset": "USDC",
+            "amount": "86000000"
+          },
+          "requestUrl": "demo:synthetic-quote",
+          "startedAt": "2026-09-05T13:58:00.000Z",
+          "receivedAt": "2026-09-05T13:58:00.000Z",
+          "httpStatus": null,
+          "raw": {
+            "synthetic": true,
+            "purpose": "Demonstrate evidence export and incomplete-cost decisions"
+          },
+          "quote": {
+            "inAmount": "86000000",
+            "outAmount": "100100000",
+            "gasUsd": null,
+            "l1FeeUsd": null,
+            "providerTimestamp": null,
+            "expiresAt": null
+          },
+          "error": null
+        }
+      ]
+    }
+  ],
+  "amountScale": {
+    "decimals": 6,
+    "verification": "historically verified by RPC capture on 2026-09-05; runtime metadata revalidation not performed"
+  },
+  "candidates": [
+    {
+      "sourceChain": "solana",
+      "destinationChain": "base",
+      "status": "REJECT",
+      "reasons": [
+        "NO_POSITIVE_QUOTED_DIFFERENCE",
+        "COSTS_INCOMPLETE",
+        "INVENTORY_UNVERIFIED",
+        "SEQUENTIAL_QUOTES_NOT_FILLS"
+      ],
+      "inputUsdc": "100.000000",
+      "intermediateEurc": "86.000000",
+      "outputUsdc": "99.900000",
+      "quotedDeltaUsdc": "-0.100000",
+      "gasEstimatesUsd": [
+        {
+          "chain": "solana",
+          "gas": null,
+          "l1Fee": null
+        },
+        {
+          "chain": "base",
+          "gas": "0.004234",
+          "l1Fee": null
+        }
+      ],
+      "netProfitUsdc": null,
+      "executionReady": false
+    },
+    {
+      "sourceChain": "base",
+      "destinationChain": "solana",
+      "status": "REVIEW",
+      "reasons": [
+        "COSTS_INCOMPLETE",
+        "INVENTORY_UNVERIFIED",
+        "SEQUENTIAL_QUOTES_NOT_FILLS"
+      ],
+      "inputUsdc": "100.000000",
+      "intermediateEurc": "86.000000",
+      "outputUsdc": "100.100000",
+      "quotedDeltaUsdc": "0.100000",
+      "gasEstimatesUsd": [
+        {
+          "chain": "base",
+          "gas": "0.004234",
+          "l1Fee": null
+        },
+        {
+          "chain": "solana",
+          "gas": null,
+          "l1Fee": null
+        }
+      ],
+      "netProfitUsdc": null,
+      "executionReady": false
+    }
+  ]
+}

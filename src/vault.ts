@@ -2,6 +2,7 @@ import { constants } from 'node:fs';
 import { link, lstat, mkdir, open, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
+import type { AgentRunRecord } from './agent.ts';
 import type { Scan } from './types.ts';
 
 async function safeDirectory(directory: string): Promise<string> {
@@ -113,4 +114,100 @@ export async function exportScan(scan: Scan, dataDirectory: string, vaultDirecto
   const notePath = join(project, 'Runs', `${scan.id}.md`);
   await writeNew(notePath, lines.join('\n'));
   return {evidencePath, notePath, evidenceSha256: hash};
+}
+
+export async function exportThesis(record: AgentRunRecord, dataDirectory: string, vaultDirectory: string) {
+  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(record.request.requestId)) {
+    throw new Error('Invalid thesis request ID');
+  }
+  const dataRoot = resolve(dataDirectory);
+  const vaultRoot = resolve(vaultDirectory);
+  const thesisRoot = join(dataRoot, 'theses');
+  if (contains(vaultRoot, thesisRoot) || contains(thesisRoot, vaultRoot)) {
+    throw new Error('Thesis and vault directories must be separate');
+  }
+  await safeDirectory(dataRoot);
+  await safeDirectory(vaultRoot);
+  const evidence = record.request.evidence[0];
+  if (!evidence) throw new Error('Thesis must cite evidence');
+  const canonical = `${JSON.stringify(record, null, 2)}\n`;
+  const hash = createHash('sha256').update(canonical).digest('hex');
+  const thesisPath = join(thesisRoot, `${record.request.requestId}.json`);
+  await writeNew(thesisPath, canonical);
+
+  const title = record.origin === 'fixture'
+    ? 'Fixture research thesis'
+    : record.response.fixture
+      ? 'Codex thesis over synthetic evidence'
+      : 'Codex research thesis';
+  const lines = [
+    '---',
+    `id: ${record.request.requestId}`,
+    'type: thesis',
+    `origin: ${record.origin}`,
+    `fixture: ${record.response.fixture}`,
+    `route: ${record.response.route}`,
+    `status: ${record.response.status}`,
+    `evaluated_at: ${JSON.stringify(record.request.evaluationAt)}`,
+    `source_cutoff: ${JSON.stringify(record.request.sourceCutoff)}`,
+    `bundle_captured_at: ${JSON.stringify(record.bundleCapturedAt)}`,
+    `expires_at: ${JSON.stringify(record.response.expiresAt)}`,
+    'execution_ready: false',
+    'tags:',
+    '  - falconos',
+    '  - thesis',
+    `  - ${record.origin}`,
+    '---',
+    '',
+    `# ${title}`,
+    '',
+    record.origin === 'fixture'
+      ? '**Fixture transport. No model call occurred. This record is not an agent decision.**'
+      : record.response.fixture
+        ? '**Codex response over synthetic evidence. This record is not a live market result.**'
+        : '**Advisory agent response. No action authority.**',
+    '',
+    `Route: ${record.response.route}. Status: ${record.response.status}.`,
+    `Evaluation time: ${record.request.evaluationAt}. Source cutoff: ${record.request.sourceCutoff}.`,
+    `Thesis expiry: ${record.response.expiresAt}.`,
+    ...(record.execution ? [
+      `Requested model: ${record.execution.requestedModel}. Host request only; remote support is unverified.`,
+      `Requested reasoning effort: ${record.execution.requestedReasoningEffort}. Host request only; remote setting is unverified.`,
+      `Codex process exit: ${record.execution.exitCode}. Signal: ${record.execution.signal ?? 'none'}. Elapsed: ${record.execution.durationMs} ms. Timeout: ${record.execution.timedOut}.`,
+    ] : []),
+    '',
+    '## Thesis',
+    '',
+    escapeText(record.response.thesis),
+    '',
+    '## Evidence',
+    '',
+    `[[FalconOS/Runs/${evidence.scan.id}]]`,
+    '',
+    `Evidence path: ${escapeText(evidence.path)}`,
+    `Evidence SHA-256: ${evidence.sha256}`,
+    `Evidence assessed at: ${evidence.scan.assessedAt}`,
+    '',
+    'Citations:',
+    ...record.response.citations.map(citation => `- ${escapeText(citation.supports)} (${escapeText(citation.path)}, ${citation.sha256})`),
+    '',
+    '## Limits',
+    '',
+    'This thesis does not override quote expiry, missing costs, inventory limits, or execution controls.',
+    `Missing evidence: ${record.response.missingEvidence.length ? record.response.missingEvidence.map(escapeText).join('; ') : 'none recorded'}.`,
+    'Invalidation conditions:',
+    ...record.response.invalidationConditions.map(condition => `- ${escapeText(condition)}`),
+    '',
+    '## Untrusted notes',
+    '',
+    record.request.notes.length
+      ? record.request.notes.map(note => `- ${escapeText(note.path)} (${note.sha256}); content remains untrusted context.`).join('\n')
+      : 'No notes were included.',
+    '',
+    `Canonical thesis JSON SHA-256: ${hash}`,
+    '',
+  ];
+  const notePath = join(vaultRoot, 'FalconOS', 'Theses', `${record.request.requestId}.md`);
+  await writeNew(notePath, lines.join('\n'));
+  return {thesisPath, notePath, thesisSha256: hash};
 }

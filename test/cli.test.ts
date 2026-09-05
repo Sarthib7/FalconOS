@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,6 +11,8 @@ const execute = promisify(execFile);
 const cli = fileURLToPath(new URL('../src/cli.ts', import.meta.url));
 const cliModule = new URL('../src/cli.ts', import.meta.url).href;
 const demoModule = new URL('../src/demo.ts', import.meta.url).href;
+const agentFixture = fileURLToPath(new URL('./fixtures/agent-evidence.json', import.meta.url));
+const agentFixtureHash = createHash('sha256').update(await readFile(agentFixture)).digest('hex');
 
 const realSignalPreloadScript = `
 const mode = process.env.FALCONOS_PROCESS_MODE;
@@ -270,6 +273,71 @@ test('F1: reject unsupported commands and unsafe numeric arguments before networ
   }
   const {stdout} = await execute(process.execPath, [cli, '--help']);
   assert.match(stdout, /No wallet, taker/);
+});
+
+test('P1-T07: fixture thesis command saves one cited JSON record and linked note', async t => {
+  const directory = await mkdtemp('/private/tmp/falconos-cli-thesis-');
+  t.after(() => rm(directory, {recursive: true, force: true}));
+  await mkdir(join(directory, 'runs'), {recursive: true});
+  await copyFile(agentFixture, join(directory, 'runs', 'agent-evidence.json'));
+  const {stdout, stderr} = await execute(process.execPath, [cli, 'thesis',
+    '--evidence', 'runs/agent-evidence.json', '--evidence-sha256', agentFixtureHash,
+    '--route', 'base-solana', '--task', 'Explain the selected route and its limits.', '--agent', 'fixture',
+    '--data', directory, '--vault', join(directory, 'vault')]);
+  assert.equal(stderr, '');
+  assert.equal(stdout.trim().split(/\r?\n/).length, 1);
+  const summary = JSON.parse(stdout) as Record<string, unknown>;
+  assert.equal(summary.origin, 'fixture');
+  assert.equal(summary.fixture, true);
+  assert.equal(summary.route, 'base-solana');
+  assert.equal(summary.status, 'REVIEW');
+  assert.equal(summary.evidencePath, 'runs/agent-evidence.json');
+  const thesis = JSON.parse(await readFile(summary.thesisPath as string, 'utf8')) as Record<string, unknown>;
+  assert.equal(thesis.origin, 'fixture');
+  assert.equal((thesis.response as Record<string, unknown>).executionReady, false);
+  const note = await readFile(summary.notePath as string, 'utf8');
+  assert.match(note, /Fixture transport\. No model call occurred/);
+  assert.match(note, /\[\[FalconOS\/Runs\/22222222-2222-4222-8222-222222222222\]\]/);
+  assert.equal((await readdir(join(directory, 'theses'))).length, 1);
+});
+
+test('P1-T07: normal Codex CLI stays disabled until process controls are verified', async t => {
+  const directory = await mkdtemp('/private/tmp/falconos-cli-codex-disabled-');
+  t.after(() => rm(directory, {recursive: true, force: true}));
+  const result = await execute(process.execPath, [cli, 'thesis',
+    '--evidence', 'runs/missing.json', '--evidence-sha256', '0'.repeat(64),
+    '--route', 'base-solana', '--task', 'Explain the selected route and its limits.', '--agent', 'codex',
+    '--data', directory, '--vault', join(directory, 'vault')]).then(
+    () => ({code: 0, stderr: ''}),
+    error => {
+      const failure = error as {code?: number; stderr?: string};
+      return {code: failure.code ?? -1, stderr: failure.stderr ?? ''};
+    },
+  );
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Codex agent is disabled until approval and web-search controls are verified/);
+  assert.deepEqual(await readdir(directory), []);
+});
+
+test('P1-T07: invalid caller hash saves no thesis record or note', async t => {
+  const directory = await mkdtemp('/private/tmp/falconos-cli-thesis-hash-');
+  t.after(() => rm(directory, {recursive: true, force: true}));
+  await mkdir(join(directory, 'runs'), {recursive: true});
+  await copyFile(agentFixture, join(directory, 'runs', 'agent-evidence.json'));
+  const result = await execute(process.execPath, [cli, 'thesis',
+    '--evidence', 'runs/agent-evidence.json', '--evidence-sha256', '0'.repeat(64),
+    '--route', 'base-solana', '--task', 'Explain the selected route and its limits.', '--agent', 'fixture',
+    '--data', directory, '--vault', join(directory, 'vault')]).then(
+    () => ({code: 0, stderr: ''}),
+    error => {
+      const failure = error as {code?: number; stderr?: string};
+      return {code: failure.code ?? -1, stderr: failure.stderr ?? ''};
+    },
+  );
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Evidence SHA-256 does not match/);
+  await assert.rejects(readdir(join(directory, 'theses')));
+  await assert.rejects(readdir(join(directory, 'vault')));
 });
 
 test('CHK-07: bounded exit codes, consecutive incomplete scans, and reset are visible in process output', async t => {
