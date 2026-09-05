@@ -1,0 +1,20 @@
+{
+  "name": "falconos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.12.0"
+  },
+  "scripts": {
+    "demo": "node src/cli.ts demo",
+    "scan": "node src/cli.ts scan",
+    "watch": "node src/cli.ts watch",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "typescript": "7.0.2"
+  }
+}
