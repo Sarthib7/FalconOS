@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "provenance": "VERIFIED, collector_luna public read-only RPC capture",
+  "purpose": "P1-T01 and CHK-05 exact token metadata",
+  "captureMethod": "curl -sS through the approved escalated shell path",
+  "captureWindow": {
+    "start": "2026-09-05T13:37:07Z",
+    "end": "2026-09-05T13:37:52Z",
+    "precision": "seconds"
+  },
+  "requestShapeSources": [
+    {
+      "method": "getTokenSupply",
+      "url": "https://solana.com/docs/rpc/http/getTokenSupply",
+      "evidence": "Mint address plus commitment object; result value.decimals and context.slot."
+    },
+    {
+      "method": "eth_call",
+      "url": "https://docs.base.org/base-chain/api-reference/ethereum-json-rpc-api/eth_call",
+      "evidence": "Call object plus block tag; result is a hex byte array."
+    },
+    {
+      "method": "decimals()",
+      "url": "https://eips.ethereum.org/EIPS/eip-20",
+      "evidence": "ERC-20 metadata method returns uint8 decimals."
+    }
+  ],
+  "notes": [
+    "No wallet, credential, signing method, or state-changing RPC method was used.",
+    "The Base eth_blockNumber result pinned both decimals calls to block 0x308df13.",
+    "The shell date marker emitted literal N for fractional seconds, so capture timestamps use second precision.",
+    "A separate Node fetch probe returned fetch failed before this curl capture. That probe is diagnostic only and is not metadata evidence."
+  ],
+  "baseBlockContext": {
+    "endpoint": "https://mainnet.base.org",
+    "transport": "curl subprocess",
+    "method": "eth_blockNumber",
+    "params": [],
+    "startedAt": "2026-09-05T13:37:14Z",
+    "receivedAt": "2026-09-05T13:37:14Z",
+    "httpStatus": 200,
+    "response": {
+      "jsonrpc": "2.0",
+      "result": "0x308df13",
+      "id": "base-block"
+    },
+    "blockNumberHex": "0x308df13",
+    "blockNumber": "50913043",
+    "error": null
+  },
+  "assets": [
+    {
+      "chain": "solana",
+      "asset": "USDC",
+      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "endpoint": "https://api.mainnet-beta.solana.com",
+      "transport": "curl subprocess",
+      "method": "getTokenSupply",
+      "params": [
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        {
+          "commitment": "finalized"
+        }
+      ],
+      "commitment": "finalized",
+      "startedAt": "2026-09-05T13:37:51Z",
+      "receivedAt": "2026-09-05T13:37:52Z",
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "apiVersion": "4.2.2",
+            "slot": 444532563
+          },
+          "value": {
+            "amount": "8307692416244033",
+            "decimals": 6,
+            "uiAmount": 8307692416.244033,
+            "uiAmountString": "8307692416.244033"
+          }
+        },
+        "id": "solana-USDC"
+      },
+      "observed": {
+        "decimals": 6,
+        "slot": 444532563
+      },
+      "error": null
+    },
+    {
+      "chain": "solana",
+      "asset": "EURC",
+      "address": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+      "endpoint": "https://api.mainnet-beta.solana.com",
+      "transport": "curl subprocess",
+      "method": "getTokenSupply",
+      "params": [
+        "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+        {
+          "commitment": "finalized"
+        }
+      ],
+      "commitment": "finalized",
+      "startedAt": "2026-09-05T13:37:07Z",
+      "receivedAt": "2026-09-05T13:37:07Z",
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "apiVersion": "4.2.2",
+            "slot": 444532421
+          },
+          "value": {
+            "amount": "105019305783332",
+            "decimals": 6,
+            "uiAmount": 105019305.783332,
+            "uiAmountString": "105019305.783332"
+          }
+        },
+        "id": "solana-EURC"
+      },
+      "observed": {
+        "decimals": 6,
+        "slot": 444532421
+      },
+      "error": null
+    },
+    {
+      "chain": "base",
+      "asset": "USDC",
+      "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "endpoint": "https://mainnet.base.org",
+      "transport": "curl subprocess",
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "data": "0x313ce567"
+        },
+        "0x308df13"
+      ],
+      "blockNumberHex": "0x308df13",
+      "blockNumber": "50913043",
+      "abiMethod": "decimals() returns (uint8)",
+      "calldata": "0x313ce567",
+      "startedAt": "2026-09-05T13:37:23Z",
+      "receivedAt": "2026-09-05T13:37:23Z",
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "0x0000000000000000000000000000000000000000000000000000000000000006",
+        "id": "base-USDC"
+      },
+      "observed": {
+        "decimals": 6
+      },
+      "error": null
+    },
+    {
+      "chain": "base",
+      "asset": "EURC",
+      "address": "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42",
+      "endpoint": "https://mainnet.base.org",
+      "transport": "curl subprocess",
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42",
+          "data": "0x313ce567"
+        },
+        "0x308df13"
+      ],
+      "blockNumberHex": "0x308df13",
+      "blockNumber": "50913043",
+      "abiMethod": "decimals() returns (uint8)",
+      "calldata": "0x313ce567",
+      "startedAt": "2026-09-05T13:37:32Z",
+      "receivedAt": "2026-09-05T13:37:33Z",
+      "httpStatus": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "0x0000000000000000000000000000000000000000000000000000000000000006",
+        "id": "base-EURC"
+      },
+      "observed": {
+        "decimals": 6
+      },
+      "error": null
+    }
+  ]
+}

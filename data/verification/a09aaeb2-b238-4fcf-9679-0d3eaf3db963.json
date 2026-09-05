@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "id": "a09aaeb2-b238-4fcf-9679-0d3eaf3db963",
+  "mode": "live",
+  "assessedAt": "2026-09-05T13:42:31.977Z",
+  "cycles": [
+    {
+      "sourceChain": "solana",
+      "destinationChain": "base",
+      "legs": [
+        {
+          "request": {
+            "chain": "solana",
+            "inputAsset": "USDC",
+            "outputAsset": "EURC",
+            "amount": "10000000"
+          },
+          "requestUrl": "https://api.jup.ag/swap/v2/order?inputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&outputMint=HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr&amount=10000000",
+          "startedAt": "2026-09-05T13:42:31.977Z",
+          "receivedAt": "2026-09-05T13:42:31.981Z",
+          "httpStatus": null,
+          "raw": null,
+          "quote": null,
+          "error": "DNS lookup failed (ENOTFOUND): getaddrinfo ENOTFOUND api.jup.ag"
+        }
+      ]
+    },
+    {
+      "sourceChain": "base",
+      "destinationChain": "solana",
+      "legs": [
+        {
+          "request": {
+            "chain": "base",
+            "inputAsset": "USDC",
+            "outputAsset": "EURC",
+            "amount": "10000000"
+          },
+          "requestUrl": "https://aggregator-api.kyberswap.com/base/api/v1/routes?tokenIn=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&tokenOut=0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42&amountIn=10000000",
+          "startedAt": "2026-09-05T13:42:31.981Z",
+          "receivedAt": "2026-09-05T13:42:31.984Z",
+          "httpStatus": null,
+          "raw": null,
+          "quote": null,
+          "error": "DNS lookup failed (ENOTFOUND): getaddrinfo ENOTFOUND aggregator-api.kyberswap.com"
+        }
+      ]
+    }
+  ],
+  "amountScale": {
+    "decimals": 6,
+    "verification": "configured; EURC mainnet precision unverified"
+  },
+  "candidates": [
+    {
+      "sourceChain": "solana",
+      "destinationChain": "base",
+      "status": "UNAVAILABLE",
+      "reasons": [
+        "SOURCE_UNAVAILABLE"
+      ],
+      "inputUsdc": null,
+      "intermediateEurc": null,
+      "outputUsdc": null,
+      "quotedDeltaUsdc": null,
+      "gasEstimatesUsd": [
+        {
+          "chain": "solana",
+          "gas": null,
+          "l1Fee": null
+        }
+      ],
+      "netProfitUsdc": null,
+      "executionReady": false
+    },
+    {
+      "sourceChain": "base",
+      "destinationChain": "solana",
+      "status": "UNAVAILABLE",
+      "reasons": [
+        "SOURCE_UNAVAILABLE"
+      ],
+      "inputUsdc": null,
+      "intermediateEurc": null,
+      "outputUsdc": null,
+      "quotedDeltaUsdc": null,
+      "gasEstimatesUsd": [
+        {
+          "chain": "base",
+          "gas": null,
+          "l1Fee": null
+        }
+      ],
+      "netProfitUsdc": null,
+      "executionReady": false
+    }
+  ]
+}

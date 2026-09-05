@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Falcon: payout recovery validation</title>
+  <style>
+    :root { color-scheme: light; --ink:#192d32; --muted:#50636a; --paper:#f5f5ee; --line:#c8d4cc; --green:#155941; --amber:#785000; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:17px/1.65 system-ui,sans-serif; }
+    main { max-width:1080px; margin:auto; padding:48px 28px 72px; }
+    a { color:var(--green); text-underline-offset:3px; overflow-wrap:anywhere; }
+    a:focus-visible,summary:focus-visible { outline:3px solid #9a6500; outline-offset:5px; }
+    h1,h2,h3 { line-height:1.18; letter-spacing:-.025em; }
+    h1 { font-size:clamp(38px,6vw,64px); max-width:800px; margin:18px 0; }
+    h2 { font-size:29px; margin:0 0 20px; }
+    h3 { font-size:21px; }
+    p { margin:12px 0 18px; }
+    section { margin-top:44px; padding-top:30px; border-top:1px solid var(--line); }
+    .eyebrow,.tag { font-size:12px; font-weight:700; letter-spacing:.065em; text-transform:uppercase; }
+    .tag { display:inline-block; color:var(--green); margin-right:7px; }
+    .proposal { color:var(--amber); }
+    .lead { font-size:23px; max-width:850px; }
+    .muted, .note { color:var(--muted); }
+    .note { font-size:14px; }
+    .verdict { border-left:5px solid #b07a13; padding:18px 24px; background:#fff3d9; margin:28px 0; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+    .card { background:white; padding:24px; border:1px solid var(--line); border-radius:12px; }
+    .card h3 { margin-top:0; }
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:15px; }
+    caption { text-align:left; font-size:14px; margin-bottom:12px; color:var(--muted); }
+    th,td { text-align:left; padding:14px 12px; vertical-align:top; border-bottom:1px solid var(--line); }
+    th { background:#e6ebe3; }
+    li { margin:12px 0; }
+    ol,ul { padding-left:24px; }
+    blockquote { margin:14px 0; padding-left:18px; border-left:3px solid var(--line); }
+    .demo { background:#122b2c; color:#f1f8ed; border-radius:16px; padding:28px; margin:24px 0; }
+    .demo .tag,.demo .note { color:#bedbc5; }
+    .demo h3 { margin:8px 0; font-size:26px; }
+    .demo dl { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; }
+    .demo dt,.demo dd { padding:12px 0; margin:0; border-bottom:1px solid #446160; }
+    .demo dd { text-align:right; }
+    .callout { border:1px solid #e0b259; background:#ffe7b5; color:#473213; padding:16px; border-radius:8px; }
+    details { border-bottom:1px solid var(--line); padding:16px 0; }
+    summary { cursor:pointer; font-weight:650; }
+    code { font: .9em ui-monospace,monospace; overflow-wrap:anywhere; }
+    nav { display:flex; flex-wrap:wrap; gap:10px 24px; margin-top:24px; font-size:14px; }
+    @media(max-width:700px) { main { padding:28px 18px 48px; } .grid { grid-template-columns:1fr; } .demo { padding:18px; } th,td { min-width:150px; } }
+    @media print { body { background:white; font-size:11pt; } main { padding:0; } .card,.demo { break-inside:avoid; } nav { display:none; } details { display:block; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Falcon / Idea 1 / Research reviewed 5 September 2026</div>
+    <h1>Know the exposure before paying again.</h1>
+    <p class="lead"><span class="tag proposal">INFERRED</span>Falcon helps payment operators review an unresolved payout before they approve another disbursement.</p>
+    <div class="verdict">
+      <p><strong>VERIFIED user instruction: ON STANDBY.</strong> Resume this idea only after the user confirms customer need. The user has requested different ideas for Colosseum.</p>
+      <strong>INFERRED verdict: narrow the idea, then validate demand.</strong>
+      <p>Test operators at stablecoin account platforms. The user's follow-up names Avici, Altitude, and Umbra. Avici is the proposed first interview; payroll remains one use case.</p>
+      <p>Provider documents establish failure cases. Buyer urgency, incident frequency, and willingness to pay remain unverified.</p>
+    </div>
+    <p class="note">Provenance: VERIFIED means checked against the cited source during this session. REPORTED means attributed but not independently confirmed. INFERRED marks analysis, designs, examples, and proposed test targets. Checking documentation does not test a product.</p>
+    <nav aria-label="Report sections"><a href="#product">Product</a><a href="#evidence">Evidence</a><a href="#competition">Competition</a><a href="#validation">Validation plan</a><a href="#uncertain">Open decisions</a></nav>
+  </header>
+
+  <section id="product">
+    <h2>The refined product</h2>
+    <p><span class="tag proposal">INFERRED</span>The first user is a payment operator. The proposed buyer is the head of payment operations at a stablecoin account platform. One candidate trigger: a worker reports missing pay, and someone considers paying again.</p>
+    <p><span class="tag proposal">INFERRED</span>Falcon prepares a case for the existing approval process. It connects the obligation, funding allocation, original payout, return evidence, and any later disbursement. Each fact carries its source and observation time.</p>
+    <div class="grid">
+      <article class="card"><h3>Start with one decision</h3><p><span class="tag proposal">INFERRED</span>Show what remains unresolved before another payment. Offer a trace request or an approval packet that states the added exposure.</p></article>
+      <article class="card"><h3>Enter through an existing workflow</h3><p><span class="tag proposal">INFERRED</span>Begin with a case link and an export for the operator's current approval system. Test whether operators use that evidence before building a separate inbox.</p></article>
+    </div>
+    <div class="demo" aria-label="Fictional product example">
+      <div class="tag">INFERRED / Fictional screen / No live payment</div>
+      <h3>Worker reports missing pay</h3>
+      <p>Original payment unresolved. Another payment requested.</p>
+      <dl>
+        <dt>Payroll obligation</dt><dd>USD 2,000</dd>
+        <dt>Stablecoin funding evidence</dt><dd>Recorded separately</dd>
+        <dt>Provider state</dt><dd>COMPLETED</dd>
+        <dt>Recipient bank credit</dt><dd>Not established</dd>
+        <dt>Return evidence</dt><dd>Not available</dd>
+        <dt>Proposed additional disbursement</dt><dd>USD 2,000</dd>
+      </dl>
+      <div class="callout"><strong>Both payouts could still reach the worker.</strong><br>Potential total disbursement: USD 4,000. Amount above the obligation: USD 2,000.</div>
+      <p class="note">Illustration only. Fees, FX, partial returns, and other payments are excluded. These amounts describe possible exposure, not expected loss.</p>
+      <p><strong>Suggested action:</strong> request a provider trace. If the business chooses an emergency advance, record approval for the additional exposure.</p>
+    </div>
+    <p><span class="tag proposal">INFERRED</span><strong>Correction to the earlier framing:</strong> an unresolved original should not always prohibit another payment. A business may approve an emergency advance. Falcon must keep both disbursements visible. Calling the second payment a retry would hide the business decision.</p>
+    <p><span class="tag proposal">INFERRED</span>The narrow promise is: <strong>see unresolved payouts before approving another disbursement.</strong> A read-only product cannot enforce payments made in another system.</p>
+  </section>
+
+  <section id="evidence">
+    <h2>What the evidence establishes</h2>
+    <div class="table-wrap"><table>
+      <caption>Primary sources checked this session. These are evidence of payment states and existing supply, not direct demand for Falcon.</caption>
+      <thead><tr><th scope="col">Evidence</th><th scope="col">Finding</th><th scope="col">Limit</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag">VERIFIED</span><a href="https://docs.bvnk.com/bvnk/use-cases/virtual-accounts/send-payment-via-va/">BVNK payout states</a></td><td>The COMPLETED description still allows rejection by the beneficiary bank. Exact excerpt: <q>rejected by the beneficiary bank</q>.</td><td>Documents a possible state transition. It does not measure how often it happens.</td></tr>
+        <tr><td><span class="tag">VERIFIED</span><a href="https://apidocs.bridge.xyz/platform/orchestration/transfers/transfer-states">Bridge transfer states</a></td><td>Separate states include <code>returned</code>, <code>refund_in_flight</code>, and <code>refund_failed</code>.</td><td>A return event does not necessarily establish that the sender has received spendable funds.</td></tr>
+        <tr><td><span class="tag">VERIFIED</span><a href="https://docs.bvnk.com/bvnk/get-started/payment-sim/">BVNK payout simulator</a></td><td>Its RETURN scenario describes a <q>successful payout, followed by a return event</q>.</td><td>The documented scenario is a useful test candidate. No sandbox account or integration was tested here.</td></tr>
+        <tr><td><span class="tag proposal">INFERRED</span>Direct demand assessment</td><td>Demand score: <strong>1/3, weak</strong>. Documented failures justify interviews.</td><td>This research did not establish repeated buyer workarounds or paid commitments for this exact workflow. Search cannot establish their absence.</td></tr>
+      </tbody>
+    </table></div>
+    <p><span class="tag proposal">INFERRED</span>Do not combine provider status names into a universal settlement label. Falcon needs explicit rules for the selected provider and route.</p>
+  </section>
+
+  <section id="competition">
+    <h2>Existing products reduce the available gap</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">Product</th><th scope="col">Verified source evidence</th><th scope="col">Implication for Falcon</th></tr></thead>
+      <tbody>
+        <tr><td>Modern Treasury</td><td><span class="tag">VERIFIED</span>Its orchestration guide says: <q>Each leg has its own status, settlement state, and reconciliation record.</q> <a href="https://docs.moderntreasury.com/payments/docs/orchestration">Source</a></td><td><span class="tag proposal">INFERRED</span>Connecting payment legs alone is insufficient differentiation.</td></tr>
+        <tr><td>Cryptio</td><td><span class="tag">VERIFIED</span>Its page advertises <q>full break assignment with sign-off history for every discrepancy</q>. <a href="https://www.cryptio.co/solutions/reconciliation">Source</a></td><td><span class="tag proposal">INFERRED</span>A reconciliation inbox and evidence export overlap with an existing offer.</td></tr>
+        <tr><td>Squads Grid</td><td><span class="tag">VERIFIED</span>Its page advertises <q>a reconciled history of user inflows and outflows across every payment rail</q>. Its documentation explicitly supports Solana tokens. <a href="https://squads.xyz/grid">Product</a>; <a href="https://grid.squads.xyz/grid/v1/accounts/introduction">Solana support</a></td><td><span class="tag proposal">INFERRED</span>A current Solana product already combines payment infrastructure and reconciliation. Falcon must prove a more specific benefit.</td></tr>
+      </tbody>
+    </table></div>
+    <p><span class="tag proposal">INFERRED</span>The candidate gap is the decision about another disbursement, with original and replacement exposure in one case. This research does not prove competitors lack that feature. Test their actual workflows with an operator.</p>
+    <p><span class="tag proposal">INFERRED</span>Any future advantage would come from useful provider mappings and repeated use inside approval workflows. A timeline, an AI summary, or a public receipt hash offers little protection against copying.</p>
+  </section>
+
+  <section>
+    <h2>One complete product path</h2>
+    <p><span class="tag proposal">INFERRED</span>The proposed first slice uses one account platform, one payout provider, and one bank route. Select the provider from the first customer's actual stack.</p>
+    <ol>
+      <li><span class="tag proposal">INFERRED</span><strong>Open the case.</strong> Import the obligation and original payout through stable identifiers. Handle pooled funding through provider allocation records. Matching amounts and timestamps alone cannot establish the relationship.</li>
+      <li><span class="tag proposal">INFERRED</span><strong>Build the evidence view.</strong> Show chain observations, provider events, ledger entries, and worker reports separately. Mark missing, stale, or conflicting evidence.</li>
+      <li><span class="tag proposal">INFERRED</span><strong>Prepare a decision.</strong> State the unknowns and possible added exposure. Attach the customer's rule version and the facts used.</li>
+      <li><span class="tag proposal">INFERRED</span><strong>Keep the case current.</strong> New facts invalidate an affected draft recommendation. Record the decision already taken. Track original and replacement payments separately. Reopen the case if later evidence changes its status.</li>
+    </ol>
+    <p><span class="tag proposal">INFERRED</span>Start with read-only access and redacted cases. Deterministic rules select the available actions. An optional language model can draft an explanation with source references. It has no payment authority.</p>
+    <p><span class="tag proposal">INFERRED</span>Defer automated execution, multiple providers, treasury yield, and a universal policy editor. Test an approval packet before committing to a larger dashboard.</p>
+  </section>
+
+  <section>
+    <h2>Solana and the hackathon</h2>
+    <p><span class="tag">VERIFIED</span>Solana documents distinct <code>processed</code>, <code>confirmed</code>, and <code>finalized</code> states. <a href="https://solana.com/docs/payments/production-readiness">Production guidance</a>.</p>
+    <p><span class="tag proposal">INFERRED</span>Use Solana records to verify the relevant token transfer and its confirmation state. Use provider records to link it to the obligation. Chain finality cannot establish recipient bank credit.</p>
+    <p><span class="tag proposal">INFERRED</span><strong>Crypto necessity is conditional.</strong> Removing chain evidence weakens a case only when that evidence changes the operator's decision. A workflow that relies entirely on bank statuses is a general payment operations product.</p>
+    <p><span class="tag proposal">INFERRED</span>Integrate existing Solana RPC data and provider APIs. A custom Solana program is unnecessary for this read-only slice. Build Falcon's case relationships, evidence rules, and decision packet.</p>
+    <p><span class="tag">VERIFIED</span>Colosseum's announcement lists Crypto World's Fair for September 14 to October 12, 2026. It opens the competition across blockchain ecosystems. Its accelerator and fund retain a Solana focus. <a href="https://blog.colosseum.com/expanding-the-arena/">September 3 announcement</a>.</p>
+    <p><span class="tag proposal">INFERRED</span>A proposed demo can combine a real Solana devnet transfer with a clearly labelled provider sandbox return scenario. Show how the evidence changes the decision. Devnet funds and sandbox bank events must remain visibly distinct. Provider access and complete funding-to-payout links remain untested.</p>
+    <p><span class="tag proposal">INFERRED</span>Estimate: one to two weeks for that bounded prototype, if provider access and identifiers are available. This is an estimate, not a tested schedule. A live payroll integration is outside that estimate.</p>
+  </section>
+
+  <section>
+    <h2>What carries forward from your Falcon files</h2>
+    <p><span class="tag">VERIFIED</span>The earlier design separates source activity from destination completion. Evidence: <code>/Users/sarthiborkar/Build/falconOS_idea/docs/superpowers/specs/2026-09-03-falcon-verify-phase-one-design.md:158</code>. It also limits what an onchain receipt attests at line 125. These are design statements, not execution results.</p>
+    <p><span class="tag">VERIFIED</span>The inspected prototype module evaluates swap quote age and price impact. Evidence: <code>/Users/sarthiborkar/Build/falconOS_idea/src/domain/review.ts:52</code>. That module does not establish a working payout integration. Its tests were not run during this research.</p>
+    <p><span class="tag proposal">INFERRED</span>Keep the distinction between evidence and conclusions. Keep deterministic decisions. The new payout workflow needs its own case model. The earlier Arc guard and swap screen do not establish that model.</p>
+    <p><span class="tag">VERIFIED</span>The prior handoff records a <code>pivot</code> verdict. Evidence: <code>/Users/sarthiborkar/Build/falconOS_idea/.superstack/idea-context.md:61</code>. Its market findings concern broader institutional policy. They do not validate this payroll workflow.</p>
+  </section>
+
+  <section>
+    <h2>Score and risks</h2>
+    <p><span class="tag proposal">INFERRED</span><strong>Screening score: 8/15.</strong> Founder fit 3, MVP speed 2, distribution 1, market pull 1, revenue path 1. Founder fit uses your stated blockchain background. Buyer access and willingness to pay remain unverified.</p>
+    <p><span class="tag proposal">INFERRED</span>The numeric threshold does not override weak demand. Verdict: <code>pivot</code> toward the narrow decision workflow and validate. Confidence in this recommendation: <code>0.70</code>. This is a judgment, not a measured probability of startup success.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">Risk</th><th scope="col">Severity</th><th scope="col">Proposed response</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag proposal">INFERRED</span>Market: existing tools may resolve the case adequately.</td><td>High</td><td>Replay actual cases against the operator's current workflow.</td></tr>
+        <tr><td><span class="tag proposal">INFERRED</span>Technical: missing IDs or pooled balances may prevent reliable linkage.</td><td>High</td><td>Inspect redacted records before promising an integration. Preserve ambiguity.</td></tr>
+        <tr><td><span class="tag proposal">INFERRED</span>Regulatory and privacy: scope changes if Falcon controls funds; case records can expose worker information.</td><td>High</td><td>Limit the first pilot to read-only evidence. Establish jurisdiction, data duties, and contract scope before production. No licensing conclusion is established here.</td></tr>
+        <tr><td><span class="tag proposal">INFERRED</span>Team and access: enterprise onboarding may outlast the event.</td><td>High</td><td>Choose a reachable operator and verify sandbox access early. Use labelled fixtures only to test the interface.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="validation">
+    <h2>Seven-day validation plan</h2>
+    <p><span class="tag proposal">INFERRED</span>These are proposed targets. No interviews, customer outreach, payment transactions, or pilots were performed during this research.</p>
+    <ol>
+      <li><span class="tag proposal">INFERRED</span><strong>Days 1 and 2: inspect the current workflow.</strong> Reach five operators in the same buyer segment. Ask for the last missing payout where another disbursement was considered. Record systems checked, active work time, decision owner, and outcome.</li>
+      <li><span class="tag proposal">INFERRED</span><strong>Days 3 and 4: replay evidence.</strong> Seek redacted case packs from two teams. Reconstruct what each operator knew at the decision time. Show Falcon's proposed packet without exposing later outcomes.</li>
+      <li><span class="tag proposal">INFERRED</span><strong>Days 5 and 6: test access and value.</strong> Verify provider identifiers, timestamps, returns, and funding allocations. Compare active investigation time and decision errors against current tools. Historical familiarity can bias this comparison.</li>
+      <li><span class="tag proposal">INFERRED</span><strong>Day 7: make the commitment test.</strong> Ask one budget owner for a paid, read-only pilot. Set its price and scope together. A verbal compliment does not meet the gate.</li>
+    </ol>
+    <div class="grid">
+      <article class="card"><h3>Continue when</h3><p><span class="tag proposal">INFERRED</span>Three operators describe the same recurring decision problem. Two teams provide usable evidence. One budget owner accepts a paid pilot. The case records show information Falcon adds at the decision time.</p></article>
+      <article class="card"><h3>Stop or change direction when</h3><p><span class="tag proposal">INFERRED</span>Current tools already answer the decision quickly, reliable linkage is unavailable, or no buyer owns the problem. Few incidents make the test inconclusive; they do not establish low demand across the market.</p></article>
+    </div>
+    <p><span class="tag proposal">INFERRED</span>For the pilot, test a fixed platform fee tied to an agreed case volume. Track active investigation time and unsupported payout recommendations. Avoid fees based on claimed recovered funds. Pricing remains untested.</p>
+    <p><span class="tag proposal">INFERRED</span>If the first account platform has no usable cases but a payment provider does, test that provider's support workflow. If only broad reconciliation remains, stop this formulation.</p>
+  </section>
+
+  <section id="candidates">
+    <h2>Candidate interviews from your follow-up</h2>
+    <p><span class="tag">VERIFIED</span>You named <q>umbra, avici.money, alttiude by squads protocol</q>. These are candidate contacts. Meetings and customer demand are not established.</p>
+    <p><span class="tag proposal">INFERRED</span>Revision: the earlier payroll-only buyer hypothesis was too narrow for this shortlist. Test operators at stablecoin account platforms. Keep one bank payout recovery workflow.</p>
+    <ol>
+      <li><strong>Avici: proposed first interview.</strong> <span class="tag">VERIFIED</span>Its business account guide lists <q>Payroll originating in USDC</q> paid into bank accounts. <a href="https://docs.avici.money/getting-started/business-accounts/blockchains-currencies-and-payment-rails">Payment rails</a>. The official text was available through search; direct fetching failed because of its Markdown content type. <span class="tag proposal">INFERRED</span>Ask an operator to replay a payout that required investigation before another disbursement.</li>
+      <li><strong>Altitude: workflow comparison.</strong> <span class="tag">VERIFIED</span>Its page advertises bank and stablecoin payments, approvals, and <q>every payment and conversion is recorded in one ledger</q>. <a href="https://altitude.xyz/">Altitude</a>. <span class="tag proposal">INFERRED</span>Ask what information remains missing during a payout investigation. Existing product overlap makes this a useful challenge to Falcon's value.</li>
+      <li><strong>Umbra: possible later integration.</strong> <span class="tag proposal">INFERRED</span>Assuming Umbra Privacy on Solana. <span class="tag">VERIFIED</span>Its documentation describes opt-in viewing keys under <q>Voluntary Auditability</q>. <a href="https://docs.umbraprivacy.com/docs/introduction/what-is-umbra">Umbra</a>. <span class="tag proposal">INFERRED</span>Investigate consented access to private payment evidence only if the first customer needs it.</li>
+    </ol>
+    <p><span class="tag proposal">INFERRED</span>Product fit does not establish failures or unmet demand at these companies. Demand and distribution scores remain unchanged.</p>
+  </section>
+
+  <section id="uncertain">
+    <h2>Least confident decisions</h2>
+    <ol>
+      <li><span class="tag proposal">INFERRED</span><strong>Avici as the first interview.</strong> Its documented route fits. Operator access, incident frequency, and willingness to pay remain unknown.</li>
+      <li><span class="tag proposal">INFERRED</span><strong>A separate product earns budget.</strong> Existing reconciliation and provider tools may already cover the decision.</li>
+      <li><span class="tag proposal">INFERRED</span><strong>Chain evidence changes the answer.</strong> Actual cases may show that bank and provider records contain all the useful facts.</li>
+      <li><span class="tag proposal">INFERRED</span><strong>A useful prototype fits the event.</strong> Provider access and reliable funding allocations determine the scope.</li>
+    </ol>
+  </section>
+</main>
+</body>
+</html>

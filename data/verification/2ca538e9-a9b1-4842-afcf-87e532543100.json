@@ -1,0 +1,427 @@
+{
+  "schemaVersion": 1,
+  "id": "2ca538e9-a9b1-4842-afcf-87e532543100",
+  "mode": "live",
+  "assessedAt": "2026-09-05T14:07:51.854Z",
+  "cycles": [
+    {
+      "sourceChain": "solana",
+      "destinationChain": "base",
+      "legs": [
+        {
+          "request": {
+            "chain": "solana",
+            "inputAsset": "USDC",
+            "outputAsset": "EURC",
+            "amount": "10000000"
+          },
+          "requestUrl": "https://api.jup.ag/swap/v2/order?inputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&outputMint=HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr&amount=10000000",
+          "startedAt": "2026-09-05T14:07:49.321Z",
+          "receivedAt": "2026-09-05T14:07:49.669Z",
+          "httpStatus": 200,
+          "raw": {
+            "swapType": "aggregator",
+            "inAmount": "10000000",
+            "outAmount": "8614646",
+            "otherAmountThreshold": "8614646",
+            "swapMode": "ExactIn",
+            "slippageBps": 0,
+            "priceImpactPct": "-0.00014095786229274278",
+            "routePlan": [
+              {
+                "percent": 100,
+                "bps": 10000,
+                "usdValue": 9.99990811375551,
+                "swapInfo": {
+                  "ammKey": "GPah53U8YNAMmvfUrZ7gECCfc1mEkJ8PphxhNb7hjeSg",
+                  "label": "DefiTuna",
+                  "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                  "outputMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+                  "inAmount": "10000000",
+                  "outAmount": "8614646"
+                }
+              }
+            ],
+            "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            "feeBps": 0,
+            "platformFee": {
+              "feeBps": 0,
+              "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            },
+            "signatureFeeLamports": 0,
+            "signatureFeePayer": null,
+            "prioritizationFeeLamports": 0,
+            "prioritizationFeePayer": null,
+            "rentFeeLamports": 0,
+            "rentFeePayer": null,
+            "transaction": null,
+            "gasless": false,
+            "jitOptimized": false,
+            "taker": null,
+            "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            "outputMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+            "router": "metis",
+            "guaranteedPrice": false,
+            "requestId": "01a071e5-a126-7226-8083-79d4b39cc233",
+            "inUsdValue": 9.99990811375551,
+            "outUsdValue": 9.99849854808467,
+            "swapUsdValue": 9.99990811375551,
+            "priceImpact": -0.01409578622927428,
+            "mode": "ultra",
+            "totalTime": 160
+          },
+          "quote": {
+            "inAmount": "10000000",
+            "outAmount": "8614646",
+            "gasUsd": null,
+            "l1FeeUsd": null,
+            "providerTimestamp": null,
+            "expiresAt": null
+          },
+          "error": null
+        },
+        {
+          "request": {
+            "chain": "base",
+            "inputAsset": "EURC",
+            "outputAsset": "USDC",
+            "amount": "8614646"
+          },
+          "requestUrl": "https://aggregator-api.kyberswap.com/base/api/v1/routes?tokenIn=0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42&tokenOut=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&amountIn=8614646",
+          "startedAt": "2026-09-05T14:07:49.669Z",
+          "receivedAt": "2026-09-05T14:07:49.929Z",
+          "httpStatus": 200,
+          "raw": {
+            "code": 0,
+            "message": "successfully",
+            "data": {
+              "routeSummary": {
+                "tokenIn": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+                "amountIn": "8614646",
+                "amountInUsd": "9.868764267008798",
+                "tokenOut": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                "amountOut": "9997512",
+                "amountOutUsd": "9.945029579076179",
+                "gas": "287581",
+                "gasPrice": "6000000",
+                "gasUsd": "0.004235987440127848",
+                "l1FeeUsd": "0.000015832719685332034",
+                "extraFee": {
+                  "feeAmount": "",
+                  "chargeFeeBy": "",
+                  "isInBps": false,
+                  "feeReceiver": ""
+                },
+                "route": [
+                  [
+                    {
+                      "pool": "0x1fe14350e72ed606c8850a16d91d5500c18274b7a19852dacf7c4164f78d820b",
+                      "tokenIn": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+                      "tokenOut": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                      "swapAmount": "8614646",
+                      "amountOut": "9997512",
+                      "exchange": "pancake-infinity-cl",
+                      "poolType": "pancake-infinity-cl",
+                      "poolExtra": {
+                        "blockNumber": 50913489,
+                        "vault": "0x238a358808379702088667322f80ac48bad5e6c4",
+                        "poolManager": "0xa0ffb9c1ce1fe56963b0321b32e7a0302114058b",
+                        "permit2Addr": "0x31c2f6fcff4f8759b3bd5bf0e1084a055615c768",
+                        "tokenIn": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+                        "tokenOut": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                        "fee": 34,
+                        "parameters": "0x0000000000000000000000000000000000000000000000000000000000010000",
+                        "hookAddress": "0x0000000000000000000000000000000000000000",
+                        "hookData": "",
+                        "priceLimit": "83992617082884003287410217972",
+                        "swapFee": 50
+                      },
+                      "extra": {
+                        "HookSwapInfo": null,
+                        "_cs": "18023278442691957305",
+                        "_ss": {
+                          "pool": "kipseli-prop_0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42_0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                          "tokenIn": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+                          "tokenOut": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                          "swapAmount": "8614646",
+                          "amountOut": "9998020",
+                          "exchange": "kipseli-prop",
+                          "poolType": "kipseli-prop",
+                          "poolExtra": {
+                            "approvalAddress": "0x71c2ed90cc288229be59f26b8b3eef3c07d7ab99",
+                            "blockNumber": 50913956
+                          },
+                          "extra": null
+                        },
+                        "_ts": "1788617269",
+                        "nSqrtRx96": "85352342849839946698510693746",
+                        "nT": 1489,
+                        "rAI": "0",
+                        "ri": "e6a1f7a8JVtNaJqe"
+                      }
+                    }
+                  ]
+                ],
+                "routeID": "e6a1f7a8JVtNaJqe",
+                "checksum": "18023278442691957305",
+                "timestamp": 1788617269
+              },
+              "routerAddress": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5"
+            },
+            "requestId": "e6a1f7a8-255b-4d68-9a9e-91bafeaa94bf"
+          },
+          "quote": {
+            "inAmount": "8614646",
+            "outAmount": "9997512",
+            "gasUsd": "0.004235987440127848",
+            "l1FeeUsd": "0.000015832719685332034",
+            "providerTimestamp": "2026-09-05T14:07:49.000Z",
+            "expiresAt": null
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "sourceChain": "base",
+      "destinationChain": "solana",
+      "legs": [
+        {
+          "request": {
+            "chain": "base",
+            "inputAsset": "USDC",
+            "outputAsset": "EURC",
+            "amount": "10000000"
+          },
+          "requestUrl": "https://aggregator-api.kyberswap.com/base/api/v1/routes?tokenIn=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&tokenOut=0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42&amountIn=10000000",
+          "startedAt": "2026-09-05T14:07:49.929Z",
+          "receivedAt": "2026-09-05T14:07:50.111Z",
+          "httpStatus": 200,
+          "raw": {
+            "code": 0,
+            "message": "successfully",
+            "data": {
+              "routeSummary": {
+                "tokenIn": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                "amountIn": "10000000",
+                "amountInUsd": "9.947504518200308",
+                "tokenOut": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+                "amountOut": "8616064",
+                "amountOutUsd": "9.870388699136432",
+                "gas": "287581",
+                "gasPrice": "6000000",
+                "gasUsd": "0.004235987440127848",
+                "l1FeeUsd": "0.000015832719685332034",
+                "extraFee": {
+                  "feeAmount": "",
+                  "chargeFeeBy": "",
+                  "isInBps": false,
+                  "feeReceiver": ""
+                },
+                "route": [
+                  [
+                    {
+                      "pool": "0x1fe14350e72ed606c8850a16d91d5500c18274b7a19852dacf7c4164f78d820b",
+                      "tokenIn": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                      "tokenOut": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+                      "swapAmount": "10000000",
+                      "amountOut": "8616064",
+                      "exchange": "pancake-infinity-cl",
+                      "poolType": "pancake-infinity-cl",
+                      "poolExtra": {
+                        "blockNumber": 50913489,
+                        "vault": "0x238a358808379702088667322f80ac48bad5e6c4",
+                        "poolManager": "0xa0ffb9c1ce1fe56963b0321b32e7a0302114058b",
+                        "permit2Addr": "0x31c2f6fcff4f8759b3bd5bf0e1084a055615c768",
+                        "tokenIn": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                        "tokenOut": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+                        "fee": 34,
+                        "parameters": "0x0000000000000000000000000000000000000000000000000000000000010000",
+                        "hookAddress": "0x0000000000000000000000000000000000000000",
+                        "hookData": "",
+                        "priceLimit": "86425042339413873589788941337",
+                        "swapFee": 50
+                      },
+                      "extra": {
+                        "HookSwapInfo": null,
+                        "_cs": "6558285502017890018",
+                        "_ss": {
+                          "pool": "kipseli-prop_0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42_0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                          "tokenIn": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                          "tokenOut": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+                          "swapAmount": "10000000",
+                          "amountOut": "8615475",
+                          "exchange": "kipseli-prop",
+                          "poolType": "kipseli-prop",
+                          "poolExtra": {
+                            "approvalAddress": "0x71c2ed90cc288229be59f26b8b3eef3c07d7ab99",
+                            "blockNumber": 50913956
+                          },
+                          "extra": null
+                        },
+                        "_ts": "1788617270",
+                        "nSqrtRx96": "85352554183608870577212352461",
+                        "nT": 1489,
+                        "rAI": "0",
+                        "ri": "5d95e4a9bQBEyYUf"
+                      }
+                    }
+                  ]
+                ],
+                "routeID": "5d95e4a9bQBEyYUf",
+                "checksum": "6558285502017890018",
+                "timestamp": 1788617270
+              },
+              "routerAddress": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5"
+            },
+            "requestId": "5d95e4a9-6d00-44c9-851f-0ac54da81f41"
+          },
+          "quote": {
+            "inAmount": "10000000",
+            "outAmount": "8616064",
+            "gasUsd": "0.004235987440127848",
+            "l1FeeUsd": "0.000015832719685332034",
+            "providerTimestamp": "2026-09-05T14:07:50.000Z",
+            "expiresAt": null
+          },
+          "error": null
+        },
+        {
+          "request": {
+            "chain": "solana",
+            "inputAsset": "EURC",
+            "outputAsset": "USDC",
+            "amount": "8616064"
+          },
+          "requestUrl": "https://api.jup.ag/swap/v2/order?inputMint=HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=8616064",
+          "startedAt": "2026-09-05T14:07:51.538Z",
+          "receivedAt": "2026-09-05T14:07:51.854Z",
+          "httpStatus": 200,
+          "raw": {
+            "swapType": "aggregator",
+            "inAmount": "8616064",
+            "outAmount": "10000206",
+            "otherAmountThreshold": "10000206",
+            "swapMode": "ExactIn",
+            "slippageBps": 0,
+            "priceImpactPct": "-0.0000030222616873419013",
+            "routePlan": [
+              {
+                "percent": 100,
+                "bps": 10000,
+                "usdValue": 10.000144334915746,
+                "swapInfo": {
+                  "ammKey": "ArisQNcbjXPJD7RgPRvysatX3xcfHPTbcTkfD8kDoZ9i",
+                  "label": "Whirlpool",
+                  "inputMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+                  "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                  "inAmount": "8616064",
+                  "outAmount": "10000206"
+                }
+              }
+            ],
+            "feeMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+            "feeBps": 0,
+            "platformFee": {
+              "feeBps": 0,
+              "feeMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr"
+            },
+            "signatureFeeLamports": 0,
+            "signatureFeePayer": null,
+            "prioritizationFeeLamports": 0,
+            "prioritizationFeePayer": null,
+            "rentFeeLamports": 0,
+            "rentFeePayer": null,
+            "transaction": null,
+            "gasless": false,
+            "jitOptimized": false,
+            "taker": null,
+            "inputMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+            "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            "router": "metis",
+            "guaranteedPrice": false,
+            "requestId": "01a071e5-a968-7251-92c0-98ff0a1744eb",
+            "inUsdValue": 10.000144334915746,
+            "outUsdValue": 10.000114111862654,
+            "swapUsdValue": 10.000144334915746,
+            "priceImpact": -0.00030222616873419014,
+            "mode": "ultra",
+            "totalTime": 206
+          },
+          "quote": {
+            "inAmount": "8616064",
+            "outAmount": "10000206",
+            "gasUsd": null,
+            "l1FeeUsd": null,
+            "providerTimestamp": null,
+            "expiresAt": null
+          },
+          "error": null
+        }
+      ]
+    }
+  ],
+  "amountScale": {
+    "decimals": 6,
+    "verification": "historically verified by RPC capture on 2026-09-05; runtime metadata revalidation not performed"
+  },
+  "candidates": [
+    {
+      "sourceChain": "solana",
+      "destinationChain": "base",
+      "status": "REJECT",
+      "reasons": [
+        "NO_POSITIVE_QUOTED_DIFFERENCE",
+        "COSTS_INCOMPLETE",
+        "INVENTORY_UNVERIFIED",
+        "SEQUENTIAL_QUOTES_NOT_FILLS"
+      ],
+      "inputUsdc": "10.000000",
+      "intermediateEurc": "8.614646",
+      "outputUsdc": "9.997512",
+      "quotedDeltaUsdc": "-0.002488",
+      "gasEstimatesUsd": [
+        {
+          "chain": "solana",
+          "gas": null,
+          "l1Fee": null
+        },
+        {
+          "chain": "base",
+          "gas": "0.004235987440127848",
+          "l1Fee": "0.000015832719685332034"
+        }
+      ],
+      "netProfitUsdc": null,
+      "executionReady": false
+    },
+    {
+      "sourceChain": "base",
+      "destinationChain": "solana",
+      "status": "REVIEW",
+      "reasons": [
+        "COSTS_INCOMPLETE",
+        "INVENTORY_UNVERIFIED",
+        "SEQUENTIAL_QUOTES_NOT_FILLS"
+      ],
+      "inputUsdc": "10.000000",
+      "intermediateEurc": "8.616064",
+      "outputUsdc": "10.000206",
+      "quotedDeltaUsdc": "0.000206",
+      "gasEstimatesUsd": [
+        {
+          "chain": "base",
+          "gas": "0.004235987440127848",
+          "l1Fee": "0.000015832719685332034"
+        },
+        {
+          "chain": "solana",
+          "gas": null,
+          "l1Fee": null
+        }
+      ],
+      "netProfitUsdc": null,
+      "executionReady": false
+    }
+  ]
+}

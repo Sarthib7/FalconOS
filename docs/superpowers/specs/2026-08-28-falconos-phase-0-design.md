@@ -1,5 +1,7 @@
 # FalconOS Phase 0 Design
 
+> [VERIFIED, user direction, 2026-09-05] Historical Phoenix-only design. The user authorized a multichain build with Obsidian research. [Current context](../../../CONTEXT.md) and [build plan](../../../plans/roadmap.md) supersede this implementation sequence. The original decisions below remain available for reference.
+
 - Date: 2026-08-28
 - Owner: Founder / FalconOS
 - Status: Written design, awaiting document review

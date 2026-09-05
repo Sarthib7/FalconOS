@@ -1,5 +1,7 @@
 # FalconOS Vision
 
+> [VERIFIED, user direction, 2026-09-05] Historical vision. The user changed the scope to multichain trading with Obsidian research and continuous discovery. [Current context](CONTEXT.md) and [build plan](plans/roadmap.md) now govern implementation. The original text below is preserved as a reference.
+
 > **The Solana-native operating system for verifiable capital agents.**
 
 | Field | Value |

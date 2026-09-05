@@ -1,0 +1,65 @@
+{
+  "capturedAt": "2026-09-05T14:10:13.844Z",
+  "scope": [
+    "src",
+    "test"
+  ],
+  "files": [
+    {
+      "path": "src/cli.ts",
+      "bytes": 5697,
+      "sha256": "46fde9bc8af0f5fb4ebe5ebd7ef691cd4424199cb96c114fa056c5fe3b3d9c47"
+    },
+    {
+      "path": "src/demo.ts",
+      "bytes": 1387,
+      "sha256": "58667a85fcd5e8dfc8dd380db1e00abbda12f562b4d6953737ccb81cd09c99df"
+    },
+    {
+      "path": "src/scan.ts",
+      "bytes": 4703,
+      "sha256": "bc9c9f6b7701475d54cca4656ffb59c0d706f29654e4c6655d7fd1b8b281fe16"
+    },
+    {
+      "path": "src/sources.ts",
+      "bytes": 13907,
+      "sha256": "837cefeb87af187fe3cf09a002536f9a0ceab973a80a01d6a4e660ec32c71634"
+    },
+    {
+      "path": "src/types.ts",
+      "bytes": 1392,
+      "sha256": "179eb49e0e38371638f0e76ddf739cfec1a13f2200639d732038843743d98109"
+    },
+    {
+      "path": "src/vault.ts",
+      "bytes": 7539,
+      "sha256": "09d29c02acc059ae91195993b31747c184b501d84f6464076287243f0050a9e4"
+    },
+    {
+      "path": "test/cli.test.ts",
+      "bytes": 18440,
+      "sha256": "b1a2b9692a6b06cf16e7177acf382a3a44f2a590e28ac412c08476e283dcf4cd"
+    },
+    {
+      "path": "test/fixtures/public-metadata.json",
+      "bytes": 6420,
+      "sha256": "75928e9cf4c4255bccba7c79dd8235171956f794f94963d008f3be7e3e976691"
+    },
+    {
+      "path": "test/scan.test.ts",
+      "bytes": 3277,
+      "sha256": "474f843673973784bce9e42ad5b6ad8d02d947cbbc5046f388eadb93a64b4f21"
+    },
+    {
+      "path": "test/sources.test.ts",
+      "bytes": 19762,
+      "sha256": "9aee78f757b7256ca090a1de295cfa4b9f38b183904bd84ba5c45427c262a85f"
+    },
+    {
+      "path": "test/vault.test.ts",
+      "bytes": 10260,
+      "sha256": "521c75311270665ab83199f1320cc41c3f7a3ae92810674a09dac197587cdbb1"
+    }
+  ],
+  "aggregateSha256": "67f89f3ae9cb7c8cefe6d464e249c4ed159d83e8746256b1507b9c9f187eda05"
+}
