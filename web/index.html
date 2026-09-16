@@ -1184,6 +1184,70 @@
     @media (prefers-reduced-motion: reduce) { .desk-tabs:has([aria-selected="true"])::after { transition: none; } }
   }
 
+  /* Terminal reframe: pipeline bar, domain status table, build log, prompt chips. */
+  .pipeline-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px 16px; padding: 12px 20px;
+    background: var(--surface);
+    border: 1px solid color-mix(in oklch, var(--fg) 24%, var(--border));
+    border-bottom: 0;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .pipeline-bar .pipeline-io { color: var(--muted); }
+  .architecture-node code {
+    display: inline-flex; align-items: center; margin-top: 18px; padding: 4px 8px;
+    color: var(--accent); background: var(--accent-soft);
+    border: 1px solid color-mix(in oklch, var(--accent) 30%, transparent); border-radius: 4px;
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .domain-terminal, .build-log {
+    background: color-mix(in oklch, var(--bg) 74%, transparent);
+    border: 1px solid color-mix(in oklch, var(--fg) 24%, var(--border));
+    box-shadow: 0 30px 90px color-mix(in oklch, var(--bg) 72%, transparent);
+  }
+  .build-log { display: flex; flex-direction: column; }
+  .domain-terminal .terminal-header, .build-log .terminal-header { padding: 13px 16px; }
+  .domain-terminal .terminal-command, .build-log .terminal-command {
+    min-height: auto; padding: 11px 16px; border-bottom: 1px solid var(--border);
+  }
+  .domain-roster {
+    display: flex; flex-direction: column; margin: 0; padding: 0; border: 0; list-style: none;
+  }
+  .domain-roster li {
+    display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 14px;
+    min-width: 0; padding: 12px 16px; border: 0; border-top: 1px solid var(--border);
+  }
+  .domain-roster li::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+  }
+  .domain-roster li[data-state="tested"]::before,
+  .domain-roster li[data-state="working"]::before {
+    background: var(--accent); box-shadow: 0 0 9px color-mix(in oklch, var(--accent) 60%, transparent);
+  }
+  .domain-roster li[data-state="dev"]::before { background: transparent; border: 1.6px solid var(--fg); box-sizing: border-box; }
+  .domain-roster strong {
+    display: block; min-width: 0; font-family: var(--font-mono); font-size: 13px; font-weight: 560; letter-spacing: .01em;
+  }
+  .domain-roster span {
+    display: block; margin: 0; color: var(--muted);
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; text-align: right;
+  }
+  .domain-roster li[data-state="tested"] span,
+  .domain-roster li[data-state="working"] span { color: var(--accent); }
+  .domain-roster li[data-state="dev"] span { color: var(--fg); }
+  .build-log .log-row { padding: 20px 16px; border-color: var(--border); }
+  .build-log .log-row .meta { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+  .build-log .log-row .meta::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none;
+  }
+  .build-log .log-row[data-state="done"] .meta { color: var(--accent); }
+  .build-log .log-row[data-state="done"] .meta::before {
+    background: var(--accent); box-shadow: 0 0 9px color-mix(in oklch, var(--accent) 60%, transparent);
+  }
+  @media (max-width: 900px) {
+    .domain-roster li { grid-template-columns: 10px 1fr auto; }
+    .pipeline-bar { font-size: 9px; }
+  }
 </style>
 </head>
 <body>
@@ -1214,11 +1278,11 @@
       <div class="container">
         <div class="hero-split">
           <div>
-            <p class="eyebrow">FalconOS / Agentic investment firm</p>
+            <p class="eyebrow">Falcon Investment / Agentic markets firm</p>
             <h1 data-od-id="hero-heading">An investment firm<br>built around <em>agents.</em></h1>
           </div>
           <div>
-            <p class="lead" data-od-id="hero-description">FalconOS is building shared market context, investment memory, and capital mandates for autonomous agents. People coordinate through a clear human view.</p>
+            <p class="lead" data-od-id="hero-description">FalconOS is building Falcon Investment: shared market context, investment memory, and capital mandates for autonomous agents. People coordinate through a clear human view.</p>
             <div class="hero-cta">
               <a class="btn btn-primary btn-arrow" href="#research-demo" data-od-id="explore-demo">Open the dashboard</a>
             </div>
@@ -1230,7 +1294,7 @@
           <p class="eyebrow">The firm thesis</p>
           <div class="firm-thesis-grid">
             <h2 data-od-id="firm-thesis-heading">Investment intelligence should not reset at every decision.</h2>
-            <p>FalconOS is being built to connect evidence, theses, risk decisions, and outcomes. Each agent can work from the same institutional memory while staying inside a defined mandate.</p>
+            <p>FalconOS is being built to connect evidence, theses, risk decisions, and outcomes. Agents will reason from that shared memory, inside defined mandates.</p>
           </div>
         </div>
       </div>
@@ -1239,31 +1303,35 @@
       <div class="container">
         <div class="architecture-heading" data-od-id="architecture-heading">
           <div><p class="eyebrow">System architecture</p><h2 data-od-id="architecture-title">Agents reason inside boundaries.</h2></div>
-          <p class="lead">FalconOS separates evidence validation, specialist advice, independent risk review, and client-owned action. The dashboard gives people visibility without custody or execution authority.</p>
+          <p class="lead">FalconOS separates evidence, specialist advice, independent risk review, and client-owned action. People get visibility without custody or execution.</p>
         </div>
+        <div class="pipeline-bar"><span class="terminal-live">FALCONOS / ADVISORY PIPELINE</span><span class="pipeline-io">STDIN → STDOUT</span></div>
         <ol class="architecture-flow" aria-label="FalconOS advisory architecture">
-          <li class="architecture-node" data-od-id="architecture-client-agent"><span class="meta">01 / CALLER</span><h3>Client Agent</h3><p>Sends a bounded market intent, evidence cutoff, and policy context. It remains the final decision and execution owner.</p><code>authority / external</code></li>
-          <li class="architecture-node" data-od-id="architecture-falcon-skills"><span class="meta">02 / INGRESS</span><h3>Falcon Skills</h3><p>Validates exact schemas, policy context, evidence hashes, and freshness before advice begins. The boundary is advisory and non-executing.</p><code>input / validated</code></li>
-          <li class="architecture-node" data-od-id="architecture-lead-specialist"><span class="meta">03 / ANALYSIS</span><h3>Lead specialist</h3><p>The relevant domain specialist studies one frozen evidence set and can return a typed, non-binding proposal or NO_DATA.</p><code>proposal / non-binding</code></li>
-          <li class="architecture-node" data-od-id="architecture-risk-review"><span class="meta">04 / RISK GATE</span><h3>Independent review</h3><p>A separate reviewer receives the same evidence. It returns PASS, BLOCK, or NO_DATA and cannot rewrite the lead proposal.</p><code>authority / veto-only</code></li>
-          <li class="architecture-node" data-od-id="architecture-advisory"><span class="meta">05 / RETURN</span><h3>Advisory result</h3><p>FalconOS returns citations, invalidations, expiry, and the lead and risk records. It cannot sign or submit an order.</p><code>executionReady / false</code></li>
+          <li class="architecture-node" data-od-id="architecture-client-agent"><span class="meta">01 / CALLER</span><h3>Client Agent</h3><p>Sends a bounded intent, evidence cutoff, and policy. Owns the final decision and execution.</p><code>authority=external</code></li>
+          <li class="architecture-node" data-od-id="architecture-falcon-skills"><span class="meta">02 / INGRESS</span><h3>Falcon Skills</h3><p>Validates schemas, policy, evidence hashes, and freshness. Advisory boundary, non-executing.</p><code>input=validated</code></li>
+          <li class="architecture-node" data-od-id="architecture-lead-specialist"><span class="meta">03 / ANALYSIS</span><h3>Lead specialist</h3><p>Studies one frozen evidence set. Returns a typed, non-binding proposal or NO_DATA.</p><code>proposal=non-binding</code></li>
+          <li class="architecture-node" data-od-id="architecture-risk-review"><span class="meta">04 / RISK GATE</span><h3>Independent review</h3><p>Independent reviewer, same evidence. It returns PASS, BLOCK, or NO_DATA. Cannot rewrite the proposal.</p><code>authority=veto-only</code></li>
+          <li class="architecture-node" data-od-id="architecture-advisory"><span class="meta">05 / RETURN</span><h3>Advisory result</h3><p>Returns citations, invalidations, expiry, and both records. Cannot sign or submit an order.</p><code>executionReady=false</code></li>
         </ol>
         <div class="architecture-boundary" data-od-id="architecture-decision-boundary"><span>Decision boundary</span><p>The Client Agent decides what happens next. FalconOS never signs or submits an order.</p></div>
         <div class="architecture-support">
-          <article class="architecture-plane" data-od-id="architecture-evidence-plane"><p class="eyebrow">Evidence plane</p><h3>One run. One source-bound record.</h3><p>Canonical snapshots, raw bytes, normalized facts, source choices, timestamps, and hashes stay bound to the request and advisory.</p></article>
-          <article class="architecture-plane" data-od-id="architecture-human-plane"><p class="eyebrow">Human coordination plane</p><h3>Visibility without custody.</h3><p>People inspect context, proposals, risk outcomes, and paper mandates. This preview connects no agent, wallet, or live execution.</p></article>
+          <article class="architecture-plane" data-od-id="architecture-evidence-plane"><p class="eyebrow">Evidence plane</p><h3>One run. One source-bound record.</h3><p>Canonical snapshots, raw bytes, normalized facts, timestamps, and hashes stay bound to the request.</p></article>
+          <article class="architecture-plane" data-od-id="architecture-human-plane"><p class="eyebrow">Human coordination plane</p><h3>Visibility without custody.</h3><p>People inspect context, proposals, risk outcomes, and paper mandates. This preview connects no agent, wallet, or execution.</p></article>
         </div>
         <div class="architecture-domains" data-od-id="architecture-domains">
-          <span class="meta">SPECIALIST DOMAINS / CURRENT STATE</span>
-          <ul class="domain-roster">
-            <li data-od-id="domain-perps"><strong>Perps</strong><span>Tested local preview</span></li>
-            <li data-od-id="domain-stablecoins"><strong>Stablecoins</strong><span>Working local CLI</span></li>
-            <li data-od-id="domain-stocks"><strong>Stocks</strong><span>In development</span></li>
-            <li data-od-id="domain-arbitrage"><strong>Arbitrage</strong><span>Planned</span></li>
-            <li data-od-id="domain-memecoins"><strong>Memecoins</strong><span>Planned</span></li>
-            <li data-od-id="domain-liquidity"><strong>Liquidity pools</strong><span>Planned</span></li>
-            <li data-od-id="domain-amms"><strong>AMMs</strong><span>Planned</span></li>
-          </ul>
+          <div class="domain-terminal">
+            <div class="terminal-header"><span>FALCONOS / SPECIALIST DOMAINS</span><span class="terminal-live">07 MAPPED</span></div>
+            <div class="terminal-command"><span aria-hidden="true">›</span> falconos ps --domains<span class="terminal-caret" aria-hidden="true"></span></div>
+            <ul class="domain-roster">
+              <li data-state="tested" data-od-id="domain-perps"><strong>Perps</strong><span>Tested local preview</span></li>
+              <li data-state="working" data-od-id="domain-stablecoins"><strong>Stablecoins</strong><span>Working local CLI</span></li>
+              <li data-state="dev" data-od-id="domain-stocks"><strong>Stocks</strong><span>In development</span></li>
+              <li data-state="planned" data-od-id="domain-arbitrage"><strong>Arbitrage</strong><span>Planned</span></li>
+              <li data-state="planned" data-od-id="domain-memecoins"><strong>Memecoins</strong><span>Planned</span></li>
+              <li data-state="planned" data-od-id="domain-liquidity"><strong>Liquidity pools</strong><span>Planned</span></li>
+              <li data-state="planned" data-od-id="domain-amms"><strong>AMMs</strong><span>Planned</span></li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
@@ -1393,20 +1461,22 @@
           <div class="roadmap-copy">
             <p class="eyebrow">Build status</p>
             <h2 data-od-id="roadmap-heading">From research<br>to execution.</h2>
-            <p class="lead">The current prototype proves the evidence format. Connected agents, investment memory, and controlled execution are the next product slices.</p>
+            <p class="lead">The prototype proves the evidence format. Connected agents, investment memory, and controlled execution are the next slices.</p>
           </div>
-          <div>
-            <article class="log-row" data-od-id="roadmap-current">
+          <div class="build-log">
+            <div class="terminal-header"><span>FALCONOS / BUILD STATUS</span><span class="terminal-live">1 / 3 LOCAL</span></div>
+            <div class="terminal-command"><span aria-hidden="true">›</span> falconos status --roadmap<span class="terminal-caret" aria-hidden="true"></span></div>
+            <article class="log-row" data-state="done" data-od-id="roadmap-current">
               <span class="meta">CURRENT</span>
-              <div><h3 data-od-id="current-heading">Research foundation</h3><p>Local quote research with candidate checks, JSON exports, and linked Obsidian notes. The website previews the human coordination view.</p></div>
+              <div><h3 data-od-id="current-heading">Research foundation</h3><p>Local quote research: candidate checks, JSON exports, linked Obsidian notes. This site previews the coordination view.</p></div>
             </article>
-            <article class="log-row" data-od-id="roadmap-agent">
+            <article class="log-row" data-state="next" data-od-id="roadmap-agent">
               <span class="meta">PLANNED</span>
-              <div><h3 data-od-id="agent-heading">Connected knowledge and reasoning</h3><p>Give existing agents relevant research, strategy context, and outcome history. Use it to produce investment theses with traceable sources.</p></div>
+              <div><h3 data-od-id="agent-heading">Connected knowledge and reasoning</h3><p>Give agents research, strategy context, and outcome history. They produce theses with traceable sources.</p></div>
             </article>
-            <article class="log-row" data-od-id="roadmap-execution">
+            <article class="log-row" data-state="next" data-od-id="roadmap-execution">
               <span class="meta">PLANNED</span>
-              <div><h3 data-od-id="execution-heading">Capital and execution</h3><p>Connect agent decisions to capital mandates and approved execution. Track positions and outcomes across the investment cycle.</p></div>
+              <div><h3 data-od-id="execution-heading">Capital and execution</h3><p>Connect decisions to capital mandates and approved execution. Track positions and outcomes across the cycle.</p></div>
             </article>
           </div>
         </div>
@@ -1432,7 +1502,7 @@
           <a href="#research-demo" data-od-id="footer-dashboard">Human view</a>
         </div>
       </div>
-      <p class="foot-note">FalconOS is building an investment firm around autonomous agents. The current dashboard is an illustrative paper preview. Connected agents and live execution are planned.</p>
+      <p class="foot-note">FalconOS is building Falcon Investment, an agentic markets firm built around autonomous agents. The current dashboard is an illustrative paper preview. Connected agents and live execution are planned.</p>
     </div>
   </footer>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
