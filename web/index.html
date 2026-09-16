@@ -350,7 +350,7 @@
     .feature h3 { font-size: 28px; margin-bottom: 14px; max-width: 19ch; }
     .feature p { max-width: 35ch; font-size: 16px; line-height: 1.6; }
     .feature-foot { margin-top: 24px; padding-top: 18px; font-family: var(--font-mono); color: var(--muted); font-size: 12px; line-height: 1.7; }
-    #research-demo { padding-top: 56px; }
+    #market-view { padding-top: 56px; }
     .workspace { padding: 0; background: var(--bg); border-color: var(--border); }
     .workspace-bar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 28px; border-bottom: 1px solid var(--border); }
     .workspace-label { font-size: 13px; display: flex; gap: 12px; align-items: center; }
@@ -647,7 +647,7 @@
     font-size: 16px;
     line-height: 1.75;
   }
-  #research-demo {
+  #market-view {
     padding-top: 72px !important;
     border-top: 1px solid var(--border);
   }
@@ -668,7 +668,7 @@
     .firm-thesis-grid { grid-template-columns: 1fr; gap: 26px; }
     .firm-thesis-grid h2 { max-width: 20ch; }
     .firm-thesis-grid > p { max-width: 54ch; }
-    #research-demo { padding-top: 58px !important; }
+    #market-view { padding-top: 58px !important; }
     .firm-section { padding-block: 80px; }
   }
   @media (max-width: 640px) {
@@ -676,7 +676,7 @@
     .firm-thesis { margin-top: 44px; padding-top: 42px; }
     .firm-thesis-grid h2 { font-size: 36px; }
     .firm-thesis-grid > p { font-size: 15px; line-height: 1.7; }
-    #research-demo { padding-top: 46px !important; }
+    #market-view { padding-top: 46px !important; }
     .principles-figure::before { inset: -10px 10px 10px -10px; }
   }
 
@@ -1009,13 +1009,13 @@
   .domain-roster li { min-width: 0; padding: 14px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .domain-roster strong { display: block; font-size: 13px; font-weight: 560; }
   .domain-roster span { display: block; margin-top: 7px; color: var(--muted); font-family: var(--font-mono); font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
-  #research-demo,
+  #market-view,
   .architecture-section,
   .firm-section,
   #quote-example,
   #roadmap,
   .closing { border-top: 1px solid var(--border); }
-  #research-demo { background: color-mix(in oklch, var(--surface) 30%, transparent); }
+  #market-view { background: color-mix(in oklch, var(--surface) 30%, transparent); }
   .desk-section-heading .eyebrow,
   .desk-section-heading > p,
   .agent-role,
@@ -1248,6 +1248,32 @@
     .domain-roster li { grid-template-columns: 10px 1fr auto; }
     .pipeline-bar { font-size: 9px; }
   }
+  /* Split wordmark: FALCON + highlighted OS. */
+  .wm { display: inline-flex; align-items: center; font-weight: 700; letter-spacing: -.01em; }
+  .wm-os { color: var(--bg); background: var(--fg); font-style: italic; padding: 1px 5px 1px 4px; margin-left: 3px; border-radius: 2px; transform: rotate(-2deg); }
+
+  /* Markets snapshot band: interactive preview of /dash. */
+  .market-snap { margin-bottom: 26px; background: color-mix(in oklch, var(--bg) 74%, transparent); border: 1px solid color-mix(in oklch, var(--fg) 24%, var(--border)); box-shadow: 0 30px 90px color-mix(in oklch, var(--bg) 72%, transparent); }
+  .market-snap-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .market-snap-body { display: grid; grid-template-columns: 170px minmax(0, 1fr); }
+  .market-snap-controls { display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+  .market-snap-controls button { text-align: left; padding: 12px 16px; background: transparent; border: 0; border-bottom: 1px solid var(--border); color: var(--muted); font-family: var(--font-mono); font-size: 12px; cursor: pointer; }
+  .market-snap-controls button:last-child { border-bottom: 0; }
+  .market-snap-controls button[aria-pressed="true"] { color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+  .market-snap-main { padding: 12px 16px; min-width: 0; }
+  .market-snap-chart { height: 120px; }
+  .market-snap-chart svg { width: 100%; height: 100%; }
+  .market-snap-read { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 8px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .market-snap-read b { font-size: 16px; color: var(--fg); font-variant-numeric: tabular-nums; }
+  .market-snap-read .pos { color: var(--accent); }
+  .market-snap-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 11px 16px; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+  @media (max-width: 700px) {
+    .market-snap-body { grid-template-columns: 1fr; }
+    .market-snap-controls { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--border); }
+    .market-snap-controls button { flex: 1; border-bottom: 0; border-right: 1px solid var(--border); padding: 11px 8px; }
+    .market-snap-controls button:last-child { border-right: 0; }
+    .market-snap-controls button[aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--accent); }
+  }
 </style>
 </head>
 <body>
@@ -1256,12 +1282,12 @@
   <header class="topnav" data-od-id="topnav">
     <div class="container">
       <div class="topnav-inner">
-        <a class="logo" href="#content" aria-label="FalconOS home" data-od-id="brand-home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>FalconOS</span></a>
+        <a class="logo" href="#content" aria-label="FalconOS home" data-od-id="brand-home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span class="wm">FALCON<i class="wm-os">OS</i></span></a>
         <nav id="main-nav" aria-label="Main navigation" data-od-id="main-navigation">
           <a href="#firm-thesis" data-od-id="nav-firm">The firm</a>
           <a href="#architecture" data-od-id="nav-architecture">Architecture</a>
           <a href="#how-it-works" data-od-id="nav-method">Investment method</a>
-          <a href="#research-demo" data-od-id="nav-demo">Human view</a>
+          <a href="/dash/" data-od-id="nav-demo">Dashboard</a>
         </nav>
         <span class="nav-runtime" data-od-id="nav-runtime"><i aria-hidden="true"></i>Advisory only</span>
         <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" data-od-id="menu-toggle">Menu</button>
@@ -1284,7 +1310,7 @@
           <div>
             <p class="lead" data-od-id="hero-description">FalconOS is building Falcon Investment: shared market context, investment memory, and capital mandates for autonomous agents. People coordinate through a clear human view.</p>
             <div class="hero-cta">
-              <a class="btn btn-primary btn-arrow" href="#research-demo" data-od-id="explore-demo">Open the dashboard</a>
+              <a class="btn btn-primary btn-arrow" href="/dash/" data-od-id="explore-demo">Open the dashboard</a>
             </div>
             <p class="hero-note">Research prototype available.<br>Connected agents and live execution are planned.</p>
           </div>
@@ -1335,31 +1361,24 @@
         </div>
       </div>
     </section>
-    <section class="section investment-demo" id="research-demo" data-od-id="research-demo"><div class="container">
-      <div class="desk-section-heading"><div><p class="eyebrow">Human coordination layer</p><h2 data-od-id="demo-heading">See what the firm is doing.</h2></div><p>Inspect context, review proposals, and coordinate mandates.<br>Interact to take control of the paper preview.</p></div>
-      <div class="investment-desk" id="investment-desk" data-od-id="investment-desk">
-        <div class="desk-topbar"><div class="desk-identity"><svg class="desk-monogram" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>Coordination desk <small>Human view · Paper preview</small></span></div><div class="demo-playback" data-od-id="demo-playback"><span class="demo-label" id="demo-playback-status">Preview tour paused</span><button class="btn btn-secondary" type="button" id="demo-playback-toggle" aria-describedby="demo-playback-help" data-od-id="demo-playback-toggle">Play tour</button><span class="visually-hidden" id="demo-playback-help">Cycles through Research, Strategy, Risk, and Capital. Interact to control the preview tour.</span></div></div>
-        <div class="desk-grid"><aside class="mandate-sidebar" aria-label="Choose a sample mandate" data-od-id="mandate-sidebar"><div><p class="eyebrow">Agent mandates</p><div class="mandate-list">
-          <button class="mandate-option" data-mandate="liquidity" aria-pressed="true" data-od-id="mandate-liquidity"><span class="mandate-number">01</span><span><strong>Stablecoin liquidity</strong><small>Capital across chains</small></span></button>
-          <button class="mandate-option" data-mandate="payments" aria-pressed="false" data-od-id="mandate-payments"><span class="mandate-number">02</span><span><strong>Agent payments</strong><small>A spending mandate</small></span></button>
-          <button class="mandate-option" data-mandate="markets" aria-pressed="false" data-od-id="mandate-markets"><span class="mandate-number">03</span><span><strong>Market access</strong><small>Assets and investment rights</small></span></button>
-        </div></div><div class="mandate-boundary"><span class="meta">HUMAN COORDINATION</span><p>Inspect the context.<br>Coordinate the mandate.</p><div><span>Execution</span><strong>Disabled</strong></div></div></aside>
-        <div class="desk-main"><div class="desk-brief-heading"><div><p class="eyebrow" id="desk-brief-label">Mandate 01 / Sample</p><h3 id="desk-brief-title" data-od-id="desk-brief-title">Map stablecoin capital across chains.</h3></div><span class="paper-badge">PAPER</span></div><div class="desk-chains" id="desk-chains" aria-label="Chains in scope"></div>
-          <div class="desk-tabs" role="tablist" aria-label="Investment process" data-od-id="desk-tabs">
-            <button id="desk-tab-research" role="tab" aria-selected="true" aria-controls="desk-panel-research" tabindex="0" data-desk-view="research" data-od-id="desk-tab-research"><span>01</span>Research</button>
-            <button id="desk-tab-strategy" role="tab" aria-selected="false" aria-controls="desk-panel-strategy" tabindex="-1" data-desk-view="strategy" data-od-id="desk-tab-strategy"><span>02</span>Strategy</button>
-            <button id="desk-tab-risk" role="tab" aria-selected="false" aria-controls="desk-panel-risk" tabindex="-1" data-desk-view="risk" data-od-id="desk-tab-risk"><span>03</span>Risk</button>
-            <button id="desk-tab-capital" role="tab" aria-selected="false" aria-controls="desk-panel-capital" tabindex="-1" data-desk-view="capital" data-od-id="desk-tab-capital"><span>04</span>Capital</button>
+    <section class="section investment-demo" id="market-view" data-od-id="market-view"><div class="container">
+      <div class="desk-section-heading"><div><p class="eyebrow">Human view</p><h2 data-od-id="demo-heading">Market dashboard.</h2></div><p>Read-only snapshot across sample instruments.<br>No orders, custody, or execution.</p></div>
+      <div class="market-snap" id="market-snap" data-od-id="market-snap" hidden>
+        <div class="market-snap-head"><span class="terminal-live">FALCONOS / MARKET SNAPSHOT</span><span id="ms-observed">loading…</span></div>
+        <div class="market-snap-body">
+          <div class="market-snap-controls" role="group" aria-label="Choose an instrument">
+            <button type="button" data-ms="usd-coin" aria-pressed="true">USDC</button>
+            <button type="button" data-ms="solana" aria-pressed="false">SOL</button>
+            <button type="button" data-ms="jupiter-exchange-solana" aria-pressed="false">JUP</button>
           </div>
-          <div class="desk-panels">
-            <div id="desk-panel-research" role="tabpanel" aria-labelledby="desk-tab-research" tabindex="0" data-od-id="desk-panel-research"><p class="agent-role">Research / Shared agent context</p><h4>Evidence before a decision.</h4><p id="desk-objective" class="desk-panel-lead">Compare asset access, liquidity, and settlement before proposing where capital should move.</p><div class="research-questions" id="desk-questions"></div><a class="text-link" href="#quote-example" data-od-id="desk-source-library">Inspect the evidence format ↓</a></div>
-            <div id="desk-panel-strategy" role="tabpanel" aria-labelledby="desk-tab-strategy" tabindex="0" hidden data-od-id="desk-panel-strategy"><p class="agent-role">Strategy / Human input</p><h4>A thesis with conditions.</h4><label class="desk-field" for="desk-thesis">Example thesis. Add direction for the agent.</label><textarea id="desk-thesis" aria-describedby="desk-thesis-status" class="textarea" rows="4" maxlength="1600" data-od-id="desk-thesis"></textarea><p class="desk-condition" id="desk-condition"></p><div class="row-between"><span class="meta" id="desk-thesis-status">Export the brief to keep your edits.</span><button class="btn btn-secondary" id="desk-save-thesis" data-od-id="desk-save-thesis">Save thesis</button></div></div>
-            <div id="desk-panel-risk" role="tabpanel" aria-labelledby="desk-tab-risk" tabindex="0" hidden data-od-id="desk-panel-risk"><p class="agent-role">Risk / Human review</p><h4>Know what still needs review.</h4><p class="desk-panel-lead">Record your review. These checks do not validate or authorize a trade.</p><div class="risk-review" id="desk-risk-checks"></div><div class="risk-summary"><span id="desk-risk-summary">4 checks open</span><span>Live execution remains disabled</span></div></div>
-            <div id="desk-panel-capital" role="tabpanel" aria-labelledby="desk-tab-capital" tabindex="0" hidden data-od-id="desk-panel-capital"><p class="agent-role">Capital / Mandate oversight</p><h4>Give the plan a limit.</h4><dl class="desk-budget"><div><dt>Sample budget</dt><dd>100.00 <small>USDC</small></dd></div><div><dt>Per-chain limit</dt><dd>40<small>%</small></dd></div><div><dt>Unallocated</dt><dd id="desk-reserve">100.00 <small>USDC</small></dd></div></dl><div class="paper-allocation-bar" id="desk-allocation-bar" role="img" aria-label="100 paper USDC unallocated"><span class="unallocated"></span></div><form id="desk-allocation-form" novalidate><div class="paper-form-row"><label class="desk-field">Chain<select class="input" id="desk-allocation-chain" name="chain" data-od-id="desk-allocation-chain"></select></label><label class="desk-field">Paper USDC<input class="input" id="desk-allocation-amount" name="amount" type="number" min="0.01" step="0.01" max="40" value="25.00" required aria-describedby="desk-allocation-error" data-od-id="desk-allocation-amount"/></label><button class="btn btn-secondary" type="submit" data-od-id="desk-record-plan">Record plan</button></div><p id="desk-allocation-error" class="paper-error" role="alert" hidden></p></form><div id="desk-paper-plans" class="paper-plans"></div></div>
+          <div class="market-snap-main">
+            <div class="market-snap-chart" id="ms-chart" aria-hidden="true"></div>
+            <div class="market-snap-read" id="ms-read"></div>
           </div>
-          <div class="desk-bottom-bar"><span>A human view of agent work.<br>Illustrative paper preview.</span><button class="btn btn-ghost btn-arrow" id="desk-export-brief" data-od-id="desk-export-brief">Export brief</button></div>
-        </div></div>
-      </div><div class="desk-footnote"><span>Agents use FalconOS. People coordinate through this view.</span><a class="text-link" href="#quote-example" data-od-id="desk-full-workspace">Inspect current research evidence ↓</a></div><span class="visually-hidden" id="desk-announcement" role="status" aria-live="polite"></span>
+        </div>
+        <div class="market-snap-foot"><span>Real market data · read-only · not investment advice</span><a class="text-link" href="/dash/" data-od-id="open-dashboard">Open the dashboard →</a></div>
+      </div>
+      <p class="desk-footnote" style="margin-top:14px"><span>Agents use FalconOS. People inspect markets through this view.</span><a class="text-link" href="#quote-example" data-od-id="desk-source-library">Inspect research evidence ↓</a></p>
     </div></section>
     <section class="section firm-section" id="how-it-works" data-od-id="how-it-works"><div class="container">
       <div class="principles-split"><div><p class="eyebrow">How the firm thinks</p><h2 data-od-id="workflow-heading">Every decision<br>adds context.</h2><p class="lead">Research becomes institutional memory. That memory shapes strategy, risk, and the next allocation.</p></div>        <figure class="principles-figure" data-od-id="alpine-atmosphere">
@@ -1487,22 +1506,22 @@
       <div class="container">
         <div class="closing-mark"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg></div>
         <h2 data-od-id="closing-heading">See the firm through its decisions.</h2>
-        <p class="lead">Open the coordination desk. Inspect the context, proposal, risk review, and paper mandate behind each decision.</p>
-        <a class="btn btn-secondary btn-arrow" href="#research-demo" data-od-id="return-to-demo">Open the coordination desk</a>
+        <p class="lead">Open the market dashboard. Inspect read-only prices, volume, and 1D charts across sample instruments.</p>
+        <a class="btn btn-secondary btn-arrow" href="/dash/" data-od-id="return-to-demo">Open the dashboard</a>
       </div>
     </section>
   </main>
   <footer class="pagefoot" data-od-id="footer">
     <div class="container">
       <div class="row-between">
-        <div class="brand-lockup"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>FalconOS</span></div>
+        <div class="brand-lockup"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span class="wm">FALCON<i class="wm-os">OS</i></span></div>
         <div class="foot-links">
           <a href="#firm-thesis" data-od-id="footer-firm">The firm</a>
           <a href="#architecture" data-od-id="footer-architecture">Architecture</a>
-          <a href="#research-demo" data-od-id="footer-dashboard">Human view</a>
+          <a href="/dash/" data-od-id="footer-dashboard">Dashboard</a>
         </div>
       </div>
-      <p class="foot-note">FalconOS is building Falcon Investment, an agentic markets firm built around autonomous agents. The current dashboard is an illustrative paper preview. Connected agents and live execution are planned.</p>
+      <p class="foot-note">FalconOS is building Falcon Investment, an agentic markets firm built around autonomous agents. The dashboard shows a read-only market snapshot. Connected agents and live execution are planned.</p>
     </div>
   </footer>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -1516,7 +1535,7 @@
       <button class="btn btn-ghost" id="close-copy" type="button" data-od-id="close-copy">Close</button>
     </div>
   </dialog>
-  <noscript><p style="padding:24px;text-align:center">Enable JavaScript to use the coordination demo and sample quote controls.</p></noscript>
+  <noscript><p style="padding:24px;text-align:center">Enable JavaScript to load the market snapshot preview and sample quote controls.</p></noscript>
 <script>
 (() => {
   'use strict';
@@ -1660,117 +1679,6 @@
   selectCandidate(1, false);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  // Illustrative investment briefs. Tour playback changes views, never decisions or funds.
-  const deskChains = {solana:'Solana',base:'Base',robinhood:'Robinhood Chain',tempo:'Tempo',arc:'Arc'};
-  const deskBriefs = {
-    liquidity:{number:'01',title:'Map stablecoin capital across chains.',chains:['solana','base','robinhood','tempo','arc'],objective:'Compare asset access, liquidity, and settlement before proposing where capital should move.',questions:[['Asset identity','Which token, issuer, and contract does the strategy rely on?'],['Market structure','Where can capital enter and exit with sufficient liquidity?'],['Settlement','What costs and confirmation conditions apply across chains?']],thesis:'Compare prefunded liquidity across chains. Require asset identity, complete costs, and an exit path before considering a live position.',condition:'Invalidation: unknown token identity, incomplete costs, or no credible exit.',checks:[false,false,false,false],plans:[],recorded:false},
-    payments:{number:'02',title:'Set a spending mandate for agents.',chains:['tempo','arc'],objective:'Define how an agent could pay for research or services within a clear spending mandate.',questions:[['Permissions','Which services may the agent pay, and who sets the limits?'],['Payment context','What token controls and reconciliation records are needed?'],['Settlement','How will the operator verify payment and service delivery?']],thesis:'Start with a paper budget for approved research services. Define the recipient, spending cap, and evidence of delivery before a payment is considered.',condition:'Invalidation: an unapproved recipient, missing delivery evidence, or a breached spending limit.',checks:[false,false,false,false],plans:[],recorded:false},
-    markets:{number:'03',title:'Build a thesis for new market access.',chains:['robinhood','base','solana'],objective:'Research an asset’s investment rights, entry conditions, and exit constraints before proposing an allocation.',questions:[['Investment rights','What does the token represent, and who may access it?'],['Price evidence','Which sources support the price and its valuation basis?'],['Exit conditions','What liquidity, transfer restrictions, and market hours apply?']],thesis:'Establish the asset’s rights and access conditions before evaluating price. Keep the proposal in paper mode until entry and exit evidence is available.',condition:'Invalidation: unclear investment rights, unsupported pricing, or restricted exits.',checks:[false,false,false,false],plans:[],recorded:false}
-  };
-  const deskChecks = ['Asset identity and access reviewed','Liquidity and complete costs reviewed','Exit conditions documented','Proposal reviewed by the operator'];
-  const deskTabs = Array.from(document.querySelectorAll('[data-desk-view]'));
-  const mandateButtons = Array.from(document.querySelectorAll('[data-mandate]'));
-  const deskWorkspace = byId('investment-desk');
-  let deskSelected = 'liquidity', deskView = 'research', nextPaperPlan = 1;
-  const deskMoney = cents => (cents/100).toFixed(2);
-  const deskMotion = new Set();
-  function cancelDeskMotion() { deskMotion.forEach(animation => animation.cancel()); deskMotion.clear(); }
-  function revealDeskContent(...elements) {
-    cancelDeskMotion();
-    if (reduced.matches || document.hidden) return;
-    elements.forEach(element => {
-      if (!element?.animate) return;
-      const animation = element.animate([{ opacity: .86 }, { opacity: 1 }], {
-        duration: window.innerWidth <= 640 ? 140 : 180, easing: 'cubic-bezier(.2,0,0,1)'
-      });
-      deskMotion.add(animation);
-      animation.onfinish = animation.oncancel = () => deskMotion.delete(animation);
-    });
-  }
-
-  function renderPaperPlans() {
-    const brief = deskBriefs[deskSelected], used = brief.plans.reduce((n,p)=>n+p.cents,0);
-    byId('desk-reserve').innerHTML = deskMoney(10000-used)+' <small>USDC</small>';
-    byId('desk-allocation-bar').innerHTML = brief.plans.map(p=>'<span style="width:'+p.cents/100+'%" title="'+deskChains[p.chain]+': '+deskMoney(p.cents)+' paper USDC"></span>').join('') + (used<10000?'<span class="unallocated" style="width:'+(10000-used)/100+'%"></span>':'');
-    byId('desk-allocation-bar').setAttribute('aria-label',deskMoney(used)+' paper USDC planned; '+deskMoney(10000-used)+' unallocated.');
-    byId('desk-paper-plans').innerHTML = brief.plans.length ? brief.plans.map(p=>'<div class="paper-plan" data-od-id="paper-plan-'+p.id+'"><span>'+deskChains[p.chain]+'</span><span class="num">'+deskMoney(p.cents)+' paper USDC</span><button type="button" class="btn btn-ghost" data-remove-plan="'+p.id+'" data-od-id="remove-plan-'+p.id+'" aria-label="Remove '+deskChains[p.chain]+' paper plan">Remove</button></div>').join('') : '<p class="paper-plan-empty">No allocation recorded. The full sample budget remains unallocated.</p>';
-  }
-  function renderRiskSummary() {
-    const open = deskBriefs[deskSelected].checks.filter(v=>!v).length;
-    byId('desk-risk-summary').textContent = open ? open+' check'+(open===1?'':'s')+' open' : 'Operator review recorded';
-  }
-  function renderDesk() {
-    const b=deskBriefs[deskSelected];
-    mandateButtons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.mandate===deskSelected)));
-    byId('desk-brief-label').textContent='Mandate '+b.number+' / Sample';
-    byId('desk-brief-title').textContent=b.title;
-    byId('desk-chains').innerHTML=b.chains.map(id=>'<span>'+deskChains[id]+'</span>').join('');
-    byId('desk-objective').textContent=b.objective;
-    byId('desk-questions').innerHTML=b.questions.map(([label,text],i)=>'<div class="research-question" data-od-id="research-question-'+i+'"><strong>'+label+'</strong><span>'+text+'</span></div>').join('');
-    byId('desk-thesis').value=b.thesis;byId('desk-thesis').setCustomValidity('');byId('desk-thesis').removeAttribute('aria-invalid');
-    byId('desk-thesis-status').textContent=b.recorded?'Thesis recorded in this preview.':'Export the brief to keep your edits.';
-    byId('desk-condition').textContent=b.condition;
-    byId('desk-risk-checks').innerHTML=deskChecks.map((label,i)=>'<label class="risk-check"><input type="checkbox" data-risk-check="'+i+'" data-od-id="risk-check-'+i+'" '+(b.checks[i]?'checked':'')+'/><span>'+label+'</span></label>').join('');
-    byId('desk-allocation-chain').innerHTML=b.chains.map(id=>'<option value="'+id+'">'+deskChains[id]+'</option>').join('');
-    byId('desk-allocation-error').hidden=true;byId('desk-allocation-amount').removeAttribute('aria-invalid');
-    renderRiskSummary();renderPaperPlans();
-  }
-  function setDeskView(view, focus=false) {
-    if(!['research','strategy','risk','capital'].includes(view))return;
-    const changed = deskView !== view;
-    deskView=view;
-    deskTabs.forEach(tab=>{const active=tab.dataset.deskView===view;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;byId('desk-panel-'+tab.dataset.deskView).hidden=!active;if(active&&focus)tab.focus();});
-    if (changed) revealDeskContent(byId('desk-panel-'+view));
-    updateDeskTour();
-  }
-  mandateButtons.forEach(button=>button.addEventListener('click',()=>{
-    const changed = deskSelected !== button.dataset.mandate;
-    deskSelected=button.dataset.mandate;renderDesk();
-    if (changed) revealDeskContent(byId('desk-brief-title'), byId('desk-chains'), byId('desk-panel-'+deskView));
-    byId('desk-announcement').textContent=deskBriefs[deskSelected].title+' selected.';
-  }));
-  deskTabs.forEach((tab,i)=>{
-    tab.addEventListener('click',()=>setDeskView(tab.dataset.deskView));
-    tab.addEventListener('keydown',event=>{let n;if(event.key==='ArrowRight')n=(i+1)%4;else if(event.key==='ArrowLeft')n=(i+3)%4;else if(event.key==='Home')n=0;else if(event.key==='End')n=3;else return;event.preventDefault();setDeskView(deskTabs[n].dataset.deskView,true);});
-  });
-  byId('desk-thesis').addEventListener('input',()=>{const b=deskBriefs[deskSelected];b.thesis=byId('desk-thesis').value;b.recorded=false;b.checks.fill(false);byId('desk-thesis').setCustomValidity('');byId('desk-thesis').removeAttribute('aria-invalid');byId('desk-thesis-status').textContent='Draft changed. Save the thesis or export your brief.';Array.from(byId('desk-risk-checks').querySelectorAll('input')).forEach(input=>input.checked=false);renderRiskSummary();});
-  byId('desk-save-thesis').addEventListener('click',()=>{const field=byId('desk-thesis');if(field.value.trim().length<12){field.setCustomValidity('Write a thesis of at least 12 characters.');field.setAttribute('aria-invalid','true');field.reportValidity();return;}deskBriefs[deskSelected].thesis=field.value.trim();deskBriefs[deskSelected].recorded=true;byId('desk-thesis-status').textContent='Thesis recorded in this preview.';toast('Thesis recorded. Export the brief to keep it.');});
-  byId('desk-risk-checks').addEventListener('change',event=>{if(event.target.dataset.riskCheck===undefined)return;deskBriefs[deskSelected].checks[Number(event.target.dataset.riskCheck)]=event.target.checked;renderRiskSummary();});
-  byId('desk-allocation-form').addEventListener('submit',event=>{
-    event.preventDefault();const b=deskBriefs[deskSelected],field=byId('desk-allocation-amount'),raw=field.value,chain=byId('desk-allocation-chain').value,error=byId('desk-allocation-error');let message='';
-    const cents=/^\d+(\.\d{1,2})?$/.test(raw)?Math.round(Number(raw)*100):0;
-    const used=b.plans.reduce((n,p)=>n+p.cents,0),chainUsed=b.plans.filter(p=>p.chain===chain).reduce((n,p)=>n+p.cents,0);
-    if(!Number.isSafeInteger(cents)||cents<=0)message='Enter a positive amount with up to two decimal places.';
-    else if(!b.chains.includes(chain))message='Choose a chain in this mandate.';
-    else if(used+cents>10000)message='This exceeds the 100.00 USDC paper budget.';
-    else if(chainUsed+cents>4000)message='This exceeds the 40% limit for '+deskChains[chain]+'.';
-    if(message){error.textContent=message;error.hidden=false;field.setAttribute('aria-invalid','true');field.focus();return;}
-    b.plans.push({id:nextPaperPlan++,chain,cents});field.removeAttribute('aria-invalid');error.hidden=true;renderPaperPlans();toast('Paper plan recorded. No funds moved.');
-  });
-  byId('desk-paper-plans').addEventListener('click',event=>{const button=event.target.closest('[data-remove-plan]');if(!button)return;const b=deskBriefs[deskSelected];b.plans=b.plans.filter(p=>p.id!==Number(button.dataset.removePlan));renderPaperPlans();byId('desk-allocation-amount').focus();toast('Paper plan removed.');});
-  byId('desk-export-brief').addEventListener('click',()=>{
-    const b=deskBriefs[deskSelected];const text=JSON.stringify({product:'FalconOS',mode:'illustrative-paper-preview',agentConnected:false,executionEnabled:false,brief:{title:b.title,chains:b.chains.map(id=>deskChains[id]),objective:b.objective,questions:b.questions.map(([label,question])=>({label,question})),operatorThesis:b.thesis,thesisRecorded:b.recorded,invalidation:b.condition,operatorReview:deskChecks.map((label,i)=>({label,checked:b.checks[i]}))},paperMandate:{budgetUsdc:'100.00',perChainLimitPercent:40,allocations:b.plans.map(p=>({chain:deskChains[p.chain],paperUsdc:deskMoney(p.cents)}))},note:'Illustrative agent roles. No model, wallet, or live execution is connected.'},null,2);
-    let url,link;try{url=URL.createObjectURL(new Blob([text],{type:'application/json'}));link=document.createElement('a');link.href=url;link.download='falconos-'+deskSelected+'-brief.json';document.body.append(link);link.click();toast('Brief download requested.');}catch{showCopyFallback(text,'Download unavailable. Copy the brief below to keep your work.',byId('desk-export-brief'));}finally{if(link)link.remove();if(url)setTimeout(()=>URL.revokeObjectURL(url),1500);}
-  });
-  const deskTourViews=['research','strategy','risk','capital'];
-  const demoToggle=byId('demo-playback-toggle'),demoStatus=byId('demo-playback-status');
-  const demoDwell=6000;
-  let demoMode=reduced.matches?'paused':'playing',demoTimer=0,demoPageActive=true;
-  const deskBox=deskWorkspace.getBoundingClientRect();
-  let demoVisible=deskBox.bottom>0&&deskBox.top<window.innerHeight;
-  function demoCanPlay(){return demoMode==='playing'&&demoVisible&&demoPageActive&&!document.hidden;}
-  function updateDeskTour(){deskWorkspace.dataset.playback=demoMode;demoToggle.textContent=demoMode==='playing'?'Pause tour':'Play tour';demoStatus.textContent=demoMode==='playing'?'Preview tour · '+titleCase(deskView)+' · '+(deskTourViews.indexOf(deskView)+1)+'/4':demoMode==='manual'?'You control the preview':'Preview tour paused';}
-  function scheduleDemo(){clearTimeout(demoTimer);demoTimer=0;if(!demoCanPlay())return;demoTimer=setTimeout(()=>{demoTimer=0;if(!demoCanPlay())return;setDeskView(deskTourViews[(deskTourViews.indexOf(deskView)+1)%4]);scheduleDemo();},demoDwell);}
-  function stopDemo(mode='manual'){demoMode=mode;clearTimeout(demoTimer);demoTimer=0;updateDeskTour();}
-  function takeDeskControl(event){if(event.target.closest('#demo-playback-toggle'))return;if(demoMode!=='manual')stopDemo();}
-  ['pointerdown','click','focusin','keydown'].forEach(type=>deskWorkspace.addEventListener(type,takeDeskControl,true));
-  deskWorkspace.addEventListener('wheel',takeDeskControl,{passive:true});
-  demoToggle.addEventListener('click',()=>{if(demoMode==='playing'){stopDemo('paused');return;}demoMode='playing';updateDeskTour();scheduleDemo();});
-  if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{demoVisible=entries[0].isIntersecting;scheduleDemo();},{threshold:0});observer.observe(deskWorkspace);}else{const updateVisibility=()=>{const box=deskWorkspace.getBoundingClientRect(),visible=box.bottom>0&&box.top<window.innerHeight;if(visible!==demoVisible){demoVisible=visible;scheduleDemo();}};window.addEventListener('scroll',updateVisibility,{passive:true});window.addEventListener('resize',updateVisibility,{passive:true});}
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelDeskMotion();scheduleDemo();});
-  window.addEventListener('pagehide',()=>{demoPageActive=false;cancelDeskMotion();scheduleDemo();});window.addEventListener('pageshow',()=>{demoPageActive=true;scheduleDemo();});
-  reduced.addEventListener('change',event=>{if(event.matches){cancelDeskMotion();stopDemo('paused');}});
-  renderDesk();updateDeskTour();scheduleDemo();
 
 })();
 </script>
@@ -1936,7 +1844,7 @@
       '[data-od-id="hero"]',
       '[data-od-id="firm-thesis"]',
       '[data-od-id="architecture"]',
-      '[data-od-id="research-demo"]',
+      '[data-od-id="market-view"]',
       '[data-od-id="how-it-works"]',
       '[data-od-id="quote-example"]',
       '[data-od-id="roadmap"]',
@@ -2025,7 +1933,7 @@
   }
 
   function setupReveals() {
-    const elements = document.querySelectorAll('.firm-thesis-grid, .architecture-heading, .architecture-flow, .architecture-support, .architecture-domains, .desk-section-heading, .investment-desk, .principles-split, .agent-principles, .quote-disclosure, .roadmap-split, .closing .container');
+    const elements = document.querySelectorAll('.firm-thesis-grid, .architecture-heading, .architecture-flow, .architecture-support, .architecture-domains, .desk-section-heading, .market-snap, .principles-split, .agent-principles, .quote-disclosure, .roadmap-split, .closing .container');
     elements.forEach(element => element.classList.add('motion-reveal'));
     document.body.classList.add('motion-enhanced');
     if (!('IntersectionObserver' in window)) {
@@ -2160,5 +2068,79 @@ Photography: Simon Berger, https://www.pexels.com/photo/mountain-covered-with-sn
 License: https://www.pexels.com/license/
 Original Alpine Vector symbol from the selected FalconOS brand board.
 -->
+
+<script id="market-snap-script">
+(() => {
+  'use strict';
+  const root = document.getElementById('market-snap');
+  if (!root || !window.fetch) return;
+  const fin = v => typeof v === 'number' && Number.isFinite(v);
+  const N = v => Number(v.toFixed(3));
+  const labels = { 'usd-coin': 'USDC', solana: 'SOL', 'jupiter-exchange-solana': 'JUP' };
+  let snap = null, sel = 'usd-coin';
+  function fmtPrice(v) { return v >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : v < 10 ? v.toFixed(4) : v.toFixed(2); }
+  function money(v) { if (v >= 1e9) return '
+ + (v / 1e9).toFixed(2) + 'B'; if (v >= 1e6) return '
+ + (v / 1e6).toFixed(1) + 'M'; if (v >= 1e3) return '
+ + (v / 1e3).toFixed(1) + 'K'; return '
+ + v.toFixed(0); }
+  function pct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
+  function ago(sec) { const d = Date.now() / 1000 - sec; if (d < 0) return 'just now'; if (d < 90) return Math.round(d) + 's ago'; if (d < 5400) return Math.round(d / 60) + 'm ago'; if (d < 172800) return Math.round(d / 3600) + 'h ago'; return Math.round(d / 86400) + 'd ago'; }
+  function normOhlc(raw) {
+    if (!Array.isArray(raw) || raw.length < 2) return null;
+    let prevT = -Infinity; const out = [];
+    for (const row of raw) {
+      if (!Array.isArray(row) || row.length !== 5) return null;
+      const [t, o, h, l, c] = row;
+      if (!fin(t) || !fin(o) || !fin(h) || !fin(l) || !fin(c) || t <= 0 || t <= prevT || o <= 0 || h <= 0 || l <= 0 || c <= 0) return null;
+      if (!(h >= l && h >= o && h >= c && l <= o && l <= c)) return null;
+      prevT = t; out.push({ o, h, l, c });
+    }
+    return out;
+  }
+  function svgCandles(cs, w, h) {
+    const pad = 4, hi = Math.max(...cs.map(c => c.h)), lo = Math.min(...cs.map(c => c.l));
+    const y = v => N(pad + (h - 2 * pad) * (1 - (v - lo) / ((hi - lo) || 1)));
+    const cw = (w - 2 * pad) / cs.length;
+    let s = '';
+    cs.forEach((c, i) => {
+      const x = N(pad + cw * i + cw / 2), col = c.c >= c.o ? 'var(--accent)' : 'var(--muted)';
+      s += '<line x1="' + x + '" x2="' + x + '" y1="' + y(c.h) + '" y2="' + y(c.l) + '" stroke="' + col + '"/>';
+      const yo = y(c.o), yc = y(c.c), top = Math.min(yo, yc), ht = Math.max(1, Math.abs(yc - yo));
+      s += '<rect x="' + N(x - cw * 0.32) + '" y="' + top + '" width="' + N(cw * 0.64) + '" height="' + N(ht) + '" fill="' + col + '"/>';
+    });
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' + s + '</svg>';
+  }
+  function render() {
+    const inst = snap?.instruments?.[sel];
+    if (!inst) return;
+    const cs = normOhlc(inst.ohlc);
+    document.getElementById('ms-chart').innerHTML = cs ? svgCandles(cs, 280, 120) : '';
+    const up = inst.change24h >= 0;
+    document.getElementById('ms-read').innerHTML = '<span>' + labels[sel] + '/USD</span><b>' + fmtPrice(inst.price) + '</b><span class="' + (up ? 'pos' : '') + '">' + pct(inst.change24h) + '</span><span class="muted">' + money(inst.vol24h) + ' 24h vol</span>';
+  }
+  fetch('/dash-snapshot.json')
+    .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+    .then(data => {
+      if (!data?.instruments) throw new Error('bad snapshot');
+      for (const id of Object.keys(labels)) {
+        const s = data.instruments[id];
+        if (!s || !fin(s.price) || s.price <= 0) throw new Error('invalid ' + id);
+      }
+      snap = data;
+      const obsEl = document.getElementById('ms-observed');
+      obsEl.textContent = fin(data.observedAt) ? 'observed ' + ago(data.observedAt) : 'as of build';
+      if (fin(data.observedAt)) obsEl.title = new Date(data.observedAt * 1000).toISOString();
+      render();
+      root.hidden = false;
+      root.querySelectorAll('[data-ms]').forEach(btn => btn.addEventListener('click', () => {
+        sel = btn.dataset.ms;
+        root.querySelectorAll('[data-ms]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+        render();
+      }));
+    })
+    .catch(() => {});
+})();
+</script>
 </body>
 </html>
