@@ -1,9 +1,7 @@
-// Regenerate the real market-data fallback snapshot for /dash.
-// Best-effort: on any network/validation failure, keep the existing committed
-// snapshot and exit 0 so it never fails the build. The committed file is a real
-// CoinGecko capture with source + observedAt; the page prefers a live fetch and
-// only falls back to this snapshot (marked stale). The write is atomic (temp +
-// rename) so an interrupted run can never truncate the last-known-good file.
+// Regenerate the committed market snapshot for /dash when COINGECKO_API_KEY is set
+// in the build environment. Without a key, skip immediately and keep the last
+// committed snapshot. On any network/validation failure, exit 0 so the build
+// never fails. The write is atomic (temp + rename).
 import { writeFile, rename } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -20,8 +18,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const fin = (v) => typeof v === 'number' && Number.isFinite(v);
 
+// Optional supported auth: set COINGECKO_API_KEY in the build environment and
+// the refresher sends it as x-cg-demo-api-key. The key never reaches the page.
+const KEY = process.env.COINGECKO_API_KEY || '';
+
 async function j(url) {
-  const r = await fetch(url, { headers: { accept: 'application/json' } });
+  const headers = { accept: 'application/json' };
+  if (KEY) headers['x-cg-demo-api-key'] = KEY;
+  const r = await fetch(url, { headers });
   if (!r.ok) throw new Error(`${url} -> ${r.status}`);
   return r.json();
 }
@@ -51,6 +55,11 @@ function validPrice(p, nowSec) {
   if (p.last_updated_at > nowSec + 300) return false;
   if (p.last_updated_at < nowSec - 7 * 86400) return false;
   return true;
+}
+
+if (!KEY) {
+  console.log('dash snapshot refresh skipped (no COINGECKO_API_KEY)');
+  process.exit(0);
 }
 
 try {

@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="description" content="FalconOS / Falcon Investment market dashboard. Live read-only market data from CoinGecko across sample instruments. No orders, no custody, no execution; market prices are not investment advice."/>
+  <meta name="description" content="FalconOS / Falcon Investment market dashboard. Read-only market snapshot from CoinGecko across sample instruments. No orders, no custody, no execution; market prices are not investment advice."/>
   <meta name="theme-color" content="#252a2b"/>
   <meta name="color-scheme" content="dark"/>
   <link rel="icon" type="image/png" href="/falcon-symbol.png"/>
-  <title>FalconOS Dashboard · Live market data</title>
+  <title>FalconOS Dashboard · Market snapshot</title>
   <style>
     :root {
       --bg: oklch(0.191836 0.009832 234.362437);
@@ -160,8 +160,8 @@
 
   <main class="wrap">
     <div class="banner" role="note">
-      <strong>Live market data</strong>
-      <span>Read-only prices from CoinGecko. No orders, no custody, no execution. Market prices are not investment advice.</span>
+      <strong>Market snapshot</strong>
+      <span>Read-only prices from a committed CoinGecko capture. No orders, no custody, no execution. Market prices are not investment advice.</span>
     </div>
 
     <div class="controls">
@@ -174,7 +174,6 @@
       <span class="spacer-x"></span>
       <div class="source-line">
         <span class="fresh" id="dash-fresh" data-state="loading"><i aria-hidden="true"></i><span id="dash-fresh-label">Loading</span></span>
-        <button type="button" class="refresh-btn" id="dash-refresh">Refresh</button>
       </div>
     </div>
 
@@ -182,14 +181,10 @@
       <section class="panel p-price" aria-label="Price">
         <div class="panel-head">
           <span id="dt-inst-head">Price</span>
-          <span class="tf" role="group" aria-label="Timeframe">
-            <button type="button" data-tf="1D" aria-pressed="true">1D</button>
-            <button type="button" data-tf="7D" aria-pressed="false">7D</button>
-            <button type="button" data-tf="30D" aria-pressed="false">30D</button>
-          </span>
+          <span class="tag">1D</span>
         </div>
         <div class="chart gridbg" id="dt-price-chart"><svg id="dt-price" role="img" aria-label="Price chart"></svg></div>
-        <div class="read" id="dt-price-read"><span class="muted">Loading real data…</span></div>
+        <div class="read" id="dt-price-read"><span class="muted">Loading snapshot…</span></div>
       </section>
 
       <section class="panel p-source" aria-label="Data source and freshness">
@@ -220,7 +215,7 @@
       </section>
 
       <section class="panel p-instruments" aria-label="Instruments">
-        <div class="panel-head"><span>Instruments</span><span class="tag">Live prices</span></div>
+        <div class="panel-head"><span>Instruments</span><span class="tag">Snapshot</span></div>
         <table>
           <thead><tr><th>Asset</th><th>Price</th><th>24h</th><th>24h vol</th></tr></thead>
           <tbody id="dash-instruments-body"><tr><td colspan="4" class="muted" style="padding:14px">Loading…</td></tr></tbody>
@@ -239,16 +234,15 @@
   <script>
   (function () {
     'use strict';
-    var API = 'https://api.coingecko.com/api/v3';
     var SNAPSHOT = '/dash-snapshot.json';
     var INSTR = {
       liquidity: { id: 'usd-coin', sym: 'USDC', name: 'USD Coin' },
       payments: { id: 'solana', sym: 'SOL', name: 'Solana' },
       markets: { id: 'jupiter-exchange-solana', sym: 'JUP', name: 'Jupiter' },
     };
-    var TF = { '1D': 1, '7D': 7, '30D': 30 };
     var order = ['liquidity', 'payments', 'markets'];
-    var state = { mandate: 'liquidity', tf: '1D', status: 'loading' };
+    var state = { mandate: 'liquidity' };
+    var snapData = null;
     var model = null;
 
     function byId(id) { return document.getElementById(id); }
@@ -270,6 +264,7 @@
     function money(v) { if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B'; if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M'; if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K'; return '$' + v.toFixed(0); }
     function pct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
     function ago(sec) { var d = Date.now() / 1000 - sec; if (d < 0) d = 0; if (d < 90) return Math.round(d) + 's ago'; if (d < 5400) return Math.round(d / 60) + 'm ago'; if (d < 172800) return Math.round(d / 3600) + 'h ago'; return Math.round(d / 86400) + 'd ago'; }
+    function iso(sec) { return fin(sec) ? new Date(sec * 1000).toISOString() : '—'; }
     function normOhlc(raw) {
       if (!Array.isArray(raw) || raw.length < 2) return null;
       var out = [], prevT = -Infinity;
@@ -300,34 +295,27 @@
     }
     function volatility(cs) { var r = []; for (var i = 1; i < cs.length; i++) r.push(Math.log(cs[i].c / cs[i - 1].c)); if (!r.length) return 0; var m = r.reduce(function (a, b) { return a + b; }, 0) / r.length; var v = r.reduce(function (a, b) { return a + (b - m) * (b - m); }, 0) / r.length; return Math.sqrt(v * r.length) * 100; }
 
-    function priceUrl() { return API + '/simple/price?ids=' + order.map(function (k) { return INSTR[k].id; }).join(',') + '&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true'; }
-    function ohlcUrl(mandate, tf) { return API + '/coins/' + INSTR[mandate].id + '/ohlc?vs_currency=usd&days=' + TF[tf]; }
-
-    function buildLive(price, ohlc, mandate, tf) {
-      var instruments = order.map(function (k) { var p = price[INSTR[k].id]; if (!p) throw new Error('missing ' + k); var m = { key: k, sym: INSTR[k].sym, name: INSTR[k].name, price: p.usd, vol24h: p.usd_24h_vol, change24h: p.usd_24h_change, updatedAt: p.last_updated_at }; if (!fin(m.price) || m.price <= 0 || !fin(m.vol24h) || m.vol24h < 0 || !fin(m.change24h)) throw new Error('invalid ' + k); return m; });
-      var cs = normOhlc(ohlc); if (!cs) throw new Error('invalid ohlc');
-      var current = instruments.filter(function (x) { return x.key === mandate; })[0];
-      var nowSec = Date.now() / 1000;
-      var observedAt = current.updatedAt;
-      if (!fin(observedAt) || observedAt > nowSec + 300) throw new Error('invalid timestamp');
-      var isFresh = nowSec - observedAt <= 1800;
-      return { instruments: instruments, current: current, ohlc: cs, ohlcTf: tf, observedAt: observedAt, origin: 'live', live: isFresh };
-    }
     function buildSnapshot(snap, mandate) {
       if (!snap || !snap.instruments) throw new Error('bad snapshot');
-      var instruments = order.map(function (k) { var s = snap.instruments[INSTR[k].id]; if (!s) throw new Error('missing ' + k); var m = { key: k, sym: INSTR[k].sym, name: INSTR[k].name, price: s.price, vol24h: s.vol24h, change24h: s.change24h, updatedAt: s.updatedAt }; if (!fin(m.price) || m.price <= 0 || !fin(m.vol24h) || m.vol24h < 0 || !fin(m.change24h)) throw new Error('invalid ' + k); return m; });
-      var cs = normOhlc(snap.instruments[INSTR[mandate].id].ohlc); if (!cs) throw new Error('invalid snapshot ohlc');
+      var instruments = order.map(function (k) {
+        var s = snap.instruments[INSTR[k].id];
+        if (!s) throw new Error('missing ' + k);
+        var m = { key: k, sym: INSTR[k].sym, name: INSTR[k].name, price: s.price, vol24h: s.vol24h, change24h: s.change24h, updatedAt: s.updatedAt };
+        if (!fin(m.price) || m.price <= 0 || !fin(m.vol24h) || m.vol24h < 0 || !fin(m.change24h)) throw new Error('invalid ' + k);
+        return m;
+      });
+      var cs = normOhlc(snap.instruments[INSTR[mandate].id].ohlc);
+      if (!cs) throw new Error('invalid snapshot ohlc');
       var current = instruments.filter(function (x) { return x.key === mandate; })[0];
-      var observedAt = fin(current.updatedAt) ? current.updatedAt : snap.observedAt;
-      return { instruments: instruments, current: current, ohlc: cs, ohlcTf: '1D', observedAt: observedAt, origin: 'snapshot', live: false };
+      var observedAt = fin(snap.observedAt) ? snap.observedAt : current.updatedAt;
+      return { instruments: instruments, current: current, ohlc: cs, ohlcTf: '1D', observedAt: observedAt };
     }
 
     function setFresh(stateName, label) { var el = byId('dash-fresh'); el.setAttribute('data-state', stateName); byId('dash-fresh-label').textContent = label; }
 
     function renderNoData() {
-      state.status = 'nodata';
       setFresh('nodata', 'No data');
-      byId('dt-price-chart').innerHTML = '<div class="nodata">NO_DATA · could not load market data</div>';
+      byId('dt-price-chart').innerHTML = '<div class="nodata">NO_DATA · could not load market snapshot</div>';
       byId('dt-price-read').innerHTML = '<span class="muted">NO_DATA</span>';
       byId('dt-vol').textContent = 'NO_DATA';
       byId('dt-volshare').innerHTML = '';
@@ -338,92 +326,61 @@
 
     function render() {
       if (!model) { renderNoData(); return; }
-      var live = model.live, cur = model.current;
-      var originLabel = live ? 'live' : (model.origin === 'snapshot' ? 'snapshot' : 'stale');
-      state.status = live ? 'live' : 'stale';
-      setFresh(state.status, live ? 'Live' : 'Stale');
-      // price
+      var cur = model.current;
+      setFresh('snapshot', 'Snapshot');
       var w = byId('dt-price-chart'); if (!w.querySelector('svg')) w.innerHTML = '<svg id="dt-price" role="img"></svg>';
       byId('dt-price').outerHTML = svgCandles(model.ohlc, 320, 150).replace('<svg ', '<svg id="dt-price" role="img" ').replace(' aria-hidden="true"', '');
-      byId('dt-price').setAttribute('aria-label', cur.name + ' price, ' + model.ohlcTf + ', ' + originLabel);
+      byId('dt-price').setAttribute('aria-label', cur.name + ' price, 1D, snapshot');
       byId('dt-inst-head').textContent = cur.sym + ' / USD · ' + cur.name;
       var up = cur.change24h >= 0;
-      byId('dt-price-read').innerHTML = '<span>' + cur.sym + '/USD</span><b>' + fmtPrice(cur.price) + '</b><span class="' + (up ? 'up' : 'down') + '">' + pct(cur.change24h) + '</span><span class="muted">' + originLabel + '</span>';
-      // volume + share
+      byId('dt-price-read').innerHTML = '<span>' + cur.sym + '/USD</span><b>' + fmtPrice(cur.price) + '</b><span class="' + (up ? 'up' : 'down') + '">' + pct(cur.change24h) + '</span><span class="muted">snapshot</span>';
       byId('dt-vol').textContent = money(cur.vol24h);
       byId('dt-vol-sym').textContent = cur.sym + ' · reported 24h volume';
       var totVol = model.instruments.reduce(function (a, x) { return a + x.vol24h; }, 0) || 1;
-      byId('dt-volshare').innerHTML = model.instruments.map(function (x) { var share = x.vol24h / totVol * 100; return '<li data-current="' + (x.key === cur.key) + '"><span class="sym">' + x.sym + '</span><span class="track"><span class="fill" style="width:' + N(share) + '%"></span></span><span class="val">' + share.toFixed(1) + '%</span></li>'; }).join('');
-      // stats
+      byId('dt-volshare').innerHTML = model.instruments.map(function (x) {
+        var share = x.vol24h / totVol * 100;
+        return '<li data-current="' + (x.key === cur.key) + '"><span class="sym">' + x.sym + '</span><span class="track"><span class="fill" style="width:' + N(share) + '%"></span></span><span class="val">' + share.toFixed(1) + '%</span></li>';
+      }).join('');
       var hi = Math.max.apply(0, model.ohlc.map(function (c) { return c.h; })), lo = Math.min.apply(0, model.ohlc.map(function (c) { return c.l; }));
       byId('dt-stat-change').innerHTML = '<span class="' + (up ? 'up' : 'down') + '">' + pct(cur.change24h) + '</span>';
       byId('dt-stat-vol').textContent = volatility(model.ohlc).toFixed(2) + '%';
       byId('dt-stat-high').textContent = fmtPrice(hi);
       byId('dt-stat-low').textContent = fmtPrice(lo);
-      byId('dt-stats-tf').textContent = '24h · ' + model.ohlcTf;
-      // instruments
-      byId('dash-instruments-body').innerHTML = model.instruments.map(function (x) { var u = x.change24h >= 0; return '<tr data-current="' + (x.key === cur.key) + '"><td class="sym">' + x.sym + '</td><td>' + fmtPrice(x.price) + '</td><td class="' + (u ? 'up' : 'down') + '">' + pct(x.change24h) + '</td><td class="muted">' + money(x.vol24h) + '</td></tr>'; }).join('');
-      // source panel
+      byId('dt-stats-tf').textContent = '24h · 1D';
+      byId('dash-instruments-body').innerHTML = model.instruments.map(function (x) {
+        var u = x.change24h >= 0;
+        return '<tr data-current="' + (x.key === cur.key) + '"><td class="sym">' + x.sym + '</td><td>' + fmtPrice(x.price) + '</td><td class="' + (u ? 'up' : 'down') + '">' + pct(x.change24h) + '</td><td class="muted">' + money(x.vol24h) + '</td></tr>';
+      }).join('');
       byId('dt-source').textContent = 'CoinGecko';
-      byId('dt-live-tag').textContent = originLabel;
-      byId('dt-state').innerHTML = live ? '<span class="up">Live</span>' : (model.origin === 'snapshot' ? '<span class="down">Stale snapshot</span>' : '<span class="down">Stale · provider lag</span>');
-      byId('dt-observed').textContent = fin(model.observedAt) ? ago(model.observedAt) : '—';
+      byId('dt-live-tag').textContent = 'snapshot';
+      byId('dt-state').innerHTML = '<span class="down">Snapshot</span>';
+      var observed = byId('dt-observed');
+      observed.textContent = fin(model.observedAt) ? ago(model.observedAt) : '—';
+      observed.title = iso(model.observedAt);
       byId('dt-observed-inst').textContent = cur.sym + '/USD';
     }
 
-    var seq = 0;
-    var cache = { price: null, priceAt: 0, pricePending: null, ohlc: {} };
-    var PRICE_TTL = 60000, OHLC_TTL = 300000;
-    function getPrice(force) {
-      if (force) { cache.price = null; cache.pricePending = null; }
-      if (cache.price && Date.now() - cache.priceAt < PRICE_TTL) return Promise.resolve(cache.price);
-      if (cache.pricePending) return cache.pricePending;
-      var p = fetchJson(priceUrl()).then(function (data) {
-        if (cache.pricePending === p) { cache.price = data; cache.priceAt = Date.now(); cache.pricePending = null; }
-        return data;
-      }, function (err) {
-        if (cache.pricePending === p) cache.pricePending = null;
-        throw err;
-      });
-      cache.pricePending = p;
-      return p;
-    }
-    function getOhlc(mandate, tf, force) {
-      var key = mandate + ':' + tf;
-      var e = cache.ohlc[key] || (cache.ohlc[key] = { data: null, at: 0, pending: null });
-      if (force) { e.data = null; e.pending = null; }
-      if (e.data && Date.now() - e.at < OHLC_TTL) return Promise.resolve(e.data);
-      if (e.pending) return e.pending;
-      var p = fetchJson(ohlcUrl(mandate, tf)).then(function (d) {
-        if (e.pending === p) { e.data = d; e.at = Date.now(); e.pending = null; }
-        return d;
-      }, function (err) {
-        if (e.pending === p) e.pending = null;
-        throw err;
-      });
-      e.pending = p;
-      return p;
-    }
-    async function load(initial, force) {
-      var token = ++seq;
-      var mandate = state.mandate, tf = state.tf;
-      if (initial) setFresh('loading', 'Loading');
+    function selectMandate(mandate) {
+      if (!snapData) return;
       try {
-        var price = await getPrice(force);
-        var ohlc = await getOhlc(mandate, tf, force);
-        if (token !== seq) return;
-        model = buildLive(price, ohlc, mandate, tf);
+        model = buildSnapshot(snapData, mandate);
         render();
       } catch (e) {
-        if (token !== seq) return;
-        try {
-          var snap = await fetchJson(SNAPSHOT, 6000);
-          if (token !== seq) return;
-          model = buildSnapshot(snap, mandate);
-          render();
-        } catch (e2) {
-          if (token === seq) { model = null; renderNoData(); }
-        }
+        model = null;
+        renderNoData();
+      }
+    }
+
+    async function load() {
+      setFresh('loading', 'Loading');
+      try {
+        snapData = await fetchJson(SNAPSHOT, 6000);
+        model = buildSnapshot(snapData, state.mandate);
+        render();
+      } catch (e) {
+        snapData = null;
+        model = null;
+        renderNoData();
       }
     }
 
@@ -431,21 +388,10 @@
       btn.addEventListener('click', function () {
         state.mandate = btn.dataset.mandate;
         Array.prototype.forEach.call(document.querySelectorAll('[data-mandate]'), function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
-        load(true);
+        selectMandate(state.mandate);
       });
     });
-    Array.prototype.forEach.call(document.querySelectorAll('[data-tf]'), function (btn) {
-      btn.addEventListener('click', function () {
-        state.tf = btn.dataset.tf;
-        Array.prototype.forEach.call(document.querySelectorAll('[data-tf]'), function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
-        load(true);
-      });
-    });
-    byId('dash-refresh').addEventListener('click', function () { load(false, true); });
-
-    // Gentle auto-refresh while the tab is visible.
-    setInterval(function () { if (!document.hidden) load(false); }, 90000);
-    load(true);
+    load();
   })();
   </script>
 </body>
