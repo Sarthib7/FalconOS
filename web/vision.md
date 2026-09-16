@@ -28,4 +28,4 @@ Evidence quote: "FalconOS is the umbrella product." "Falcon Investment is a coun
 
 ## Open decisions
 
-[INFERRED] Decide who owns the manual Pages project and DNS setup, and whether the waitlist should ever move beyond a local preview.
+[INFERRED] Decide whether the waitlist should ever move beyond a local preview.
