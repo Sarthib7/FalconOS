@@ -18,7 +18,7 @@ Evidence quote: "FalconOS is the umbrella product." "Falcon Investment is a coun
 
 ## Boundaries
 
-[VERIFIED, coordinator read] Cloudflare Pages deployment and DNS setup are manual and were not performed.
+[VERIFIED, live fetch 2026-09-16] `https://falconos.markets/` returns HTTP 200 and serves the current page. Cloudflare Pages and DNS are live and user-managed.
 
 [BOUNDARY] A networked waitlist, persistent storage, signing, and transaction behavior remain outside this site's current scope.
 

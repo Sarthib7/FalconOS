@@ -15,7 +15,7 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 
 ## Custom domain (manual)
 
-After creating the Pages project, open **Pages → the project → Custom domains → Set up a custom domain** and enter the canonical hostname `falconos.markets`. Follow the DNS and certificate instructions Cloudflare presents for the domain. This repository does not claim that the domain is live.
+After creating the Pages project, open **Pages → the project → Custom domains → Set up a custom domain** and enter the canonical hostname `falconos.markets`. Follow the DNS and certificate instructions Cloudflare presents for the domain. The domain is live at `https://falconos.markets/` (verified 2026-09-16, HTTP 200).
 
 ## Sources
 
