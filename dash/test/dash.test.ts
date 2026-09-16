@@ -6,6 +6,7 @@ import { runCentralAdvice, runLiveAdvice } from '../council.ts';
 import { renderAdvice } from '../render.ts';
 import type { FieldCapture } from '../../stocks/stocks.ts';
 import type { PythPriceResult } from '../pyth.ts';
+import { parsePreStocks } from '../prestocks.ts';
 
 const AT = '2026-09-16T00:00:00.000Z';
 
@@ -106,4 +107,17 @@ test('V65: a large token-vs-underlying dislocation is vetoed to BLOCKED', async 
   assert.equal(advice.status, 'BLOCKED');
   const review = advice.riskReview;
   assert.ok(review.kind === 'risk-review' && review.reasons.some(reason => reason.includes('dislocated')));
+});
+
+test('V64: parsePreStocks maps only valid rows by mint', () => {
+  const entries = parsePreStocks([
+    { name: 'OpenAI PreStocks', symbol: 'OPENAI', contract_address: 'PreMint1', markPrice: 967.4994641333656, tokenPrice: 983.5880055787931, supply: 1 },
+    { symbol: 'NOMINT', markPrice: 10, tokenPrice: 10 },
+    { symbol: 'BADPRICE', contract_address: 'PreMint2', markPrice: -5, tokenPrice: 10 },
+    'garbage',
+  ]);
+  assert.equal(entries.size, 1);
+  const entry = entries.get('PreMint1');
+  assert.equal(entry?.symbol, 'OPENAI');
+  assert.equal(entry?.markPrice, '967.4994641333656');
 });

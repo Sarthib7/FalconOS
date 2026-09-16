@@ -122,11 +122,11 @@ export function dashBoundary(config: DashConfig, underlyingRefs?: ReadonlyMap<st
   return createHostTransportBoundary(transport);
 }
 
-export async function runLiveAdvice(config: DashConfig, adapter: LiveEvidenceAdapter): Promise<{ snapshot: CanonicalBasketSnapshot; advice: StocksAdviceResponse }> {
+export async function runLiveAdvice(config: DashConfig, adapter: LiveEvidenceAdapter, underlyingRefs?: ReadonlyMap<string, PythUnderlyingRef | null>): Promise<{ snapshot: CanonicalBasketSnapshot; advice: StocksAdviceResponse }> {
   const snapshot = await buildLiveBasketSnapshot(config, adapter);
   const stamp = `${Date.now()}`;
   const request = createStocksAdviceRequest({ requestId: `dash-${stamp}`, runId: `run-${stamp}`, snapshot });
-  const advice = await invokeStocksAdvice(dashBoundary(config), request);
+  const advice = await invokeStocksAdvice(dashBoundary(config, underlyingRefs), request);
   return { snapshot, advice };
 }
 
