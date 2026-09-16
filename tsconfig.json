@@ -11,5 +11,5 @@
     "noUncheckedIndexedAccess": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "stablecoins/**/*.ts", "preps/**/*.ts", "stocks/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "stablecoins/**/*.ts", "preps/**/*.ts", "stocks/**/*.ts", "dash/**/*.ts", "test/**/*.ts"]
 }
