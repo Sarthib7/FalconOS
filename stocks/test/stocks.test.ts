@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBasketProposal, createCanonicalBasketSnapshot, createHostTransportBoundary, createRiskReview, createStocksAdviceRequest, invokeStocksAdvice, validateCanonicalBasketSnapshot, STOCKS_SCHEMA_VERSION } from '../stocks.ts';
+import { createBasketProposal, createCanonicalBasketSnapshot, createHostTransportBoundary, createRiskReview, createStocksAdviceRequest, invokeStocksAdvice, validateCanonicalBasketSnapshot, validateStocksAdviceResponse, STOCKS_SCHEMA_VERSION } from '../stocks.ts';
 import type { AssetCaptureInput, AssetSourcePrecedence, BasketProposal, CanonicalBasketSnapshotInput, FieldCapture, SourceRole, SourceSpec, StockField, StockRegistryEntry } from '../stocks.ts';
 
 const EVENT_AT = '2026-09-16T00:00:00.000Z';
@@ -326,4 +326,14 @@ test('V56: basket leg weights must sum to 10000 bps', () => {
 
 test('V58: a critical risk review cannot pass', () => {
   assert.throws(() => createRiskReview({ reviewId: 'rev', requestId: 'r1', runId: 'run1', status: 'PASS', critical: true, reasons: [], snapshotHash: 'b'.repeat(64), proposalHash: null }), /cannot pass/);
+});
+
+test('V58: validateStocksAdviceResponse rejects a forged published advice', async () => {
+  const { snapshot, proposal } = readyProposal();
+  const advice = await invokeStocksAdvice(councilBoundary(proposal, { status: 'PASS' }), createStocksAdviceRequest({ requestId: 'r1', runId: 'run1', snapshot }));
+  assert.equal(advice.status, 'PUBLISHED');
+  const forged = structuredClone(advice) as { proposal: unknown };
+  forged.proposal = null;
+  deepFreeze(forged);
+  assert.throws(() => validateStocksAdviceResponse(forged), /requires a proposal/);
 });
