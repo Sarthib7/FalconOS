@@ -6,7 +6,7 @@ import { runCentralAdvice, runLiveAdvice } from '../council.ts';
 import { renderAdvice } from '../render.ts';
 import type { FieldCapture } from '../../stocks/stocks.ts';
 import type { PythPriceResult } from '../pyth.ts';
-import { parsePreStocks } from '../prestocks.ts';
+import { divideIntegerByDecimal, effectiveMultiplier, parsePreStocks, scaledPreStocksAdapter } from '../prestocks.ts';
 
 const AT = '2026-09-16T00:00:00.000Z';
 
@@ -120,4 +120,34 @@ test('V64: parsePreStocks maps only valid rows by mint', () => {
   const entry = entries.get('PreMint1');
   assert.equal(entry?.symbol, 'OPENAI');
   assert.equal(entry?.markPrice, '967.4994641333656');
+  assert.equal(entry?.tokenPrice, '983.5880055787931');
+});
+
+test('V66: effectiveMultiplier picks the pending multiplier once its timestamp has passed', () => {
+  const before = effectiveMultiplier({ multiplier: '1', newMultiplier: '5', newMultiplierEffectiveTimestamp: 1781065800 }, 1781065799);
+  const after = effectiveMultiplier({ multiplier: '1', newMultiplier: '1.4861347', newMultiplierEffectiveTimestamp: 1784305800 }, 1784305800);
+  assert.equal(before, '1');
+  assert.equal(after, '1.4861347');
+});
+
+test('V66: divideIntegerByDecimal normalizes raw pool units to scaled units', () => {
+  assert.equal(divideIntegerByDecimal('1477000000', '1.4861347'), '993853383');
+  assert.equal(divideIntegerByDecimal('605000000', '5'), '121000000');
+});
+
+test('V66: scaledPreStocksAdapter fails closed when issuer corroboration disagrees', async () => {
+  const inner = fixtureAdapter({ mintA: { price: '1477.00', liquidity: '5000000', at: AT } });
+  const adapter = scaledPreStocksAdapter(inner, new Map([['mintA', '1.4861347']]), new Map([['mintA', '900.00']]), 500);
+  const captures = await adapter.fetchAsset({ assetId: 'mintA', underlying: 'OPENAI', targetWeightBps: 10_000, priceScale: 6, quantityScale: 2, minLiquidity: '100000', maxWeightBps: 10_000 });
+  assert.equal(captures.price.status, 'outage');
+  assert.equal(captures.price.normalizedValue, null);
+  assert.match(captures.price.failure?.reason ?? '', /source-disagreement/);
+});
+
+test('V66: scaledPreStocksAdapter publishes normalized price when issuer agrees', async () => {
+  const inner = fixtureAdapter({ mintA: { price: '1477.00', liquidity: '5000000', at: AT } });
+  const adapter = scaledPreStocksAdapter(inner, new Map([['mintA', '1.4861347']]), new Map([['mintA', '993.853383']]), 500);
+  const captures = await adapter.fetchAsset({ assetId: 'mintA', underlying: 'OPENAI', targetWeightBps: 10_000, priceScale: 6, quantityScale: 2, minLiquidity: '100000', maxWeightBps: 10_000 });
+  assert.equal(captures.price.status, 'ok');
+  assert.equal(captures.price.normalizedValue, '993853383');
 });

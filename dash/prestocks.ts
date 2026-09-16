@@ -1,12 +1,18 @@
+import type { FieldCapture } from '../stocks/stocks.ts';
+import type { AssetCaptures, DashAssetConfig, LiveEvidenceAdapter } from './adapters.ts';
+import { scaleDecimalToInteger } from './adapters.ts';
 import type { PythUnderlyingRef } from './pyth.ts';
 
 // PreStocks public API (keyless), from the Stocklana track: https://prestocks.com/api/prestocks
-// Returns tokenized pre-IPO stocks with real Solana mints (contract_address), the on-chain
-// tokenPrice, and the SPV markPrice of the underlying private company. The response carries no
-// source timestamp, so references attest local receipt time only. markPrice becomes the
-// underlying reference for the dislocation veto; price/liquidity evidence for these mints comes
-// from DEX Screener pools.
+// Rows carry real Solana mints (contract_address), the SPV markPrice per underlying share, and
+// the issuer tokenPrice per *scaled* token unit. The mints are token-2022 with the scaled-UI-
+// amount extension (verified on-chain 2026-09-16: OPENAI multiplier 1.4861347, SPACEX 5, both
+// past their activation timestamps, plus a 50bps transfer fee). DEX pools and Jupiter price the
+// RAW unit while wallets and the issuer price the SCALED unit, so raw pool evidence MUST be
+// divided by the on-chain effective multiplier before any reference comparison (V66). The API
+// response carries no source timestamp, so references attest local receipt time only.
 const PRESTOCKS_URL = process.env.PRESTOCKS_URL ?? 'https://prestocks.com/api/prestocks';
+const RPC_URL = process.env.SOLANA_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
 const DECIMAL = /^\d+(\.\d+)?$/;
 
 export interface PreStockEntry {
@@ -14,6 +20,12 @@ export interface PreStockEntry {
   symbol: string;
   markPrice: string;
   tokenPrice: string;
+}
+
+export interface ScaledUiState {
+  multiplier: string;
+  newMultiplier: string | null;
+  newMultiplierEffectiveTimestamp: number | null;
 }
 
 function positiveDecimal(value: unknown): string | null {
@@ -40,22 +52,151 @@ export function parsePreStocks(value: unknown): Map<string, PreStockEntry> {
   return entries;
 }
 
-// Read-only GET. On any failure the map holds null refs, so the dashboard degrades to
-// evidence-only rendering with no dislocation check instead of fabricating references.
-export async function fetchPreStocksRefs(mints: readonly string[]): Promise<Map<string, PythUnderlyingRef | null>> {
+// The token-2022 scaled-UI-amount rule: the pending multiplier governs once its activation
+// timestamp has passed; before that the current multiplier holds.
+export function effectiveMultiplier(state: ScaledUiState, nowSeconds: number): string {
+  if (state.newMultiplier !== null && state.newMultiplierEffectiveTimestamp !== null && nowSeconds >= state.newMultiplierEffectiveTimestamp) {
+    return state.newMultiplier;
+  }
+  return state.multiplier;
+}
+
+// Exact integer-units ÷ decimal multiplier, floored. BigInt only, no floating point.
+export function divideIntegerByDecimal(integerUnits: string, multiplier: string): string {
+  if (!DECIMAL.test(multiplier)) throw new TypeError(`invalid multiplier: ${multiplier}`);
+  const fracLength = multiplier.split('.')[1]?.length ?? 0;
+  const denominator = BigInt(scaleDecimalToInteger(multiplier, fracLength));
+  if (denominator === 0n) throw new TypeError('multiplier must be positive');
+  const numerator = BigInt(integerUnits) * 10n ** BigInt(fracLength);
+  return (numerator / denominator).toString();
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== 'object' || value === null) return null;
+  return value as Record<string, unknown>;
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function parseScaledState(value: unknown): ScaledUiState | null {
+  const root = readRecord(value);
+  const result = readRecord(root?.result);
+  const account = result?.value;
+  if (account === null || account === undefined) return null;
+  const accountRecord = readRecord(account);
+  const data = readRecord(accountRecord?.data);
+  const program = readString(data?.program);
+  if (program !== 'spl-token-2022') return program === 'spl-token' ? { multiplier: '1', newMultiplier: null, newMultiplierEffectiveTimestamp: null } : null;
+  const parsed = readRecord(data?.parsed);
+  const info = readRecord(parsed?.info);
+  const extensions = info?.extensions;
+  const rows = Array.isArray(extensions) ? extensions : [];
+  const scaled = rows.find(row => readRecord(row)?.extension === 'scaledUiAmountConfig');
+  if (scaled === undefined) return { multiplier: '1', newMultiplier: null, newMultiplierEffectiveTimestamp: null };
+  const state = readRecord(readRecord(scaled)?.state);
+  const multiplier = readString(state?.multiplier);
+  if (multiplier === null || !DECIMAL.test(multiplier)) return null;
+  const pendingRaw = readString(state?.newMultiplier);
+  const pending = pendingRaw !== null && DECIMAL.test(pendingRaw) ? pendingRaw : null;
+  const activation = readNumber(state?.newMultiplierEffectiveTimestamp);
+  return { multiplier, newMultiplier: pending, newMultiplierEffectiveTimestamp: activation };
+}
+
+// Read-only RPC lookups. A failed read yields null for that mint, and the wrapping adapter
+// fails the price capture closed: evidence that cannot be unit-normalized must not publish.
+export async function fetchScaledUiMultipliers(mints: readonly string[], rpcUrl = RPC_URL): Promise<Map<string, string | null>> {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const results = await Promise.all(mints.map(async (mint): Promise<[string, string | null]> => {
+    try {
+      const response = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAccountInfo', params: [mint, { encoding: 'jsonParsed' }] }),
+      });
+      if (!response.ok) return [mint, null];
+      const state = parseScaledState(await response.json());
+      return [mint, state === null ? null : effectiveMultiplier(state, nowSeconds)];
+    } catch {
+      return [mint, null];
+    }
+  }));
+  return new Map(results);
+}
+
+// Read-only GET. On any failure both maps hold nulls: references disappear (no dislocation
+// check) and the wrapping adapter refuses to publish uncorroborated pool prices.
+export async function fetchPreStocks(mints: readonly string[]): Promise<{ refs: Map<string, PythUnderlyingRef | null>; issuerPrices: Map<string, string | null> }> {
   const refs = new Map<string, PythUnderlyingRef | null>();
-  for (const mint of mints) refs.set(mint, null);
+  const issuerPrices = new Map<string, string | null>();
+  for (const mint of mints) {
+    refs.set(mint, null);
+    issuerPrices.set(mint, null);
+  }
   try {
     const response = await fetch(PRESTOCKS_URL, { method: 'GET', headers: { accept: 'application/json' } });
-    if (!response.ok) return refs;
+    if (!response.ok) return { refs, issuerPrices };
     const receivedAt = new Date().toISOString();
     const entries = parsePreStocks(await response.json());
     for (const mint of mints) {
       const entry = entries.get(mint);
-      if (entry !== undefined) refs.set(mint, { feedId: `prestocks:${entry.symbol}`, spot: entry.markPrice, publishTime: receivedAt });
+      if (entry === undefined) continue;
+      refs.set(mint, { feedId: `prestocks:${entry.symbol}`, spot: entry.markPrice, publishTime: receivedAt });
+      issuerPrices.set(mint, entry.tokenPrice);
     }
-    return refs;
+    return { refs, issuerPrices };
   } catch {
-    return refs;
+    return { refs, issuerPrices };
   }
+}
+
+// Wraps a raw-unit evidence adapter (DEX Screener) for scaled-UI mints: divides the price
+// capture by the on-chain multiplier, then requires the normalized price to agree with the
+// issuer's own scaled-unit price within `sanityBps`. Missing multiplier, missing issuer
+// corroboration, or disagreement all fail the capture closed (-> NO_DATA downstream, V66).
+// Liquidity is USD-denominated and unit-independent, so it passes through restamped only.
+export function scaledPreStocksAdapter(inner: LiveEvidenceAdapter, multipliers: ReadonlyMap<string, string | null>, issuerPrices: ReadonlyMap<string, string | null>, sanityBps = 500): LiveEvidenceAdapter {
+  const adapter: LiveEvidenceAdapter = {
+    sourceId: inner.sourceId,
+    adapterVersion: `${inner.adapterVersion}+scaled-ui`,
+    semanticVersion: 'usd-pool-scaled',
+    async fetchAsset(asset: DashAssetConfig): Promise<AssetCaptures> {
+      const captures = await inner.fetchAsset(asset);
+      const stamp = { adapterVersion: adapter.adapterVersion, semanticVersion: adapter.semanticVersion };
+      const liquidity: FieldCapture = { ...captures.liquidity, ...stamp };
+      const price: FieldCapture = { ...captures.price, ...stamp };
+      if (price.status !== 'ok' || price.normalizedValue === null) return { price, liquidity };
+      const outage = (reason: string, retryable: boolean): FieldCapture => ({
+        ...price,
+        status: 'outage',
+        continuity: 'gap',
+        normalizedValue: null,
+        rawBytes: reason,
+        failure: { retryable, retryAfterMs: retryable ? 2000 : null, reason },
+      });
+      const multiplier = multipliers.get(asset.assetId) ?? null;
+      if (multiplier === null) return { price: outage('scaled-ui multiplier unavailable; cannot normalize raw pool price', true), liquidity };
+      const normalized = divideIntegerByDecimal(price.normalizedValue, multiplier);
+      const issuer = issuerPrices.get(asset.assetId) ?? null;
+      if (issuer === null) return { price: outage('issuer price unavailable; cannot corroborate normalized pool price', true), liquidity };
+      const issuerUnits = BigInt(scaleDecimalToInteger(issuer, asset.priceScale));
+      if (issuerUnits === 0n) return { price: outage('issuer price is zero; cannot corroborate normalized pool price', false), liquidity };
+      const poolUnits = BigInt(normalized);
+      const gap = poolUnits > issuerUnits ? poolUnits - issuerUnits : issuerUnits - poolUnits;
+      const gapBps = (gap * 10000n) / issuerUnits;
+      if (gapBps > BigInt(sanityBps)) {
+        return { price: outage(`source-disagreement: normalized pool ${normalized} vs issuer ${issuerUnits.toString()} units differs by ${gapBps.toString()}bps (bound ${sanityBps})`, false), liquidity };
+      }
+      return {
+        price: { ...price, normalizedValue: normalized, rawBytes: JSON.stringify({ inner: price.rawBytes, scaledUiMultiplier: multiplier, issuerPrice: issuer }) },
+        liquidity,
+      };
+    },
+  };
+  return adapter;
 }

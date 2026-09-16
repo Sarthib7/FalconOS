@@ -1,7 +1,7 @@
 import { dexScreenerAdapter } from './adapters.ts';
 import type { DashConfig } from './adapters.ts';
 import { runCentralAdvice, runLiveAdvice } from './council.ts';
-import { fetchPreStocksRefs } from './prestocks.ts';
+import { fetchPreStocks, fetchScaledUiMultipliers, scaledPreStocksAdapter } from './prestocks.ts';
 import { fetchPythPrices } from './pyth.ts';
 import { renderAdvice } from './render.ts';
 
@@ -37,8 +37,10 @@ const PREIPO_CONFIG: DashConfig = {
 
 async function main(): Promise<void> {
   if (process.argv[2] === 'preipo') {
-    const refs = await fetchPreStocksRefs(PREIPO_CONFIG.assets.map(asset => asset.assetId));
-    const { snapshot, advice } = await runLiveAdvice(PREIPO_CONFIG, dexScreenerAdapter(), refs);
+    const mints = PREIPO_CONFIG.assets.map(asset => asset.assetId);
+    const [{ refs, issuerPrices }, multipliers] = await Promise.all([fetchPreStocks(mints), fetchScaledUiMultipliers(mints)]);
+    const adapter = scaledPreStocksAdapter(dexScreenerAdapter(), multipliers, issuerPrices);
+    const { snapshot, advice } = await runLiveAdvice(PREIPO_CONFIG, adapter, refs);
     process.stdout.write(`${renderAdvice(snapshot, advice, PREIPO_CONFIG, refs)}\n`);
     return;
   }
