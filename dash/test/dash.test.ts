@@ -6,7 +6,7 @@ import { runCentralAdvice, runLiveAdvice } from '../council.ts';
 import { renderAdvice } from '../render.ts';
 import type { FieldCapture } from '../../stocks/stocks.ts';
 import type { PythPriceResult } from '../pyth.ts';
-import { divideIntegerByDecimal, effectiveMultiplier, parsePreStocks, scaledPreStocksAdapter } from '../prestocks.ts';
+import { divideIntegerByDecimal, effectiveMultiplier, multiplierFromSupply, multipliersAgree, parsePreStocks, scaledPreStocksAdapter } from '../prestocks.ts';
 
 const AT = '2026-09-16T00:00:00.000Z';
 
@@ -128,6 +128,16 @@ test('V66: effectiveMultiplier picks the pending multiplier once its timestamp h
   const after = effectiveMultiplier({ multiplier: '1', newMultiplier: '1.4861347', newMultiplierEffectiveTimestamp: 1784305800 }, 1784305800);
   assert.equal(before, '1');
   assert.equal(after, '1.4861347');
+});
+
+test('V66: multiplierFromSupply matches the live OPENAI and SPACEX mint ratios', () => {
+  assert.equal(multiplierFromSupply('1901951695078', 9, '2826.556411779'), '1.4861346');
+  assert.equal(multiplierFromSupply('8742515849291', 9, '43712.579246455'), '5');
+});
+
+test('V66: multipliersAgree rejects extension vs supply drift beyond 5bps', () => {
+  assert.equal(multipliersAgree('1.4861347', '1.4861346'), true);
+  assert.equal(multipliersAgree('5', '5.01'), false);
 });
 
 test('V66: divideIntegerByDecimal normalizes raw pool units to scaled units', () => {

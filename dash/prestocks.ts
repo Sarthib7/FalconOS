@@ -71,6 +71,34 @@ export function divideIntegerByDecimal(integerUnits: string, multiplier: string)
   return (numerator / denominator).toString();
 }
 
+const MULTIPLIER_PRECISION = 7;
+
+// Derive the live scaled-UI multiplier from getTokenSupply: uiAmount / (raw / 10^decimals).
+// RPC uiAmount is time-correct, so this cross-checks the extension time-gate path.
+export function multiplierFromSupply(rawAmount: string, decimals: number, uiAmount: string, precision = MULTIPLIER_PRECISION): string | null {
+  if (!/^\d+$/.test(rawAmount) || !Number.isInteger(decimals) || decimals < 0 || !DECIMAL.test(uiAmount)) return null;
+  const raw = BigInt(rawAmount);
+  if (raw === 0n) return null;
+  const parts = uiAmount.split('.');
+  const uiFracLen = parts[1]?.length ?? 0;
+  const uiInt = BigInt(`${parts[0] ?? '0'}${parts[1] ?? ''}`);
+  const numerator = uiInt * 10n ** BigInt(decimals);
+  const denominator = raw * 10n ** BigInt(uiFracLen);
+  const scaled = (numerator * 10n ** BigInt(precision)) / denominator;
+  const intPart = scaled / 10n ** BigInt(precision);
+  const fracPart = (scaled % 10n ** BigInt(precision)).toString().padStart(precision, '0').replace(/0+$/, '');
+  return fracPart.length === 0 ? intPart.toString() : `${intPart}.${fracPart}`;
+}
+
+export function multipliersAgree(a: string, b: string, maxGapBps = 5): boolean {
+  if (!DECIMAL.test(a) || !DECIMAL.test(b)) return false;
+  const aUnits = BigInt(scaleDecimalToInteger(a, MULTIPLIER_PRECISION));
+  const bUnits = BigInt(scaleDecimalToInteger(b, MULTIPLIER_PRECISION));
+  if (bUnits === 0n) return false;
+  const gap = aUnits > bUnits ? aUnits - bUnits : bUnits - aUnits;
+  return (gap * 10000n) / bUnits <= BigInt(maxGapBps);
+}
+
 function readRecord(value: unknown): Record<string, unknown> | null {
   if (typeof value !== 'object' || value === null) return null;
   return value as Record<string, unknown>;
@@ -108,20 +136,44 @@ function parseScaledState(value: unknown): ScaledUiState | null {
   return { multiplier, newMultiplier: pending, newMultiplierEffectiveTimestamp: activation };
 }
 
-// Read-only RPC lookups. A failed read yields null for that mint, and the wrapping adapter
-// fails the price capture closed: evidence that cannot be unit-normalized must not publish.
+function parseTokenSupply(value: unknown): { amount: string; decimals: number; uiAmount: string } | null {
+  const root = readRecord(value);
+  const result = readRecord(root?.result);
+  const supply = readRecord(result?.value);
+  const amount = readString(supply?.amount);
+  const decimals = readNumber(supply?.decimals);
+  const uiAmount = readString(supply?.uiAmountString);
+  if (amount === null || decimals === null || uiAmount === null || !/^\d+$/.test(amount)) return null;
+  return { amount, decimals, uiAmount };
+}
+
+async function rpcPost(rpcUrl: string, method: string, params: readonly unknown[]): Promise<unknown> {
+  const response = await fetch(rpcUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+  });
+  if (!response.ok) throw new Error(`${method} HTTP ${response.status}`);
+  return response.json();
+}
+
+// Read-only RPC lookups. Extension time-gate and getTokenSupply must agree; otherwise null
+// for that mint and the wrapping adapter fails the price capture closed (V66).
 export async function fetchScaledUiMultipliers(mints: readonly string[], rpcUrl = RPC_URL): Promise<Map<string, string | null>> {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const results = await Promise.all(mints.map(async (mint): Promise<[string, string | null]> => {
     try {
-      const response = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAccountInfo', params: [mint, { encoding: 'jsonParsed' }] }),
-      });
-      if (!response.ok) return [mint, null];
-      const state = parseScaledState(await response.json());
-      return [mint, state === null ? null : effectiveMultiplier(state, nowSeconds)];
+      const [accountJson, supplyJson] = await Promise.all([
+        rpcPost(rpcUrl, 'getAccountInfo', [mint, { encoding: 'jsonParsed' }]),
+        rpcPost(rpcUrl, 'getTokenSupply', [mint]),
+      ]);
+      const state = parseScaledState(accountJson);
+      const supply = parseTokenSupply(supplyJson);
+      if (state === null || supply === null) return [mint, null];
+      const fromExtension = effectiveMultiplier(state, nowSeconds);
+      const fromSupply = multiplierFromSupply(supply.amount, supply.decimals, supply.uiAmount);
+      if (fromSupply === null || !multipliersAgree(fromExtension, fromSupply)) return [mint, null];
+      return [mint, fromExtension];
     } catch {
       return [mint, null];
     }
