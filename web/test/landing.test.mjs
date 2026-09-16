@@ -49,3 +49,15 @@ test('V55: production links resolve within deployed page', () => {
     .filter((id) => !ids.has(id));
   assert.deepEqual(missingTargets, []);
 });
+
+test('V48: crawler and social copy avoid live-use claims', () => {
+  const metaDescription = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? '';
+  const ogDescription = html.match(/<meta property="og:description" content="([^"]*)"/)?.[1] ?? '';
+  for (const copy of [metaDescription, ogDescription]) {
+    assert.notEqual(copy, '');
+    assert.match(copy, /planned/);
+    assert.match(copy, /preview/);
+    assert.doesNotMatch(copy, /agents use the system/i);
+    assert.doesNotMatch(copy, /use the dashboard/i);
+  }
+});
