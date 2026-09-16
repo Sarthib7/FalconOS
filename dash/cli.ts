@@ -1,6 +1,7 @@
 import { dexScreenerAdapter } from './adapters.ts';
 import type { DashConfig } from './adapters.ts';
-import { runLiveAdvice } from './council.ts';
+import { runCentralAdvice, runLiveAdvice } from './council.ts';
+import { fetchPythPrices } from './pyth.ts';
 import { renderAdvice } from './render.ts';
 
 // Verification config. `assetId` is a Solana token mint that is the BASE token in a liquid
@@ -23,6 +24,13 @@ const SAMPLE_CONFIG: DashConfig = {
 };
 
 async function main(): Promise<void> {
+  const pythAssets = SAMPLE_CONFIG.assets.flatMap(asset => asset.pyth === undefined ? [] : [{ assetId: asset.assetId, underlying: asset.underlying, priceScale: asset.priceScale, tokenizedFeedId: asset.pyth.tokenizedFeedId, underlyingFeedId: asset.pyth.underlyingFeedId }]);
+  if (pythAssets.length > 0) {
+    const pythResults = await fetchPythPrices(pythAssets);
+    const { snapshot, advice, underlyingRefs } = await runCentralAdvice(SAMPLE_CONFIG, dexScreenerAdapter(), pythResults);
+    process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG, underlyingRefs)}\n`);
+    return;
+  }
   const { snapshot, advice } = await runLiveAdvice(SAMPLE_CONFIG, dexScreenerAdapter());
   process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG)}\n`);
 }

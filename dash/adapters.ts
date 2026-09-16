@@ -9,11 +9,13 @@ export interface DashAssetConfig {
   quantityScale: number;
   minLiquidity: string;
   maxWeightBps: number;
+  pyth?: { tokenizedFeedId: string; underlyingFeedId: string };
 }
 
 export interface DashConfig {
   assets: readonly DashAssetConfig[];
   coherenceCapMs: number;
+  maxDislocationBps?: number;
 }
 
 export interface AssetCaptures {

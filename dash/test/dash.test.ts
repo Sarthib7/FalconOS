@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fixtureAdapter } from '../adapters.ts';
+import { fixtureAdapter, scaleDecimalToInteger } from '../adapters.ts';
 import type { DashConfig } from '../adapters.ts';
-import { runLiveAdvice } from '../council.ts';
+import { runCentralAdvice, runLiveAdvice } from '../council.ts';
 import { renderAdvice } from '../render.ts';
+import type { FieldCapture } from '../../stocks/stocks.ts';
+import type { PythPriceResult } from '../pyth.ts';
 
 const AT = '2026-09-16T00:00:00.000Z';
 
@@ -50,4 +52,58 @@ test('V65: a pool below the liquidity floor is vetoed to BLOCKED', async () => {
   const { advice } = await runLiveAdvice(config(), adapter);
   assert.equal(advice.status, 'BLOCKED');
   assert.equal(advice.proposal, null);
+});
+
+function pythOk(value: string, scale: number): FieldCapture {
+  return { field: 'price', sourceId: 'pyth', sourceRole: 'primary', adapterVersion: 'pyth-hermes-v2', semanticVersion: 'core', status: 'ok', eventAt: AT, capturedAt: AT, sequence: 1, continuity: 'continuous', rawBytes: `pyth:${value}`, normalizedValue: scaleDecimalToInteger(value, scale), equivalenceValidated: false, failure: null };
+}
+
+function pythOutage(): FieldCapture {
+  return { field: 'price', sourceId: 'pyth', sourceRole: 'primary', adapterVersion: 'pyth-hermes-v2', semanticVersion: 'core', status: 'outage', eventAt: AT, capturedAt: AT, sequence: 1, continuity: 'gap', rawBytes: 'outage', normalizedValue: null, equivalenceValidated: false, failure: { retryable: true, retryAfterMs: 1000, reason: 'hermes unavailable' } };
+}
+
+function dexFixture() {
+  return fixtureAdapter({
+    mintA: { price: '150.25', liquidity: '5000000', at: AT },
+    mintB: { price: '400.10', liquidity: '3000000', at: AT },
+  });
+}
+
+test('V57 V60: healthy Pyth is the selected primary price source', async () => {
+  const pythResults = new Map<string, PythPriceResult>([
+    ['mintA', { price: pythOk('150.00', 6), underlying: { feedId: `0x${'a'.repeat(64)}`, spot: '150.10', publishTime: AT } }],
+    ['mintB', { price: pythOk('400.00', 6), underlying: { feedId: `0x${'b'.repeat(64)}`, spot: '400.00', publishTime: AT } }],
+  ]);
+  const { snapshot, advice, underlyingRefs } = await runCentralAdvice(config(), dexFixture(), pythResults);
+  assert.equal(snapshot.envelope.status, 'READY');
+  assert.equal(advice.status, 'PUBLISHED');
+  const decision = snapshot.sourceDecisions.find(entry => entry.assetId === 'mintA' && entry.field === 'price');
+  assert.equal(decision?.selectedSourceId, 'pyth');
+  const rendered = renderAdvice(snapshot, advice, config(), underlyingRefs);
+  assert.match(rendered, /underlying=\$150\.100000/);
+  assert.match(rendered, /premium=[-+]\d+bps/);
+});
+
+test('V60: a Pyth outage fails over to the DEX secondary price', async () => {
+  const pythResults = new Map<string, PythPriceResult>([
+    ['mintA', { price: pythOutage(), underlying: null }],
+    ['mintB', { price: pythOk('400.00', 6), underlying: null }],
+  ]);
+  const { snapshot, advice } = await runCentralAdvice(config(), dexFixture(), pythResults);
+  assert.equal(snapshot.envelope.status, 'READY');
+  assert.equal(advice.status, 'PUBLISHED');
+  const decision = snapshot.sourceDecisions.find(entry => entry.assetId === 'mintA' && entry.field === 'price');
+  assert.equal(decision?.selectedRole, 'secondary');
+  assert.equal(decision?.selectedSourceId, 'fixture');
+});
+
+test('V65: a large token-vs-underlying dislocation is vetoed to BLOCKED', async () => {
+  const pythResults = new Map<string, PythPriceResult>([
+    ['mintA', { price: pythOk('150.00', 6), underlying: { feedId: `0x${'c'.repeat(64)}`, spot: '100.00', publishTime: AT } }],
+    ['mintB', { price: pythOk('400.00', 6), underlying: null }],
+  ]);
+  const { advice } = await runCentralAdvice(config(), dexFixture(), pythResults);
+  assert.equal(advice.status, 'BLOCKED');
+  const review = advice.riskReview;
+  assert.ok(review.kind === 'risk-review' && review.reasons.some(reason => reason.includes('dislocated')));
 });

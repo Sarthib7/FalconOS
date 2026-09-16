@@ -1,5 +1,7 @@
 import type { CanonicalBasketSnapshot, StocksAdviceResponse } from '../stocks/stocks.ts';
+import { scaleDecimalToInteger } from './adapters.ts';
 import type { DashConfig } from './adapters.ts';
+import type { PythUnderlyingRef } from './pyth.ts';
 
 function fromIntegerUnits(value: string, scale: number): string {
   if (scale === 0) return value;
@@ -8,7 +10,7 @@ function fromIntegerUnits(value: string, scale: number): string {
   return `${digits.slice(0, cut)}.${digits.slice(cut)}`;
 }
 
-export function renderAdvice(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig): string {
+export function renderAdvice(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig, underlyingRefs?: ReadonlyMap<string, PythUnderlyingRef | null>): string {
   const lines: string[] = [];
   lines.push('FalconOS · Stocks live dashboard   [advisory-only · executionReady=false]');
   lines.push(`provenance=${snapshot.envelope.provenance}  snapshot=${snapshot.envelope.status}  advice=${advice.status}`);
@@ -21,7 +23,18 @@ export function renderAdvice(snapshot: CanonicalBasketSnapshot, advice: StocksAd
     const liquidity = projection?.fields.liquidity ?? null;
     const priceText = price === null ? 'NO_DATA' : `$${fromIntegerUnits(price, asset.priceScale)}`;
     const liquidityText = liquidity === null ? 'NO_DATA' : `$${fromIntegerUnits(liquidity, asset.quantityScale)}`;
-    lines.push(`  ${asset.underlying.padEnd(10)} price=${priceText.padEnd(16)} liquidity=${liquidityText}`);
+    let extra = '';
+    const reference = underlyingRefs?.get(asset.assetId) ?? null;
+    if (reference !== null && price !== null) {
+      const underlyingUnits = BigInt(scaleDecimalToInteger(reference.spot, asset.priceScale));
+      if (underlyingUnits > 0n) {
+        const signedGap = BigInt(price) - underlyingUnits;
+        const gap = signedGap < 0n ? -signedGap : signedGap;
+        const bps = (gap * 10000n) / underlyingUnits;
+        extra = `  underlying=$${fromIntegerUnits(underlyingUnits.toString(), asset.priceScale)}  premium=${signedGap < 0n ? '-' : '+'}${bps}bps`;
+      }
+    }
+    lines.push(`  ${asset.underlying.padEnd(10)} token=${priceText.padEnd(16)} liquidity=${liquidityText}${extra}`);
   }
   if (snapshot.missing.length > 0) lines.push(`  missing: ${snapshot.missing.join(', ')}`);
   if (snapshot.conflicts.length > 0) lines.push(`  conflicts: ${snapshot.conflicts.join(', ')}`);
