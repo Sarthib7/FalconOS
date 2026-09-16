@@ -8,6 +8,8 @@ export type SnapshotStatus = 'READY' | 'NO_DATA';
 export type StockField = 'price' | 'liquidity';
 export const STOCK_FIELDS = ['price', 'liquidity'] as const;
 export type CaptureStatus = 'ok' | 'outage' | 'invalid';
+export type SourceRole = 'primary' | 'secondary';
+export type Continuity = 'continuous' | 'gap';
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const NON_EMPTY = /\S/;
@@ -37,9 +39,25 @@ function integerString(value: unknown, name: string): string {
   return result;
 }
 
+function integerFinite(value: unknown, name: string): number {
+  if (typeof value !== 'number' || !Number.isInteger(value)) throw new TypeError(`${name} must be an integer`);
+  return value;
+}
+
+function booleanValue(value: unknown, name: string): boolean {
+  if (typeof value !== 'boolean') throw new TypeError(`${name} must be boolean`);
+  return value;
+}
+
 function isoTime(value: unknown, name: string): string {
   const result = stringValue(value, name);
   if (!Number.isFinite(Date.parse(result))) throw new TypeError(`${name} must be an ISO timestamp`);
+  return result;
+}
+
+function hashValue(value: unknown, name: string): string {
+  const result = stringValue(value, name);
+  if (!SHA256.test(result)) throw new TypeError(`${name} must be lowercase SHA-256`);
   return result;
 }
 
@@ -51,11 +69,6 @@ function provenance(value: unknown): DataProvenance {
 function enumValue<T extends string>(value: unknown, allowed: readonly T[], name: string): T {
   if (typeof value !== 'string' || !allowed.includes(value as T)) throw new TypeError(`${name} is invalid`);
   return value as T;
-}
-
-function integerFinite(value: unknown, name: string): number {
-  if (typeof value !== 'number' || !Number.isInteger(value)) throw new TypeError(`${name} must be an integer`);
-  return value;
 }
 
 function stableStringify(value: unknown): string {
@@ -83,37 +96,159 @@ function isDeepFrozen(value: unknown, seen = new WeakSet<object>()): boolean {
   return Object.values(value as RecordValue).every(child => isDeepFrozen(child, seen));
 }
 
+export interface StockLimits {
+  minLiquidity: string;
+  maxWeightBps: number;
+}
+
+export interface StockFees {
+  takerBps: number;
+  makerBps: number;
+}
+
+export interface StockCapabilities {
+  tradable: boolean;
+  redeemable: boolean;
+}
+
+export interface StockCorporateAction {
+  lastEventId: string | null;
+  asOf: string | null;
+}
+
 export interface StockRegistryEntry {
   schemaVersion: typeof STOCKS_SCHEMA_VERSION;
+  registryVersion: string;
   venue: StockVenue;
   assetId: string;
   underlying: string;
-  precision: number;
+  instrumentType: 'tokenized-equity';
+  priceScale: number;
+  quantityScale: number;
+  limits: StockLimits;
+  fees: StockFees;
+  capabilities: StockCapabilities;
+  corporateAction: StockCorporateAction;
+  provenance: DataProvenance;
+}
+
+function scale(value: unknown, name: string): number {
+  const result = integerFinite(value, name);
+  if (result < 0 || result > 18) throw new TypeError(`${name} must be between 0 and 18`);
+  return result;
+}
+
+function bps(value: unknown, name: string): number {
+  const result = integerFinite(value, name);
+  if (result < 0 || result > 10000) throw new TypeError(`${name} must be between 0 and 10000 bps`);
+  return result;
 }
 
 export function validateStockRegistry(value: unknown): StockRegistryEntry {
   const object = record(value, 'stock registry entry');
-  exactKeys(object, ['schemaVersion', 'venue', 'assetId', 'underlying', 'precision'], 'stock registry entry');
+  exactKeys(object, ['schemaVersion', 'registryVersion', 'venue', 'assetId', 'underlying', 'instrumentType', 'priceScale', 'quantityScale', 'limits', 'fees', 'capabilities', 'corporateAction', 'provenance'], 'stock registry entry');
   if (object.schemaVersion !== STOCKS_SCHEMA_VERSION) throw new TypeError('stock registry schemaVersion must be 1');
-  const venue = enumValue(object.venue, [STOCK_VENUE], 'stock registry venue');
-  const assetId = stringValue(object.assetId, 'stock registry assetId');
-  const underlying = stringValue(object.underlying, 'stock registry underlying');
-  const precision = integerFinite(object.precision, 'stock registry precision');
-  if (precision < 0 || precision > 18) throw new TypeError('stock registry precision must be between 0 and 18');
-  return { schemaVersion: STOCKS_SCHEMA_VERSION, venue, assetId, underlying, precision };
+  if (object.instrumentType !== 'tokenized-equity') throw new TypeError('stock registry instrumentType must be tokenized-equity');
+  const limits = record(object.limits, 'stock registry limits');
+  exactKeys(limits, ['minLiquidity', 'maxWeightBps'], 'stock registry limits');
+  const fees = record(object.fees, 'stock registry fees');
+  exactKeys(fees, ['takerBps', 'makerBps'], 'stock registry fees');
+  const capabilities = record(object.capabilities, 'stock registry capabilities');
+  exactKeys(capabilities, ['tradable', 'redeemable'], 'stock registry capabilities');
+  const corporateAction = record(object.corporateAction, 'stock registry corporateAction');
+  exactKeys(corporateAction, ['lastEventId', 'asOf'], 'stock registry corporateAction');
+  const maxWeightBps = bps(limits.maxWeightBps, 'stock registry limits.maxWeightBps');
+  if (maxWeightBps < 1) throw new TypeError('stock registry limits.maxWeightBps must be at least 1');
+  return {
+    schemaVersion: STOCKS_SCHEMA_VERSION,
+    registryVersion: stringValue(object.registryVersion, 'stock registry registryVersion'),
+    venue: enumValue(object.venue, [STOCK_VENUE], 'stock registry venue'),
+    assetId: stringValue(object.assetId, 'stock registry assetId'),
+    underlying: stringValue(object.underlying, 'stock registry underlying'),
+    instrumentType: 'tokenized-equity',
+    priceScale: scale(object.priceScale, 'stock registry priceScale'),
+    quantityScale: scale(object.quantityScale, 'stock registry quantityScale'),
+    limits: { minLiquidity: integerString(limits.minLiquidity, 'stock registry limits.minLiquidity'), maxWeightBps },
+    fees: { takerBps: bps(fees.takerBps, 'stock registry fees.takerBps'), makerBps: bps(fees.makerBps, 'stock registry fees.makerBps') },
+    capabilities: { tradable: booleanValue(capabilities.tradable, 'stock registry capabilities.tradable'), redeemable: booleanValue(capabilities.redeemable, 'stock registry capabilities.redeemable') },
+    corporateAction: { lastEventId: corporateAction.lastEventId === null ? null : stringValue(corporateAction.lastEventId, 'stock registry corporateAction.lastEventId'), asOf: corporateAction.asOf === null ? null : isoTime(corporateAction.asOf, 'stock registry corporateAction.asOf') },
+    provenance: provenance(object.provenance),
+  };
+}
+
+export interface SourceSpec {
+  sourceId: string;
+  adapterVersion: string;
+  semanticVersion: string;
+}
+
+export interface FieldSourcePolicy {
+  field: StockField;
+  primary: SourceSpec;
+  secondary: SourceSpec | null;
+}
+
+export interface AssetSourcePrecedence {
+  schemaVersion: typeof STOCKS_SCHEMA_VERSION;
+  policyVersion: string;
+  fields: readonly FieldSourcePolicy[];
+}
+
+function validateSourceSpec(value: unknown, name: string): SourceSpec {
+  const object = record(value, name);
+  exactKeys(object, ['sourceId', 'adapterVersion', 'semanticVersion'], name);
+  return {
+    sourceId: stringValue(object.sourceId, `${name}.sourceId`),
+    adapterVersion: stringValue(object.adapterVersion, `${name}.adapterVersion`),
+    semanticVersion: stringValue(object.semanticVersion, `${name}.semanticVersion`),
+  };
+}
+
+export function validateAssetSourcePrecedence(value: unknown): AssetSourcePrecedence {
+  const object = record(value, 'asset source precedence');
+  exactKeys(object, ['schemaVersion', 'policyVersion', 'fields'], 'asset source precedence');
+  if (object.schemaVersion !== STOCKS_SCHEMA_VERSION) throw new TypeError('asset source precedence schemaVersion must be 1');
+  if (!Array.isArray(object.fields) || object.fields.length === 0) throw new TypeError('asset source precedence fields must be a non-empty array');
+  const seen = new Set<StockField>();
+  const fields: FieldSourcePolicy[] = [];
+  for (const raw of object.fields) {
+    const policy = record(raw, 'field source policy');
+    exactKeys(policy, ['field', 'primary', 'secondary'], 'field source policy');
+    const field = enumValue(policy.field, STOCK_FIELDS, 'field source policy field');
+    if (seen.has(field)) throw new TypeError(`field source policy ${field} duplicated`);
+    seen.add(field);
+    fields.push({ field, primary: validateSourceSpec(policy.primary, `${field} primary source`), secondary: policy.secondary === null ? null : validateSourceSpec(policy.secondary, `${field} secondary source`) });
+  }
+  for (const field of STOCK_FIELDS) if (!seen.has(field)) throw new TypeError(`asset source precedence missing policy for ${field}`);
+  return { schemaVersion: STOCKS_SCHEMA_VERSION, policyVersion: stringValue(object.policyVersion, 'asset source precedence policyVersion'), fields };
+}
+
+export interface CaptureFailure {
+  retryable: boolean;
+  retryAfterMs: number | null;
+  reason: string;
 }
 
 export interface FieldCapture {
   field: StockField;
+  sourceId: string;
+  sourceRole: SourceRole;
+  adapterVersion: string;
+  semanticVersion: string;
   status: CaptureStatus;
+  eventAt: string;
   capturedAt: string;
   sequence: number;
+  continuity: Continuity;
   rawBytes: string | Uint8Array;
   normalizedValue: string | null;
+  equivalenceValidated: boolean;
+  failure: CaptureFailure | null;
 }
 
 export interface AssetCaptureInput {
   registry: StockRegistryEntry;
+  precedence: AssetSourcePrecedence;
   captures: readonly FieldCapture[];
 }
 
@@ -128,12 +263,28 @@ export interface CanonicalBasketSnapshotInput {
 export interface RawManifestEntry {
   assetId: string;
   field: StockField;
+  sourceId: string;
+  sourceRole: SourceRole;
   status: CaptureStatus;
-  capturedAt: string | null;
+  eventAt: string;
+  capturedAt: string;
   sequence: number;
+  continuity: Continuity;
   rawBytesBase64: string;
   rawSha256: string;
   normalizedValue: string | null;
+  equivalenceValidated: boolean;
+}
+
+export interface SourceDecision {
+  assetId: string;
+  field: StockField;
+  policyVersion: string;
+  primarySourceId: string;
+  secondarySourceId: string | null;
+  selectedSourceId: string | null;
+  selectedRole: SourceRole | null;
+  selectedCapturedAt: string | null;
 }
 
 export interface AssetProjection {
@@ -158,14 +309,41 @@ export interface CanonicalBasketSnapshotEnvelope {
 export interface CanonicalBasketSnapshot {
   envelope: CanonicalBasketSnapshotEnvelope;
   registries: Record<string, StockRegistryEntry>;
+  sourcePrecedence: Record<string, AssetSourcePrecedence>;
   projections: Record<string, AssetProjection>;
   rawManifest: { schemaVersion: typeof STOCKS_SCHEMA_VERSION; entries: readonly RawManifestEntry[] };
   normalized: { schemaVersion: typeof STOCKS_SCHEMA_VERSION; assets: Record<string, AssetProjection> };
+  sourceDecisions: readonly SourceDecision[];
   missing: readonly string[];
   conflicts: readonly string[];
   bytes: string;
   hash: string;
   frozen: true;
+}
+
+interface FieldCaptureView {
+  capture: FieldCapture;
+  eventAtMs: number;
+  capturedAtMs: number;
+}
+
+function manifestEntry(assetId: string, capture: FieldCapture): RawManifestEntry {
+  const bytes = typeof capture.rawBytes === 'string' ? Buffer.from(capture.rawBytes, 'utf8') : new Uint8Array(capture.rawBytes);
+  return {
+    assetId,
+    field: capture.field,
+    sourceId: capture.sourceId,
+    sourceRole: capture.sourceRole,
+    status: capture.status,
+    eventAt: capture.eventAt,
+    capturedAt: capture.capturedAt,
+    sequence: capture.sequence,
+    continuity: capture.continuity,
+    rawBytesBase64: Buffer.from(bytes).toString('base64'),
+    rawSha256: createHash('sha256').update(bytes).digest('hex'),
+    normalizedValue: capture.normalizedValue,
+    equivalenceValidated: capture.equivalenceValidated,
+  };
 }
 
 export function createCanonicalBasketSnapshot(input: CanonicalBasketSnapshotInput): CanonicalBasketSnapshot {
@@ -179,8 +357,10 @@ export function createCanonicalBasketSnapshot(input: CanonicalBasketSnapshotInpu
   const missing: string[] = [];
   const conflicts: string[] = [];
   const registries: Record<string, StockRegistryEntry> = {};
+  const sourcePrecedence: Record<string, AssetSourcePrecedence> = {};
   const projections: Record<string, AssetProjection> = {};
   const rawEntries: RawManifestEntry[] = [];
+  const sourceDecisions: SourceDecision[] = [];
   const selectedTimes: number[] = [];
 
   for (const assetId of assetIds) {
@@ -191,50 +371,98 @@ export function createCanonicalBasketSnapshot(input: CanonicalBasketSnapshotInpu
     }
     const registry = validateStockRegistry(assetInput.registry);
     if (registry.assetId !== assetId) throw new TypeError(`asset ${assetId} registry assetId mismatch`);
+    const precedence = validateAssetSourcePrecedence(assetInput.precedence);
     registries[assetId] = registry;
+    sourcePrecedence[assetId] = precedence;
     if (!Array.isArray(assetInput.captures)) throw new TypeError(`asset ${assetId} captures must be an array`);
-    const fieldValues: Record<StockField, string | null> = { price: null, liquidity: null };
-    const seenFields = new Set<StockField>();
+
+    const capturesByField = new Map<StockField, FieldCaptureView[]>();
     for (const capture of assetInput.captures) {
       const field = enumValue(capture.field, STOCK_FIELDS, `asset ${assetId} capture.field`);
-      if (seenFields.has(field)) throw new TypeError(`asset ${assetId} duplicate field ${field}`);
-      seenFields.add(field);
-      const status = enumValue(capture.status, ['ok', 'outage', 'invalid'], `asset ${assetId} ${field}.status`);
+      enumValue(capture.sourceRole, ['primary', 'secondary'], `asset ${assetId} ${field}.sourceRole`);
+      enumValue(capture.status, ['ok', 'outage', 'invalid'], `asset ${assetId} ${field}.status`);
+      enumValue(capture.continuity, ['continuous', 'gap'], `asset ${assetId} ${field}.continuity`);
+      stringValue(capture.sourceId, `asset ${assetId} ${field}.sourceId`);
+      stringValue(capture.adapterVersion, `asset ${assetId} ${field}.adapterVersion`);
+      stringValue(capture.semanticVersion, `asset ${assetId} ${field}.semanticVersion`);
+      booleanValue(capture.equivalenceValidated, `asset ${assetId} ${field}.equivalenceValidated`);
       const sequence = integerFinite(capture.sequence, `asset ${assetId} ${field}.sequence`);
       if (sequence < 0) throw new TypeError(`asset ${assetId} ${field}.sequence must be non-negative`);
-      const bytes = typeof capture.rawBytes === 'string' ? Buffer.from(capture.rawBytes, 'utf8') : new Uint8Array(capture.rawBytes);
-      let capturedAtEntry: string | null = null;
-      let normalizedValue: string | null = null;
-      if (status === 'ok') {
-        capturedAtEntry = isoTime(capture.capturedAt, `asset ${assetId} ${field}.capturedAt`);
-        const ms = Date.parse(capturedAtEntry);
-        if (ms > capturedAtMs) conflicts.push(`${assetId}.${field}.future`);
-        else selectedTimes.push(ms);
-        normalizedValue = integerString(capture.normalizedValue, `asset ${assetId} ${field}.normalizedValue`);
-        fieldValues[field] = normalizedValue;
+      const eventAtMs = Date.parse(isoTime(capture.eventAt, `asset ${assetId} ${field}.eventAt`));
+      const capturedAtCaptureMs = Date.parse(isoTime(capture.capturedAt, `asset ${assetId} ${field}.capturedAt`));
+      if (capture.status === 'ok') {
+        if (capture.failure !== null) throw new TypeError(`asset ${assetId} ${field} ok capture must not carry a failure`);
+        integerString(capture.normalizedValue, `asset ${assetId} ${field}.normalizedValue`);
       } else {
-        missing.push(`${assetId}.${field}.${status}`);
+        const failure = record(capture.failure, `asset ${assetId} ${field}.failure`);
+        exactKeys(failure, ['retryable', 'retryAfterMs', 'reason'], `asset ${assetId} ${field}.failure`);
+        booleanValue(failure.retryable, `asset ${assetId} ${field}.failure.retryable`);
+        if (failure.retryAfterMs !== null) integerFinite(failure.retryAfterMs, `asset ${assetId} ${field}.failure.retryAfterMs`);
+        stringValue(failure.reason, `asset ${assetId} ${field}.failure.reason`);
+        if (capture.normalizedValue !== null) throw new TypeError(`asset ${assetId} ${field} failing capture must not carry a normalized value`);
       }
-      rawEntries.push({
-        assetId,
-        field,
-        status,
-        capturedAt: capturedAtEntry,
-        sequence,
-        rawBytesBase64: Buffer.from(bytes).toString('base64'),
-        rawSha256: createHash('sha256').update(bytes).digest('hex'),
-        normalizedValue,
-      });
+      rawEntries.push(manifestEntry(assetId, capture));
+      if (eventAtMs > capturedAtCaptureMs) conflicts.push(`${assetId}.${field}.event-after-receipt`);
+      if (capturedAtCaptureMs > capturedAtMs) conflicts.push(`${assetId}.${field}.future`);
+      const views = capturesByField.get(field) ?? [];
+      views.push({ capture, eventAtMs, capturedAtMs: capturedAtCaptureMs });
+      capturesByField.set(field, views);
     }
-    for (const field of STOCK_FIELDS) if (!seenFields.has(field)) missing.push(`${assetId}.${field}.missing`);
-    projections[assetId] = { assetId, underlying: registry.underlying, fields: fieldValues };
+
+    for (const field of STOCK_FIELDS) {
+      const policy = precedence.fields.find(entry => entry.field === field);
+      if (policy === undefined) {
+        missing.push(`${assetId}.${field}.policy`);
+        continue;
+      }
+      const views = capturesByField.get(field) ?? [];
+      const primaries = views.filter(view => view.capture.sourceRole === 'primary');
+      const secondaries = views.filter(view => view.capture.sourceRole === 'secondary');
+      if (primaries.length > 1 || secondaries.length > 1) conflicts.push(`${assetId}.${field}.duplicate-role`);
+      const primary = primaries[0];
+      const secondary = secondaries[0];
+      const decision: SourceDecision = { assetId, field, policyVersion: precedence.policyVersion, primarySourceId: policy.primary.sourceId, secondarySourceId: policy.secondary?.sourceId ?? null, selectedSourceId: null, selectedRole: null, selectedCapturedAt: null };
+      if (primary !== undefined && primary.capture.sourceId !== policy.primary.sourceId) conflicts.push(`${assetId}.${field}.primary-identity`);
+      if (secondary !== undefined && (policy.secondary === null || secondary.capture.sourceId !== policy.secondary.sourceId)) conflicts.push(`${assetId}.${field}.secondary-identity`);
+      let selected: FieldCaptureView | undefined;
+      let selectedRole: SourceRole | null = null;
+      if (primary === undefined) {
+        missing.push(`${assetId}.${field}.primary-missing`);
+      } else if (primary.capture.status === 'invalid') {
+        conflicts.push(`${assetId}.${field}.primary-invalid`);
+      } else if (primary.capture.status === 'ok') {
+        if (secondary !== undefined && secondary.capture.status === 'ok' && secondary.capture.normalizedValue !== primary.capture.normalizedValue) {
+          conflicts.push(`${assetId}.${field}.source-disagreement`);
+        } else {
+          selected = primary;
+          selectedRole = 'primary';
+        }
+      } else if (secondary !== undefined && secondary.capture.status === 'ok' && secondary.capture.equivalenceValidated && policy.secondary !== null && secondary.capture.sourceId === policy.secondary.sourceId) {
+        selected = secondary;
+        selectedRole = 'secondary';
+      } else {
+        missing.push(`${assetId}.${field}.${primary.capture.status}`);
+      }
+      const fieldValue = selected?.capture.normalizedValue ?? null;
+      if (selected !== undefined) {
+        decision.selectedSourceId = selected.capture.sourceId;
+        decision.selectedRole = selectedRole;
+        decision.selectedCapturedAt = selected.capture.capturedAt;
+        selectedTimes.push(selected.capturedAtMs);
+      }
+      sourceDecisions.push(decision);
+      const projection = projections[assetId] ?? { assetId, underlying: registry.underlying, fields: { price: null, liquidity: null } };
+      projection.fields[field] = fieldValue;
+      projections[assetId] = projection;
+    }
   }
 
   if (selectedTimes.length > 1 && Math.max(...selectedTimes) - Math.min(...selectedTimes) > input.coherenceCapMs) {
     conflicts.push('basket.coherence-cap');
   }
 
-  rawEntries.sort((a, b) => a.assetId.localeCompare(b.assetId) || a.field.localeCompare(b.field));
+  rawEntries.sort((a, b) => a.assetId.localeCompare(b.assetId) || a.field.localeCompare(b.field) || a.sourceRole.localeCompare(b.sourceRole) || a.sourceId.localeCompare(b.sourceId));
+  sourceDecisions.sort((a, b) => a.assetId.localeCompare(b.assetId) || a.field.localeCompare(b.field));
   const rawManifest = { schemaVersion: STOCKS_SCHEMA_VERSION as typeof STOCKS_SCHEMA_VERSION, entries: rawEntries };
   const normalized = { schemaVersion: STOCKS_SCHEMA_VERSION as typeof STOCKS_SCHEMA_VERSION, assets: projections };
   const dedupMissing = [...new Set(missing)].sort();
@@ -252,14 +480,16 @@ export function createCanonicalBasketSnapshot(input: CanonicalBasketSnapshotInpu
     rawManifestSha256: sha256Utf8(stableStringify(rawManifest)),
     normalizedProjectionSha256: sha256Utf8(stableStringify(normalized)),
   };
-  const payload = { envelope, registries, projections, rawManifest, normalized, missing: dedupMissing, conflicts: dedupConflicts };
+  const payload = { envelope, registries, sourcePrecedence, projections, rawManifest, normalized, sourceDecisions, missing: dedupMissing, conflicts: dedupConflicts };
   const bytes = stableStringify(payload);
   return freezeDeep({
     envelope,
     registries,
+    sourcePrecedence,
     projections,
     rawManifest,
     normalized,
+    sourceDecisions,
     missing: dedupMissing,
     conflicts: dedupConflicts,
     bytes,
@@ -270,7 +500,7 @@ export function createCanonicalBasketSnapshot(input: CanonicalBasketSnapshotInpu
 
 export function validateCanonicalBasketSnapshot(value: unknown): CanonicalBasketSnapshot {
   const object = record(value, 'canonical basket snapshot');
-  exactKeys(object, ['envelope', 'registries', 'projections', 'rawManifest', 'normalized', 'missing', 'conflicts', 'bytes', 'hash', 'frozen'], 'canonical basket snapshot');
+  exactKeys(object, ['envelope', 'registries', 'sourcePrecedence', 'projections', 'rawManifest', 'normalized', 'sourceDecisions', 'missing', 'conflicts', 'bytes', 'hash', 'frozen'], 'canonical basket snapshot');
   if (!isDeepFrozen(object)) throw new TypeError('canonical basket snapshot must be deeply frozen');
   if (object.frozen !== true) throw new TypeError('canonical basket snapshot frozen flag must be true');
   const envelope = record(object.envelope, 'basket envelope');
@@ -283,12 +513,11 @@ export function validateCanonicalBasketSnapshot(value: unknown): CanonicalBasket
   if (!Number.isInteger(envelope.coherenceCapMs) || (envelope.coherenceCapMs as number) <= 0) throw new TypeError('basket coherenceCapMs invalid');
   if (!Array.isArray(envelope.assetIds) || envelope.assetIds.length === 0) throw new TypeError('basket assetIds invalid');
   const bytes = stringValue(object.bytes, 'basket bytes');
-  const hash = stringValue(object.hash, 'basket hash');
-  if (!SHA256.test(hash)) throw new TypeError('basket hash must be lowercase SHA-256');
+  const hash = hashValue(object.hash, 'basket hash');
   const missing = object.missing;
   const conflicts = object.conflicts;
   if (!Array.isArray(missing) || !Array.isArray(conflicts)) throw new TypeError('basket missing/conflicts must be arrays');
-  const payload = { envelope: object.envelope, registries: object.registries, projections: object.projections, rawManifest: object.rawManifest, normalized: object.normalized, missing: object.missing, conflicts: object.conflicts };
+  const payload = { envelope: object.envelope, registries: object.registries, sourcePrecedence: object.sourcePrecedence, projections: object.projections, rawManifest: object.rawManifest, normalized: object.normalized, sourceDecisions: object.sourceDecisions, missing: object.missing, conflicts: object.conflicts };
   if (stableStringify(payload) !== bytes) throw new TypeError('basket bytes do not match canonical payload');
   if (sha256Utf8(bytes) !== hash) throw new TypeError('basket hash does not match bytes');
   if (sha256Utf8(stableStringify(object.rawManifest)) !== envelope.rawManifestSha256) throw new TypeError('basket rawManifestSha256 mismatch');
@@ -296,12 +525,6 @@ export function validateCanonicalBasketSnapshot(value: unknown): CanonicalBasket
   const expectedStatus: SnapshotStatus = missing.length === 0 && conflicts.length === 0 ? 'READY' : 'NO_DATA';
   if (status !== expectedStatus) throw new TypeError('basket status does not match missing/conflicts');
   return object as unknown as CanonicalBasketSnapshot;
-}
-
-function hashValue(value: unknown, name: string): string {
-  const result = stringValue(value, name);
-  if (!SHA256.test(result)) throw new TypeError(`${name} must be lowercase SHA-256`);
-  return result;
 }
 
 export interface BasketLeg {
@@ -352,11 +575,13 @@ export function createBasketProposal(input: BasketProposalInput): BasketProposal
     seen.add(assetId);
     if (!snapshot.envelope.assetIds.includes(assetId)) throw new TypeError(`basket leg ${assetId} not in snapshot`);
     const projection = snapshot.projections[assetId];
-    if (projection === undefined) throw new TypeError(`basket leg ${assetId} missing projection`);
+    const registry = snapshot.registries[assetId];
+    if (projection === undefined || registry === undefined) throw new TypeError(`basket leg ${assetId} missing snapshot binding`);
     const underlying = stringValue(leg.underlying, `basket leg ${assetId} underlying`);
     if (underlying !== projection.underlying) throw new TypeError(`basket leg ${assetId} underlying mismatch`);
     const targetWeightBps = integerFinite(leg.targetWeightBps, `basket leg ${assetId} targetWeightBps`);
     if (targetWeightBps < 1 || targetWeightBps > 10000) throw new TypeError(`basket leg ${assetId} targetWeightBps out of range`);
+    if (targetWeightBps > registry.limits.maxWeightBps) throw new TypeError(`basket leg ${assetId} targetWeightBps exceeds registry max-weight cap`);
     weightSum += targetWeightBps;
     legs.push({ assetId, underlying, targetWeightBps });
   }
@@ -394,7 +619,7 @@ export function validateBasketProposal(value: unknown): BasketProposal {
   const object = record(value, 'basket proposal');
   exactKeys(object, ['schemaVersion', 'kind', 'proposalId', 'status', 'specialist', 'legs', 'invalidations', 'confidence', 'horizon', 'snapshotHash', 'expiresAt', 'provenance', 'authority', 'executionReady'], 'basket proposal');
   if (object.schemaVersion !== STOCKS_SCHEMA_VERSION || object.kind !== 'basket-proposal' || object.specialist !== 'stocks' || object.authority !== 'non-binding-advisory' || object.executionReady !== false) throw new TypeError('invalid basket proposal authority');
-  const status = enumValue(object.status, ['PROPOSED', 'NO_DATA'], 'basket proposal status');
+  enumValue(object.status, ['PROPOSED', 'NO_DATA'], 'basket proposal status');
   stringValue(object.proposalId, 'basket proposalId');
   if (!Array.isArray(object.legs) || object.legs.length === 0) throw new TypeError('basket proposal legs invalid');
   const seen = new Set<string>();
@@ -474,6 +699,14 @@ export function createRiskReview(input: RiskReviewInput): RiskReview {
   });
 }
 
+export interface Citation {
+  assetId: string;
+  underlying: string;
+  field: StockField;
+  sourceId: string;
+  rawSha256: string;
+}
+
 export interface StocksAdviceRequest {
   schemaVersion: typeof STOCKS_SCHEMA_VERSION;
   kind: 'stocks.advice';
@@ -531,13 +764,6 @@ export interface RiskResponse {
 
 export type AdviceStatus = 'PUBLISHED' | 'BLOCKED' | 'NO_DATA';
 
-export interface Citation {
-  assetId: string;
-  underlying: string;
-  field: StockField;
-  rawSha256: string;
-}
-
 export interface StocksAdviceResponse {
   schemaVersion: typeof STOCKS_SCHEMA_VERSION;
   kind: 'stocks.advice';
@@ -580,11 +806,25 @@ export interface PublishStocksAdviceInput {
   riskReview: RiskReview | RiskReviewFailure;
 }
 
+function basketCitations(snapshot: CanonicalBasketSnapshot, proposal: BasketProposal): Citation[] {
+  const citations: Citation[] = [];
+  for (const leg of proposal.legs) {
+    for (const field of STOCK_FIELDS) {
+      const decision = snapshot.sourceDecisions.find(entry => entry.assetId === leg.assetId && entry.field === field && entry.selectedSourceId !== null);
+      if (decision === undefined || decision.selectedSourceId === null) continue;
+      const entry = snapshot.rawManifest.entries.find(item => item.assetId === leg.assetId && item.field === field && item.sourceId === decision.selectedSourceId);
+      if (entry === undefined) continue;
+      citations.push({ assetId: leg.assetId, underlying: leg.underlying, field, sourceId: decision.selectedSourceId, rawSha256: entry.rawSha256 });
+    }
+  }
+  citations.sort((a, b) => a.assetId.localeCompare(b.assetId) || a.field.localeCompare(b.field));
+  return citations;
+}
+
 export function publishStocksAdvice(input: PublishStocksAdviceInput): StocksAdviceResponse {
   const requestId = stringValue(input.requestId, 'requestId');
   const runId = stringValue(input.runId, 'runId');
   const snapshot = validateCanonicalBasketSnapshot(input.snapshot);
-  const snapshotHash = snapshot.hash;
   const proposal = input.proposal;
   const review = input.riskReview;
   let status: AdviceStatus;
@@ -602,17 +842,7 @@ export function publishStocksAdvice(input: PublishStocksAdviceInput): StocksAdvi
     status = 'PUBLISHED';
     publishedProposal = proposal;
   }
-  const citations: Citation[] = [];
-  if (publishedProposal !== null) {
-    for (const leg of publishedProposal.legs) {
-      for (const entry of snapshot.rawManifest.entries) {
-        if (entry.assetId === leg.assetId && entry.status === 'ok') {
-          citations.push({ assetId: entry.assetId, underlying: leg.underlying, field: entry.field, rawSha256: entry.rawSha256 });
-        }
-      }
-    }
-    citations.sort((a, b) => a.assetId.localeCompare(b.assetId) || a.field.localeCompare(b.field));
-  }
+  const citations = publishedProposal === null ? [] : basketCitations(snapshot, publishedProposal);
   const response = freezeDeep({
     schemaVersion: STOCKS_SCHEMA_VERSION,
     kind: 'stocks.advice' as const,
@@ -621,7 +851,7 @@ export function publishStocksAdvice(input: PublishStocksAdviceInput): StocksAdvi
     status,
     proposal: publishedProposal,
     riskReview: review,
-    snapshotHash,
+    snapshotHash: snapshot.hash,
     citations,
     authority: 'advisory-only' as const,
     executionReady: false as const,
@@ -644,10 +874,11 @@ export function validateStocksAdviceResponse(value: unknown): StocksAdviceRespon
   if (!Array.isArray(citations)) throw new TypeError('stocks advice citations must be an array');
   for (const raw of citations) {
     const citation = record(raw, 'stocks advice citation');
-    exactKeys(citation, ['assetId', 'underlying', 'field', 'rawSha256'], 'stocks advice citation');
+    exactKeys(citation, ['assetId', 'underlying', 'field', 'sourceId', 'rawSha256'], 'stocks advice citation');
     stringValue(citation.assetId, 'citation assetId');
     stringValue(citation.underlying, 'citation underlying');
     enumValue(citation.field, STOCK_FIELDS, 'citation field');
+    stringValue(citation.sourceId, 'citation sourceId');
     hashValue(citation.rawSha256, 'citation rawSha256');
   }
   if (status === 'PUBLISHED') {
