@@ -1,4 +1,4 @@
-import { dexScreenerAdapter } from './adapters.ts';
+import { dexScreenerAdapter } from '../stocks/adapters.ts';
 import type { DashConfig } from './adapters.ts';
 import { runCentralAdvice, runLiveAdvice } from './council.ts';
 import { fetchPreStocks, fetchScaledUiMultipliers, scaledPreStocksAdapter } from '../stocks/prestocks.ts';
