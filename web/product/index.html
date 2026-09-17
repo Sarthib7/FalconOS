@@ -20,6 +20,8 @@
     .topnav-inner { min-height: 86px; display: flex; align-items: center; gap: 30px; }
     .logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 600 14px ui-monospace, monospace; letter-spacing: .04em; }
     .logo svg { width: 24px; height: 24px; }
+    .wm { display: inline-flex; align-items: center; }
+    .wm-os { margin-left: 3px; padding: 1px 4px 2px; background: var(--fg); color: var(--bg); font-style: italic; }
     nav { display: flex; gap: 22px; margin-left: auto; font: 11px ui-monospace, monospace; letter-spacing: .05em; text-transform: uppercase; }
     nav a { color: var(--muted); text-decoration: none; }
     nav a:hover, nav a:focus-visible { color: var(--fg); }
@@ -42,7 +44,7 @@
 <body>
   <header class="topnav">
     <div class="container topnav-inner">
-      <a class="logo" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>FALCONOS</span></a>
+      <a class="logo" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span class="wm">FALCON<i class="wm-os">OS</i></span></a>
       <nav aria-label="Page navigation"><a href="/">Home</a><a href="/research/">Research</a><a href="/#waitlist">Waitlist</a></nav>
     </div>
   </header>

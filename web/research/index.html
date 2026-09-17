@@ -19,6 +19,8 @@
     .topnav-inner { min-height: 86px; display: flex; align-items: center; gap: 30px; }
     .logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 600 14px ui-monospace, monospace; letter-spacing: .04em; }
     .logo svg { width: 24px; height: 24px; }
+    .wm { display: inline-flex; align-items: center; }
+    .wm-os { margin-left: 3px; padding: 1px 4px 2px; background: var(--fg); color: var(--bg); font-style: italic; }
     nav { display: flex; gap: 22px; margin-left: auto; font: 11px ui-monospace, monospace; letter-spacing: .05em; text-transform: uppercase; }
     nav a { color: var(--muted); text-decoration: none; }
     nav a:hover, nav a:focus-visible { color: var(--fg); }
@@ -34,9 +36,10 @@
     .record-row { display: grid; grid-template-columns: 150px 1fr; gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--border); }
     .record-row dt { color: var(--muted); font: 10px ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; }
     .record-row dd { margin: 0; font-family: ui-monospace, monospace; font-size: 12px; }
-    .checks { display: grid; gap: 12px; margin: 22px 0 0; padding: 0; list-style: none; }
-    .checks li { padding: 12px 14px; border-left: 2px solid var(--accent); background: color-mix(in oklch, var(--accent) 7%, transparent); color: var(--muted); }
-    .checks li strong { display: block; margin-bottom: 3px; color: var(--fg); font: 11px ui-monospace, monospace; text-transform: uppercase; }
+    .checks, .program { display: grid; gap: 12px; margin: 22px 0 0; padding: 0; list-style: none; }
+    .checks li, .program li { padding: 12px 14px; border-left: 2px solid var(--accent); background: color-mix(in oklch, var(--accent) 7%, transparent); color: var(--muted); }
+    .checks li strong, .program li strong { display: block; margin-bottom: 3px; color: var(--fg); font: 11px ui-monospace, monospace; text-transform: uppercase; }
+    .program li { border-left-color: var(--border); background: color-mix(in oklch, var(--surface) 54%, transparent); }
     .unknown { border-left-color: var(--warn) !important; background: color-mix(in oklch, var(--warn) 7%, transparent) !important; }
     .back { display: inline-block; margin-top: 58px; color: var(--muted); font: 12px ui-monospace, monospace; }
     @media (max-width: 720px) { .topnav-inner { flex-wrap: wrap; padding: 18px 0; } nav { width: 100%; margin-left: 0; justify-content: space-between; } main { padding-top: 60px; } .research-grid { grid-template-columns: 1fr; margin-top: 54px; } .record-row { grid-template-columns: 1fr; gap: 4px; } }
@@ -45,7 +48,7 @@
 <body>
   <header class="topnav">
     <div class="container topnav-inner">
-      <a class="logo" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>FALCONOS</span></a>
+      <a class="logo" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span class="wm">FALCON<i class="wm-os">OS</i></span></a>
       <nav aria-label="Page navigation"><a href="/">Home</a><a href="/product/">Product</a><a href="/#waitlist">Waitlist</a></nav>
     </div>
   </header>
@@ -77,9 +80,26 @@
           </ul>
         </article>
         <article class="card">
+          <p class="eyebrow">Planned research program</p>
+          <h2>What we will do next.</h2>
+          <ol class="program">
+            <li><strong>01 / Capture</strong>Collect source records with timestamps, request scope, and raw response bytes.</li>
+            <li><strong>02 / Normalize</strong>Turn source values into typed facts while keeping the original evidence attached.</li>
+            <li><strong>03 / Form thesis</strong>State the opportunity, the decision condition, and what evidence would change the view.</li>
+            <li><strong>04 / Test risk</strong>Check access, liquidity, costs, stale data, and exit conditions before any mandate.</li>
+            <li><strong>05 / Keep outcome</strong>Attach later decisions and outcomes to the earlier record so the next run can inspect its history.</li>
+          </ol>
+        </article>
+        <article class="card">
           <p class="eyebrow">Research path</p>
           <h2>Research becomes memory.</h2>
           <p>Agents relate source evidence, asset research, market structure, strategy context, and outcomes. The next decision can inspect the last one instead of starting empty.</p>
+          <dl class="record">
+            <div class="record-row"><dt>Question</dt><dd>What is the claim?</dd></div>
+            <div class="record-row"><dt>Evidence</dt><dd>Which source supports it?</dd></div>
+            <div class="record-row"><dt>Invalidation</dt><dd>What would change the view?</dd></div>
+            <div class="record-row"><dt>Outcome</dt><dd>What happened after the decision?</dd></div>
+          </dl>
         </article>
         <article class="card">
           <p class="eyebrow">Public view</p>
