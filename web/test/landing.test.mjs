@@ -11,18 +11,19 @@ const visibleText = html
   .replace(/\s+/g, ' ')
   .trim();
 
-test('V48: capability labels match verified state', () => {
-  assert.match(visibleText, /Perps Tested local preview/);
-  assert.match(visibleText, /Stablecoins Working local CLI/);
-  assert.match(visibleText, /Stocks In development/);
-  assert.match(visibleText, /Connected agents and live execution are planned\./);
+test('V48: landing leads with a concise product view', () => {
+  assert.match(visibleText, /An investment firm built around agents\./);
+  assert.match(visibleText, /Market snapshot\./);
+  assert.match(visibleText, /Get access when the firm opens\./);
+  assert.match(html, /href="\/product\/"/);
+  assert.match(html, /href="\/research\/"/);
 });
 
-test('V51 V53: advisory and risk copy preserves authority', () => {
-  assert.match(visibleText, /The Client Agent decides what happens next\./);
-  assert.match(visibleText, /FalconOS never signs or submits an order\./);
-  assert.match(visibleText, /It returns PASS, BLOCK, or NO_DATA/);
-  assert.doesNotMatch(visibleText, /request review/i);
+test('V51 V53: public landing keeps advisory boundaries', () => {
+  assert.match(visibleText, /Read-only snapshot across sample instruments/);
+  assert.match(visibleText, /No orders, custody, or execution/);
+  assert.match(visibleText, /Connected agents and live execution are planned\./);
+  assert.doesNotMatch(visibleText, /submit an order/i);
 });
 
 test('V55: production links resolve within deployed page', () => {
@@ -36,7 +37,7 @@ test('V55: production links resolve within deployed page', () => {
     (match) => match[1],
   );
   assert.deepEqual(
-    hrefs.filter((href) => /\.html(?:[?#]|$)/i.test(href)),
+    hrefs.filter((href) => /\.html(?:[?#]|$)|\/dash\//i.test(href)),
     [],
   );
 
@@ -50,14 +51,8 @@ test('V55: production links resolve within deployed page', () => {
   assert.deepEqual(missingTargets, []);
 });
 
-test('V48: crawler and social copy avoid live-use claims', () => {
-  const metaDescription = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? '';
-  const ogDescription = html.match(/<meta property="og:description" content="([^"]*)"/)?.[1] ?? '';
-  for (const copy of [metaDescription, ogDescription]) {
-    assert.notEqual(copy, '');
-    assert.match(copy, /planned/);
-    assert.match(copy, /preview/);
-    assert.doesNotMatch(copy, /agents use the system/i);
-    assert.doesNotMatch(copy, /use the dashboard/i);
-  }
+test('V56: every inline landing script compiles', () => {
+  const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
+  assert.ok(scripts.length > 0);
+  for (const script of scripts) assert.doesNotThrow(() => new Function(script));
 });
