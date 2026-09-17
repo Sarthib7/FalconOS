@@ -1,12 +1,12 @@
 import { createBasketProposal, createCanonicalBasketSnapshot, createHostTransportBoundary, createStocksAdviceRequest, invokeStocksAdvice, STOCKS_SCHEMA_VERSION } from '../stocks/stocks.ts';
-import type { AssetCaptureInput, AssetSourcePrecedence, BasketLeg, CanonicalBasketSnapshot, CanonicalBasketSnapshotInput, FieldCapture, HostTransportBoundary, LeadResponse, RiskResponse, StockRegistryEntry, StocksAdviceResponse, StocksHostTransport } from '../stocks/stocks.ts';
+import type { AssetCaptureInput, AssetSourcePrecedence, BasketLeg, CanonicalBasketSnapshot, CanonicalBasketSnapshotInput, DataProvenance, FieldCapture, HostTransportBoundary, LeadResponse, RiskResponse, StockRegistryEntry, StocksAdviceResponse, StocksHostTransport } from '../stocks/stocks.ts';
 import { evaluateMarketIntegrity } from '../stocks/integrity.ts';
 import { scaleDecimalToInteger } from '../stocks/live.ts';
 import type { LiveEvidenceAdapter, StockAssetConfig, UnderlyingReference } from '../stocks/live.ts';
 import type { DashConfig } from './adapters.ts';
 import type { PythPriceResult } from './pyth.ts';
 
-function registryOf(asset: StockAssetConfig): StockRegistryEntry {
+function registryOf(asset: StockAssetConfig, provenance: DataProvenance): StockRegistryEntry {
   return {
     schemaVersion: STOCKS_SCHEMA_VERSION,
     registryVersion: 'dash-live-1',
@@ -20,7 +20,7 @@ function registryOf(asset: StockAssetConfig): StockRegistryEntry {
     fees: { takerBps: 0, makerBps: 0 },
     capabilities: { tradable: true, redeemable: true },
     corporateAction: { lastEventId: null, asOf: null },
-    provenance: 'live',
+    provenance,
   };
 }
 
@@ -43,7 +43,7 @@ export async function buildLiveBasketSnapshot(config: DashConfig, adapter: LiveE
   for (const asset of config.assets) {
     assetIds.push(asset.assetId);
     const captures = await adapter.fetchAsset(asset);
-    assets[asset.assetId] = { registry: registryOf(asset), precedence: precedenceOf(adapter), captures: [captures.price, captures.liquidity] };
+    assets[asset.assetId] = { registry: registryOf(asset, config.provenance ?? 'live'), precedence: precedenceOf(adapter), captures: [captures.price, captures.liquidity] };
     for (const capture of [captures.price, captures.liquidity]) {
       const ms = Date.parse(capture.capturedAt);
       if (Number.isFinite(ms) && ms > maxCapturedMs) maxCapturedMs = ms;
@@ -55,7 +55,7 @@ export async function buildLiveBasketSnapshot(config: DashConfig, adapter: LiveE
     assets,
     capturedAt: new Date(maxCapturedMs).toISOString(),
     coherenceCapMs: config.coherenceCapMs,
-    provenance: 'live',
+    provenance: config.provenance ?? 'live',
   };
   return createCanonicalBasketSnapshot(input);
 }
@@ -177,7 +177,7 @@ export async function buildCentralSnapshot(config: DashConfig, dexAdapter: LiveE
         ],
       };
     }
-    assets[asset.assetId] = { registry: registryOf(asset), precedence, captures };
+    assets[asset.assetId] = { registry: registryOf(asset, config.provenance ?? 'live'), precedence, captures };
     for (const capture of captures) {
       const ms = Date.parse(capture.capturedAt);
       if (Number.isFinite(ms) && ms > maxCapturedMs) maxCapturedMs = ms;
@@ -189,7 +189,7 @@ export async function buildCentralSnapshot(config: DashConfig, dexAdapter: LiveE
     assets,
     capturedAt: new Date(maxCapturedMs).toISOString(),
     coherenceCapMs: config.coherenceCapMs,
-    provenance: 'live',
+    provenance: config.provenance ?? 'live',
   };
   return { snapshot: createCanonicalBasketSnapshot(input), underlyingRefs };
 }
