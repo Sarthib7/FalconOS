@@ -5,6 +5,7 @@ import { scaleDecimalToInteger } from '../../stocks/live.ts';
 import type { DashConfig } from '../adapters.ts';
 import { runCentralAdvice, runLiveAdvice } from '../council.ts';
 import { renderAdvice } from '../render.ts';
+import { evaluateMarketIntegrity } from '../../stocks/integrity.ts';
 import type { FieldCapture } from '../../stocks/stocks.ts';
 import type { PythPriceResult } from '../pyth.ts';
 import { divideIntegerByDecimal, effectiveMultiplier, multiplierFromSupply, multipliersAgree, parsePreStocks, parseScaledUiAccountState, scaledPreStocksAdapter } from '../../stocks/prestocks.ts';
@@ -33,10 +34,13 @@ test('I11: live fixture evidence publishes an advisory basket with citations', a
   assert.equal(advice.executionReady, false);
   assert.equal(advice.proposal?.legs.length, 2);
   assert.equal(advice.citations.length, 4);
-  const rendered = renderAdvice(snapshot, advice, config());
+  const integrity = evaluateMarketIntegrity({ snapshot, proposal: advice.proposal, checkedAt: new Date().toISOString(), maxAgeMs: Number.MAX_SAFE_INTEGER });
+  const rendered = renderAdvice(snapshot, advice, config(), undefined, integrity);
   assert.match(rendered, /advisory-only/);
   assert.match(rendered, /AAPLx/);
   assert.match(rendered, /PUBLISHED/);
+  assert.match(rendered, /Integrity/);
+  assert.match(rendered, /status=VERIFIED/);
 });
 
 test('V64: a provider outage fails closed to NO_DATA advice', async () => {
@@ -204,4 +208,10 @@ test('V66: scaledPreStocksAdapter publishes normalized price when issuer agrees'
   const captures = await adapter.fetchAsset({ assetId: 'mintA', underlying: 'OPENAI', targetWeightBps: 10_000, priceScale: 6, quantityScale: 2, minLiquidity: '100000', maxWeightBps: 10_000 });
   assert.equal(captures.price.status, 'ok');
   assert.equal(captures.price.normalizedValue, '993853383');
+});
+
+test('integrity gate maps a stale snapshot to NO_DATA advice', async () => {
+  const { advice } = await runLiveAdvice({ ...config(), integrityMaxAgeMs: 1 }, dexFixture());
+  assert.equal(advice.status, 'NO_DATA');
+  assert.equal(advice.proposal, null);
 });

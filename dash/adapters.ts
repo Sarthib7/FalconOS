@@ -4,4 +4,5 @@ export interface DashConfig {
   assets: readonly StockAssetConfig[];
   coherenceCapMs: number;
   maxDislocationBps?: number;
+  integrityMaxAgeMs?: number;
 }

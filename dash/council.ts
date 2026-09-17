@@ -1,5 +1,6 @@
 import { createBasketProposal, createCanonicalBasketSnapshot, createHostTransportBoundary, createStocksAdviceRequest, invokeStocksAdvice, STOCKS_SCHEMA_VERSION } from '../stocks/stocks.ts';
 import type { AssetCaptureInput, AssetSourcePrecedence, BasketLeg, CanonicalBasketSnapshot, CanonicalBasketSnapshotInput, FieldCapture, HostTransportBoundary, LeadResponse, RiskResponse, StockRegistryEntry, StocksAdviceResponse, StocksHostTransport } from '../stocks/stocks.ts';
+import { evaluateMarketIntegrity } from '../stocks/integrity.ts';
 import { scaleDecimalToInteger } from '../stocks/live.ts';
 import type { LiveEvidenceAdapter, StockAssetConfig, UnderlyingReference } from '../stocks/live.ts';
 import type { DashConfig } from './adapters.ts';
@@ -88,6 +89,11 @@ export function dashBoundary(config: DashConfig, underlyingRefs?: ReadonlyMap<st
     async riskReview(request): Promise<RiskResponse> {
       const reasons: string[] = [];
       let status: RiskResponse['status'] = 'PASS';
+      const integrity = evaluateMarketIntegrity({ snapshot: request.snapshot, proposal: request.leadProposal, checkedAt: new Date().toISOString(), maxAgeMs: config.integrityMaxAgeMs ?? Number.MAX_SAFE_INTEGER });
+      if (integrity.status !== 'VERIFIED') {
+        reasons.push('market integrity ' + integrity.status + ': ' + integrity.refusalCodes.join(', '));
+        status = integrity.status === 'DIVERGENT' ? 'BLOCK' : 'NO_DATA';
+      }
       if (request.snapshot.envelope.status !== 'READY' || request.leadProposal === null || request.leadProposal.status !== 'PROPOSED') {
         status = 'NO_DATA';
       } else {

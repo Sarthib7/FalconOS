@@ -1,5 +1,7 @@
 import { dexScreenerAdapter } from '../stocks/adapters.ts';
+import type { CanonicalBasketSnapshot, StocksAdviceResponse } from '../stocks/stocks.ts';
 import type { DashConfig } from './adapters.ts';
+import { evaluateMarketIntegrity } from '../stocks/integrity.ts';
 import { runCentralAdvice, runLiveAdvice } from './council.ts';
 import { fetchPreStocks, fetchScaledUiMultipliers, scaledPreStocksAdapter } from '../stocks/prestocks.ts';
 import { PREIPO_ASSETS } from '../stocks/preipo.ts';
@@ -28,7 +30,12 @@ const SAMPLE_CONFIG: DashConfig = {
 const PREIPO_CONFIG: DashConfig = {
   assets: PREIPO_ASSETS,
   coherenceCapMs: 120_000,
+  integrityMaxAgeMs: 900_000,
 };
+
+function reportFor(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig) {
+  return evaluateMarketIntegrity({ snapshot, proposal: advice.proposal, checkedAt: new Date().toISOString(), maxAgeMs: config.integrityMaxAgeMs ?? Number.MAX_SAFE_INTEGER });
+}
 
 async function main(): Promise<void> {
   if (process.argv[2] === 'preipo') {
@@ -36,18 +43,18 @@ async function main(): Promise<void> {
     const [{ refs, issuerPrices }, multipliers] = await Promise.all([fetchPreStocks(mints), fetchScaledUiMultipliers(mints)]);
     const adapter = scaledPreStocksAdapter(dexScreenerAdapter(), multipliers, issuerPrices);
     const { snapshot, advice } = await runLiveAdvice(PREIPO_CONFIG, adapter, refs);
-    process.stdout.write(`${renderAdvice(snapshot, advice, PREIPO_CONFIG, refs)}\n`);
+    process.stdout.write(`${renderAdvice(snapshot, advice, PREIPO_CONFIG, refs, reportFor(snapshot, advice, PREIPO_CONFIG))}\n`);
     return;
   }
   const pythAssets = SAMPLE_CONFIG.assets.flatMap(asset => asset.pyth === undefined ? [] : [{ assetId: asset.assetId, underlying: asset.underlying, priceScale: asset.priceScale, tokenizedFeedId: asset.pyth.tokenizedFeedId, underlyingFeedId: asset.pyth.underlyingFeedId }]);
   if (pythAssets.length > 0) {
     const pythResults = await fetchPythPrices(pythAssets);
     const { snapshot, advice, underlyingRefs } = await runCentralAdvice(SAMPLE_CONFIG, dexScreenerAdapter(), pythResults);
-    process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG, underlyingRefs)}\n`);
+    process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG, underlyingRefs, reportFor(snapshot, advice, SAMPLE_CONFIG))}\n`);
     return;
   }
   const { snapshot, advice } = await runLiveAdvice(SAMPLE_CONFIG, dexScreenerAdapter());
-  process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG)}\n`);
+  process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG, undefined, reportFor(snapshot, advice, SAMPLE_CONFIG))}\n`);
 }
 
 main().catch((error: unknown) => {
