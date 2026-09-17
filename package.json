@@ -11,6 +11,7 @@
     "scan": "node src/cli.ts scan",
     "watch": "node src/cli.ts watch",
     "stocks": "node dash/cli.ts preipo",
+    "stocks:demo": "node dash/cli.ts stocks-demo",
     "test": "node --test test/*.test.ts stablecoins/test/*.test.ts preps/test/*.test.ts stocks/test/*.test.ts dash/test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

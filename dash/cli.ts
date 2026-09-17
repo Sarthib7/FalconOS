@@ -2,6 +2,8 @@ import { dexScreenerAdapter } from '../stocks/adapters.ts';
 import type { CanonicalBasketSnapshot, StocksAdviceResponse } from '../stocks/stocks.ts';
 import type { DashConfig } from './adapters.ts';
 import { evaluateMarketIntegrity } from '../stocks/integrity.ts';
+import { STOCKS_DEMO_ASSETS, stocksDemoValues } from '../stocks/demo.ts';
+import { fixtureAdapter } from '../stocks/adapters.ts';
 import { runCentralAdvice, runLiveAdvice } from './council.ts';
 import { fetchPreStocks, fetchScaledUiMultipliers, scaledPreStocksAdapter } from '../stocks/prestocks.ts';
 import { PREIPO_ASSETS } from '../stocks/preipo.ts';
@@ -33,11 +35,30 @@ const PREIPO_CONFIG: DashConfig = {
   integrityMaxAgeMs: 900_000,
 };
 
-function reportFor(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig) {
-  return evaluateMarketIntegrity({ snapshot, proposal: advice.proposal, checkedAt: new Date().toISOString(), maxAgeMs: config.integrityMaxAgeMs ?? Number.MAX_SAFE_INTEGER });
+function reportFor(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig, checkedAt = new Date().toISOString()) {
+  return evaluateMarketIntegrity({ snapshot, proposal: advice.proposal, checkedAt, maxAgeMs: config.integrityMaxAgeMs ?? 900_000 });
+}
+
+async function runStocksDemo(): Promise<void> {
+  const capturedAt = new Date().toISOString();
+  const config: DashConfig = { assets: STOCKS_DEMO_ASSETS, coherenceCapMs: 120_000, integrityMaxAgeMs: 900_000 };
+  const healthy = await runLiveAdvice(config, fixtureAdapter(stocksDemoValues(capturedAt)));
+  const blocked = await runLiveAdvice(config, fixtureAdapter(stocksDemoValues(capturedAt, true)));
+  const staleAt = new Date(Date.parse(capturedAt) + 3_600_000).toISOString();
+
+  process.stdout.write('STOCKS DEMO / HEALTHY\n');
+  process.stdout.write(`${renderAdvice(healthy.snapshot, healthy.advice, config, undefined, reportFor(healthy.snapshot, healthy.advice, config, capturedAt))}\n\n`);
+  process.stdout.write('STOCKS DEMO / LOW-LIQUIDITY\n');
+  process.stdout.write(`${renderAdvice(blocked.snapshot, blocked.advice, config, undefined, reportFor(blocked.snapshot, blocked.advice, config, capturedAt))}\n\n`);
+  process.stdout.write('STOCKS DEMO / STALE-REPLAY\n');
+  process.stdout.write(`${renderAdvice(healthy.snapshot, healthy.advice, config, undefined, reportFor(healthy.snapshot, healthy.advice, config, staleAt))}\n`);
 }
 
 async function main(): Promise<void> {
+  if (process.argv[2] === 'stocks-demo') {
+    await runStocksDemo();
+    return;
+  }
   if (process.argv[2] === 'preipo') {
     const mints = PREIPO_CONFIG.assets.map(asset => asset.assetId);
     const [{ refs, issuerPrices }, multipliers] = await Promise.all([fetchPreStocks(mints), fetchScaledUiMultipliers(mints)]);
