@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fixtureAdapter, scaleDecimalToInteger } from '../adapters.ts';
+import { fixtureAdapter } from '../adapters.ts';
+import { scaleDecimalToInteger } from '../../stocks/live.ts';
 import type { DashConfig } from '../adapters.ts';
 import { runCentralAdvice, runLiveAdvice } from '../council.ts';
 import { renderAdvice } from '../render.ts';

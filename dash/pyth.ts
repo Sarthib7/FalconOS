@@ -1,5 +1,6 @@
-import { scaleDecimalToInteger } from './adapters.ts';
+import { scaleDecimalToInteger } from '../stocks/live.ts';
 import type { FieldCapture } from '../stocks/stocks.ts';
+import type { UnderlyingReference } from '../stocks/live.ts';
 
 // Pyth Hermes REST, verified against https://docs.pyth.network/price-feeds/core/fetch-price-updates
 // GET /v2/updates/price/latest?ids[]=0x<feedId>  with  Authorization: Bearer $PYTH_API_KEY
@@ -16,15 +17,9 @@ export interface PythAssetFeeds {
   underlyingFeedId: string;
 }
 
-export interface PythUnderlyingRef {
-  feedId: string;
-  spot: string;
-  publishTime: string;
-}
-
 export interface PythPriceResult {
   price: FieldCapture;
-  underlying: PythUnderlyingRef | null;
+  underlying: UnderlyingReference | null;
 }
 
 interface HermesEntry {
@@ -105,7 +100,7 @@ export async function fetchPythPrices(assets: readonly PythAssetFeeds[], maxAgeM
     }
     for (const asset of pending) {
       const underlyingEntry = byId.get(asset.underlyingFeedId);
-      const underlying: PythUnderlyingRef | null = underlyingEntry === undefined ? null : { feedId: asset.underlyingFeedId, spot: pythToDecimal(underlyingEntry.price, underlyingEntry.expo), publishTime: new Date(underlyingEntry.publishTime * 1000).toISOString() };
+      const underlying: UnderlyingReference | null = underlyingEntry === undefined ? null : { feedId: asset.underlyingFeedId, spot: pythToDecimal(underlyingEntry.price, underlyingEntry.expo), publishTime: new Date(underlyingEntry.publishTime * 1000).toISOString() };
       const tokenized = byId.get(asset.tokenizedFeedId);
       if (tokenized === undefined) {
         results.set(asset.assetId, { price: priceFailure(at, 'tokenized feed absent from hermes response', true), underlying });

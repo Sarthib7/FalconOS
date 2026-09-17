@@ -1,48 +1,14 @@
+import { scaleDecimalToInteger } from '../stocks/live.ts';
+import type { AssetCaptures, LiveEvidenceAdapter, StockAssetConfig } from '../stocks/live.ts';
 import type { FieldCapture, StockField } from '../stocks/stocks.ts';
 
-// Per-asset dashboard configuration. assetId is the Solana token mint.
-export interface DashAssetConfig {
-  assetId: string;
-  underlying: string;
-  targetWeightBps: number;
-  priceScale: number;
-  quantityScale: number;
-  minLiquidity: string;
-  maxWeightBps: number;
-  pyth?: { tokenizedFeedId: string; underlyingFeedId: string };
-}
-
 export interface DashConfig {
-  assets: readonly DashAssetConfig[];
+  assets: readonly StockAssetConfig[];
   coherenceCapMs: number;
   maxDislocationBps?: number;
 }
 
-export interface AssetCaptures {
-  price: FieldCapture;
-  liquidity: FieldCapture;
-}
-
-// A read-only live evidence source. One HTTP call yields both fields for an asset.
-export interface LiveEvidenceAdapter {
-  readonly sourceId: string;
-  readonly adapterVersion: string;
-  readonly semanticVersion: string;
-  fetchAsset(asset: DashAssetConfig): Promise<AssetCaptures>;
-}
-
 const DECIMAL = /^\d+(\.\d+)?$/;
-
-// Exact decimal-string -> integer-units string at `scale` decimals. No floating point.
-export function scaleDecimalToInteger(value: string, scale: number): string {
-  if (!DECIMAL.test(value)) throw new Error(`invalid decimal: ${value}`);
-  const parts = value.split('.');
-  const intPart = parts[0] ?? '0';
-  const fracPart = parts[1] ?? '';
-  const frac = `${fracPart}${'0'.repeat(scale)}`.slice(0, scale);
-  const combined = `${intPart}${frac}`.replace(/^0+(?=\d)/, '');
-  return combined;
-}
 
 function readDecimal(value: unknown): string | null {
   if (typeof value === 'string' && DECIMAL.test(value)) return value;
@@ -110,7 +76,7 @@ export function dexScreenerAdapter(baseUrl = 'https://api.dexscreener.com'): Liv
     sourceId: 'dexscreener',
     adapterVersion: 'dexscreener-token-pairs-v1',
     semanticVersion: 'usd-pool',
-    async fetchAsset(asset: DashAssetConfig): Promise<AssetCaptures> {
+    async fetchAsset(asset: StockAssetConfig): Promise<AssetCaptures> {
       const fail = (at: string, reason: string, retryable: boolean): AssetCaptures => ({
         price: failedCapture('price', adapter, at, reason, retryable),
         liquidity: failedCapture('liquidity', adapter, at, reason, retryable),
@@ -153,7 +119,7 @@ export function fixtureAdapter(values: Readonly<Record<string, { price: string; 
     sourceId: 'fixture',
     adapterVersion: 'fixture-v1',
     semanticVersion: 'test',
-    async fetchAsset(asset: DashAssetConfig): Promise<AssetCaptures> {
+    async fetchAsset(asset: StockAssetConfig): Promise<AssetCaptures> {
       const value = values[asset.assetId];
       if (value === undefined) {
         const at = new Date().toISOString();

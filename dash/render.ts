@@ -1,7 +1,7 @@
 import type { CanonicalBasketSnapshot, StocksAdviceResponse } from '../stocks/stocks.ts';
-import { scaleDecimalToInteger } from './adapters.ts';
+import { scaleDecimalToInteger } from '../stocks/live.ts';
 import type { DashConfig } from './adapters.ts';
-import type { PythUnderlyingRef } from './pyth.ts';
+import type { UnderlyingReference } from '../stocks/live.ts';
 
 function fromIntegerUnits(value: string, scale: number): string {
   if (scale === 0) return value;
@@ -10,7 +10,7 @@ function fromIntegerUnits(value: string, scale: number): string {
   return `${digits.slice(0, cut)}.${digits.slice(cut)}`;
 }
 
-export function renderAdvice(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig, underlyingRefs?: ReadonlyMap<string, PythUnderlyingRef | null>): string {
+export function renderAdvice(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig, underlyingRefs?: ReadonlyMap<string, UnderlyingReference | null>): string {
   const lines: string[] = [];
   lines.push('FalconOS · Stocks live dashboard   [advisory-only · executionReady=false]');
   lines.push(`provenance=${snapshot.envelope.provenance}  snapshot=${snapshot.envelope.status}  advice=${advice.status}`);

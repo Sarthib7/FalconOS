@@ -1,7 +1,6 @@
+import { scaleDecimalToInteger } from './live.ts';
+import type { AssetCaptures, LiveEvidenceAdapter, StockAssetConfig, UnderlyingReference } from './live.ts';
 import type { FieldCapture } from './stocks.ts';
-import type { AssetCaptures, DashAssetConfig, LiveEvidenceAdapter } from '../dash/adapters.ts';
-import { scaleDecimalToInteger } from '../dash/adapters.ts';
-import type { PythUnderlyingRef } from '../dash/pyth.ts';
 
 // PreStocks public API (keyless), from the Stocklana track: https://prestocks.com/api/prestocks
 // Rows carry real Solana mints (contract_address), the SPV markPrice per underlying share, and
@@ -183,8 +182,8 @@ export async function fetchScaledUiMultipliers(mints: readonly string[], rpcUrl 
 
 // Read-only GET. On any failure both maps hold nulls: references disappear (no dislocation
 // check) and the wrapping adapter refuses to publish uncorroborated pool prices.
-export async function fetchPreStocks(mints: readonly string[]): Promise<{ refs: Map<string, PythUnderlyingRef | null>; issuerPrices: Map<string, string | null> }> {
-  const refs = new Map<string, PythUnderlyingRef | null>();
+export async function fetchPreStocks(mints: readonly string[]): Promise<{ refs: Map<string, UnderlyingReference | null>; issuerPrices: Map<string, string | null> }> {
+  const refs = new Map<string, UnderlyingReference | null>();
   const issuerPrices = new Map<string, string | null>();
   for (const mint of mints) {
     refs.set(mint, null);
@@ -217,7 +216,7 @@ export function scaledPreStocksAdapter(inner: LiveEvidenceAdapter, multipliers: 
     sourceId: inner.sourceId,
     adapterVersion: `${inner.adapterVersion}+scaled-ui`,
     semanticVersion: 'usd-pool-scaled',
-    async fetchAsset(asset: DashAssetConfig): Promise<AssetCaptures> {
+    async fetchAsset(asset: StockAssetConfig): Promise<AssetCaptures> {
       const captures = await inner.fetchAsset(asset);
       const stamp = { adapterVersion: adapter.adapterVersion, semanticVersion: adapter.semanticVersion };
       const liquidity: FieldCapture = { ...captures.liquidity, ...stamp };

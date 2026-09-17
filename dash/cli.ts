@@ -1,9 +1,10 @@
 import { dexScreenerAdapter } from './adapters.ts';
 import type { DashConfig } from './adapters.ts';
 import { runCentralAdvice, runLiveAdvice } from './council.ts';
+import { fetchPreStocks, fetchScaledUiMultipliers, scaledPreStocksAdapter } from '../stocks/prestocks.ts';
+import { PREIPO_ASSETS } from '../stocks/preipo.ts';
 import { fetchPythPrices } from './pyth.ts';
 import { renderAdvice } from './render.ts';
-import { runPreIpo } from '../stocks/cli.ts';
 
 // Verification config. `assetId` is a Solana token mint that is the BASE token in a liquid
 // pool (DEX Screener reports price/liquidity for base tokens). Wrapped SOL proves the live
@@ -24,9 +25,18 @@ const SAMPLE_CONFIG: DashConfig = {
   coherenceCapMs: 120_000,
 };
 
+const PREIPO_CONFIG: DashConfig = {
+  assets: PREIPO_ASSETS,
+  coherenceCapMs: 120_000,
+};
+
 async function main(): Promise<void> {
   if (process.argv[2] === 'preipo') {
-    await runPreIpo();
+    const mints = PREIPO_CONFIG.assets.map(asset => asset.assetId);
+    const [{ refs, issuerPrices }, multipliers] = await Promise.all([fetchPreStocks(mints), fetchScaledUiMultipliers(mints)]);
+    const adapter = scaledPreStocksAdapter(dexScreenerAdapter(), multipliers, issuerPrices);
+    const { snapshot, advice } = await runLiveAdvice(PREIPO_CONFIG, adapter, refs);
+    process.stdout.write(`${renderAdvice(snapshot, advice, PREIPO_CONFIG, refs)}\n`);
     return;
   }
   const pythAssets = SAMPLE_CONFIG.assets.flatMap(asset => asset.pyth === undefined ? [] : [{ assetId: asset.assetId, underlying: asset.underlying, priceScale: asset.priceScale, tokenizedFeedId: asset.pyth.tokenizedFeedId, underlyingFeedId: asset.pyth.underlyingFeedId }]);
