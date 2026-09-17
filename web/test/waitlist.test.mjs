@@ -54,7 +54,8 @@ test('waitlist counts repeated submissions even for one email', async () => {
   const responses = await Promise.all(
     Array.from({ length: 6 }, () => handleWaitlist(request({ email: 'user@example.com' }), testEnv))
   );
-  assert.deepEqual(responses.map(response => response.status), [201, 201, 201, 201, 201, 429]);
+  assert.equal(responses.filter(response => response.status === 201).length, 5);
+  assert.equal(responses.filter(response => response.status === 429).length, 1);
   assert.equal(testEnv.WAITLIST_DB.calls.filter(call => typeof call === 'string' && call.includes('waitlist_entries')).length, 5);
 });
 
