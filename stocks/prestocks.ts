@@ -1,7 +1,6 @@
-import type { FieldCapture } from '../stocks/stocks.ts';
-import type { AssetCaptures, DashAssetConfig, LiveEvidenceAdapter } from './adapters.ts';
-import { scaleDecimalToInteger } from './adapters.ts';
-import type { PythUnderlyingRef } from './pyth.ts';
+import { scaleDecimalToInteger } from './live.ts';
+import type { AssetCaptures, LiveEvidenceAdapter, StockAssetConfig, UnderlyingReference } from './live.ts';
+import type { FieldCapture } from './stocks.ts';
 
 // PreStocks public API (keyless), from the Stocklana track: https://prestocks.com/api/prestocks
 // Rows carry real Solana mints (contract_address), the SPV markPrice per underlying share, and
@@ -112,7 +111,16 @@ function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function parseScaledState(value: unknown): ScaledUiState | null {
+function positiveDecimalString(value: unknown): string | null {
+  const text = readString(value);
+  if (text === null || !DECIMAL.test(text)) return null;
+  const [intPart = '0', fracPart = ''] = text.split('.');
+  if ((intPart + fracPart).replace(/0/g, '') === '') return null;
+  return text;
+}
+
+// Fail closed on zero, malformed, or incomplete scaled-UI extension state (V66).
+export function parseScaledUiAccountState(value: unknown): ScaledUiState | null {
   const root = readRecord(value);
   const result = readRecord(root?.result);
   const account = result?.value;
@@ -128,12 +136,20 @@ function parseScaledState(value: unknown): ScaledUiState | null {
   const scaled = rows.find(row => readRecord(row)?.extension === 'scaledUiAmountConfig');
   if (scaled === undefined) return { multiplier: '1', newMultiplier: null, newMultiplierEffectiveTimestamp: null };
   const state = readRecord(readRecord(scaled)?.state);
-  const multiplier = readString(state?.multiplier);
-  if (multiplier === null || !DECIMAL.test(multiplier)) return null;
-  const pendingRaw = readString(state?.newMultiplier);
-  const pending = pendingRaw !== null && DECIMAL.test(pendingRaw) ? pendingRaw : null;
-  const activation = readNumber(state?.newMultiplierEffectiveTimestamp);
-  return { multiplier, newMultiplier: pending, newMultiplierEffectiveTimestamp: activation };
+  if (state === null) return null;
+  const multiplier = positiveDecimalString(state.multiplier);
+  if (multiplier === null) return null;
+  const hasPendingKey = Object.prototype.hasOwnProperty.call(state, 'newMultiplier');
+  const hasTimestampKey = Object.prototype.hasOwnProperty.call(state, 'newMultiplierEffectiveTimestamp');
+  const pendingRaw = state.newMultiplier;
+  const activation = readNumber(state.newMultiplierEffectiveTimestamp);
+  if (hasPendingKey && pendingRaw !== null && pendingRaw !== undefined) {
+    const pending = positiveDecimalString(pendingRaw);
+    if (pending === null || activation === null) return null;
+    return { multiplier, newMultiplier: pending, newMultiplierEffectiveTimestamp: activation };
+  }
+  if (hasTimestampKey && activation !== null) return null;
+  return { multiplier, newMultiplier: null, newMultiplierEffectiveTimestamp: null };
 }
 
 function parseTokenSupply(value: unknown): { amount: string; decimals: number; uiAmount: string } | null {
@@ -167,7 +183,7 @@ export async function fetchScaledUiMultipliers(mints: readonly string[], rpcUrl 
         rpcPost(rpcUrl, 'getAccountInfo', [mint, { encoding: 'jsonParsed' }]),
         rpcPost(rpcUrl, 'getTokenSupply', [mint]),
       ]);
-      const state = parseScaledState(accountJson);
+      const state = parseScaledUiAccountState(accountJson);
       const supply = parseTokenSupply(supplyJson);
       if (state === null || supply === null) return [mint, null];
       const fromExtension = effectiveMultiplier(state, nowSeconds);
@@ -183,8 +199,8 @@ export async function fetchScaledUiMultipliers(mints: readonly string[], rpcUrl 
 
 // Read-only GET. On any failure both maps hold nulls: references disappear (no dislocation
 // check) and the wrapping adapter refuses to publish uncorroborated pool prices.
-export async function fetchPreStocks(mints: readonly string[]): Promise<{ refs: Map<string, PythUnderlyingRef | null>; issuerPrices: Map<string, string | null> }> {
-  const refs = new Map<string, PythUnderlyingRef | null>();
+export async function fetchPreStocks(mints: readonly string[]): Promise<{ refs: Map<string, UnderlyingReference | null>; issuerPrices: Map<string, string | null> }> {
+  const refs = new Map<string, UnderlyingReference | null>();
   const issuerPrices = new Map<string, string | null>();
   for (const mint of mints) {
     refs.set(mint, null);
@@ -217,7 +233,7 @@ export function scaledPreStocksAdapter(inner: LiveEvidenceAdapter, multipliers: 
     sourceId: inner.sourceId,
     adapterVersion: `${inner.adapterVersion}+scaled-ui`,
     semanticVersion: 'usd-pool-scaled',
-    async fetchAsset(asset: DashAssetConfig): Promise<AssetCaptures> {
+    async fetchAsset(asset: StockAssetConfig): Promise<AssetCaptures> {
       const captures = await inner.fetchAsset(asset);
       const stamp = { adapterVersion: adapter.adapterVersion, semanticVersion: adapter.semanticVersion };
       const liquidity: FieldCapture = { ...captures.liquidity, ...stamp };
@@ -232,7 +248,7 @@ export function scaledPreStocksAdapter(inner: LiveEvidenceAdapter, multipliers: 
         failure: { retryable, retryAfterMs: retryable ? 2000 : null, reason },
       });
       const multiplier = multipliers.get(asset.assetId) ?? null;
-      if (multiplier === null) return { price: outage('scaled-ui multiplier unavailable; cannot normalize raw pool price', true), liquidity };
+      if (multiplier === null || positiveDecimalString(multiplier) === null) return { price: outage('scaled-ui multiplier invalid; cannot normalize raw pool price', false), liquidity };
       const normalized = divideIntegerByDecimal(price.normalizedValue, multiplier);
       const issuer = issuerPrices.get(asset.assetId) ?? null;
       if (issuer === null) return { price: outage('issuer price unavailable; cannot corroborate normalized pool price', true), liquidity };
