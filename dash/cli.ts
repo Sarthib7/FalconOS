@@ -41,17 +41,18 @@ function reportFor(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceRespon
 
 async function runStocksDemo(): Promise<void> {
   const capturedAt = new Date().toISOString();
-  const config: DashConfig = { assets: STOCKS_DEMO_ASSETS, coherenceCapMs: 120_000, integrityMaxAgeMs: 900_000 };
+  const config: DashConfig = { assets: STOCKS_DEMO_ASSETS, coherenceCapMs: 120_000, integrityMaxAgeMs: 900_000, provenance: 'synthetic' };
   const healthy = await runLiveAdvice(config, fixtureAdapter(stocksDemoValues(capturedAt)));
   const blocked = await runLiveAdvice(config, fixtureAdapter(stocksDemoValues(capturedAt, true)));
-  const staleAt = new Date(Date.parse(capturedAt) + 3_600_000).toISOString();
+  const staleCapturedAt = new Date(Date.parse(capturedAt) - 3_600_000).toISOString();
+  const stale = await runLiveAdvice(config, fixtureAdapter(stocksDemoValues(staleCapturedAt)));
 
   process.stdout.write('STOCKS DEMO / HEALTHY\n');
   process.stdout.write(`${renderAdvice(healthy.snapshot, healthy.advice, config, undefined, reportFor(healthy.snapshot, healthy.advice, config, capturedAt))}\n\n`);
   process.stdout.write('STOCKS DEMO / LOW-LIQUIDITY\n');
   process.stdout.write(`${renderAdvice(blocked.snapshot, blocked.advice, config, undefined, reportFor(blocked.snapshot, blocked.advice, config, capturedAt))}\n\n`);
   process.stdout.write('STOCKS DEMO / STALE-REPLAY\n');
-  process.stdout.write(`${renderAdvice(healthy.snapshot, healthy.advice, config, undefined, reportFor(healthy.snapshot, healthy.advice, config, staleAt))}\n`);
+  process.stdout.write(`${renderAdvice(stale.snapshot, stale.advice, config, undefined, reportFor(stale.snapshot, stale.advice, config))}\n`);
 }
 
 async function main(): Promise<void> {
