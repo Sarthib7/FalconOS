@@ -14,7 +14,7 @@ This pull request records the plan. It does not migrate runtime code.
 
 [VERIFIED, repository read, 2026-09-17] The landing page and dashboard are large self-contained HTML files with inline styles and scripts. Evidence: `web/index.html` has 2,146 lines and `web/dash/index.html` is an HTML entry point with inline CSS and page behavior.
 
-[VERIFIED, repository read, 2026-09-17] The dashboard reads a committed snapshot rather than executing trades. Evidence: `web/vision.md:5,17` describes the `/dash` page as an illustrative snapshot and states that signing and order submission are outside scope.
+[VERIFIED, repository read, 2026-09-17] The dashboard is a read-only market snapshot. Evidence: `web/dash/index.html:6` describes the page as a CoinGecko snapshot with no orders, custody, or execution.
 
 [VERIFIED, live fetch, 2026-09-17] Production serves the landing page at `https://falconos.markets/` and the dashboard at `https://falconos.markets/dash/`. Both routes returned the expected FalconOS pages during this session.
 
@@ -67,7 +67,7 @@ This pull request records the plan. It does not migrate runtime code.
 - server-rendered or server-generated page content,
 - framework-managed application routing beyond the current two static entries,
 - server-side data access that should not run in the browser,
-- a deployment move that benefits from Next.js runtime features.
+- a deployment move that benefits from Next.js runtime behavior.
 
 Do not add Next.js only to replace HTML components. React inside Vite covers the current static product with less deployment change.
 
@@ -82,7 +82,6 @@ Do not add Next.js only to replace HTML components. React inside Vite covers the
 
 ## Out of scope
 
-- Fixing the unpushed local dashboard commit `42e87d8`.
 - Adding live trading, wallet connection, signing, custody, pooled capital, or order submission.
 - Adding a backend API or persistent waitlist.
 - Changing Cloudflare ownership or deployment settings.
