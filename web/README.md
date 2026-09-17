@@ -13,9 +13,16 @@ This is an isolated Vite static site. No Wrangler configuration is required for 
 
 Because the repository is a monorepo, set the root directory to `web`; the command then runs from that directory and writes the static artifact to `web/dist`.
 
+## Public pages
+
+- `/`: first impression, market snapshot, access state, and waitlist.
+- `/product/`: firm model, advisory pipeline, and product boundaries.
+- `/research/`: evidence format, research checks, and unresolved proof.
+- `/dash/`: private-preview gate. The full dashboard UI is not public.
+
 ## Dashboard access
 
-The public build contains the landing page and a private-preview gate at `/dash/`. The gate is also the local development page at `web/dash/index.html`. The former dashboard UI is not included in this branch.
+The public build contains the landing page, two detail pages, and a private-preview gate at `/dash/`. The gate is also the local development page at `web/dash/index.html`. The former dashboard UI is not included in this branch.
 
 ## Waitlist pipeline
 

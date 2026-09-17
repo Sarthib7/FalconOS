@@ -33,6 +33,22 @@ function request(body, headers = {}) {
   });
 }
 
+function chunkedRequest(body, headers = {}) {
+  const bytes = new TextEncoder().encode(body);
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    }
+  });
+  return new Request('https://falconos.markets/api/waitlist', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body: stream,
+    duplex: 'half'
+  });
+}
+
 test('waitlist accepts and normalizes a valid email', async () => {
   const testEnv = env();
   const response = await handleWaitlist(request({ email: ' User@Example.COM ', source: 'landing' }), testEnv);
@@ -46,6 +62,14 @@ test('waitlist rejects invalid email before database writes', async () => {
   const response = await handleWaitlist(request({ email: 'not-an-email' }), testEnv);
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { error: 'invalid_email' });
+  assert.equal(testEnv.WAITLIST_DB.calls.length, 0);
+});
+
+test('waitlist rejects oversized chunked bodies before database writes', async () => {
+  const testEnv = env();
+  const response = await handleWaitlist(chunkedRequest(JSON.stringify({ email: 'user@example.com', padding: 'x'.repeat(5000) })), testEnv);
+  assert.equal(response.status, 413);
+  assert.deepEqual(await response.json(), { error: 'request_too_large' });
   assert.equal(testEnv.WAITLIST_DB.calls.length, 0);
 });
 
