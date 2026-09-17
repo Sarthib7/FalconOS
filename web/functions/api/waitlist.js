@@ -1,6 +1,7 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_BODY_BYTES = 4096;
 const MAX_SUBMISSIONS_PER_HOUR = 5;
+const WINDOW_MS = 60 * 60 * 1000;
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -49,12 +50,29 @@ export async function handleWaitlist(request, env) {
     : 'landing';
   const clientIp = request.headers.get('cf-connecting-ip') || 'unknown';
   const ipHash = await digest(env.WAITLIST_IP_SALT + ':' + clientIp);
+  const windowStart = Math.floor(Date.now() / WINDOW_MS);
 
-  const recent = await env.WAITLIST_DB
-    .prepare("SELECT COUNT(*) AS count FROM waitlist_entries WHERE ip_hash = ?1 AND created_at > datetime('now', '-1 hour')")
-    .bind(ipHash)
+  const rate = await env.WAITLIST_DB
+    .prepare(`
+      INSERT INTO waitlist_rate_limits (ip_hash, window_start, attempts)
+      VALUES (?1, ?2, 1)
+      ON CONFLICT(ip_hash) DO UPDATE SET
+        window_start = CASE
+          WHEN waitlist_rate_limits.window_start = excluded.window_start
+          THEN waitlist_rate_limits.window_start
+          ELSE excluded.window_start
+        END,
+        attempts = CASE
+          WHEN waitlist_rate_limits.window_start = excluded.window_start
+          THEN waitlist_rate_limits.attempts + 1
+          ELSE 1
+        END
+      RETURNING attempts
+    `)
+    .bind(ipHash, windowStart)
     .first();
-  if (Number(recent?.count || 0) >= MAX_SUBMISSIONS_PER_HOUR) return json({ error: 'rate_limited' }, 429);
+  if (!rate) return json({ error: 'waitlist_unavailable' }, 503);
+  if (Number(rate.attempts) > MAX_SUBMISSIONS_PER_HOUR) return json({ error: 'rate_limited' }, 429);
 
   const result = await env.WAITLIST_DB
     .prepare("INSERT INTO waitlist_entries (email, source, ip_hash) VALUES (?1, ?2, ?3) ON CONFLICT(email) DO UPDATE SET source = excluded.source, updated_at = datetime('now')")

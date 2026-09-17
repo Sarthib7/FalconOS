@@ -2,17 +2,19 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { handleWaitlist } from '../functions/api/waitlist.js';
 
-function makeDb({ recentCount = 0, changes = 1 } = {}) {
+function makeDb({ attempts = 0, changes = 1 } = {}) {
   const calls = [];
+  let nextAttempts = attempts;
   return {
     calls,
     prepare(sql) {
       calls.push(sql);
+      const rateLimitQuery = sql.includes('waitlist_rate_limits');
       return {
         bind(...values) {
           calls.push(values);
           return {
-            first: async () => ({ count: recentCount }),
+            first: async () => rateLimitQuery ? { attempts: ++nextAttempts } : null,
             run: async () => ({ meta: { changes } })
           };
         }
@@ -21,7 +23,7 @@ function makeDb({ recentCount = 0, changes = 1 } = {}) {
   };
 }
 
-const env = () => ({ WAITLIST_DB: makeDb(), WAITLIST_IP_SALT: 'test-salt' });
+const env = (options) => ({ WAITLIST_DB: makeDb(options), WAITLIST_IP_SALT: 'test-salt' });
 
 function request(body, headers = {}) {
   return new Request('https://falconos.markets/api/waitlist', {
@@ -47,9 +49,27 @@ test('waitlist rejects invalid email before database writes', async () => {
   assert.equal(testEnv.WAITLIST_DB.calls.length, 0);
 });
 
-test('waitlist rate-limits repeated submissions from one client', async () => {
-  const testEnv = { ...env(), WAITLIST_DB: makeDb({ recentCount: 5 }) };
-  const response = await handleWaitlist(request({ email: 'user@example.com' }, { 'cf-connecting-ip': '203.0.113.4' }), testEnv);
+test('waitlist counts repeated submissions even for one email', async () => {
+  const testEnv = env();
+  const responses = await Promise.all(
+    Array.from({ length: 6 }, () => handleWaitlist(request({ email: 'user@example.com' }), testEnv))
+  );
+  assert.deepEqual(responses.map(response => response.status), [201, 201, 201, 201, 201, 429]);
+  assert.equal(testEnv.WAITLIST_DB.calls.filter(call => typeof call === 'string' && call.includes('waitlist_entries')).length, 5);
+});
+
+test('waitlist limits concurrent new emails with one atomic counter', async () => {
+  const testEnv = env();
+  const responses = await Promise.all(
+    Array.from({ length: 6 }, (_, index) => handleWaitlist(request({ email: `user${index}@example.com` }), testEnv))
+  );
+  assert.equal(responses.filter(response => response.status === 201).length, 5);
+  assert.equal(responses.filter(response => response.status === 429).length, 1);
+});
+
+test('waitlist rate-limits when the atomic counter reaches the limit', async () => {
+  const testEnv = env({ attempts: 5 });
+  const response = await handleWaitlist(request({ email: 'user@example.com' }), testEnv);
   assert.equal(response.status, 429);
   assert.deepEqual(await response.json(), { error: 'rate_limited' });
 });

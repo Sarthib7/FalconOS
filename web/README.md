@@ -26,7 +26,7 @@ Configure these user-managed Cloudflare bindings before enabling submissions:
 - `WAITLIST_DB`: D1 database with `web/migrations/0001_waitlist.sql` applied.
 - `WAITLIST_IP_SALT`: secret used to hash the client IP before rate-limit storage.
 
-The endpoint validates JSON content, email shape, request size, same-origin requests, and one-client submission volume. It stores the normalized email, source, hashed client IP, and timestamps. Local Vite dev serves the form but does not execute Pages Functions.
+The endpoint validates JSON content, email shape, request size, and same-origin requests. An atomic D1 counter limits each hashed client IP to five attempts per hour, including repeated submissions of one email. It stores the normalized email, source, hashed client IP, and timestamps. Local Vite dev serves the form but does not execute Pages Functions.
 
 ## Custom domain (manual)
 
