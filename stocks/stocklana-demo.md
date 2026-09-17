@@ -26,7 +26,7 @@ npm run stocks:demo
    - The published proposal is withheld.
 
 3. `STOCKS DEMO / STALE-REPLAY`
-   - The command rebuilds the same fixture basket with an observation time one hour old.
+   - The command rebuilds an equivalent fixture basket with an observation time one hour old, so its snapshot hash is intentionally different.
    - Advice status is `NO_DATA`.
    - Integrity status is `STALE`.
    - Refusal codes include `snapshot-stale` and `proposal-expired`.

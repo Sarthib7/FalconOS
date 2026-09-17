@@ -12,7 +12,7 @@
 
 [VERIFIED, repository read, 2026-09-17] `dash/cli.ts` imports the PreStocks adapter from `stocks/prestocks.ts`. The dashboard remains the caller and renderer; provider-specific PreStocks logic no longer lives under `dash/`.
 
-[VERIFIED, repository and test run, 2026-09-17] The stocks contract and dashboard integration pass the repository suite: `101` tests passed and `0` failed. TypeScript typecheck also passed.
+[VERIFIED, repository and test run, 2026-09-17] The stocks contract and dashboard integration pass the repository suite: `116` tests passed and `0` failed. TypeScript typecheck also passed.
 
 [VERIFIED, user direction, 2026-09-17] The web surface may show a read-only snapshot, but it does not expose the full dashboard or any execution path.
 
