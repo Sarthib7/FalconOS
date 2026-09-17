@@ -10,7 +10,7 @@ import type { FieldCapture } from '../../stocks/stocks.ts';
 import type { PythPriceResult } from '../pyth.ts';
 import { divideIntegerByDecimal, effectiveMultiplier, multiplierFromSupply, multipliersAgree, parsePreStocks, parseScaledUiAccountState, scaledPreStocksAdapter } from '../../stocks/prestocks.ts';
 
-const AT = '2026-09-16T00:00:00.000Z';
+const AT = new Date(Date.now() - 1000).toISOString();
 
 function config(): DashConfig {
   return {
