@@ -6,7 +6,7 @@ import { runCentralAdvice, runLiveAdvice } from '../council.ts';
 import { renderAdvice } from '../render.ts';
 import type { FieldCapture } from '../../stocks/stocks.ts';
 import type { PythPriceResult } from '../pyth.ts';
-import { divideIntegerByDecimal, effectiveMultiplier, multiplierFromSupply, multipliersAgree, parsePreStocks, scaledPreStocksAdapter } from '../prestocks.ts';
+import { divideIntegerByDecimal, effectiveMultiplier, multiplierFromSupply, multipliersAgree, parsePreStocks, scaledPreStocksAdapter } from '../../stocks/prestocks.ts';
 
 const AT = '2026-09-16T00:00:00.000Z';
 

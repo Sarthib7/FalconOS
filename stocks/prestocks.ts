@@ -1,7 +1,7 @@
-import type { FieldCapture } from '../stocks/stocks.ts';
-import type { AssetCaptures, DashAssetConfig, LiveEvidenceAdapter } from './adapters.ts';
-import { scaleDecimalToInteger } from './adapters.ts';
-import type { PythUnderlyingRef } from './pyth.ts';
+import type { FieldCapture } from './stocks.ts';
+import type { AssetCaptures, DashAssetConfig, LiveEvidenceAdapter } from '../dash/adapters.ts';
+import { scaleDecimalToInteger } from '../dash/adapters.ts';
+import type { PythUnderlyingRef } from '../dash/pyth.ts';
 
 // PreStocks public API (keyless), from the Stocklana track: https://prestocks.com/api/prestocks
 // Rows carry real Solana mints (contract_address), the SPV markPrice per underlying share, and
