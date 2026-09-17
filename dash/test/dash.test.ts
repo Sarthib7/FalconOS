@@ -139,7 +139,7 @@ function scaledUiAccount(state: Record<string, unknown>): unknown {
 }
 
 test('V66: parseScaledUiAccountState rejects zero current multiplier', () => {
-  assert.equal(parseScaledUiAccountState(scaledUiAccount({ multiplier: '0' })), null);
+  for (const multiplier of ['0', '00', '00.0']) assert.equal(parseScaledUiAccountState(scaledUiAccount({ multiplier })), null);
 });
 
 test('V66: parseScaledUiAccountState rejects malformed pending multiplier', () => {
@@ -160,7 +160,7 @@ test('V66: parseScaledUiAccountState rejects activation timestamp without pendin
 
 test('V66: scaledPreStocksAdapter fails closed on invalid multiplier without throwing', async () => {
   const inner = fixtureAdapter({ mintA: { price: '605.00', liquidity: '5000000', at: AT } });
-  const adapter = scaledPreStocksAdapter(inner, new Map([['mintA', '0']]), new Map([['mintA', '121.00']]), 500);
+  const adapter = scaledPreStocksAdapter(inner, new Map([['mintA', '00.0']]), new Map([['mintA', '121.00']]), 500);
   const captures = await adapter.fetchAsset({ assetId: 'mintA', underlying: 'SPACEX', targetWeightBps: 10_000, priceScale: 6, quantityScale: 2, minLiquidity: '100000', maxWeightBps: 10_000 });
   assert.equal(captures.price.status, 'outage');
   assert.equal(captures.price.normalizedValue, null);

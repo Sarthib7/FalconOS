@@ -115,7 +115,7 @@ function positiveDecimalString(value: unknown): string | null {
   const text = readString(value);
   if (text === null || !DECIMAL.test(text)) return null;
   const [intPart = '0', fracPart = ''] = text.split('.');
-  if (intPart === '0' && fracPart.replace(/0/g, '') === '') return null;
+  if ((intPart + fracPart).replace(/0/g, '') === '') return null;
   return text;
 }
 
