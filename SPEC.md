@@ -212,6 +212,12 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - Provider/network/parse failure → typed capture failure → snapshot `NO_DATA`; the dashboard surfaces the failure and never fabricates evidence.
 - ⊥ order submission, custody, signing, capital movement; read-only display of live evidence + advisory. Secrets via env only.
 
+### I12. Falcon Investment Stocks Market Integrity Desk
+
+- `stocks/integrity.ts` evaluates canonical Stocks snapshots and bound Basket Proposals into `MarketIntegrityReport` statuses `VERIFIED`, `STALE`, `DIVERGENT`, or `NO_DATA`; output includes snapshot/proposal hashes, freshness state, warnings, refusal codes, and `executionReady: false`.
+- Integrity checks reuse canonical snapshot `status`, `missing`, `conflicts`, `sourceDecisions`, and `capturedAt`; issuer-reference freshness remains `UNKNOWN` when only local receipt time is available.
+- The Desk is advisory-only; it may gate publication and render refusal evidence, but it cannot custody funds, sign, submit orders, pool capital, or issue an ETF.
+
 ## §V INVARIANTS
 
 V1: ∀ plugin process → read exactly one bounded (≤8 MiB) JSON object from stdin, emit exactly one bounded (≤64 KiB) JSON response line to stdout, diagnostics ⊥ stdout
@@ -338,6 +344,14 @@ V64: ∀ dash live fetch → read-only HTTP GET or public RPC read; ⊥ write/ex
 V65: ∀ dash rendered output → advisory-only, `executionReady: false`; shows council basket/risk/citations + `live` provenance; ⊥ trade/order action or capital instruction
 
 V66: ∀ stocks/prestocks token-2022 scaled-UI mint price evidence → derive live multiplier from extension time-gate (`newMultiplier` when `now ≥ newMultiplierEffectiveTimestamp`, else current `multiplier`); cross-check extension vs `getTokenSupply` uiAmount/raw within 5bps; divide raw pool price by multiplier; corroborate normalized price vs issuer `tokenPrice` within 500bps; zero/malformed/missing multiplier, extension/supply disagreement, or issuer disagreement → typed price capture failure → `NO_DATA`
+V67: ∀ MarketIntegrityReport → snapshotHash matches canonical snapshot hash; bound proposal validates against same snapshot; proposal expiry ≤ checkedAt → status `STALE` + refusal `proposal-expired`; hash mismatch → reject.
+
+V68: ∀ integrity evaluation → canonical snapshot `missing` or incomplete source selection → `NO_DATA`; canonical `conflicts` → `DIVERGENT`; snapshot age beyond configured max → `STALE`.
+
+V69: ∀ live Stocks reference without provider source timestamp → freshness=`UNKNOWN`; report never upgrades unknown reference age to fresh evidence.
+
+V70: ∀ Stocklana offline demo → fixture provenance=`synthetic`; healthy, blocked, and stale cases use the same advisory-only path; stale replay publishes no proposal.
+
 ## §T TASKS
 
 id|status|task|cites
@@ -370,6 +384,9 @@ T25|x|add deterministic synthetic stocks contract tests: `NO_DATA` on missing/in
 T26|x|extend stocks snapshot to perps/stablecoins parity: rich registry, per-field source precedence + safe failover, provider-event vs local-receipt time, typed failure metadata; add deterministic parity tests|V60,V61,V62,V63,I10
 T27|~|scaffold isolated `dash/` terminal orchestration over `stocks/` read-only live adapter(s): `live` basket snapshot → stocks council → terminal render; typed failure → `NO_DATA`; verify against synthetic + one real keyless provider|V57,V64,V65,I11
 T28|x|add PreStocks scaled-UI multiplier normalization + issuer corroboration in `stocks/prestocks.ts`; fail-closed multiplier parse tests|V66,I10,I11
+T29|x|move live Stocks providers and shared evidence contracts from `dash/` to `stocks/`; update callers/tests and preserve terminal rendering|V57,V64,V65,V66,I10,I11
+T30|x|add Market Integrity Desk report, proposal binding, expiry gate, refusal statuses, and terminal output|V67,V68,V69,I12
+T31|x|add offline Stocklana demo with synthetic healthy/blocked/stale scenarios and judge walkthrough|V70,V67,I12
 ## §B BUGS
 
 id|date|cause|fix
@@ -416,3 +433,6 @@ B40|2026-09-16|transform cell threw after deriving checks; artifact variable rol
 B41|2026-09-16|browser smoke clicked evidence link after keyboard test hid its Research tab panel|one-time browser smoke correction
 B42|2026-09-16|meta+og description present-tense live-use claim violated V48; landing test stripped <meta> so it went uncaught|V48
 B43|2026-09-16|stocks PreStocks scaled-UI fix cited V66 before spec backprop; `parseScaledUiAccountState` accepted multiplier `0` & silently dropped invalid pending multiplier|V66
+B44|2026-09-17|integrity fixture captured fields after basket capture, making every case `NO_DATA` and hiding the intended `DIVERGENT` and `STALE` states|V68
+B45|2026-09-17|integrity report accepted expired or cross-snapshot proposal binding before validator and expiry refusal were added|V67
+B46|2026-09-17|offline demo labeled synthetic fixtures live and reused published advice during stale replay|V70

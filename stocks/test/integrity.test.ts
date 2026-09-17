@@ -32,7 +32,7 @@ function proposalFor(value: CanonicalBasketSnapshot, expiresAt = '2026-09-18T10:
   return createBasketProposal({ proposalId: 'proposal-1', snapshot: value, legs: [{ assetId: 'asset-a', underlying: 'AAPLx', targetWeightBps: 6000 }, { assetId: 'asset-b', underlying: 'MSFTx', targetWeightBps: 4000 }], invalidations: ['evidence expires'], confidence: null, horizon: null, expiresAt });
 }
 
-test('integrity report verifies a ready snapshot and binds hashes', () => {
+test('V67: integrity report verifies a ready snapshot and binds hashes', () => {
   const value = snapshot();
   const report = evaluateMarketIntegrity({ snapshot: value, proposal: proposalFor(value), checkedAt: '2026-09-17T10:05:00.000Z', maxAgeMs: 900000 });
   assert.equal(report.status, 'VERIFIED');
@@ -41,32 +41,32 @@ test('integrity report verifies a ready snapshot and binds hashes', () => {
   assert.equal(report.refusalCodes.length, 0);
 });
 
-test('integrity report rejects a proposal from another snapshot', () => {
+test('V67: integrity report rejects a proposal from another snapshot', () => {
   const value = snapshot();
   const other = snapshot('different');
   assert.throws(() => evaluateMarketIntegrity({ snapshot: value, proposal: proposalFor(other), checkedAt: '2026-09-17T10:05:00.000Z', maxAgeMs: 900000 }), /snapshot hash mismatch/);
 });
 
-test('integrity report marks an expired proposal stale', () => {
+test('V67: integrity report marks an expired proposal stale', () => {
   const value = snapshot();
   const report = evaluateMarketIntegrity({ snapshot: value, proposal: proposalFor(value, '2026-09-17T10:04:59.000Z'), checkedAt: '2026-09-17T10:05:00.000Z', maxAgeMs: 900000 });
   assert.equal(report.status, 'STALE');
   assert.ok(report.refusalCodes.includes('proposal-expired'));
 });
 
-test('integrity report marks an old snapshot stale', () => {
+test('V68: integrity report marks an old snapshot stale', () => {
   const report = evaluateMarketIntegrity({ snapshot: snapshot(), proposal: null, checkedAt: '2026-09-17T12:00:00.000Z', maxAgeMs: 900000 });
   assert.equal(report.status, 'STALE');
   assert.deepEqual(report.refusalCodes, ['snapshot-stale']);
 });
 
-test('integrity report marks canonical conflicts divergent', () => {
+test('V68: integrity report marks canonical conflicts divergent', () => {
   const report = evaluateMarketIntegrity({ snapshot: snapshot('conflict'), proposal: null, checkedAt: '2026-09-17T10:00:02.000Z', maxAgeMs: 900000 });
   assert.equal(report.status, 'DIVERGENT');
   assert.deepEqual(report.refusalCodes, ['canonical-conflict']);
 });
 
-test('integrity report returns NO_DATA for missing evidence', () => {
+test('V68: integrity report returns NO_DATA for missing evidence', () => {
   const report = evaluateMarketIntegrity({ snapshot: snapshot('missing'), proposal: null, checkedAt: CAPTURED_AT, maxAgeMs: 900000 });
   assert.equal(report.status, 'NO_DATA');
   assert.ok(report.refusalCodes.includes('required-evidence-missing'));
