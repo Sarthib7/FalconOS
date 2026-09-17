@@ -1,4 +1,4 @@
-import { hashBasketProposal, validateCanonicalBasketSnapshot } from './stocks.ts';
+import { hashBasketProposal, validateBasketProposal, validateCanonicalBasketSnapshot } from './stocks.ts';
 import type { BasketProposal, CanonicalBasketSnapshot } from './stocks.ts';
 
 export const INTEGRITY_SCHEMA_VERSION = 1 as const;
@@ -7,7 +7,7 @@ export type IntegrityCheckStatus = 'PASS' | 'FAIL' | 'UNKNOWN';
 export type EvidenceFreshness = 'KNOWN' | 'UNKNOWN';
 
 export interface IntegrityCheck {
-  code: 'snapshot-status' | 'required-evidence' | 'source-selection' | 'snapshot-freshness' | 'reference-freshness';
+  code: 'snapshot-status' | 'required-evidence' | 'source-selection' | 'snapshot-freshness' | 'reference-freshness' | 'proposal-binding';
   status: IntegrityCheckStatus;
   detail: string;
 }
@@ -51,8 +51,16 @@ export function evaluateMarketIntegrity(input: MarketIntegrityInput): MarketInte
   const snapshot = validateCanonicalBasketSnapshot(input.snapshot);
   const checkedAt = isoTime(input.checkedAt, 'integrity checkedAt');
   if (!Number.isInteger(input.maxAgeMs) || input.maxAgeMs <= 0) throw new TypeError('integrity maxAgeMs must be a positive integer');
-  const proposalHash = input.proposal === null ? null : hashBasketProposal(input.proposal);
-  if (proposalHash !== null && !HASH.test(proposalHash)) throw new TypeError('integrity proposalHash must be sha256');
+
+  let proposal: BasketProposal | null = null;
+  let proposalHash: string | null = null;
+  if (input.proposal !== null) {
+    proposal = validateBasketProposal(input.proposal);
+    if (proposal.snapshotHash !== snapshot.hash) throw new TypeError('integrity proposal snapshot hash mismatch');
+    if (Date.parse(proposal.expiresAt) <= Date.parse(checkedAt)) throw new TypeError('integrity proposal expired');
+    proposalHash = hashBasketProposal(proposal);
+    if (proposalHash !== null && !HASH.test(proposalHash)) throw new TypeError('integrity proposalHash must be sha256');
+  }
 
   const checks: IntegrityCheck[] = [];
   const refusalCodes: string[] = [];
@@ -89,6 +97,10 @@ export function evaluateMarketIntegrity(input: MarketIntegrityInput): MarketInte
     ? check('source-selection', 'FAIL', `${snapshot.conflicts.length} canonical conflict(s) are recorded`)
     : check('source-selection', 'PASS', 'canonical snapshot has no recorded conflicts'));
   if (hasConflicts) refusalCodes.push('canonical-conflict');
+
+  if (proposal !== null) {
+    checks.push(check('proposal-binding', 'PASS', 'proposal snapshot hash matches canonical snapshot and expiry is in the future'));
+  }
 
   const liveReferenceAgeUnknown = snapshot.envelope.provenance === 'live';
   checks.push(liveReferenceAgeUnknown

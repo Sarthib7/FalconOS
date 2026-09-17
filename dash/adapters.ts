@@ -5,4 +5,5 @@ export interface DashConfig {
   coherenceCapMs: number;
   maxDislocationBps?: number;
   integrityMaxAgeMs?: number;
+  integrityNow?: () => string;
 }
