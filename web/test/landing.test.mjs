@@ -61,3 +61,9 @@ test('V48: crawler and social copy avoid live-use claims', () => {
     assert.doesNotMatch(copy, /use the dashboard/i);
   }
 });
+
+test('V56: every inline landing script compiles', () => {
+  const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
+  assert.ok(scripts.length > 0);
+  for (const script of scripts) assert.doesNotThrow(() => new Function(script));
+});

@@ -1274,6 +1274,23 @@
     .market-snap-controls button:last-child { border-right: 0; }
     .market-snap-controls button[aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--accent); }
   }
+
+  .access-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+  .access-row .meta { margin-right: 4px; }
+  .soon-control { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+  .soon-control:disabled { cursor: not-allowed; opacity: .78; }
+  .soon-tag { color: var(--accent); }
+  .waitlist-section { padding-top: 24px; }
+  .waitlist-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr); gap: 44px; padding: 28px; border: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 34%, transparent); }
+  .waitlist-panel h2 { margin: 12px 0 14px; max-width: 14ch; }
+  .waitlist-panel .lead { max-width: 42ch; }
+  .waitlist-form { display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+  .waitlist-form label { color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+  .waitlist-form input { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: 0; background: var(--bg); color: var(--fg); font: inherit; }
+  .waitlist-form input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .waitlist-form button { align-self: flex-start; }
+  .waitlist-status { min-height: 1.6em; margin: 0; color: var(--muted); font-size: 13px; }
+  @media (max-width: 700px) { .waitlist-panel { grid-template-columns: 1fr; gap: 24px; padding: 22px; } }
 </style>
 </head>
 <body>
@@ -1287,7 +1304,7 @@
           <a href="#firm-thesis" data-od-id="nav-firm">The firm</a>
           <a href="#architecture" data-od-id="nav-architecture">Architecture</a>
           <a href="#how-it-works" data-od-id="nav-method">Investment method</a>
-          <a href="/dash/" data-od-id="nav-demo">Dashboard</a>
+          <a href="#waitlist" data-od-id="nav-waitlist">Waitlist</a>
         </nav>
         <span class="nav-runtime" data-od-id="nav-runtime"><i aria-hidden="true"></i>Advisory only</span>
         <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" data-od-id="menu-toggle">Menu</button>
@@ -1310,9 +1327,15 @@
           <div>
             <p class="lead" data-od-id="hero-description">FalconOS is building Falcon Investment: shared market context, investment memory, and capital mandates for autonomous agents. People coordinate through a clear human view.</p>
             <div class="hero-cta">
-              <a class="btn btn-primary btn-arrow" href="/dash/" data-od-id="explore-demo">Open the dashboard</a>
+              <a class="btn btn-primary btn-arrow" href="#waitlist" data-od-id="explore-waitlist">Join the waitlist</a>
             </div>
             <p class="hero-note">Research prototype available.<br>Connected agents and live execution are planned.</p>
+            <div class="access-row" aria-label="Private access options">
+              <span class="meta">PRIVATE ACCESS</span>
+              <button class="soon-control" type="button" disabled>Log in <span class="soon-tag">(Soon)</span></button>
+              <button class="soon-control" type="button" disabled>Connect wallet <span class="soon-tag">(Soon)</span></button>
+              <button class="soon-control" type="button" disabled>Sign up <span class="soon-tag">(Soon)</span></button>
+            </div>
           </div>
         </div>
         <div class="investment-universe" data-od-id="investment-universe"><span class="meta">INVESTMENT UNIVERSE</span><div><span>Solana</span><span>Base</span><span>Robinhood Chain</span><span>Tempo</span><span>Arc</span></div><span class="universe-note">Five chains in the paper workspace</span></div>
@@ -1376,7 +1399,7 @@
             <div class="market-snap-read" id="ms-read"></div>
           </div>
         </div>
-        <div class="market-snap-foot"><span>Real market data · read-only · not investment advice</span><a class="text-link" href="/dash/" data-od-id="open-dashboard">Open the dashboard →</a></div>
+        <div class="market-snap-foot"><span>Real market data · read-only · not investment advice</span><a class="text-link" href="#waitlist" data-od-id="snapshot-waitlist">Request access →</a></div>
       </div>
       <p class="desk-footnote" style="margin-top:14px"><span>Agents use FalconOS. People inspect markets through this view.</span><a class="text-link" href="#quote-example" data-od-id="desk-source-library">Inspect research evidence ↓</a></p>
     </div></section>
@@ -1501,13 +1524,32 @@
         </div>
       </div>
     </section>
+    <section class="section waitlist-section" id="waitlist" data-od-id="waitlist">
+      <div class="container">
+        <div class="waitlist-panel">
+          <div>
+            <p class="eyebrow">Private preview</p>
+            <h2>Get access when the firm opens.</h2>
+            <p class="lead">The market snapshot stays public. The dashboard, wallet connection, login, and account creation remain gated while the access pipeline is being built.</p>
+          </div>
+          <form class="waitlist-form" id="waitlist-form" novalidate>
+            <label for="waitlist-email">Email address</label>
+            <input id="waitlist-email" name="email" type="email" autocomplete="email" required maxlength="320" placeholder="you@example.com" aria-describedby="waitlist-help waitlist-status">
+            <p id="waitlist-help" class="hero-note">We will only use this address for FalconOS access updates.</p>
+            <button class="btn btn-primary btn-arrow" type="submit">Request access</button>
+            <p class="waitlist-status" id="waitlist-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
     <!-- Layout 6: a closing invitation to the same product demo. -->
     <section class="section closing" data-od-id="closing">
       <div class="container">
         <div class="closing-mark"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg></div>
         <h2 data-od-id="closing-heading">See the firm through its decisions.</h2>
-        <p class="lead">Open the market dashboard. Inspect read-only prices, volume, and 1D charts across sample instruments.</p>
-        <a class="btn btn-secondary btn-arrow" href="/dash/" data-od-id="return-to-demo">Open the dashboard</a>
+        <p class="lead">Inspect the market snapshot. Dashboard access is gated while the product is in private preview.</p>
+        <a class="btn btn-secondary btn-arrow" href="#waitlist" data-od-id="return-to-waitlist">Request private access</a>
       </div>
     </section>
   </main>
@@ -1518,7 +1560,7 @@
         <div class="foot-links">
           <a href="#firm-thesis" data-od-id="footer-firm">The firm</a>
           <a href="#architecture" data-od-id="footer-architecture">Architecture</a>
-          <a href="/dash/" data-od-id="footer-dashboard">Dashboard</a>
+          <a href="#waitlist" data-od-id="footer-waitlist">Waitlist</a>
         </div>
       </div>
       <p class="foot-note">FalconOS is building Falcon Investment, an agentic markets firm built around autonomous agents. The dashboard shows a read-only market snapshot. Connected agents and live execution are planned.</p>
@@ -2069,6 +2111,35 @@ License: https://www.pexels.com/license/
 Original Alpine Vector symbol from the selected FalconOS brand board.
 -->
 
+  <script id="waitlist-script">
+  (() => {
+    const form = document.getElementById('waitlist-form');
+    const email = document.getElementById('waitlist-email');
+    const status = document.getElementById('waitlist-status');
+    if (!form || !email || !status || !window.fetch) return;
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!email.reportValidity()) return;
+      const button = form.querySelector('button[type="submit"]');
+      button.disabled = true;
+      status.textContent = 'Sending request…';
+      try {
+        const response = await fetch('/api/waitlist', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: email.value, source: 'landing' })
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        form.reset();
+        status.textContent = 'Request received. We will contact you when access opens.';
+      } catch {
+        status.textContent = 'The access pipeline is not connected in this environment.';
+      } finally {
+        button.disabled = false;
+      }
+    });
+  })();
+  </script>
 <script id="market-snap-script">
 (() => {
   'use strict';
@@ -2079,11 +2150,7 @@ Original Alpine Vector symbol from the selected FalconOS brand board.
   const labels = { 'usd-coin': 'USDC', solana: 'SOL', 'jupiter-exchange-solana': 'JUP' };
   let snap = null, sel = 'usd-coin';
   function fmtPrice(v) { return v >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : v < 10 ? v.toFixed(4) : v.toFixed(2); }
-  function money(v) { if (v >= 1e9) return '
- + (v / 1e9).toFixed(2) + 'B'; if (v >= 1e6) return '
- + (v / 1e6).toFixed(1) + 'M'; if (v >= 1e3) return '
- + (v / 1e3).toFixed(1) + 'K'; return '
- + v.toFixed(0); }
+  function money(v) { if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B'; if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M'; if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K'; return '$' + v.toFixed(0); }
   function pct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
   function ago(sec) { const d = Date.now() / 1000 - sec; if (d < 0) return 'just now'; if (d < 90) return Math.round(d) + 's ago'; if (d < 5400) return Math.round(d / 60) + 'm ago'; if (d < 172800) return Math.round(d / 3600) + 'h ago'; return Math.round(d / 86400) + 'd ago'; }
   function normOhlc(raw) {
