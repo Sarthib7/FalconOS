@@ -54,10 +54,11 @@ export function evaluateMarketIntegrity(input: MarketIntegrityInput): MarketInte
 
   let proposal: BasketProposal | null = null;
   let proposalHash: string | null = null;
+  let proposalExpired = false;
   if (input.proposal !== null) {
     proposal = validateBasketProposal(input.proposal);
     if (proposal.snapshotHash !== snapshot.hash) throw new TypeError('integrity proposal snapshot hash mismatch');
-    if (Date.parse(proposal.expiresAt) <= Date.parse(checkedAt)) throw new TypeError('integrity proposal expired');
+    proposalExpired = Date.parse(proposal.expiresAt) <= Date.parse(checkedAt);
     proposalHash = hashBasketProposal(proposal);
     if (proposalHash !== null && !HASH.test(proposalHash)) throw new TypeError('integrity proposalHash must be sha256');
   }
@@ -99,7 +100,10 @@ export function evaluateMarketIntegrity(input: MarketIntegrityInput): MarketInte
   if (hasConflicts) refusalCodes.push('canonical-conflict');
 
   if (proposal !== null) {
-    checks.push(check('proposal-binding', 'PASS', 'proposal snapshot hash matches canonical snapshot and expiry is in the future'));
+    checks.push(proposalExpired
+      ? check('proposal-binding', 'FAIL', 'proposal expiry is at or before checkedAt')
+      : check('proposal-binding', 'PASS', 'proposal snapshot hash matches canonical snapshot and expiry is in the future'));
+    if (proposalExpired) refusalCodes.push('proposal-expired');
   }
 
   const liveReferenceAgeUnknown = snapshot.envelope.provenance === 'live';
@@ -110,7 +114,7 @@ export function evaluateMarketIntegrity(input: MarketIntegrityInput): MarketInte
 
   let status: IntegrityStatus = 'VERIFIED';
   if (hasConflicts) status = 'DIVERGENT';
-  if (refusalCodes.some(code => code === 'snapshot-stale' || code === 'snapshot-time-invalid')) status = 'STALE';
+  if (refusalCodes.some(code => code === 'snapshot-stale' || code === 'snapshot-time-invalid' || code === 'proposal-expired')) status = 'STALE';
   if (hasMissing || selectedCount !== expectedSelections || (!snapshotReady && !hasConflicts)) status = 'NO_DATA';
 
   return Object.freeze({

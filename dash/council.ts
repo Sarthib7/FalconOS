@@ -76,7 +76,7 @@ export function dashBoundary(config: DashConfig, underlyingRefs?: ReadonlyMap<st
           invalidations: ['live evidence stale, pool delisted, or source disagreement'],
           confidence: null,
           horizon: null,
-          expiresAt: new Date(Date.parse(request.snapshot.envelope.capturedAt) + 60_000).toISOString(),
+          expiresAt: new Date(Math.max(Date.parse(request.snapshot.envelope.capturedAt), Date.now()) + 60_000).toISOString(),
         });
         proposal = built;
         status = built.status;
@@ -89,7 +89,7 @@ export function dashBoundary(config: DashConfig, underlyingRefs?: ReadonlyMap<st
     async riskReview(request): Promise<RiskResponse> {
       const reasons: string[] = [];
       let status: RiskResponse['status'] = 'PASS';
-      const integrity = evaluateMarketIntegrity({ snapshot: request.snapshot, proposal: request.leadProposal, checkedAt: config.integrityNow?.() ?? new Date().toISOString(), maxAgeMs: config.integrityMaxAgeMs ?? Number.MAX_SAFE_INTEGER });
+      const integrity = evaluateMarketIntegrity({ snapshot: request.snapshot, proposal: request.leadProposal, checkedAt: new Date().toISOString(), maxAgeMs: config.integrityMaxAgeMs ?? Number.MAX_SAFE_INTEGER });
       if (integrity.status !== 'VERIFIED') {
         reasons.push('market integrity ' + integrity.status + ': ' + integrity.refusalCodes.join(', '));
         status = integrity.status === 'DIVERGENT' ? 'BLOCK' : 'NO_DATA';

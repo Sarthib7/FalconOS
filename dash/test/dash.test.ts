@@ -19,7 +19,6 @@ function config(): DashConfig {
       { assetId: 'mintB', underlying: 'MSFTx', targetWeightBps: 4000, priceScale: 6, quantityScale: 2, minLiquidity: '100000', maxWeightBps: 8000 },
     ],
     coherenceCapMs: 120_000,
-    integrityNow: () => '2026-09-16T00:00:02.000Z',
   };
 }
 
@@ -35,7 +34,7 @@ test('I11: live fixture evidence publishes an advisory basket with citations', a
   assert.equal(advice.executionReady, false);
   assert.equal(advice.proposal?.legs.length, 2);
   assert.equal(advice.citations.length, 4);
-  const integrity = evaluateMarketIntegrity({ snapshot, proposal: advice.proposal, checkedAt: config().integrityNow!(), maxAgeMs: Number.MAX_SAFE_INTEGER });
+  const integrity = evaluateMarketIntegrity({ snapshot, proposal: advice.proposal, checkedAt: new Date().toISOString(), maxAgeMs: Number.MAX_SAFE_INTEGER });
   const rendered = renderAdvice(snapshot, advice, config(), undefined, integrity);
   assert.match(rendered, /advisory-only/);
   assert.match(rendered, /AAPLx/);

@@ -47,9 +47,11 @@ test('integrity report rejects a proposal from another snapshot', () => {
   assert.throws(() => evaluateMarketIntegrity({ snapshot: value, proposal: proposalFor(other), checkedAt: '2026-09-17T10:05:00.000Z', maxAgeMs: 900000 }), /snapshot hash mismatch/);
 });
 
-test('integrity report rejects an expired proposal', () => {
+test('integrity report marks an expired proposal stale', () => {
   const value = snapshot();
-  assert.throws(() => evaluateMarketIntegrity({ snapshot: value, proposal: proposalFor(value, '2026-09-17T10:04:59.000Z'), checkedAt: '2026-09-17T10:05:00.000Z', maxAgeMs: 900000 }), /proposal expired/);
+  const report = evaluateMarketIntegrity({ snapshot: value, proposal: proposalFor(value, '2026-09-17T10:04:59.000Z'), checkedAt: '2026-09-17T10:05:00.000Z', maxAgeMs: 900000 });
+  assert.equal(report.status, 'STALE');
+  assert.ok(report.refusalCodes.includes('proposal-expired'));
 });
 
 test('integrity report marks an old snapshot stale', () => {
