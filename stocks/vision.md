@@ -14,6 +14,8 @@
 
 [VERIFIED, repository read, 2026-09-18] `stocks/dbc.ts` owns the Meteora DBC equity launch prescription and evaluation desk. It targets Stocklana's Meteora DBC bounty with USDC-quoted, Token-2022, DAMM v2 prescriptions that meet the documented stock-token keeper floor.
 
+[VERIFIED, repository read, 2026-09-18] `stocks/agent.ts` + `stocks/cli.ts` expose a Client Agent stdin/stdout surface for `stocks.advice`. Fixture mode is offline; live GETs remain outside the agent path. See [agent.md](agent.md).
+
 [VERIFIED, user direction, 2026-09-17] The web surface may show a read-only snapshot, but it does not expose the full dashboard or any execution path.
 
 ## Boundaries
@@ -28,7 +30,7 @@
 
 ## Next proof
 
-[INFERRED] Keep live claims limited to sources and assets that pass the existing registry, timestamp, coherence, and corroboration checks.
+[VERIFIED, repository, 2026-09-18] Client Agents can call `npm run stocks:advice` for bounded JSON advice. Keep live claims limited to sources and assets that pass the existing registry, timestamp, coherence, and corroboration checks.
 
 [INFERRED] After advisory acceptance, add an execution bridge that can create DBC configs/pools for approved sleeves using the official Meteora SDK.
 
@@ -38,4 +40,4 @@
 
 [DECIDED, user direction, 2026-09-18] First Stocks Specialist surface focuses on PreStocks, with Meteora DBC as the launch/liquidity sequel for equity-like sleeves.
 
-[INFERRED] Decide the host transport used by a standalone Stocks CLI while preserving the existing `stocks.advice` boundary.
+[DECIDED, 2026-09-18] The Stocks Client Agent transport is `stocks/cli.ts advice` over stdin/stdout JSON, preserving the `stocks.advice` boundary.

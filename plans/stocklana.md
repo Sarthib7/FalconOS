@@ -23,8 +23,9 @@
 1. Ship Market Integrity Desk + offline Stocklana demo (existing `feat/stocks-next` work).
 2. Add Meteora DBC equity launch desk under `stocks/dbc.ts`.
 3. Expose `npm run stocks:dbc` offline demo for judges.
-4. Keep live `npm run stocks` for PreStocks evidence.
-5. Package submission links: repo, demo command output, live site.
+4. Expose `npm run stocks:advice` Client Agent JSON surface (fixture + snapshot modes).
+5. Keep live `npm run stocks` for PreStocks evidence.
+6. Package submission links: repo, demo command output, live site.
 
 ## Execution sequel (not this PR)
 

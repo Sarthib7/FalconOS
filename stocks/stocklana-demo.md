@@ -37,6 +37,14 @@ npm run stocks:demo
 
 [VERIFIED, repository and test run, 2026-09-17] The suite covers canonical snapshot validation, source precedence, scaled-UI multiplier checks, issuer corroboration, proposal binding, integrity states, and the dashboard risk gate.
 
+## Client Agent path
+
+```bash
+npm run stocks:advice < test/fixtures/stocks-agent-healthy.json
+```
+
+[VERIFIED, repository and test run, 2026-09-18] Emits one `stocks.agent-response` JSON line with `advice.status=PUBLISHED`, integrity `VERIFIED`, and `executionReady=false`. See [agent.md](agent.md).
+
 ## Meteora DBC equity launch desk
 
 ```bash
