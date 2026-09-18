@@ -2,30 +2,30 @@
 
 ## Purpose
 
-[VERIFIED, repository read] `web/` is an isolated React and Vite site that explains the FalconOS council and labels the current state of the three displayed domains: Stablecoins, Perps, and Stocks.
+[VERIFIED, repository read] `web/` is an isolated Vite static site that introduces FalconOS and gates the live dashboard preview.
 
+[REPORTED, vision-cross-reference, 2026-09-15] Current context defines FalconOS as the umbrella for Falcon Skills, the FalconOS plugin, and Falcon Investment advisory. This surface must not imply that the council is an autonomous trader or that FalconOS provides custody, pooled capital, signing, or order submission. Source: `CONTEXT.md`.
 
-[REPORTED, vision-cross-reference, 2026-09-15] Current context defines FalconOS as the umbrella for Falcon Skills, the FalconOS plugin, and Falcon Investment advisory. This surface must not imply that the council is an autonomous trader or that FalconOS provides custody, pooled capital, signing, or order submission. Source: `CONTEXT.md:30-44`.
-Evidence quote: "FalconOS is the umbrella product." "Falcon Investment is a council of specialist advisory agents, not an autonomous trader." "FalconOS and Falcon Investment provide no custody, pooled capital, signing, or order submission." Source: `CONTEXT.md:32,38,44`
+[VERIFIED, Stocklana cross-reference, 2026-09-18] Stocks Specialist implementation and Client Agent advice live in the root `stocks/` package, not in this static site. See [stocks/vision.md](../stocks/vision.md) and [stocks/agent.md](../stocks/agent.md).
 
 ## Current scope
 
-[VERIFIED, repository read] `web/README.md` records Cloudflare Pages settings, and `web/index.html` sets `https://falconos.markets/` as the canonical URL.
+[VERIFIED, repository read] `web/README.md` records Cloudflare Pages settings, and the site sets `https://falconos.markets/` as the canonical URL.
 
-[VERIFIED, repository read] The waitlist is a disabled local preview. It sends and stores nothing, and it does not create a signup.
+[VERIFIED, live fetch 2026-09-16] `https://falconos.markets/` returns HTTP 200. `/dash/` is a private-preview gate; the full dashboard UI is not public.
 
-[VERIFIED, repository read] `web/src` has no network request, client storage, signing, transaction construction, or transaction submission behavior.
+[VERIFIED, repository read] Public pages are landing, product, research, and the gated dash preview. Waitlist posts only when Cloudflare D1 bindings are configured.
 
 ## Boundaries
 
-[VERIFIED, live fetch 2026-09-16] `https://falconos.markets/` returns HTTP 200 and serves the current page. Cloudflare Pages and DNS are live and user-managed.
+[BOUNDARY] The website does not execute Stocks advice, create DBC pools, sign transactions, or custody funds.
 
-[BOUNDARY] A networked waitlist, persistent storage, signing, and transaction behavior remain outside this site's current scope.
+[BOUNDARY] Client Agents should call `npm run stocks:advice` on the root package, not the static site.
 
 ## Next proof
 
-[INFERRED] After the next site change, run `npm run build` from `web/`, open the built site locally, and verify that the waitlist produces no network or storage activity.
+[INFERRED] Keep public copy aligned with Stocks advisory-only claims as Stocklana demos ship.
 
 ## Open decisions
 
-[INFERRED] Decide whether the waitlist should ever move beyond a local preview.
+[INFERRED] Decide whether a public read-only Stocks snapshot panel should appear on the landing page beyond the current gated dash preview.

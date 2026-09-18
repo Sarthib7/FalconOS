@@ -218,6 +218,20 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - Integrity checks reuse canonical snapshot `status`, `missing`, `conflicts`, `sourceDecisions`, and `capturedAt`; issuer-reference freshness remains `UNKNOWN` when only local receipt time is available.
 - The Desk is advisory-only; it may gate publication and render refusal evidence, but it cannot custody funds, sign, submit orders, pool capital, or issue an ETF.
 
+### I13. Falcon Investment Stocks Client Agent surface
+
+- `stocks/agent.ts` + `stocks/cli.ts` expose `npm run stocks:advice`: one `stocks.agent-request` on stdin → one `stocks.agent-response` or `stocks.agent-error` JSON line on stdout.
+- Fixture mode (`healthy` | `low-liquidity` | `stale`) is offline and synthetic. Snapshot mode accepts a frozen canonical basket snapshot. Host Lead/Risk transport is FalconOS-owned (`stocks/host.ts`).
+- Response embeds validated `stocks.advice` plus optional `MarketIntegrityReport`; `authority=advisory-only`; `executionReady=false`; `agentId` is provenance only.
+- ⊥ live market GET/RPC on the agent path; ⊥ wallet, signer, custody, pool creation, model selection, or tool authority fields (exact-key reject).
+- Human demos remain `npm run stocks:demo` / `npm run stocks:dbc`. Live PreStocks remains `npm run stocks` via `dash/`.
+
+### I14. Falcon Investment Stocks Meteora DBC equity launch desk
+
+- `stocks/dbc.ts` emits advisory DBC launch prescriptions for equity-like sleeves: USDC quote, Token-2022, DAMM v2, stock-token keeper floor ≥750 USDC units, equity fee band.
+- Evaluation statuses `READY` | `REVIEW` | `REJECT` with fit labels `equity-grade` | `meme-grade` | `unsuitable`. Offline demo: `npm run stocks:dbc`.
+- ⊥ on-chain config creation, pool creation, swaps, migration, custody, or signing in this slice.
+
 ## §V INVARIANTS
 
 V1: ∀ plugin process → read exactly one bounded (≤8 MiB) JSON object from stdin, emit exactly one bounded (≤64 KiB) JSON response line to stdout, diagnostics ⊥ stdout
@@ -352,6 +366,10 @@ V69: ∀ live Stocks reference without provider source timestamp → freshness=`
 
 V70: ∀ Stocklana offline demo → fixture provenance=`synthetic`; healthy, blocked, and stale cases use the same advisory-only path; stale replay publishes no proposal.
 
+V71: ∀ DBC equity launch prescription → program id pinned to Meteora `dynamic_bonding_curve`; equity-grade path requires USDC quote, migration threshold ≥ stock keeper floor, Token-2022 preference, DAMM v2, and equity fee band; meme-grade / below-floor configs fail closed; `executionReady=false`.
+
+V72: ∀ stocks agent process → one bounded stdin JSON request, one stdout JSON line; fixture cases map to `PUBLISHED` / `BLOCKED` / `NO_DATA`; forbidden authority fields reject; no live market call on the agent path; `authority=advisory-only`; `executionReady=false`.
+
 ## §T TASKS
 
 id|status|task|cites
@@ -387,6 +405,8 @@ T28|x|add PreStocks scaled-UI multiplier normalization + issuer corroboration in
 T29|x|move live Stocks providers and shared evidence contracts from `dash/` to `stocks/`; update callers/tests and preserve terminal rendering|V57,V64,V65,V66,I10,I11
 T30|x|add Market Integrity Desk report, proposal binding, expiry gate, refusal statuses, and terminal output|V67,V68,V69,I12
 T31|x|add offline Stocklana demo with synthetic healthy/blocked/stale scenarios and judge walkthrough|V70,V67,I12
+T32|x|add Meteora DBC equity launch prescription + evaluation desk and offline `stocks:dbc` demo|V71,I14
+T33|x|add Stocks Client Agent stdin/stdout surface (`stocks:advice`) with fixture/snapshot modes and contract docs|V72,I13
 ## §B BUGS
 
 id|date|cause|fix

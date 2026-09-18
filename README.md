@@ -2,7 +2,10 @@
 
 [VERIFIED, local implementation] FalconOS collects public Solana and Base quotes and writes linked Obsidian notes. The first slice compares USDC/EURC in both directions. See [`src/cli.ts`](src/cli.ts) and [`src/sources.ts`](src/sources.ts).
 
+[VERIFIED, Stocklana track, 2026-09-18] The Stocks Specialist under [`stocks/`](stocks/) is the active Solana Stocklana path: PreStocks evidence, market integrity, Meteora DBC launch prescriptions, and a Client Agent JSON surface. See [stocks/vision.md](stocks/vision.md), [stocks/agent.md](stocks/agent.md), and [plans/stocklana.md](plans/stocklana.md).
+
 [INFERRED, product plan] Build a multichain research and trading layer above existing agents. [CONTEXT.md](CONTEXT.md) defines the active scope. Start with the [plan index](plans/README.md) for phases, tasks, checkpoints, and passing criteria.
+
 
 [VERIFIED, prior local checks, 2026-09-05] The workspace returned `tests 40`, `pass 40`, `fail 0`, `cancelled 0`, `skipped 0` from `npm test`, and `npm run typecheck` exited `0`. CHK-05, CHK-06, and CHK-07 have scoped evidence. CHK-08 automated signal and export checks pass, while desktop graph rendering remains open. CHK-09 is complete for the approved escalated ten-cycle watch, with four valid quotes in each scan. The earlier `use_default` watch remains a separate three-cycle failure, and its context difference remains not determined. See the [registry and clock record](docs/verification/2026-09-05-registry-and-clock.md), [live checks](docs/verification/2026-09-05-live-checks.md), and [desktop check](docs/verification/2026-09-05-desktop-check.md).
 
@@ -17,6 +20,26 @@
 [REPORTED, team roles, 2026-09-05] Root only orchestrates and reports. Luna agents perform implementation and local measurements. A fixture or synthetic test record is not live evidence.
 
 [INFERRED, MVP boundary] The first usable MVP has four results: a Solana and Base collector, one cited thesis from the selected existing agent, one paper-cycle outcome, and one review view that links the candidate, evidence, thesis, and outcome. Broader strategies, a third chain, live capital, and signing remain later work.
+
+## Stocks / Stocklana
+
+[VERIFIED, repository, 2026-09-18] Node `>=24.12.0`. Stocks commands are offline unless noted. Advice remains `authority: advisory-only` and `executionReady: false`.
+
+```sh
+npm ci
+npm run stocks:demo     # human judge walkthrough: healthy / blocked / stale
+npm run stocks:dbc      # Meteora DBC equity sleeves + meme reject
+npm run stocks:advice < test/fixtures/stocks-agent-healthy.json   # Client Agent JSON
+npm run stocks          # live PreStocks path (network)
+```
+
+| Audience | Command | Contract |
+| --- | --- | --- |
+| Judges / humans | `stocks:demo`, `stocks:dbc` | [stocklana-demo.md](stocks/stocklana-demo.md) |
+| Client Agents | `stocks:advice` | [agent.md](stocks/agent.md) |
+| Live operators | `stocks` | PreStocks + DEX + RPC; not the agent path |
+
+[VERIFIED, local checks, 2026-09-18] `npx tsc --noEmit` passed. Focused stocks/dash suite returned `tests 64`, `pass 64`, `fail 0`. The agent smoke path emitted `stocks.agent-response` with `PUBLISHED` / integrity `VERIFIED`.
 
 ## Run the demonstration
 
@@ -87,6 +110,7 @@ npm test
 
 ## References
 
+- Stocks / Stocklana: [stocks/vision.md](stocks/vision.md), [stocks/agent.md](stocks/agent.md), [stocks/stocklana-demo.md](stocks/stocklana-demo.md), [plans/stocklana.md](plans/stocklana.md)
 - [VERIFIED, official API documentation] [Jupiter order](https://developers.jup.ag/docs/api-reference/swap/order). The quote request omits the taker.
 - [VERIFIED, live request record] The collector uses KyberSwap's Base GET route endpoint. [REPORTED, source researcher] [KyberSwap routes documentation](https://docs.kyberswap.com/kyberswap-solutions/kyberswap-aggregator/aggregator-api-specification/evm-swaps) describes this endpoint. Root's documentation fetch failed; the recorded live requests succeeded.
 - [VERIFIED, issuer registry] [USDC addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses) and [EURC addresses](https://developers.circle.com/stablecoins/eurc-contract-addresses) identify the configured assets.

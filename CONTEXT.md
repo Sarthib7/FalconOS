@@ -6,6 +6,8 @@
 
 ## Current direction
 
+[VERIFIED, Stocklana focus, 2026-09-18] Active build focus is the Stocks Specialist for [Stocklana](https://hackathons.solana.com/hackathons/stocklana): PreStocks evidence, Pyth-aware dash path, Market Integrity Desk, Meteora DBC equity launch prescriptions, and a Client Agent stdin/stdout surface (`npm run stocks:advice`). Execution, custody, and ETF issuance remain closed. See [plans/stocklana.md](plans/stocklana.md) and [stocks/vision.md](stocks/vision.md).
+
 [VERIFIED, prior local implementation check, 2026-09-05] The first slice returned `tests 40`, `pass 40`, `fail 0`, `cancelled 0`, `skipped 0`, and typecheck exited `0`. The registry test matches four historical token metadata entries. Live assessment now starts after collection. Automated stop and export checks pass. The approved escalated ten-scan operating check completed. The historical `use_default` failure remains separate, and its context difference remains not determined. Obsidian desktop rendering remains unverified.
 
 [REPORTED, preliminary source freeze, 2026-09-05] Root earlier reported `npm run typecheck` exit `0`, agent plus vault tests `22/22`, CLI tests `11/11`, and the full suite `tests 57`, `pass 57`, `fail 0`, `cancelled 0`, `skipped 0`. This result is superseded by the final 59-test evidence below. It did not close P1-T07, CHK-10, CHK-11, CHK-12, or CP1B. No real agent thesis run existed.
@@ -36,6 +38,8 @@
 | REJECT | [INFERRED, definition] The quoted cycle has no positive difference, or its evidence fails freshness checks. |
 | REVIEW | [INFERRED, definition] A positive quoted difference exists, but costs, inventory, and fills remain unproven. |
 | UNAVAILABLE | [INFERRED, definition] Required quotes failed or could not be validated. |
+| stocks.advice | [VERIFIED, definition, 2026-09-18] Non-binding Stocks Specialist basket advice for a Client Agent. Statuses: `PUBLISHED`, `BLOCKED`, `NO_DATA`. Always `executionReady: false`. |
+| stocks.agent-request | [VERIFIED, definition, 2026-09-18] Bounded stdin envelope for Client Agents (`fixture` or `snapshot` mode). See [stocks/agent.md](stocks/agent.md). |
 
 ## Evidence rules
 

@@ -1,8 +1,26 @@
 # Status
 
-[VERIFIED, session date] Last updated: 2026-09-05.
-[VERIFIED, tool ownership] Updated by: coordinator, root agent.
-## Current build
+[VERIFIED, session date] Last updated: 2026-09-18.
+[VERIFIED, tool ownership] Updated by: coordinator, cloud agent.
+
+## Current build — Stocklana / Stocks
+
+[VERIFIED, repository and local checks, 2026-09-18] Active track is Stocks for Stocklana on `cursor/stocklana-bounties-2e32` ([PR #4](https://github.com/Sarthib7/FalconOS/pull/4)).
+
+| Surface | Command | Result |
+| --- | --- | --- |
+| Human integrity demo | `npm run stocks:demo` | healthy / blocked / stale offline |
+| Meteora DBC desk | `npm run stocks:dbc` | equity sleeves READY; meme REJECT |
+| Client Agent JSON | `npm run stocks:advice` | `stocks.agent-response` PUBLISHED / VERIFIED |
+| Live PreStocks | `npm run stocks` | network path; not the agent path |
+
+[VERIFIED, local checks, 2026-09-18] `npx tsc --noEmit` exited `0`. Focused suite `node --test stocks/test/*.test.ts dash/test/*.test.ts` returned `tests 64`, `pass 64`, `fail 0`. Contracts: [stocks/agent.md](stocks/agent.md), [stocks/stocklana-demo.md](stocks/stocklana-demo.md), [plans/stocklana.md](plans/stocklana.md).
+
+[BOUNDARY] Advice and DBC prescriptions remain non-binding. No custody, signing, pool creation, or ETF issuance.
+
+## Earlier build — 2026-09-05 quote collector
+
+[VERIFIED, session date] Historical section below was last updated 2026-09-05 for the Solana/Base quote collector slice.
 
 [VERIFIED, prior local checks, 2026-09-05] `npm run typecheck` exited `0`. `npm test` returned `tests 40`, `pass 40`, `fail 0`, `cancelled 0`, `skipped 0`.
 
