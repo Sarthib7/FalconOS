@@ -14,6 +14,7 @@
 | [Tasks](tasks.md) | [INFERRED, workflow] The single record of task completion. Each task has an ID, owner, dependency, and check IDs. |
 | [Checks](checks.md) | [INFERRED, workflow] Commands, test cases, pass criteria, evidence requirements, and current verification limits. |
 | [Build evidence](../status.md#current-build) | [VERIFIED, session record] Actual command output, live captures, failures, and approval blocks. |
+| [Stocklana plan](stocklana.md) | [VERIFIED, 2026-09-18] Hackathon bounty targets, advisory→DBC→execution sequence, and submission notes. |
 | [Brand brief](../docs/brand-brief.md) | [VERIFIED, file contents] Alpine Vector is selected. The brief retains earlier directions and records the open 24px, crop, browser, and UI checks. |
 
 ## Current position
