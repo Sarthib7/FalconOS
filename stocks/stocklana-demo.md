@@ -37,6 +37,25 @@ npm run stocks:demo
 
 [VERIFIED, repository and test run, 2026-09-17] The suite covers canonical snapshot validation, source precedence, scaled-UI multiplier checks, issuer corroboration, proposal binding, integrity states, and the dashboard risk gate.
 
+## Meteora DBC equity launch desk
+
+```bash
+npm run stocks:dbc
+```
+
+[VERIFIED, repository and test run, 2026-09-18] Offline only. Prints equity-tuned DBC prescriptions for PreStocks OPENAI and SPACEX sleeves, then a meme-style counterexample that fails closed.
+
+1. `STOCKS DEMO / DBC EQUITY SLEEVES`
+   - Program id pinned to Meteora `dynamic_bonding_curve`.
+   - USDC quote, Token-2022, DAMM v2 migration, 750 USDC keeper floor.
+   - Evaluation status `READY` / fit `equity-grade`.
+
+2. `STOCKS DEMO / DBC MEME REJECT`
+   - WSOL quote, sub-floor threshold, 9000→20 bps meme fee schedule.
+   - Evaluation status `REJECT` / fit `unsuitable`.
+
+[BOUNDARY] The DBC desk does not create on-chain configs or pools. It prepares the launch parameters for a later execution slice.
+
 ## Live path
 
 The live command is:
@@ -50,3 +69,5 @@ npm run stocks
 ## Next integration
 
 [DECIDED, user direction, 2026-09-17] Backpack Securities is a prospective firm partner. It is not a live data source, execution venue, or custody provider in this demo.
+
+[DECIDED, user direction, 2026-09-18] After advisory hardens, move to execution: DBC config/pool creation for approved sleeves, then basket work. See [plans/stocklana.md](../plans/stocklana.md).

@@ -26,3 +26,20 @@ test('V70: Stocklana demo prints honest healthy, blocked, and stale cases offlin
   assert.match(stale, /snapshot-stale/);
   assert.match(stale, /proposal-expired/);
 });
+
+test('V71: Stocklana DBC demo prints equity sleeves and rejects meme counterexample', async () => {
+  const { stdout, stderr } = await execFileAsync('node', ['dash/cli.ts', 'stocks-dbc'], { cwd: process.cwd(), timeout: 10000 });
+  assert.equal(stderr, '');
+
+  assert.match(stdout, /STOCKS DEMO \/ DBC EQUITY SLEEVES/);
+  assert.match(stdout, /underlying=OPENAI/);
+  assert.match(stdout, /underlying=SPACEX/);
+  assert.match(stdout, /eval=READY\/equity-grade/);
+  assert.match(stdout, /quote=usdc/);
+  assert.match(stdout, /thresholdUnits=750000000/);
+
+  const reject = stdout.slice(stdout.indexOf('STOCKS DEMO / DBC MEME REJECT'));
+  assert.match(reject, /eval=REJECT\/unsuitable/);
+  assert.match(reject, /refusal: quote-not-usdc/);
+  assert.match(reject, /refusal: meme-fee-schedule/);
+});

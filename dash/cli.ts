@@ -1,6 +1,7 @@
 import { dexScreenerAdapter } from '../stocks/adapters.ts';
 import type { CanonicalBasketSnapshot, StocksAdviceResponse } from '../stocks/stocks.ts';
 import type { DashConfig } from './adapters.ts';
+import { buildEquityDbcLaunch, evaluateDbcLaunch, prestocksBasketDbcPlan, WSOL_MINT } from '../stocks/dbc.ts';
 import { evaluateMarketIntegrity } from '../stocks/integrity.ts';
 import { STOCKS_DEMO_ASSETS, stocksDemoValues } from '../stocks/demo.ts';
 import { fixtureAdapter } from '../stocks/adapters.ts';
@@ -8,7 +9,7 @@ import { runCentralAdvice, runLiveAdvice } from './council.ts';
 import { fetchPreStocks, fetchScaledUiMultipliers, scaledPreStocksAdapter } from '../stocks/prestocks.ts';
 import { PREIPO_ASSETS } from '../stocks/preipo.ts';
 import { fetchPythPrices } from './pyth.ts';
-import { renderAdvice } from './render.ts';
+import { renderAdvice, renderDbcLaunch } from './render.ts';
 
 // Verification config. `assetId` is a Solana token mint that is the BASE token in a liquid
 // pool (DEX Screener reports price/liquidity for base tokens). Wrapped SOL proves the live
@@ -55,9 +56,38 @@ async function runStocksDemo(): Promise<void> {
   process.stdout.write(`${renderAdvice(stale.snapshot, stale.advice, config, undefined, reportFor(stale.snapshot, stale.advice, config))}\n`);
 }
 
+async function runDbcDemo(): Promise<void> {
+  process.stdout.write('STOCKS DEMO / DBC EQUITY SLEEVES\n');
+  for (const prescription of prestocksBasketDbcPlan()) {
+    process.stdout.write(`${renderDbcLaunch(prescription, evaluateDbcLaunch(prescription))}\n\n`);
+  }
+
+  const meme = buildEquityDbcLaunch({
+    label: 'meme-style counterexample',
+    underlying: 'MEME',
+    quoteMint: WSOL_MINT,
+    migrationQuoteThresholdUnits: '1000000',
+    initialMarketCapUsd: '10',
+    migrationMarketCapUsd: '100',
+    fee: {
+      mode: 'scheduler-exponential',
+      startingFeeBps: 9000,
+      endingFeeBps: 20,
+      numberOfPeriod: 60,
+      totalDuration: 3600,
+    },
+  });
+  process.stdout.write('STOCKS DEMO / DBC MEME REJECT\n');
+  process.stdout.write(`${renderDbcLaunch(meme, evaluateDbcLaunch(meme))}\n`);
+}
+
 async function main(): Promise<void> {
   if (process.argv[2] === 'stocks-demo') {
     await runStocksDemo();
+    return;
+  }
+  if (process.argv[2] === 'stocks-dbc') {
+    await runDbcDemo();
     return;
   }
   if (process.argv[2] === 'preipo') {

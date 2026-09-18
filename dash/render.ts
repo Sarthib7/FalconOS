@@ -1,3 +1,4 @@
+import type { DbcLaunchEvaluation, DbcLaunchPrescription } from '../stocks/dbc.ts';
 import type { MarketIntegrityReport } from '../stocks/integrity.ts';
 import type { CanonicalBasketSnapshot, StocksAdviceResponse } from '../stocks/stocks.ts';
 import { scaleDecimalToInteger } from '../stocks/live.ts';
@@ -75,5 +76,22 @@ export function renderAdvice(snapshot: CanonicalBasketSnapshot, advice: StocksAd
       lines.push(`  ${citation.underlying.padEnd(10)} ${citation.field.padEnd(10)} ${citation.sourceId}  sha256=${citation.rawSha256.slice(0, 12)}`);
     }
   }
+  return lines.join('\n');
+}
+
+export function renderDbcLaunch(prescription: DbcLaunchPrescription, evaluation: DbcLaunchEvaluation): string {
+  const lines: string[] = [];
+  lines.push('FalconOS · Meteora DBC equity launch desk   [advisory-only · executionReady=false]');
+  lines.push(`program=${prescription.programId}`);
+  lines.push(`label=${prescription.label}  underlying=${prescription.underlying}`);
+  lines.push(`quote=${prescription.quoteKind} (${prescription.quoteMint})`);
+  lines.push(`tokenType=${prescription.tokenType}  migration=${prescription.migrationTarget}`);
+  lines.push(`thresholdUnits=${prescription.migrationQuoteThresholdUnits}  fee=${prescription.fee.startingFeeBps}->${prescription.fee.endingFeeBps}bps`);
+  lines.push(`marketCapUsd=${prescription.initialMarketCapUsd}->${prescription.migrationMarketCapUsd}`);
+  lines.push(`prescription=${prescription.hash.slice(0, 12)}  eval=${evaluation.status}/${evaluation.fit}  score=${evaluation.scoreBps}bps`);
+  for (const check of evaluation.checks) lines.push(`  check ${check.pass ? 'PASS' : 'FAIL'} ${check.code}: ${check.detail}`);
+  for (const warning of evaluation.warnings) lines.push(`  warning: ${warning}`);
+  for (const refusal of evaluation.refusalCodes) lines.push(`  refusal: ${refusal}`);
+  for (const reason of prescription.rationale) lines.push(`  why: ${reason}`);
   return lines.join('\n');
 }

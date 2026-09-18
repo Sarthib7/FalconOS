@@ -12,7 +12,7 @@
 
 [VERIFIED, repository read, 2026-09-17] `dash/cli.ts` imports the PreStocks adapter from `stocks/prestocks.ts`. The dashboard remains the caller and renderer; provider-specific PreStocks logic no longer lives under `dash/`.
 
-[VERIFIED, repository and test run, 2026-09-17] The stocks contract and dashboard integration pass the repository suite: `116` tests passed and `0` failed. TypeScript typecheck also passed.
+[VERIFIED, repository read, 2026-09-18] `stocks/dbc.ts` owns the Meteora DBC equity launch prescription and evaluation desk. It targets Stocklana's Meteora DBC bounty with USDC-quoted, Token-2022, DAMM v2 prescriptions that meet the documented stock-token keeper floor.
 
 [VERIFIED, user direction, 2026-09-17] The web surface may show a read-only snapshot, but it does not expose the full dashboard or any execution path.
 
@@ -24,16 +24,18 @@
 
 [BOUNDARY] PreStocks and DEX evidence are read-only. Provider failures, malformed rows, multiplier disagreement, or issuer disagreement fail closed to `NO_DATA`.
 
+[BOUNDARY] DBC prescriptions are advisory parameters only. No DBC config account, pool, swap, or migration transaction is created in this slice.
+
 ## Next proof
-
-[INFERRED] Add a dedicated Stocks CLI command that runs the current live evidence path and renders the existing advisory output.
-
-[INFERRED] Add more supported stock market definitions only after each venue, asset registry, source policy, and evidence contract is confirmed.
 
 [INFERRED] Keep live claims limited to sources and assets that pass the existing registry, timestamp, coherence, and corroboration checks.
 
+[INFERRED] After advisory acceptance, add an execution bridge that can create DBC configs/pools for approved sleeves using the official Meteora SDK.
+
+[INFERRED] Add Tessera and Clawpump tracks only after the PreStocks + DBC advisory path is submission-ready.
+
 ## Open decisions
 
-[INFERRED] Decide whether the first Stocks Specialist surface should focus on PreStocks tokenized pre-IPO assets or include another approved stock venue.
+[DECIDED, user direction, 2026-09-18] First Stocks Specialist surface focuses on PreStocks, with Meteora DBC as the launch/liquidity sequel for equity-like sleeves.
 
 [INFERRED] Decide the host transport used by a standalone Stocks CLI while preserving the existing `stocks.advice` boundary.
