@@ -2,27 +2,42 @@
 
 ## Purpose
 
-[VERIFIED, user direction] `stocks/` is reserved for a planned Stocks specialist and does not represent a current implementation.
+[VERIFIED, repository read, 2026-09-17] `stocks/` owns the Stocks Specialist contract and its read-only evidence adapters. The domain produces non-binding basket advice for the Client Agent.
 
 ## Current scope
 
-[VERIFIED, repository read] The repository has no Stocks source or test implementation. The web site labels Stocks as `In development`.
+[VERIFIED, repository read, 2026-09-17] `stocks/stocks.ts` defines the canonical basket snapshot, source precedence, typed captures, Basket Proposal, independent Risk Review, publication gate, and `stocks.advice` response validation.
 
-[VERIFIED, repository read] Stocks is a planned specialist only.
+[VERIFIED, repository read, 2026-09-17] `stocks/prestocks.ts` owns the provider-specific PreStocks evidence path. It validates PreStocks rows, reads issuer marks, reads token-2022 scaled-UI multipliers, and wraps the generic DEX evidence adapter with scaled-price and issuer-price corroboration.
 
-[REPORTED, vision-cross-reference, 2026-09-15] The current roster keeps Stocks as an advisory specialist, with only Perps built first. Falcon Investment advice is non-binding; the existing Client Agent retains final decision and execution ownership. Source: `CONTEXT.md:38-44,77-87`.
-Evidence quote: "Falcon Investment is a council of specialist advisory agents, not an autonomous trader." "| Stocks Specialist | Advises on stocks. |" "The existing Client Agent remains the final decision and execution owner." Source: `CONTEXT.md:38,40,82`
+[VERIFIED, repository read, 2026-09-17] `dash/cli.ts` imports the PreStocks adapter from `stocks/prestocks.ts`. The dashboard remains the caller and renderer; provider-specific PreStocks logic no longer lives under `dash/`.
+
+[VERIFIED, repository read, 2026-09-18] `stocks/dbc.ts` owns the Meteora DBC equity launch prescription and evaluation desk. It targets Stocklana's Meteora DBC bounty with USDC-quoted, Token-2022, DAMM v2 prescriptions that meet the documented stock-token keeper floor.
+
+[VERIFIED, repository read, 2026-09-18] `stocks/agent.ts` + `stocks/cli.ts` expose a Client Agent stdin/stdout surface for `stocks.advice`. Fixture mode is offline; live GETs remain outside the agent path. See [agent.md](agent.md).
+
+[VERIFIED, user direction, 2026-09-17] The web surface may show a read-only snapshot, but it does not expose the full dashboard or any execution path.
 
 ## Boundaries
 
-[BOUNDARY] This vision does not select venues, assets, APIs, data sources, or a launch date.
+[BOUNDARY] Stocks advice remains non-binding. The Client Agent retains final decision and execution ownership.
 
-[BOUNDARY] It claims no advisory, trading, execution, custody, or deployment capability for Stocks today.
+[BOUNDARY] This domain does not custody funds, reserve capital, sign transactions, submit orders, or issue an ETF.
+
+[BOUNDARY] PreStocks and DEX evidence are read-only. Provider failures, malformed rows, multiplier disagreement, or issuer disagreement fail closed to `NO_DATA`.
+
+[BOUNDARY] DBC prescriptions are advisory parameters only. No DBC config account, pool, swap, or migration transaction is created in this slice.
 
 ## Next proof
 
-[INFERRED] Define the first advisory-only input and output contract, then add a contract test that returns an unavailable result when required evidence is missing or invalid.
+[VERIFIED, repository, 2026-09-18] Client Agents can call `npm run stocks:advice` for bounded JSON advice. Keep live claims limited to sources and assets that pass the existing registry, timestamp, coherence, and corroboration checks.
+
+[INFERRED] After advisory acceptance, add an execution bridge that can create DBC configs/pools for approved sleeves using the official Meteora SDK.
+
+[INFERRED] Add Tessera and Clawpump tracks only after the PreStocks + DBC advisory path is submission-ready.
 
 ## Open decisions
 
-[INFERRED] Decide the supported market definition, required evidence, and integration sources before implementation begins.
+[DECIDED, user direction, 2026-09-18] First Stocks Specialist surface focuses on PreStocks, with Meteora DBC as the launch/liquidity sequel for equity-like sleeves.
+
+[DECIDED, 2026-09-18] The Stocks Client Agent transport is `stocks/cli.ts advice` over stdin/stdout JSON, preserving the `stocks.advice` boundary.

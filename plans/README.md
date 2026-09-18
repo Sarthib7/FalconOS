@@ -14,9 +14,12 @@
 | [Tasks](tasks.md) | [INFERRED, workflow] The single record of task completion. Each task has an ID, owner, dependency, and check IDs. |
 | [Checks](checks.md) | [INFERRED, workflow] Commands, test cases, pass criteria, evidence requirements, and current verification limits. |
 | [Build evidence](../status.md#current-build) | [VERIFIED, session record] Actual command output, live captures, failures, and approval blocks. |
+| [Stocklana plan](stocklana.md) | [VERIFIED, 2026-09-18] Hackathon bounty targets, advisory→DBC→execution sequence, and submission notes. |
 | [Brand brief](../docs/brand-brief.md) | [VERIFIED, file contents] Alpine Vector is selected. The brief retains earlier directions and records the open 24px, crop, browser, and UI checks. |
 
 ## Current position
+
+[VERIFIED, Stocklana track, 2026-09-18] Active work is Stocks for Stocklana on branch `cursor/stocklana-bounties-2e32`. Offline demos and Client Agent advice are documented in [stocklana.md](stocklana.md). Focused stocks/dash checks: `tests 64`, `pass 64`, `fail 0`; typecheck passed.
 
 [VERIFIED, prior local result, 2026-09-05] `npm run typecheck` exited `0`. `npm test` returned `tests 40`, `pass 40`, `fail 0`, `cancelled 0`, `skipped 0`. CHK-05, CHK-06, and CHK-07 have scoped evidence. CHK-08 automated signal and export checks cover both signals during requests and polling; desktop graph rendering remains open. CHK-09 is complete for the approved escalated ten-cycle watch. The earlier `use_default` watch remains a separate three-cycle failure. See the [live checks](../docs/verification/2026-09-05-live-checks.md). CP1A remains open.
 

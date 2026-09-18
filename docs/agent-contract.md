@@ -397,6 +397,10 @@ codex exec --ephemeral --ignore-user-config --ignore-rules --sandbox read-only -
 
 [VERIFIED, CHK-26 preparation, 2026-09-05] D1 selection, one synthetic request and response, and a passing local structural check are recorded above and in the [fixture evidence record](verification/2026-09-05-agent-fixture.md). Root accepted this preparation check. CHK-10, CHK-11, and CHK-12 remain open. CP1B stays open until a real delegated run and its controls pass.
 
+## Stocks Client Agent surface
+
+[VERIFIED, repository, 2026-09-18] Stocks advice for external Client Agents uses `stocks/cli.ts advice` / `npm run stocks:advice`. Contract details live in [stocks/agent.md](../stocks/agent.md). This path is separate from the Codex quote-research adapter above. It emits `stocks.agent-response` with embedded `stocks.advice`, remains `authority: advisory-only`, and sets `executionReady: false`.
+
 ## Least confident decisions
 
 1. [INFERRED] Codex CLI is the best first executable because its inspected help exposes stdin, an output schema, and a final-response file. The model response shape and process isolation still need a local run.

@@ -1,10 +1,12 @@
 import { createBasketProposal, createCanonicalBasketSnapshot, createHostTransportBoundary, createStocksAdviceRequest, invokeStocksAdvice, STOCKS_SCHEMA_VERSION } from '../stocks/stocks.ts';
-import type { AssetCaptureInput, AssetSourcePrecedence, BasketLeg, CanonicalBasketSnapshot, CanonicalBasketSnapshotInput, FieldCapture, HostTransportBoundary, LeadResponse, RiskResponse, StockRegistryEntry, StocksAdviceResponse, StocksHostTransport } from '../stocks/stocks.ts';
-import { scaleDecimalToInteger } from './adapters.ts';
-import type { DashAssetConfig, DashConfig, LiveEvidenceAdapter } from './adapters.ts';
-import type { PythPriceResult, PythUnderlyingRef } from './pyth.ts';
+import type { AssetCaptureInput, AssetSourcePrecedence, BasketLeg, CanonicalBasketSnapshot, CanonicalBasketSnapshotInput, DataProvenance, FieldCapture, HostTransportBoundary, LeadResponse, RiskResponse, StockRegistryEntry, StocksAdviceResponse, StocksHostTransport } from '../stocks/stocks.ts';
+import { evaluateMarketIntegrity } from '../stocks/integrity.ts';
+import { scaleDecimalToInteger } from '../stocks/live.ts';
+import type { LiveEvidenceAdapter, StockAssetConfig, UnderlyingReference } from '../stocks/live.ts';
+import type { DashConfig } from './adapters.ts';
+import type { PythPriceResult } from './pyth.ts';
 
-function registryOf(asset: DashAssetConfig): StockRegistryEntry {
+function registryOf(asset: StockAssetConfig, provenance: DataProvenance): StockRegistryEntry {
   return {
     schemaVersion: STOCKS_SCHEMA_VERSION,
     registryVersion: 'dash-live-1',
@@ -18,7 +20,7 @@ function registryOf(asset: DashAssetConfig): StockRegistryEntry {
     fees: { takerBps: 0, makerBps: 0 },
     capabilities: { tradable: true, redeemable: true },
     corporateAction: { lastEventId: null, asOf: null },
-    provenance: 'live',
+    provenance,
   };
 }
 
@@ -41,7 +43,7 @@ export async function buildLiveBasketSnapshot(config: DashConfig, adapter: LiveE
   for (const asset of config.assets) {
     assetIds.push(asset.assetId);
     const captures = await adapter.fetchAsset(asset);
-    assets[asset.assetId] = { registry: registryOf(asset), precedence: precedenceOf(adapter), captures: [captures.price, captures.liquidity] };
+    assets[asset.assetId] = { registry: registryOf(asset, config.provenance ?? 'live'), precedence: precedenceOf(adapter), captures: [captures.price, captures.liquidity] };
     for (const capture of [captures.price, captures.liquidity]) {
       const ms = Date.parse(capture.capturedAt);
       if (Number.isFinite(ms) && ms > maxCapturedMs) maxCapturedMs = ms;
@@ -53,14 +55,14 @@ export async function buildLiveBasketSnapshot(config: DashConfig, adapter: LiveE
     assets,
     capturedAt: new Date(maxCapturedMs).toISOString(),
     coherenceCapMs: config.coherenceCapMs,
-    provenance: 'live',
+    provenance: config.provenance ?? 'live',
   };
   return createCanonicalBasketSnapshot(input);
 }
 
 // Deterministic host council over live evidence: the lead proposes the configured target
 // weights bound to the snapshot; the independent reviewer vetoes on a pool-liquidity floor.
-export function dashBoundary(config: DashConfig, underlyingRefs?: ReadonlyMap<string, PythUnderlyingRef | null>): HostTransportBoundary {
+export function dashBoundary(config: DashConfig, underlyingRefs?: ReadonlyMap<string, UnderlyingReference | null>): HostTransportBoundary {
   const legs: BasketLeg[] = config.assets.map(asset => ({ assetId: asset.assetId, underlying: asset.underlying, targetWeightBps: asset.targetWeightBps }));
   const transport: StocksHostTransport = {
     async lead(request): Promise<LeadResponse> {
@@ -87,6 +89,11 @@ export function dashBoundary(config: DashConfig, underlyingRefs?: ReadonlyMap<st
     async riskReview(request): Promise<RiskResponse> {
       const reasons: string[] = [];
       let status: RiskResponse['status'] = 'PASS';
+      const integrity = evaluateMarketIntegrity({ snapshot: request.snapshot, proposal: request.leadProposal, checkedAt: new Date().toISOString(), maxAgeMs: config.integrityMaxAgeMs ?? 900_000 });
+      if (integrity.status !== 'VERIFIED') {
+        reasons.push('market integrity ' + integrity.status + ': ' + integrity.refusalCodes.join(', '));
+        status = integrity.status === 'DIVERGENT' ? 'BLOCK' : 'NO_DATA';
+      }
       if (request.snapshot.envelope.status !== 'READY' || request.leadProposal === null || request.leadProposal.status !== 'PROPOSED') {
         status = 'NO_DATA';
       } else {
@@ -122,7 +129,7 @@ export function dashBoundary(config: DashConfig, underlyingRefs?: ReadonlyMap<st
   return createHostTransportBoundary(transport);
 }
 
-export async function runLiveAdvice(config: DashConfig, adapter: LiveEvidenceAdapter, underlyingRefs?: ReadonlyMap<string, PythUnderlyingRef | null>): Promise<{ snapshot: CanonicalBasketSnapshot; advice: StocksAdviceResponse }> {
+export async function runLiveAdvice(config: DashConfig, adapter: LiveEvidenceAdapter, underlyingRefs?: ReadonlyMap<string, UnderlyingReference | null>): Promise<{ snapshot: CanonicalBasketSnapshot; advice: StocksAdviceResponse }> {
   const snapshot = await buildLiveBasketSnapshot(config, adapter);
   const stamp = `${Date.now()}`;
   const request = createStocksAdviceRequest({ requestId: `dash-${stamp}`, runId: `run-${stamp}`, snapshot });
@@ -135,10 +142,10 @@ export async function runLiveAdvice(config: DashConfig, adapter: LiveEvidenceAda
 // disagreement rule); when Pyth fails typed, the DEX price rides as the equivalence-validated
 // secondary and V60 failover selects it. DEX Screener stays the liquidity primary. Pyth results
 // are injected so tests stay offline.
-export async function buildCentralSnapshot(config: DashConfig, dexAdapter: LiveEvidenceAdapter, pythResults: ReadonlyMap<string, PythPriceResult>): Promise<{ snapshot: CanonicalBasketSnapshot; underlyingRefs: Map<string, PythUnderlyingRef | null> }> {
+export async function buildCentralSnapshot(config: DashConfig, dexAdapter: LiveEvidenceAdapter, pythResults: ReadonlyMap<string, PythPriceResult>): Promise<{ snapshot: CanonicalBasketSnapshot; underlyingRefs: Map<string, UnderlyingReference | null> }> {
   const assets: Record<string, AssetCaptureInput> = {};
   const assetIds: string[] = [];
-  const underlyingRefs = new Map<string, PythUnderlyingRef | null>();
+  const underlyingRefs = new Map<string, UnderlyingReference | null>();
   let maxCapturedMs = 0;
   for (const asset of config.assets) {
     assetIds.push(asset.assetId);
@@ -170,7 +177,7 @@ export async function buildCentralSnapshot(config: DashConfig, dexAdapter: LiveE
         ],
       };
     }
-    assets[asset.assetId] = { registry: registryOf(asset), precedence, captures };
+    assets[asset.assetId] = { registry: registryOf(asset, config.provenance ?? 'live'), precedence, captures };
     for (const capture of captures) {
       const ms = Date.parse(capture.capturedAt);
       if (Number.isFinite(ms) && ms > maxCapturedMs) maxCapturedMs = ms;
@@ -182,12 +189,12 @@ export async function buildCentralSnapshot(config: DashConfig, dexAdapter: LiveE
     assets,
     capturedAt: new Date(maxCapturedMs).toISOString(),
     coherenceCapMs: config.coherenceCapMs,
-    provenance: 'live',
+    provenance: config.provenance ?? 'live',
   };
   return { snapshot: createCanonicalBasketSnapshot(input), underlyingRefs };
 }
 
-export async function runCentralAdvice(config: DashConfig, dexAdapter: LiveEvidenceAdapter, pythResults: ReadonlyMap<string, PythPriceResult>): Promise<{ snapshot: CanonicalBasketSnapshot; advice: StocksAdviceResponse; underlyingRefs: Map<string, PythUnderlyingRef | null> }> {
+export async function runCentralAdvice(config: DashConfig, dexAdapter: LiveEvidenceAdapter, pythResults: ReadonlyMap<string, PythPriceResult>): Promise<{ snapshot: CanonicalBasketSnapshot; advice: StocksAdviceResponse; underlyingRefs: Map<string, UnderlyingReference | null> }> {
   const { snapshot, underlyingRefs } = await buildCentralSnapshot(config, dexAdapter, pythResults);
   const stamp = `${Date.now()}`;
   const request = createStocksAdviceRequest({ requestId: `dash-${stamp}`, runId: `run-${stamp}`, snapshot });

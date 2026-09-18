@@ -1,7 +1,9 @@
+import type { DbcLaunchEvaluation, DbcLaunchPrescription } from '../stocks/dbc.ts';
+import type { MarketIntegrityReport } from '../stocks/integrity.ts';
 import type { CanonicalBasketSnapshot, StocksAdviceResponse } from '../stocks/stocks.ts';
-import { scaleDecimalToInteger } from './adapters.ts';
+import { scaleDecimalToInteger } from '../stocks/live.ts';
 import type { DashConfig } from './adapters.ts';
-import type { PythUnderlyingRef } from './pyth.ts';
+import type { UnderlyingReference } from '../stocks/live.ts';
 
 function fromIntegerUnits(value: string, scale: number): string {
   if (scale === 0) return value;
@@ -10,11 +12,21 @@ function fromIntegerUnits(value: string, scale: number): string {
   return `${digits.slice(0, cut)}.${digits.slice(cut)}`;
 }
 
-export function renderAdvice(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig, underlyingRefs?: ReadonlyMap<string, PythUnderlyingRef | null>): string {
+export function renderAdvice(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig, underlyingRefs?: ReadonlyMap<string, UnderlyingReference | null>, integrity?: MarketIntegrityReport): string {
   const lines: string[] = [];
   lines.push('FalconOS · Stocks live dashboard   [advisory-only · executionReady=false]');
   lines.push(`provenance=${snapshot.envelope.provenance}  snapshot=${snapshot.envelope.status}  advice=${advice.status}`);
   lines.push(`capturedAt=${snapshot.envelope.capturedAt}  hash=${snapshot.hash.slice(0, 12)}`);
+  lines.push('');
+  lines.push('Integrity');
+  if (integrity === undefined) {
+    lines.push('  report unavailable');
+  } else {
+    lines.push(`  status=${integrity.status}  freshness=${integrity.freshness}  snapshot=${integrity.snapshotHash.slice(0, 12)}`);
+    if (integrity.proposalHash !== null) lines.push(`  proposal=${integrity.proposalHash.slice(0, 12)}`);
+    for (const warning of integrity.warnings) lines.push(`  warning: ${warning}`);
+    for (const refusal of integrity.refusalCodes) lines.push(`  refusal: ${refusal}`);
+  }
   lines.push('');
   lines.push('Evidence');
   for (const asset of config.assets) {
@@ -64,5 +76,22 @@ export function renderAdvice(snapshot: CanonicalBasketSnapshot, advice: StocksAd
       lines.push(`  ${citation.underlying.padEnd(10)} ${citation.field.padEnd(10)} ${citation.sourceId}  sha256=${citation.rawSha256.slice(0, 12)}`);
     }
   }
+  return lines.join('\n');
+}
+
+export function renderDbcLaunch(prescription: DbcLaunchPrescription, evaluation: DbcLaunchEvaluation): string {
+  const lines: string[] = [];
+  lines.push('FalconOS · Meteora DBC equity launch desk   [advisory-only · executionReady=false]');
+  lines.push(`program=${prescription.programId}`);
+  lines.push(`label=${prescription.label}  underlying=${prescription.underlying}`);
+  lines.push(`quote=${prescription.quoteKind} (${prescription.quoteMint})`);
+  lines.push(`tokenType=${prescription.tokenType}  migration=${prescription.migrationTarget}`);
+  lines.push(`thresholdUnits=${prescription.migrationQuoteThresholdUnits}  fee=${prescription.fee.startingFeeBps}->${prescription.fee.endingFeeBps}bps`);
+  lines.push(`marketCapUsd=${prescription.initialMarketCapUsd}->${prescription.migrationMarketCapUsd}`);
+  lines.push(`prescription=${prescription.hash.slice(0, 12)}  eval=${evaluation.status}/${evaluation.fit}  score=${evaluation.scoreBps}bps`);
+  for (const check of evaluation.checks) lines.push(`  check ${check.pass ? 'PASS' : 'FAIL'} ${check.code}: ${check.detail}`);
+  for (const warning of evaluation.warnings) lines.push(`  warning: ${warning}`);
+  for (const refusal of evaluation.refusalCodes) lines.push(`  refusal: ${refusal}`);
+  for (const reason of prescription.rationale) lines.push(`  why: ${reason}`);
   return lines.join('\n');
 }

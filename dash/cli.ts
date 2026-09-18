@@ -1,9 +1,15 @@
-import { dexScreenerAdapter } from './adapters.ts';
+import { dexScreenerAdapter } from '../stocks/adapters.ts';
+import type { CanonicalBasketSnapshot, StocksAdviceResponse } from '../stocks/stocks.ts';
 import type { DashConfig } from './adapters.ts';
+import { buildEquityDbcLaunch, evaluateDbcLaunch, prestocksBasketDbcPlan, WSOL_MINT } from '../stocks/dbc.ts';
+import { evaluateMarketIntegrity } from '../stocks/integrity.ts';
+import { STOCKS_DEMO_ASSETS, stocksDemoValues } from '../stocks/demo.ts';
+import { fixtureAdapter } from '../stocks/adapters.ts';
 import { runCentralAdvice, runLiveAdvice } from './council.ts';
-import { fetchPreStocks, fetchScaledUiMultipliers, scaledPreStocksAdapter } from './prestocks.ts';
+import { fetchPreStocks, fetchScaledUiMultipliers, scaledPreStocksAdapter } from '../stocks/prestocks.ts';
+import { PREIPO_ASSETS } from '../stocks/preipo.ts';
 import { fetchPythPrices } from './pyth.ts';
-import { renderAdvice } from './render.ts';
+import { renderAdvice, renderDbcLaunch } from './render.ts';
 
 // Verification config. `assetId` is a Solana token mint that is the BASE token in a liquid
 // pool (DEX Screener reports price/liquidity for base tokens). Wrapped SOL proves the live
@@ -24,35 +30,83 @@ const SAMPLE_CONFIG: DashConfig = {
   coherenceCapMs: 120_000,
 };
 
-// Real tokenized pre-IPO basket. Mints verified live from https://prestocks.com/api/prestocks
-// (OPENAI, SPACEX PreStocks). PreStocks markPrice is the underlying reference; DEX Screener
-// pools supply price + liquidity evidence. Run with: node dash/cli.ts preipo
 const PREIPO_CONFIG: DashConfig = {
-  assets: [
-    { assetId: 'PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF', underlying: 'OPENAI', targetWeightBps: 6000, priceScale: 6, quantityScale: 2, minLiquidity: '500000', maxWeightBps: 8000 },
-    { assetId: 'PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh', underlying: 'SPACEX', targetWeightBps: 4000, priceScale: 6, quantityScale: 2, minLiquidity: '500000', maxWeightBps: 8000 },
-  ],
+  assets: PREIPO_ASSETS,
   coherenceCapMs: 120_000,
+  integrityMaxAgeMs: 900_000,
 };
 
+function reportFor(snapshot: CanonicalBasketSnapshot, advice: StocksAdviceResponse, config: DashConfig, checkedAt = new Date().toISOString()) {
+  return evaluateMarketIntegrity({ snapshot, proposal: advice.proposal, checkedAt, maxAgeMs: config.integrityMaxAgeMs ?? 900_000 });
+}
+
+async function runStocksDemo(): Promise<void> {
+  const capturedAt = new Date().toISOString();
+  const config: DashConfig = { assets: STOCKS_DEMO_ASSETS, coherenceCapMs: 120_000, integrityMaxAgeMs: 900_000, provenance: 'synthetic' };
+  const healthy = await runLiveAdvice(config, fixtureAdapter(stocksDemoValues(capturedAt)));
+  const blocked = await runLiveAdvice(config, fixtureAdapter(stocksDemoValues(capturedAt, true)));
+  const staleCapturedAt = new Date(Date.parse(capturedAt) - 3_600_000).toISOString();
+  const stale = await runLiveAdvice(config, fixtureAdapter(stocksDemoValues(staleCapturedAt)));
+
+  process.stdout.write('STOCKS DEMO / HEALTHY\n');
+  process.stdout.write(`${renderAdvice(healthy.snapshot, healthy.advice, config, undefined, reportFor(healthy.snapshot, healthy.advice, config, capturedAt))}\n\n`);
+  process.stdout.write('STOCKS DEMO / LOW-LIQUIDITY\n');
+  process.stdout.write(`${renderAdvice(blocked.snapshot, blocked.advice, config, undefined, reportFor(blocked.snapshot, blocked.advice, config, capturedAt))}\n\n`);
+  process.stdout.write('STOCKS DEMO / STALE-REPLAY\n');
+  process.stdout.write(`${renderAdvice(stale.snapshot, stale.advice, config, undefined, reportFor(stale.snapshot, stale.advice, config))}\n`);
+}
+
+async function runDbcDemo(): Promise<void> {
+  process.stdout.write('STOCKS DEMO / DBC EQUITY SLEEVES\n');
+  for (const prescription of prestocksBasketDbcPlan()) {
+    process.stdout.write(`${renderDbcLaunch(prescription, evaluateDbcLaunch(prescription))}\n\n`);
+  }
+
+  const meme = buildEquityDbcLaunch({
+    label: 'meme-style counterexample',
+    underlying: 'MEME',
+    quoteMint: WSOL_MINT,
+    migrationQuoteThresholdUnits: '1000000',
+    initialMarketCapUsd: '10',
+    migrationMarketCapUsd: '100',
+    fee: {
+      mode: 'scheduler-exponential',
+      startingFeeBps: 9000,
+      endingFeeBps: 20,
+      numberOfPeriod: 60,
+      totalDuration: 3600,
+    },
+  });
+  process.stdout.write('STOCKS DEMO / DBC MEME REJECT\n');
+  process.stdout.write(`${renderDbcLaunch(meme, evaluateDbcLaunch(meme))}\n`);
+}
+
 async function main(): Promise<void> {
+  if (process.argv[2] === 'stocks-demo') {
+    await runStocksDemo();
+    return;
+  }
+  if (process.argv[2] === 'stocks-dbc') {
+    await runDbcDemo();
+    return;
+  }
   if (process.argv[2] === 'preipo') {
     const mints = PREIPO_CONFIG.assets.map(asset => asset.assetId);
     const [{ refs, issuerPrices }, multipliers] = await Promise.all([fetchPreStocks(mints), fetchScaledUiMultipliers(mints)]);
     const adapter = scaledPreStocksAdapter(dexScreenerAdapter(), multipliers, issuerPrices);
     const { snapshot, advice } = await runLiveAdvice(PREIPO_CONFIG, adapter, refs);
-    process.stdout.write(`${renderAdvice(snapshot, advice, PREIPO_CONFIG, refs)}\n`);
+    process.stdout.write(`${renderAdvice(snapshot, advice, PREIPO_CONFIG, refs, reportFor(snapshot, advice, PREIPO_CONFIG))}\n`);
     return;
   }
   const pythAssets = SAMPLE_CONFIG.assets.flatMap(asset => asset.pyth === undefined ? [] : [{ assetId: asset.assetId, underlying: asset.underlying, priceScale: asset.priceScale, tokenizedFeedId: asset.pyth.tokenizedFeedId, underlyingFeedId: asset.pyth.underlyingFeedId }]);
   if (pythAssets.length > 0) {
     const pythResults = await fetchPythPrices(pythAssets);
     const { snapshot, advice, underlyingRefs } = await runCentralAdvice(SAMPLE_CONFIG, dexScreenerAdapter(), pythResults);
-    process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG, underlyingRefs)}\n`);
+    process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG, underlyingRefs, reportFor(snapshot, advice, SAMPLE_CONFIG))}\n`);
     return;
   }
   const { snapshot, advice } = await runLiveAdvice(SAMPLE_CONFIG, dexScreenerAdapter());
-  process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG)}\n`);
+  process.stdout.write(`${renderAdvice(snapshot, advice, SAMPLE_CONFIG, undefined, reportFor(snapshot, advice, SAMPLE_CONFIG))}\n`);
 }
 
 main().catch((error: unknown) => {

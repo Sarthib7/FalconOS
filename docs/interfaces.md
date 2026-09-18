@@ -54,7 +54,16 @@
 
 [VERIFIED, P1-T07 fixture state, 2026-09-05] The synthetic evidence-to-thesis exchange is recorded in the [agent fixture evidence](verification/2026-09-05-agent-fixture.md). It validates the local shape and persistence path only. No real agent run exists, so CHK-10, CHK-11, CHK-12, and CP1B remain open.
 
+## Stocks Client Agent surface
+
+[VERIFIED, repository, 2026-09-18] Provider: `stocks/cli.ts` (`advice`). Consumer: external Client Agent. Input: one `stocks.agent-request` JSON object on stdin (≤8 MiB). Output: one `stocks.agent-response` or `stocks.agent-error` JSON line on stdout (≤64 KiB).
+
+[VERIFIED, contract] Fixture mode cases are `healthy`, `low-liquidity`, and `stale`. Snapshot mode accepts a frozen canonical basket snapshot. Host transport is injected inside FalconOS; the request cannot select models, wallets, signers, or execution tools. Forbidden authority fields are rejected.
+
+[VERIFIED, boundary] The agent path performs no live market GET/RPC. Live PreStocks evidence remains on `npm run stocks` via `dash/`. Full field notes: [stocks/agent.md](../stocks/agent.md). Related human demos: [stocks/stocklana-demo.md](../stocks/stocklana-demo.md).
+
 ## Least confident decisions
 
 1. [INFERRED] The historical capture verifies six decimals only at its captured slots and block. Runtime metadata revalidation remains open.
 2. [INFERRED] A ten-second observation window is useful for research. It does not establish execution freshness.
+3. [INFERRED] Stocks fixture advice is sufficient for Stocklana judges and Client Agent smoke. Live agent operators still need an approved evidence feed before production claims.
