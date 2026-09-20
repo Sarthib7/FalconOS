@@ -67,38 +67,62 @@ pub struct CanonicalSnapshot {
     pub status: SnapshotStatus,
 }
 
-/// Parse a UTC ISO-8601 timestamp (`YYYY-MM-DDTHH:MM:SS[.mmm]Z`) to epoch
-/// milliseconds. Mirrors the TS `Date.parse` + `isoTime` validation: any
-/// unparseable timestamp is a typed failure, never a guessed time.
+/// Parse a strict UTC ISO-8601 timestamp (`YYYY-MM-DDTHH:MM:SS[.mmm]Z`) to
+/// epoch milliseconds. Fixed-width unsigned digit fields only (no signs, no
+/// flexible widths), real-calendar day validation (leap years included), and
+/// a four-digit year so the epoch arithmetic cannot overflow. Any deviation
+/// is a typed failure, never a guessed time.
 pub fn parse_iso_ms(value: &str) -> Option<i64> {
+    fn digits(field: &str, width: usize) -> Option<i64> {
+        if field.len() != width || field.bytes().any(|b| !b.is_ascii_digit()) {
+            return None;
+        }
+        field.parse().ok()
+    }
     let rest = value.strip_suffix('Z')?;
-    let (date, time) = rest.split_at(rest.find('T')?);
-    let time = &time[1..];
-    let mut date_parts = date.split('-');
-    let year: i64 = date_parts.next()?.parse().ok()?;
-    let month: i64 = date_parts.next()?.parse().ok()?;
-    let day: i64 = date_parts.next()?.parse().ok()?;
-    if date_parts.next().is_some() || !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+    if rest.len() < 19 || rest.as_bytes()[10] != b'T' {
+        return None;
+    }
+    let (date, time) = (&rest[..10], &rest[11..]);
+    if date.as_bytes()[4] != b'-' || date.as_bytes()[7] != b'-' {
+        return None;
+    }
+    let year = digits(&date[..4], 4)?;
+    let month = digits(&date[5..7], 2)?;
+    let day = digits(&date[8..10], 2)?;
+    let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    let days_in_month = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if leap => 29,
+        2 => 28,
+        _ => return None,
+    };
+    if day < 1 || day > days_in_month {
         return None;
     }
     let (hms, millis) = match time.split_once('.') {
         Some((hms, frac)) => {
-            if frac.is_empty() || frac.len() > 3 || frac.bytes().any(|b| !b.is_ascii_digit()) {
+            if frac.is_empty() || frac.len() > 3 {
                 return None;
             }
             let scale = 10_i64.pow(3 - frac.len() as u32);
-            (hms, frac.parse::<i64>().ok()? * scale)
+            (hms, digits(frac, frac.len())? * scale)
         }
         None => (time, 0),
     };
-    let mut time_parts = hms.split(':');
-    let hour: i64 = time_parts.next()?.parse().ok()?;
-    let minute: i64 = time_parts.next()?.parse().ok()?;
-    let second: i64 = time_parts.next()?.parse().ok()?;
-    if time_parts.next().is_some() || hour > 23 || minute > 59 || second > 59 {
+    if hms.len() != 8 || hms.as_bytes()[2] != b':' || hms.as_bytes()[5] != b':' {
+        return None;
+    }
+    let hour = digits(&hms[..2], 2)?;
+    let minute = digits(&hms[3..5], 2)?;
+    let second = digits(&hms[6..8], 2)?;
+    if hour > 23 || minute > 59 || second > 59 {
         return None;
     }
     // Days since Unix epoch via civil-date algorithm (Howard Hinnant).
+    // Year is bounded to 0000-9999 by the fixed-width parse, so all
+    // intermediate values fit comfortably in i64: no overflow possible.
     let y = if month <= 2 { year - 1 } else { year };
     let era = if y >= 0 { y } else { y - 399 } / 400;
     let yoe = y - era * 400;
@@ -330,7 +354,31 @@ mod tests {
             parse_iso_ms("2026-09-20T17:27:16Z"),
             Some(1_789_925_236_000)
         );
-        for bad in ["t", "", "2026-09-20", "2026-09-20T17:27:16", "2026-13-01T00:00:00Z", "2026-09-20T24:00:00Z", "2026-09-20T17:27:16.1234Z"] {
+        // Leap day accepted only in real leap years.
+        assert!(parse_iso_ms("2024-02-29T00:00:00Z").is_some());
+        assert!(parse_iso_ms("2000-02-29T00:00:00Z").is_some());
+        for bad in [
+            "t",
+            "",
+            "2026-09-20",
+            "2026-09-20T17:27:16",
+            "2026-13-01T00:00:00Z",
+            "2026-09-20T24:00:00Z",
+            "2026-09-20T17:27:16.1234Z",
+            // Adversarial vectors: signed fields, impossible dates, overflow.
+            "2026-09-20T-1:00:00Z",
+            "2026-02-31T00:00:00Z",
+            "2026-02-29T00:00:00Z",
+            "1900-02-29T00:00:00Z",
+            "2026-04-31T00:00:00Z",
+            "2026-09-00T00:00:00Z",
+            "-2026-09-20T00:00:00Z",
+            "99999999999-01-01T00:00:00Z",
+            "2026-09-20T00:-1:00Z",
+            "2026-09-20T00:00:00.−5Z",
+            "2026-9-20T00:00:00Z",
+            "２026-09-20T00:00:00Z",
+        ] {
             assert_eq!(parse_iso_ms(bad), None, "{bad} must be rejected");
         }
     }
