@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171b1c">
+  <meta name="color-scheme" content="dark">
+  <title>FalconOS · Copilot</title>
+  <link rel="icon" type="image/png" href="/falcon-symbol.png">
+  <style>
+    :root { color-scheme: dark; --bg: #171b1c; --surface: #202627; --surface-2: #262e2e; --fg: #eef1ed; --muted: #98a5a2; --border: #3c4746; --accent: #8ee8d1; --green: #72e3ab; --amber: #f1bf70; --gray: #9ba6a4; --danger: #ef8f86; }
+    * { box-sizing: border-box; }
+    body { min-width: 320px; margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, sans-serif; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    .topbar { min-height: 72px; padding: 0 clamp(18px, 4vw, 56px); display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--border); }
+    .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--fg); text-decoration: none; font: 600 14px ui-monospace, monospace; letter-spacing: .04em; }
+    .logo svg { width: 24px; height: 24px; }
+    .wm-os { margin-left: 3px; padding: 1px 4px 2px; background: var(--fg); color: var(--bg); font-style: italic; }
+    .topbar .eyebrow { margin-left: auto; }
+    .eyebrow, .kicker, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .eyebrow, .kicker { color: var(--accent); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+    .eyebrow { margin: 0; }
+    main { width: min(1600px, calc(100% - clamp(28px, 6vw, 110px))); margin: 0 auto; padding: 42px 0 72px; }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
+    h1 { margin: 8px 0 0; font: 400 clamp(36px, 5vw, 68px)/.98 Georgia, serif; letter-spacing: -.045em; }
+    .intro-copy { max-width: 46ch; margin: 0; color: var(--muted); }
+    .advisory { margin: 0 0 28px; padding: 12px 16px; border: 1px solid var(--border); border-left: 3px solid var(--accent); color: var(--muted); background: rgba(142,232,209,.04); font-size: 12px; }
+    .advisory strong { color: var(--fg); font-family: ui-monospace, monospace; font-weight: 500; }
+    .panes { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .95fr) minmax(300px, .95fr); gap: 14px; align-items: start; }
+    .pane { min-width: 0; border: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 90%, transparent); }
+    .pane-head { min-height: 78px; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+    .pane h2 { margin: 5px 0 0; font: 400 24px/1.05 Georgia, serif; }
+    .pane-body { padding: 20px; }
+    .status-chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid var(--border); font: 10px ui-monospace, monospace; letter-spacing: .06em; }
+    .status-chip::before { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: currentColor; content: ''; }
+    .status-published { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, var(--border)); }
+    .status-blocked { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 45%, var(--border)); }
+    .status-no-data { color: var(--gray); }
+    .meta { margin: 0; color: var(--muted); font: 11px ui-monospace, monospace; }
+    .reasons { min-height: 46px; margin: 0 0 22px; padding-left: 19px; color: var(--muted); }
+    .reasons li + li { margin-top: 5px; }
+    .empty { margin: 0; padding: 18px; border: 1px dashed var(--border); color: var(--muted); font: 12px ui-monospace, monospace; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { padding: 8px 6px; color: var(--muted); font: 10px ui-monospace, monospace; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
+    td { padding: 10px 6px; border-top: 1px solid var(--border); white-space: nowrap; }
+    td:first-child { color: var(--fg); font-family: ui-monospace, monospace; }
+    .field { display: grid; gap: 7px; margin-bottom: 16px; }
+    label { color: var(--muted); font: 10px ui-monospace, monospace; letter-spacing: .07em; text-transform: uppercase; }
+    input, select { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 0; outline: 0; background: var(--surface-2); color: var(--fg); }
+    input:focus, select:focus, button:focus-visible { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 30%, transparent); outline-offset: 1px; }
+    .wallet-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .wallet-state { min-width: 0; color: var(--muted); font: 11px ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .button-row.single { grid-template-columns: 1fr; }
+    .button { min-height: 42px; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 0; background: var(--accent); color: #10201e; font: 600 11px ui-monospace, monospace; letter-spacing: .04em; text-transform: uppercase; }
+    .button.secondary { border-color: var(--border); background: transparent; color: var(--fg); }
+    .button.danger { border-color: var(--amber); background: transparent; color: var(--amber); }
+    .quote-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+    .quote-stat { min-width: 0; padding: 12px; border: 1px solid var(--border); }
+    .quote-stat span { display: block; color: var(--muted); font: 10px ui-monospace, monospace; letter-spacing: .05em; text-transform: uppercase; }
+    .quote-stat strong { display: block; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 15px ui-monospace, monospace; }
+    .warning { margin: 18px 0 8px; color: var(--amber); font: 11px ui-monospace, monospace; }
+    .endorsement { min-height: 32px; margin: 0 0 12px; color: var(--muted); font-size: 11px; }
+    .error { min-height: 20px; margin: 12px 0 0; color: var(--danger); font-size: 12px; }
+    .graph-wrap { min-height: 430px; position: relative; background: radial-gradient(circle at 50% 45%, rgba(142,232,209,.06), transparent 58%); }
+    #graph-svg { width: 100%; height: 430px; display: block; }
+    .graph-help { margin: 12px 0 0; color: var(--muted); font: 10px ui-monospace, monospace; }
+    .node-label { pointer-events: none; fill: var(--fg); font: 10px ui-monospace, monospace; }
+    .edge { stroke: #53615f; stroke-width: 1; opacity: .7; }
+    .node { stroke: var(--bg); stroke-width: 2; cursor: pointer; }
+    .node:focus { stroke: var(--accent); }
+    .node-tooltip { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 9px 11px; border: 1px solid var(--border); background: rgba(23,27,28,.95); color: var(--fg); font: 11px ui-monospace, monospace; }
+    @media (max-width: 1120px) { .panes { grid-template-columns: 1fr 1fr; } .pane.graph { grid-column: 1 / -1; } }
+    @media (max-width: 700px) { .topbar { min-height: 60px; } .topbar .eyebrow { display: none; } main { padding-top: 30px; } .intro { display: block; } .intro-copy { margin-top: 18px; } .panes { display: block; } .pane { margin-top: 14px; } .graph-wrap { min-height: 360px; } #graph-svg { height: 360px; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>FALCON<i class="wm-os">OS</i></span></a>
+    <p class="eyebrow">Local copilot / client-owned execution</p>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="kicker">Falcon Investment Council / 01</p><h1>Advice beside action.</h1></div>
+      <p class="intro-copy">A local decision surface for PreStocks. Inspect the council record, build an unsigned route, then decide in your own wallet.</p>
+    </section>
+    <p class="advisory"><strong>Advisory only.</strong> FalconOS does not custody funds, hold signing keys, or make investment decisions for you. Data is shown only when the local council provides it.</p>
+    <section class="panes" aria-label="FalconOS copilot">
+      <article class="pane" aria-labelledby="advice-title">
+        <header class="pane-head"><div><p class="kicker">Council signal</p><h2 id="advice-title">Advice</h2></div><span id="advice-status" class="status-chip status-no-data">NO_DATA</span></header>
+        <div class="pane-body">
+          <p id="advice-meta" class="meta">Waiting for local council…</p>
+          <ul id="advice-reasons" class="reasons"><li>NO_DATA — no council response yet.</li></ul>
+          <div class="table-wrap"><table><thead><tr><th>Asset</th><th>Token price</th><th>Underlying</th><th>Premium bps</th></tr></thead><tbody id="evidence-body"><tr><td colspan="4"><p class="empty">No evidence published.</p></td></tr></tbody></table></div>
+        </div>
+      </article>
+      <article class="pane" aria-labelledby="trade-title">
+        <header class="pane-head"><div><p class="kicker">Client action</p><h2 id="trade-title">Trade ticket</h2></div><span class="meta">Jupiter / Solana</span></header>
+        <div class="pane-body">
+          <div class="wallet-row"><span id="wallet-state" class="wallet-state">Wallet not connected</span><button id="wallet-connect-control" class="button secondary" type="button">Connect wallet</button></div>
+          <div class="field"><label for="asset-select">PreStocks asset</label><select id="asset-select"><option value="PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF">OPENAI / PreStocks</option><option value="PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh">SPACEX / PreStocks</option></select></div>
+          <div class="field"><label for="usdc-amount">USDC amount</label><input id="usdc-amount" inputmode="decimal" min="0.000001" step="0.01" type="number" value="10" placeholder="10.00"></div>
+          <div class="button-row single"><button id="quote-button" class="button" type="button">Get quote</button></div>
+          <div class="quote-box" aria-live="polite"><div class="quote-stat"><span>Out amount</span><strong id="out-amount">—</strong></div><div class="quote-stat"><span>Price impact</span><strong id="price-impact">—</strong></div></div>
+          <div class="button-row single"><button id="build-button" class="button secondary" type="button" disabled>Build transaction</button></div>
+          <p id="trade-error" class="error" role="status"></p>
+          <p class="warning">Real mainnet trade. You sign, you own it.</p>
+          <p id="endorsement" class="endorsement">Council status: NO_DATA</p>
+          <div class="button-row single"><button id="sign-button" class="button danger" type="button" disabled>Sign &amp; send</button></div>
+        </div>
+      </article>
+      <article class="pane graph" aria-labelledby="graph-title">
+        <header class="pane-head"><div><p class="kicker">Evidence topology</p><h2 id="graph-title">Graph</h2></div><span class="meta">Local council</span></header>
+        <div class="pane-body"><div class="graph-wrap"><svg id="graph-svg" viewBox="0 0 640 430" role="img" aria-label="Council evidence graph"></svg><div id="graph-tooltip" class="node-tooltip" hidden></div></div><p id="graph-state" class="graph-help">Loading graph…</p></div>
+      </article>
+    </section>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var COUNCIL = 'http://127.0.0.1:8787';
+      var QUOTE_API = 'https://lite-api.jup.ag/swap/v1/quote';
+      var SWAP_API = 'https://lite-api.jup.ag/swap/v1/swap';
+      var USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+      var PLACEHOLDER = '11111111111111111111111111111111';
+      var wallet = null;
+      var walletConnected = false;
+      var latestQuote = null;
+      var unsignedTransaction = null;
+      var currentAdvice = 'NO_DATA';
+      var provider = window.solana || null;
+      var byId = function (id) { return document.getElementById(id); };
+      var text = function (id, value) { byId(id).textContent = value; };
+      var escapeDisplay = function (value) { return value === null || value === undefined || value === '' ? '—' : String(value); };
+      var shortKey = function (value) { return value.length > 12 ? value.slice(0, 5) + '…' + value.slice(-5) : value; };
+      var setError = function (value) { text('trade-error', value || ''); };
+      var renderStatus = function (status) {
+        currentAdvice = status === 'PUBLISHED' || status === 'BLOCKED' ? status : 'NO_DATA';
+        var chip = byId('advice-status');
+        chip.textContent = currentAdvice;
+        chip.className = 'status-chip status-' + currentAdvice.toLowerCase().replace('_', '-');
+        text('endorsement', currentAdvice === 'PUBLISHED' ? 'Council status: PUBLISHED' : 'Council does not endorse this trade right now');
+      };
+      var renderAdvice = function (payload) {
+        if (!payload || (payload.status !== 'PUBLISHED' && payload.status !== 'BLOCKED' && payload.status !== 'NO_DATA')) throw new Error('invalid advice response');
+        renderStatus(payload.status);
+        text('advice-meta', payload.created_at ? 'Snapshot ' + payload.created_at + (payload.latency_ms === undefined ? '' : ' · ' + payload.latency_ms + 'ms') : 'No snapshot published');
+        var reasons = Array.isArray(payload.reasons) && payload.reasons.length ? payload.reasons : ['No council reason supplied.'];
+        byId('advice-reasons').innerHTML = '';
+        reasons.forEach(function (reason) { var item = document.createElement('li'); item.textContent = String(reason); byId('advice-reasons').appendChild(item); });
+        var rows = Array.isArray(payload.evidence) ? payload.evidence : [];
+        var body = byId('evidence-body');
+        body.innerHTML = '';
+        if (!rows.length) { body.innerHTML = '<tr><td colspan="4"><p class="empty">No evidence published.</p></td></tr>'; return; }
+        rows.forEach(function (row) {
+          var tr = document.createElement('tr');
+          [row.asset_id, row.token_price, row.underlying_price, row.premium_bps === null || row.premium_bps === undefined ? null : row.premium_bps].forEach(function (value) { var td = document.createElement('td'); td.textContent = escapeDisplay(value); tr.appendChild(td); });
+          body.appendChild(tr);
+        });
+      };
+      var setNoData = function (message) {
+        renderStatus('NO_DATA');
+        text('advice-meta', 'Local council offline');
+        byId('advice-reasons').innerHTML = '<li>' + (message || 'No council data available.') + '</li>';
+        byId('evidence-body').innerHTML = '<tr><td colspan="4"><p class="empty">NO_DATA — evidence unavailable.</p></td></tr>';
+      };
+      var pollAdvice = function () {
+        fetch(COUNCIL + '/advice', { cache: 'no-store' }).then(function (response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); }).then(renderAdvice).catch(function () { setNoData('NO_DATA — local council unavailable.'); });
+      };
+      var walletKey = function () { return wallet && wallet.publicKey ? wallet.publicKey.toString() : PLACEHOLDER; };
+      var setWallet = function (next) {
+        wallet = next;
+        walletConnected = Boolean(wallet && wallet.publicKey);
+        text('wallet-state', walletConnected ? 'Connected · ' + shortKey(walletKey()) : provider ? 'Wallet ready · not connected' : 'No wallet found · read-only build mode');
+        var button = byId('wallet-connect-control');
+        button.textContent = walletConnected ? 'Disconnect' : provider ? 'Connect wallet' : 'No wallet found';
+        button.disabled = !provider;
+        byId('sign-button').disabled = !walletConnected || !unsignedTransaction;
+      };
+      var connectWallet = function () {
+        if (!provider) return;
+        if (walletConnected) { if (provider.disconnect) provider.disconnect(); setWallet(null); return; }
+        provider.connect().then(function (result) { setWallet({ publicKey: result.publicKey || provider.publicKey }); }).catch(function (error) { setError(error && error.message ? error.message : 'Wallet connection was not completed.'); });
+      };
+      var quoteUrl = function () {
+        var amount = Number(byId('usdc-amount').value);
+        if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter a positive USDC amount.');
+        var params = new URLSearchParams({ inputMint: USDC, outputMint: byId('asset-select').value, amount: String(Math.round(amount * 1000000)), slippageBps: '50' });
+        return QUOTE_API + '?' + params.toString();
+      };
+      var getQuote = function () {
+        setError(''); unsignedTransaction = null; byId('build-button').disabled = true; byId('sign-button').disabled = true;
+        var url; try { url = quoteUrl(); } catch (error) { setError(error.message); return; }
+        byId('quote-button').disabled = true;
+        fetch(url).then(function (response) { if (!response.ok) throw new Error('Quote unavailable (HTTP ' + response.status + ').'); return response.json(); }).then(function (quote) {
+          latestQuote = quote;
+          text('out-amount', escapeDisplay(quote.outAmount));
+          text('price-impact', quote.priceImpactPct === undefined ? '—' : String(quote.priceImpactPct) + '%');
+          byId('build-button').disabled = false;
+        }).catch(function (error) { latestQuote = null; text('out-amount', '—'); text('price-impact', '—'); setError(error.message || 'Quote unavailable.'); }).finally(function () { byId('quote-button').disabled = false; });
+      };
+      var buildTransaction = function () {
+        if (!latestQuote) { setError('Get a quote before building.'); return; }
+        setError(''); byId('build-button').disabled = true;
+        fetch(SWAP_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteResponse: latestQuote, userPublicKey: walletKey(), wrapAndUnwrapSol: true }) }).then(function (response) { if (!response.ok) throw new Error('Transaction build unavailable (HTTP ' + response.status + ').'); return response.json(); }).then(function (swap) {
+          if (typeof swap.swapTransaction !== 'string' || !swap.swapTransaction) throw new Error('Jupiter returned no serialized transaction.');
+          unsignedTransaction = swap.swapTransaction;
+          text('trade-error', 'Unsigned transaction ready for review.');
+          byId('sign-button').disabled = !walletConnected;
+        }).catch(function (error) { unsignedTransaction = null; setError(error.message || 'Transaction build unavailable.'); }).finally(function () { byId('build-button').disabled = !latestQuote; });
+      };
+      var signAndSend = function () {
+        if (!walletConnected || !unsignedTransaction || !provider || !provider.signAndSendTransaction) return;
+        provider.signAndSendTransaction(unsignedTransaction).then(function (result) { text('trade-error', 'Transaction submitted: ' + (result && result.signature ? shortKey(result.signature) : 'wallet response received')); }).catch(function (error) { setError(error && error.message ? error.message : 'Wallet declined or failed to submit.'); });
+      };
+      byId('wallet-connect-control').addEventListener('click', connectWallet);
+      byId('quote-button').addEventListener('click', getQuote);
+      byId('build-button').addEventListener('click', buildTransaction);
+      byId('sign-button').addEventListener('click', signAndSend);
+      if (provider) { provider.on && provider.on('connect', function () { setWallet(provider); }); provider.on && provider.on('disconnect', function () { setWallet(null); }); provider.on && provider.on('accountChanged', function (key) { setWallet(key ? { publicKey: key } : null); }); }
+      setWallet(null);
+      pollAdvice();
+      window.setInterval(pollAdvice, 2000);
+
+      var colors = { asset: '#8ee8d1', issuer: '#e1a8ff', source: '#80b8ff', venue: '#f1bf70', verdict: '#72e3ab', intent: '#ef8f86', evidence: '#d7dfdc' };
+      var graph = { nodes: [], edges: [] };
+      var svg = byId('graph-svg');
+      var graphTooltip = byId('graph-tooltip');
+      var renderGraph = function () {
+        svg.innerHTML = '';
+        var width = 640; var height = 430;
+        var nodes = graph.nodes.map(function (node, index) { return Object.assign({}, node, { x: 80 + (index % 4) * 160, y: 80 + Math.floor(index / 4) * 130, vx: 0, vy: 0 }); });
+        var byNode = {}; nodes.forEach(function (node) { byNode[node.id] = node; });
+        var edges = graph.edges.map(function (edge) { return { data: edge, from: byNode[edge.from], to: byNode[edge.to] }; }).filter(function (edge) { return edge.from && edge.to; });
+        var edgeEls = edges.map(function (edge) { var line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); line.setAttribute('class', 'edge'); svg.appendChild(line); return { model: edge, element: line }; });
+        var nodeEls = nodes.map(function (node) { var group = document.createElementNS('http://www.w3.org/2000/svg', 'g'); group.setAttribute('tabindex', '0'); group.setAttribute('role', 'button'); group.setAttribute('aria-label', node.label + ' ' + node.kind); var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); circle.setAttribute('class', 'node'); circle.setAttribute('r', node.kind === 'asset' ? '11' : '8'); circle.setAttribute('fill', colors[node.kind] || colors.evidence); var label = document.createElementNS('http://www.w3.org/2000/svg', 'text'); label.setAttribute('class', 'node-label'); label.setAttribute('x', '14'); label.setAttribute('y', '4'); label.textContent = node.label; group.appendChild(circle); group.appendChild(label); group.addEventListener('mouseenter', function () { graphTooltip.hidden = false; graphTooltip.textContent = node.label + ' · ' + node.kind; }); group.addEventListener('mouseleave', function () { graphTooltip.hidden = true; }); group.addEventListener('focus', function () { graphTooltip.hidden = false; graphTooltip.textContent = node.label + ' · ' + node.kind; }); group.addEventListener('click', function () { graphTooltip.hidden = false; graphTooltip.textContent = node.label + ' · ' + node.kind; }); svg.appendChild(group); return { model: node, element: group }; });
+        var tick = function () {
+          nodes.forEach(function (node, index) { var row = Math.floor(index / 4); node.vx += (width / 2 - node.x) * .0008; node.vy += (height / 2 - node.y) * .0008; nodes.forEach(function (other, otherIndex) { if (index === otherIndex) return; var dx = node.x - other.x; var dy = node.y - other.y; var distance = Math.max(24, Math.sqrt(dx * dx + dy * dy)); var force = 24 / (distance * distance); node.vx += dx * force; node.vy += dy * force; }); node.vx *= .92; node.vy *= .92; node.x = Math.max(34, Math.min(width - 34, node.x + node.vx)); node.y = Math.max(26, Math.min(height - 26, node.y + node.vy)); });
+          edgeEls.forEach(function (edge) { edge.element.setAttribute('x1', edge.model.from.x); edge.element.setAttribute('y1', edge.model.from.y); edge.element.setAttribute('x2', edge.model.to.x); edge.element.setAttribute('y2', edge.model.to.y); });
+          nodeEls.forEach(function (entry) { entry.element.setAttribute('transform', 'translate(' + entry.model.x + ' ' + entry.model.y + ')'); });
+          if (nodes.length) window.requestAnimationFrame(tick);
+        };
+        tick();
+      };
+      var loadGraph = function () {
+        fetch(COUNCIL + '/graph', { cache: 'no-store' }).then(function (response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); }).then(function (payload) { graph.nodes = Array.isArray(payload.nodes) ? payload.nodes : []; graph.edges = Array.isArray(payload.edges) ? payload.edges : []; renderGraph(); text('graph-state', graph.nodes.length ? graph.nodes.length + ' nodes · ' + graph.edges.length + ' edges · click a node for details' : 'NO_DATA — graph has no nodes.'); }).catch(function () { text('graph-state', 'NO_DATA — local graph unavailable.'); });
+      };
+      loadGraph();
+    }());
+  </script>
+</body>
+</html>

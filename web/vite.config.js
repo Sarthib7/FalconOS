@@ -14,6 +14,7 @@ export default defineConfig({
         product: entry('./product/index.html'),
         research: entry('./research/index.html'),
         dash: entry('./dash/index.html'),
+        copilot: entry('./copilot/index.html'),
       },
     },
   },
