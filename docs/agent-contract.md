@@ -55,7 +55,7 @@ type AgentRequest = {
 };
 ~~~
 
-[INFERRED, proposed request rules] requestId, evaluationAt, and sourceCutoff are required. sourceCutoff must be no later than evaluationAt. Every scan must have schemaVersion 1, an ID that matches its manifest entry, and an assessedAt at or before the cutoff. Every observation start and receipt time must be at or before its scan's assessedAt. Every cited provider timestamp must also be at or before the cutoff when present. The adapter rejects paths that are absolute, contain .., or resolve through a symlink.
+[INFERRED, proposed request rules] requestId, evaluationAt, and sourceCutoff are required. sourceCutoff must be no later than evaluationAt. Every scan must have schemaVersion 1 or 2, an ID that matches its manifest entry, and an assessedAt at or before the cutoff. Version 1 observations retain the historical shape without `failure`; version 2 observations require `failure` (null for successful observations, otherwise the closed kind/retry metadata record) alongside the human-readable `error`. Every observation start and receipt time must be at or before its scan's assessedAt, and every cited provider timestamp must be at or before both its receipt and the cutoff when present. The adapter rejects paths that are absolute, contain .., or resolve through a symlink.
 
 [VERIFIED, current request builder] The caller supplies `expectedEvidenceSha256`. The builder compares that value with the SHA-256 of the exact evidence bytes before parsing. It captures notes once, marks them `untrusted-note`, and rejects a note snapshot when an explicit source cutoff precedes the current clock. The request limit is 8 MiB, with at most 8 notes and 32 KiB per note.
 

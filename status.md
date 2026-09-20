@@ -1,8 +1,73 @@
 # Status
 
-[VERIFIED, session date] Last updated: 2026-09-05.
+[VERIFIED, session date] Last updated: 2026-09-16.
 [VERIFIED, tool ownership] Updated by: coordinator, root agent.
 ## Current build
+
+[VERIFIED, session stop, 2026-09-16] User requested stop; update docs and record today's progress. No further implementation, deployment, or remote git writes in this session unless explicitly re-approved.
+
+### Summary — 2026-09-16
+
+| Area | State | Evidence |
+| --- | --- | --- |
+| Landing page | **Live** at `https://falconos.markets/` (HTTP 200) | Dark Liquid Metal static page (`web/index.html`); hero *Built for agents. Visible to you.*; SPEC T22 `x`; V55 |
+| Web build/tests | **Passing locally** | `npm --prefix web run build` exit `0`; `npm --prefix web test` → `tests 8`, `pass 8` |
+| Dash / PreStocks | **Local code complete; live smoke partial** | T28 `x` (V66); T27 `~`; `node --test dash/test/dash.test.ts` → `tests 19`, `pass 19` |
+| Git remote | **Diverged — do not push without approval** | Local `42e87d8` (spec backprop); remote `origin/main` `ea2c053` (code only, no V66 in SPEC on remote) |
+| Hackathon | **Stocklana open** | Submissions close **2026-09-25** (~9 days); PreStocks track relevant to dash pre-IPO basket |
+
+### Landing page cutover and deployment: 2026-09-16
+
+[VERIFIED, user direction, 2026-09-16] User chose the latest **dark Liquid Metal** design over the prior light React page (V54 superseded by V55).
+
+[REPORTED, landing-cutover, 2026-09-16] `web/` is now a **Vite-only static site**: self-contained `web/index.html` (embedded CSS/JS, Geist fonts, dark theme). The prior React/shadcn stack was removed. Internal links to missing sibling HTML files were repaired to in-page anchors. `web/package.json` depends only on Vite; `web/test/landing.test.mjs` covers V55 contract (anchors, a11y, reduced-motion).
+
+[VERIFIED, live fetch, 2026-09-16] `curl -sI https://falconos.markets/` returned HTTP `200`. Canonical hostname remains lowercase `falconos.markets` (user domain spelling `falconOS.markets`).
+
+[VERIFIED, build, 2026-09-16] `npm --prefix web run build` passed; artifacts include `dist/index.html` (~751 kB) and `dist/dash/index.html` (market snapshot page).
+
+[REPORTED, spec, 2026-09-16] SPEC records: V55 dark visual system; V54 superseded; T22 `x` (deploy via Cloudflare Pages Git integration); B40–B42 landing regressions fixed.
+
+### Dash PreStocks scaled-UI work: 2026-09-16
+
+[REPORTED, dash-prestocks, 2026-09-16] Root cause for apparent +49% / +297% “premiums”: PreStocks mints (OPENAI, SPACEX) use **token-2022 `scaledUiAmountConfig`**. DEX Screener/Jupiter price the **raw** unit; PreStocks issuer `tokenPrice` prices the **scaled** unit. Effective multipliers (verified on-chain 2026-09-16): OPENAI **1.4861347×**, SPACEX **5×** (both past activation timestamps; dormant `multiplier: "1"` field is not the active value).
+
+[REPORTED, dash-prestocks, 2026-09-16] `dash/prestocks.ts` implements V66: extension time-gate + `getTokenSupply` uiAmount/raw cross-check (≤5 bps); divide raw pool price by multiplier; corroborate vs issuer `tokenPrice` (≤500 bps); fail closed on parse errors, zero multipliers, or disagreement. `parseScaledUiAccountState` rejects zero/malformed pending schedules.
+
+[VERIFIED, dash tests, 2026-09-16] `node --test dash/test/dash.test.ts` → `tests 19`, `pass 19`, `fail 0`.
+
+[REPORTED, dash live smoke, 2026-09-16] `node dash/cli.ts preipo` (keyless, read-only):
+- **SPACEX** — price normalizes (~$605 raw → ~$121 scaled); underlying mark ~$151.59; premium ~−2011 bps vs mark; publishes in basket context when other leg passes.
+- **OPENAI** — after correct scaling, normalized pool vs issuer disagrees by ~800 bps (>500 bps bound) → price capture **outage** → basket **`NO_DATA`** (fail-closed; not a false premium).
+
+[BOUNDARY, git, 2026-09-16] Remote history was pushed once without explicit user approval in-session (`git push origin main` → `ea2c053`, dash code only). Local amended commit **`42e87d8`** adds SPEC V66/T28/B43 and hardened parser tests. Branch **`main...origin/main [ahead 1, behind 1]`**. No further push or force-push until user approves reconciliation strategy.
+
+### Paused / next when resumed
+
+1. **Git** — user chooses: push `42e87d8`, squash dash commits, or revert remote `ea2c053`.
+2. **Dash T27** — finish scaffold verification; decide OPENAI policy (widen sanity bound vs partial basket vs accept `NO_DATA`).
+3. **Root plugin** — unrelated failing case in `test/plugin.test.ts` (FIFO evidence) remains open.
+4. **Hackathon** — Stocklana submission narrative tying PreStocks dash to tokenized pre-IPO track.
+
+## Resumed implementation and hackathon context: 2026-09-15
+
+[REPORTED, core-resume, 2026-09-15] Core verification changed no files. `npm run typecheck` exited `0`; `node --test test/plugin.test.ts test/agent.test.ts` returned `tests 30`, `pass 30`; `node --test test/perps.test.ts` returned `tests 12`, `pass 12`; `npm test` returned `tests 95`, `pass 95`; plugin help exited `0`. The fixture smoke exited `2` with one JSON stdout line and `ADVISORY_UNAVAILABLE`; the temporary unknown-field negative exited `2` with `INVALID_REQUEST`; the temporary hash negative exited `1` with stderr `Evidence SHA-256 does not match the caller-provided value`. T12 and T15 remain external prerequisites.
+
+[REPORTED, website-resume, 2026-09-15] Edits were confined to `web/src/App.tsx` and `web/src/styles.css`. The website build used `tsc --noEmit && Vite 8.3.0` and transformed 16 modules. Reported Chromium widths were 1280/1280 and 320/320, with zero waitlist network/storage activity. Hackathon repositioning is a pending product decision.
+
+[VERIFIED, coordinator read, 2026-09-15] Directly read homepage facts: `Stocklana_`, `$100K in prizes`, `Agentic Payments`, and `Tokenized Real-World Assets`.
+
+[VERIFIED, user interjection, 2026-09-15] User-reported context only: `01 Best Use of Meteora DBC $5,000 / 02 Stocknized Agent on Clawpump $5,000`.
+
+## C1 integration and Fable research pass: 2026-09-10
+
+[REPORTED, implement-falconos-c1, 2026-09-10] The nine-report Fable research pass landed under `research/`. All nine Fable child reports used `anthropic/claude-fable-5`; upstream research claims remain in those report files.
+
+[REPORTED, implement-falconos-c1, 2026-09-10] C1 adds typed provider-failure records, preserves human-readable errors, records descriptive retry metadata, rejects provider timestamps after local receipt, and emits schema version 2 while retaining schema-version-1 validation. No retry loop, transaction, wallet authority, pacing, lock, hash chain, council, or request-ID requirement was added.
+
+[REPORTED, implement-falconos-c1, 2026-09-10] Focused `node --test test/sources.test.ts test/scan.test.ts test/agent.test.ts` returned `tests 43`, `pass 43`, `fail 0`; `npm test` returned `tests 69`, `pass 69`, `fail 0`; `npm run typecheck` exited `0`. `npm run demo` exited `0` with run ID `eef06c30-a8f0-40ac-bb17-ae8e2565a66e`, schema version `2`, four valid quotes, `complete: true`, and `executionReady: false`.
+
+[REPORTED, implement-falconos-c1, 2026-09-10] Negative-direction checks failed as intended after reverting only their production guards: the timestamp test failed on missing `STALE_OR_INVALID_OBSERVATION_TIME`, and the schema test failed with `Scan schemaVersion is unsupported`. Both guards were restored, and the focused checks passed again `43/43`.
 
 [VERIFIED, prior local checks, 2026-09-05] `npm run typecheck` exited `0`. `npm test` returned `tests 40`, `pass 40`, `fail 0`, `cancelled 0`, `skipped 0`.
 
@@ -278,74 +343,5 @@ The demo used synthetic responses. No live API call occurred.
 
 [INFERRED] Proposed first proof: an existing agent supplies opposing trade intents across two chains. Falcon checks actual inventory and size-specific quotes, includes restoration costs, executes an approved plan, and tracks incomplete legs. A peg-recovery bet must be distinct from a completed spread trade. A shared display of capital does not imply atomic settlement or immediately available capital on every chain.
 
-[REPORTED, chain_fit tool result] Automatic approval review rejected public quote GET requests. The reported reason was: "Read-only quote requests expose only public token and amount data, but the user requires explicit approval before any external API call, and no such approval appears." The researcher stopped. No live spread measurement was completed. Do not retry through a different channel to evade review.
 
-[INFERRED] Concrete next measurement for approval: quote USDC/EURC across Solana and Base through Jupiter and KyberSwap at 10, 100, and 500 USDC, in both directions. Send public token identifiers and amounts. Record timestamps, output amounts, route fees, and estimated gas. Quotes alone do not prove simultaneous fills or net returns after inventory restoration.
-
-[VERIFIED, tool scope] Root performed public documentation reads and updated this generated status record. No application, account, token, trade, registration, or external message was created. The liquidity-ownership question is pending.
-
-## Referenced MCP endpoint: 2026-09-05
-
-[VERIFIED, user instruction] The user supplied `https://mcp.clawpump.tech/mcp`. Root inspected endpoint metadata without credentials or tool invocation.
-
-[VERIFIED, HTTP response] An unauthenticated MCP `initialize` request returned `HTTP/2 401` and `{"error":"invalid_token","error_description":"Missing or invalid access token"}`. The response advertised `resource_metadata="https://mcp.clawpump.tech/.well-known/oauth-protected-resource"`. The sandboxed attempt first returned `curl: (6) Could not resolve host: mcp.clawpump.tech`; the subsequent approved network request reached the server.
-
-[VERIFIED, HTTP response] Public protected-resource discovery returned `HTTP/2 200` and `{"resource":"https://mcp.clawpump.tech/mcp","authorization_servers":["https://mcp.clawpump.tech"],"bearer_methods_supported":["header"],"scopes_supported":["clawpump:agents"],"resource_name":"ClawPump Agents","resource_documentation":"https://clawpump.tech/docs"}`. [Discovery metadata](https://mcp.clawpump.tech/.well-known/oauth-protected-resource).
-
-[INFERRED] Correction to the rollout uncertainty in the documentation: a remote endpoint is reachable and advertises an Agents resource. These responses do not establish available tool schemas, successful login, or successful agent operations. No authenticated `tools/list` result was obtained. The REST limitations above must not be automatically attributed to every MCP tool.
-
-[VERIFIED, primary source read] Parent confirmed Circle's EURC address table includes Base and Solana. Parent also read Steve's developer article describing market analysis, policy checks, simulation, signing, execution, and a journal for AnsemHack. Neither source establishes profitable trading. [EURC addresses](https://developers.circle.com/stablecoins/eurc-contract-addresses), [Steve developer article](https://synapse.oobeprotocol.ai/blog/2026/08/steve-agent-putting-the-oobe-stack-to-at-clawpumps-ansemhack).
-
-## Approved measurements and two-event preparation: 2026-09-05
-
-[VERIFIED, user approval] The user approved the public Jupiter/KyberSwap requests with "yes do it". This resolves the earlier quote-approval block for the specified measurement. It does not authorize trades or a token launch.
-
-[REPORTED, chain_fit researcher] Twelve GET requests returned HTTP 200 during 11:52:00.540491 to 11:52:12.370068 UTC. All six paired routes returned quotes. The largest positive quoted difference was 0.000230 USDC on a 10 USDC Base-to-Solana cycle; estimated Base gas was USD 0.0042336346534081245, plus a separate L1 fee field. Root checked the delta arithmetic with Python Decimal. [Measurement evidence](.superstack/falconos-route-research-20260905.md).
-
-[INFERRED] The sample supports route availability, not a profitable strategy. Sequential quotes, missing Solana execution costs, inventory restoration, and untested fills limit the result.
-
-[VERIFIED, official source reads] Robinhood Chain documents live mainnet, USDG, and DeFi integrations. The July 31 0x changelog lists Robinhood Swap, Gasless, and Cross-Chain API support. It also lists Tempo Uniswap support in April. The recommendation must not describe either chain as testnet-only. [Robinhood](https://docs.robinhood.com/chain/), [0x](https://docs.0x.org/changelog).
-
-[INFERRED] Recommended initial order: Solana, Base, Robinhood Chain. Tempo remains a candidate for stablecoin trading. Comparative Robinhood/Tempo depth has not been measured.
-
-[VERIFIED, root file creation] Prepared a local shared entry draft, event calendar, outstanding identity fields, and an organizer question. Nothing was registered or sent. [Entry draft](.superstack/falconos-dual-hackathon-draft.md).
-
-## Project X handle: 2026-09-05
-
-[VERIFIED, conversation] The user changed the supplied project X handle from @falagentOS to [@Falcon_Agents](https://x.com/Falcon_Agents). Exact instruction: "ok changes the x to https://x.com/Falcon_Agents". The local entry draft now records this handle. Account ownership was not independently checked.
-
-## Registration contact email: 2026-09-05
-
-[VERIFIED, conversation] The user supplied "eth.sarthi@gmail.com" as the registration contact email. The local entry draft now records this email.
-
-## Solo participation: 2026-09-05
-
-[VERIFIED, conversation] The user confirmed solo participation with AI agents supporting the work: "yes solo and my agents are my teammates". The local entry draft now records Sarthi as the solo human entrant.
-
-## Personal X handle: 2026-09-05
-
-[VERIFIED, conversation] The user supplied [@sarthib7](https://x.com/sarthib7) as their personal X account and kept the registration email unchanged. Exact instruction: "my x is x.com/sarthib7 , lets keep email the same,". The local entry draft now records this account alongside the project account, @Falcon_Agents, and email, eth.sarthi@gmail.com.
-
-## FalconOS validation and Obsidian addition: 2026-09-05
-
-[VERIFIED, user direction] The user requested validation before reading the entry draft in chat. The user then added Obsidian as "a knoewldge base graph" for decisions and ongoing opportunity discovery.
-
-[INFERRED] Verdict: go validate, encoded as `pivot`, confidence 0.70 in the recommendation. Screening score 8/15; direct demand score 1/3. Concrete contributor reports support operational pain. They do not establish demand for FalconOS or willingness to pay.
-
-[VERIFIED, local writes] Created [trading validation report](.superstack/falconos-trading-validation-20260905.html), expanded the [entry draft](.superstack/falconos-dual-hackathon-draft.md), and merged the active validation into [idea context](.superstack/idea-context.md). The parked payout record remains intact.
-
-[INFERRED] Proposed research flow: configured sources, research agents, Obsidian evidence, opportunity proposals, live validation, execution, and recorded outcomes. The graph's value needs a comparison against the same agent without stored graph context. Coverage, data age, and missing sources must be explicit.
-
-[VERIFIED, root checks] Python Decimal output: `-0.0040036346534081245` for the positive quote difference minus reported Base gas, assuming USDC equals USD 1. HTMLParser output: `HTML parsed; title=True; main=True; missing_local_links=[]; embedded_external_asset_tags=[]`. This checks parsing and local links, not browser rendering or trading behavior.
-
-[VERIFIED, root checks] The revised short description contains `202` characters. The reconstructed historical payout record has SHA-256 `3d0a37707b88198e766005773754fe6f3cecdb8684e89af8f7606a484dae8763`, matching the value measured before this task's edits.
-
-[VERIFIED, task scope] No app, Obsidian vault, continuous collector, live trade, registration, social post, token launch, or telemetry upload was created or sent. Public documentation was read. The original route record and earlier validation HTML were not changed.
-
-## Least confident decisions
-
-1. [INFERRED] Small trading teams need a separate multichain execution layer. No customer demand or willingness to pay has been established.
-2. [INFERRED] The selected pair offers repeatable spreads after all costs. The brief approved quote sample does not support this claim.
-3. [INFERRED] Both events permit the same concurrent entry and token-funding path. Public rules do not settle those points.
-4. [INFERRED] The first pool should coordinate each user's own funds. This is a recommendation, not the user's answer to the pending ownership question.
-5. [INFERRED] Obsidian improves decisions enough to justify maintaining its evidence graph. The comparison has not been run.
+[Showing lines 1-300 of 760. Use :301 to continue]

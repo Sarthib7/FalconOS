@@ -18,6 +18,8 @@
 
 ## Current position
 
+[VERIFIED, user-confirmed product direction, 2026-09-18] FalconOS is the umbrella product; Falcon Investment Council is the current module; the current category is agent-first market intelligence and risk advisory. The current plan remains advisory-only/read-only with no custody, pooling, signing, allocation, or execution claims. Pooled investing, curated portfolios, custom ETFs or stock baskets, custody, allocation, and execution are future direction only. A possible regulated entity would be a separate Falcon investment-management brand, potentially Falcon Hedge Fund.
+
 [VERIFIED, prior local result, 2026-09-05] `npm run typecheck` exited `0`. `npm test` returned `tests 40`, `pass 40`, `fail 0`, `cancelled 0`, `skipped 0`. CHK-05, CHK-06, and CHK-07 have scoped evidence. CHK-08 automated signal and export checks cover both signals during requests and polling; desktop graph rendering remains open. CHK-09 is complete for the approved escalated ten-cycle watch. The earlier `use_default` watch remains a separate three-cycle failure. See the [live checks](../docs/verification/2026-09-05-live-checks.md). CP1A remains open.
 
 [VERIFIED, final source/test freeze evidence, 2026-09-05] The saved full-suite output contains `tests 59`, `pass 59`, `fail 0`, `cancelled 0`, `skipped 0`, and its exit file contains `0`. The focused output contains `tests 35`, `pass 35`, `fail 0`, `cancelled 0`, `skipped 0`, and its exit file contains `0`. The typecheck exit file contains `0`. The [P1-T07 fixture record](../docs/verification/2026-09-05-agent-fixture.md) records the persistent synthetic result. Real-agent acceptance remains open.

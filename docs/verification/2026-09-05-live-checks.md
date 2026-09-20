@@ -47,7 +47,7 @@ It exited `0`.
 
 [VERIFIED, bounded scan result] The Solana-to-Base candidate was `REJECT` with quoted delta `-0.002372` USDC. The Base-to-Solana candidate was also `REJECT` with quoted delta `0.000794` USDC. Both retained `COSTS_INCOMPLETE`, `INVENTORY_UNVERIFIED`, and `SEQUENTIAL_QUOTES_NOT_FILLS`.
 
-[VERIFIED, local assessment measurement] The scan set `assessedAt` to `2026-09-05T13:39:47.751Z`. Its first request started at `2026-09-05T13:39:47.752Z`. The current `src/scan.ts` rule rejects a received time later than `assessedAt`, so both candidates also recorded `STALE_OR_INVALID_OBSERVATION_TIME`. This is a local assessment timing issue. It is not a provider failure diagnosis. Source code remains unchanged in this check.
+[VERIFIED, local assessment measurement] The scan set `assessedAt` to `2026-09-05T13:39:47.751Z`. Its first request started at `2026-09-05T13:39:47.752Z`. The current `stablecoins/scan.ts` rule rejects a received time later than `assessedAt`, so both candidates also recorded `STALE_OR_INVALID_OBSERVATION_TIME`. This is a local assessment timing issue. It is not a provider failure diagnosis. Source code remains unchanged in this check.
 
 ## Bounded operating check
 

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Falcon Investment Council — Validation Report — 2026-09-20</title>
+<style>
+  :root { --bg:#0b0d10; --panel:#14181d; --ink:#e8eaed; --dim:#9aa3ad; --go:#3fb96f; --warn:#e0a93e; --bad:#e05c5c; --line:#242a31; }
+  body { background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; margin:0; padding:2rem; }
+  main { max-width:920px; margin:0 auto; }
+  h1 { font-size:1.5rem; margin:0 0 .25rem; }
+  h2 { font-size:1.1rem; margin:2rem 0 .5rem; border-bottom:1px solid var(--line); padding-bottom:.35rem; }
+  .sub { color:var(--dim); margin-bottom:1.5rem; }
+  .verdict { display:inline-block; background:var(--go); color:#06130b; font-weight:700; padding:.35rem .9rem; border-radius:6px; letter-spacing:.05em; }
+  table { border-collapse:collapse; width:100%; margin:.75rem 0; font-size:.92rem; }
+  th, td { text-align:left; padding:.45rem .6rem; border:1px solid var(--line); vertical-align:top; }
+  th { background:var(--panel); }
+  .tag { font-size:.72rem; padding:.1rem .4rem; border-radius:4px; background:var(--panel); color:var(--dim); border:1px solid var(--line); white-space:nowrap; }
+  .hi { color:var(--bad); } .med { color:var(--warn); } .ok { color:var(--go); }
+  a { color:#7ab7ff; text-decoration:none; } a:hover { text-decoration:underline; }
+  .note { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:.9rem 1.1rem; margin:.75rem 0; }
+  code { background:var(--panel); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  ol li, ul li { margin:.3rem 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>Falcon Investment Council — Validation Report</h1>
+<p class="sub">Date: 2026-09-20 · Idea: agent-first, read-only market intelligence and risk advisory for tokenized equities on Solana. Wedge: keyless pre-IPO dislocation dashboard on PreStocks, published as fail-closed advisory verdicts. Target: Stocklana hackathon (deadline 2026-09-25 16:00 ET).</p>
+
+<p><span class="verdict">GO</span> &nbsp; Confidence: 0.75. Condition: ship the verdict layer, not another price table. The basic dashboard is contested; the fail-closed advisory layer is not.</p>
+
+<div class="note">
+<strong>Provenance.</strong> Claims below marked <span class="tag">REPORTED</span> come from three read-only research subagents (2026-09-20) that fetched and cited the primary sources. Claims marked <span class="tag">VERIFIED</span> were checked directly in this repository or in this session. Untagged text is assessment judgment.
+</div>
+
+<h2>1. Scorecard</h2>
+<table>
+<tr><th>Dimension</th><th>Score</th><th>Basis</th></tr>
+<tr><td>Founder fit</td><td>3/3</td><td>Blockchain, stablecoins, DeFi, agentic payments background. Already found the scaled-UI root cause on-chain and built the fail-closed engine. <span class="tag">VERIFIED</span> repo: <code>dash/prestocks.ts</code>, 19/19 tests.</td></tr>
+<tr><td>MVP speed</td><td>3/3</td><td>Core is built and smoke-tested. SPACEX leg normalizes live; OPENAI leg fails closed to <code>NO_DATA</code> on an 800 bps source disagreement. <span class="tag">VERIFIED</span> status.md 2026-09-16.</td></tr>
+<tr><td>Distribution</td><td>2/3</td><td>Stocklana Main Track ($100K) plus PreStocks bounty ($10K, research/analytics expressly invited; ecosystem placement for continuing projects). No paid channel yet. <span class="tag">REPORTED</span> <a href="https://hackathons.solana.com/hackathons/stocklana">official page</a>.</td></tr>
+<tr><td>Market pull</td><td>2/3</td><td>Demand rubric scores 3/3 on problem evidence (below), but willingness to pay is unproven. Most workaround builders are same-hackathon entrants.</td></tr>
+<tr><td>Revenue path</td><td>1/3</td><td>Precedent exists: Messari and Nansen sell agent access via API/MCP/x402; AIXBT API at $400/mo. No accepted price for Falcon. <span class="tag">REPORTED</span>.</td></tr>
+<tr><th>Total</th><th>11/15</th><th>Threshold: &ge;8 = Go.</th></tr>
+</table>
+
+<h2>2. Demand signals (rubric score 3/3)</h2>
+<table>
+<tr><th>Signal</th><th>Class</th><th>Evidence</th></tr>
+<tr><td>Live double-digit dislocations right now</td><td class="ok">Strong</td><td><span class="tag">REPORTED</span> OPENAI ~11.9% rich ($1,114 vs $995.67 mark), SPACEX ~22.4% cheap, Neuralink ~28.8% rich. <a href="https://prestocks.com/api/prestocks">PreStocks API</a> + Jupiter, fetched 2026-09-20.</td></tr>
+<tr><td>Manual workarounds exist and multiply</td><td class="ok">Strong</td><td><span class="tag">REPORTED</span> Independent repos: <a href="https://github.com/aralroca/prestocks-pulse">prestocks-pulse</a> (states raw units look "49% / 400% too expensive"), <a href="https://github.com/RaymondAbiola/Par">Par</a> (100 of 216 xStocks wrappers carry stale multipliers; NFLXx off by 10x after a split), xorr, StockProof, Multiplier, AfterHours. Caveat: all new, zero stars, hackathon-era.</td></tr>
+<tr><td>Core tooling failed on this exact seam</td><td class="ok">Strong</td><td><span class="tag">REPORTED</span> token-2022 <a href="https://github.com/solana-program/token-2022/pull/1480">PR #1480</a> reverted scaled-UI rounding; JS packages 0.15.0-0.18.0 needed correction. Solana and xStocks docs both instruct integrators to hand-normalize raw x multiplier.</td></tr>
+<tr><td>Realized incidents demand risk advisory</td><td class="ok">Strong</td><td><span class="tag">REPORTED</span> OpenAI policy: unauthorized SPV/tokenized interests may be void. CoinDesk: linked tokens fell ~40%. SpaceX xStocks allocations canceled after ~$557M inflow (secondary source).</td></tr>
+<tr><td>Market is big enough to matter</td><td class="ok">Strong</td><td><span class="tag">REPORTED</span> RWA.xyz: $3.01B distributed value, $12.9B monthly transfers, 3.7M holders (+86% 30d). Solana: tokenized-stock volume crossed $10B cumulative in June. PreStocks: >$750M cumulative volume.</td></tr>
+<tr><td>Bounties fund this category</td><td class="warn">Weak</td><td><span class="tag">REPORTED</span> Stocklana names price feeds, corporate actions, compliance, analytics as desired infrastructure. Prize money is not product-market fit; counted as weak per rubric.</td></tr>
+</table>
+
+<h2>3. Competition</h2>
+<table>
+<tr><th>Product</th><th>Overlap</th><th>Status</th></tr>
+<tr><td><a href="https://prestocks-terminal.vercel.app/">PreStocks Terminal</a></td><td class="hi">Direct: premium/discount for all 8 PreStocks + JSON/Markdown APIs</td><td>Live. Zero-star Stocklana entry, free, no risk gating, no fail-closed behavior, no xStocks.</td></tr>
+<tr><td>AfterHours, Par, prestocks-pulse, xorr, StockProof, Multiplier</td><td class="med">Partial: dislocation math, multiplier correction, PASS/BLOCK checks in code</td><td>Repos verified; live deployments mostly unverified. Same hackathon cohort.</td></tr>
+<tr><td>RWA.xyz, DefiLlama, CoinGecko, Bitquery, Dune</td><td class="med">Inputs only: price, NAV, liquidity, holders</td><td>Live, mature. None publish a labeled premium/dislocation verdict.</td></tr>
+<tr><td>AIXBT, Kaito, Messari, Nansen</td><td class="med">Agent-first intelligence, none cover tokenized-equity dislocation</td><td>Live. Messari/Nansen already ship MCP + x402; agent delivery is table stakes, not differentiation.</td></tr>
+<tr><td>PreStocks, xStocks, Tessera, Ondo, trade.xyz</td><td>Issuers/venues, not advisory</td><td>These are data sources and bounty sponsors, not competitors.</td></tr>
+</table>
+<div class="note"><strong>Gap, with search limits.</strong> <span class="tag">INFERRED</span> CompetitorScan found no product publishing a labeled xStocks market-vs-NAV deviation series, but that is a negative search result, not proof of absence. DemandSignals found partial overlap the gap claim must respect: <a href="https://stocksonsolana.com/">Stocks on Solana</a> advertises "discount to real-world price" across 250+ xStocks/Ondo/PreStocks/Sunrise assets, and <a href="https://github.com/aralroca/prestocks-pulse">prestocks-pulse</a> ships split-aware executable prices. <a href="https://github.com/KaiVenn52/stockproof-solana">StockProof</a> returns PASS/CAUTION/BLOCKED/UNVERIFIABLE in code (deployment unverified). The remaining differentiation is narrower than "nobody ships it": no verified live product combines independent-reference pricing, effective-multiplier proof, freshness/disagreement gates, and deterministic fail-closed verdicts in one agent-consumable output.</div>
+
+<h2>4. Crypto necessity</h2>
+<p>Remove the blockchain and the product loses its evidence layer: token-2022 <code>scaledUiAmountConfig</code> state, <code>getTokenSupply</code> cross-checks, executable DEX prices, and keyless verifiability. Off-chain this collapses into an un-differentiated data terminal. Crypto is necessary, not ornamental. <span class="tag">VERIFIED</span> against <code>dash/prestocks.ts</code> behavior.</p>
+
+<h2>5. Integration-first assessment</h2>
+<p>The product is pure integration: Solana RPC, Pyth, Jupiter/DEX quotes, issuer APIs. No custom program, no audit cost, no deployment risk. This matches the "integrate first, build second" advantage case. Custom on-chain logic stays out of scope. <span class="tag">VERIFIED</span> repo structure.</p>
+
+<h2>6. Risks</h2>
+<table>
+<tr><th>Category</th><th>Risk</th><th>Severity</th></tr>
+<tr><td>market</td><td>Dashboard wedge is contested by 6+ same-hackathon projects; one is live with APIs. Differentiation must be the verdict layer or Falcon is one of many price tables.</td><td class="hi">high</td></tr>
+<tr><td>team</td><td>Five days to deadline. T27 open (OPENAI policy), git diverged (local 42e87d8 vs remote ea2c053), submission narrative unwritten. Solo founder plus agents.</td><td class="hi">high</td></tr>
+<tr><td>demand</td><td>Willingness to pay unproven. Strongest signals are hackathon-cohort artifacts; they prove the pain is real, not that anyone pays after October.</td><td class="med">medium</td></tr>
+<tr><td>technical</td><td>Issuer API is a single mark source; sustained source disagreement keeps the basket in NO_DATA (OPENAI, 800 bps). Effective-vs-stored multiplier drift needs continuous re-verification.</td><td class="med">medium</td></tr>
+<tr><td>regulatory</td><td>Advisory-only, read-only posture is the correct shield. The asset class itself carries legal risk (OpenAI void-transfer policy), which is also Falcon's content opportunity: surface it as a risk flag, never as investment advice language.</td><td class="med">medium</td></tr>
+</table>
+
+<h2>7. Go / no-go</h2>
+<p>Pivot-or-persist Go criteria: 5 of 5 pass (demand &ge;2; feasibility solved; MVP &le;2 weeks - already built; unfair advantage - correctness depth and council/snapshot architecture; crypto necessary). No no-go criterion triggers: PreStocks Terminal is a zero-star hackathon entry, not a well-funded shipped incumbent.</p>
+<p><strong>Verdict: GO.</strong> Confidence 0.75. The condition: do not compete on premium percentages. Compete on the combination no verified live product ships yet: deterministic, provenance-tagged, fail-closed advisory verdicts that an agent can consume and audit. Parts of that combination already exist separately (StockProof's verdict enum in code, Stocks on Solana's discount column), so speed and correctness depth carry the claim, not novelty.</p>
+
+<h2>8. Next steps</h2>
+<ol>
+<li><strong>Unblock the demo (day 1).</strong> Resolve git divergence (user decision pending). Close T27: keep the 500 bps bound and present <code>NO_DATA</code> as the feature; add per-leg partial-basket reporting so one bad leg does not blank the demo.</li>
+<li><strong>Differentiate against PreStocks Terminal (days 1-2).</strong> Ship what they lack: effective-multiplier proof (stored vs active, the NFLXx 10x class of bug), source-freshness and disagreement gates, verdict provenance (which sources, which bounds, why BLOCKED/NO_DATA), and an agent-consumable JSON advisory endpoint shaped like <code>council.advice</code>.</li>
+<li><strong>Optional, if days 3-4 are free:</strong> add xStocks NAV-deviation coverage. It is a probable gap (INFERRED from negative search; Stocks on Solana already advertises a discount column, so verify what it actually publishes before claiming whitespace). It widens the story beyond one issuer. Check the PreStocks bounty exclusivity rule first: it restricts pre-IPO tokens to PreStocks only; xStocks are public equities, so confirm eligibility before mixing.</li>
+<li><strong>Submit before 2026-09-25 16:00 ET (day 5).</strong> Main Track plus Best Use of PreStocks. Demo script: live dislocation, live fail-closed refusal, agent consuming the verdict. Judges reward a real problem, a working end-to-end demo, Solana necessity, and execution quality.</li>
+<li><strong>Post-hackathon demand test (week after).</strong> Interview five agent builders and tokenized-equity traders: "how do you check fair value today?" Offer the advisory API behind x402 per-call pricing (Messari/Nansen pattern). Continue when three describe the same recurring check and one pays anything at all.</li>
+</ol>
+
+<h2>9. Least confident decisions</h2>
+<ol>
+<li>Confidence 0.75 assumes the verdict layer is enough differentiation for judges. Judges may still reward the prettiest dashboard.</li>
+<li>The post-hackathon buyer is assumed to be agent builders paying per call. Nobody has paid yet; the cohort-artifact demand evidence expires in October.</li>
+<li>xStocks expansion is scoped as optional. If it is actually the winning story, five days may not be enough to add it safely.</li>
+<li>NO_DATA-as-feature framing may read as "broken" in a two-minute judge demo. The demo script has to sell the refusal explicitly.</li>
+</ol>
+</main>
+</body>
+</html>

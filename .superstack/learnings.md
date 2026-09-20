@@ -1,0 +1,12 @@
+# Project learnings
+
+- solana-skills-catalog-verification: [REPORTED] Treat the Solana Skills catalog as a directory, and verify each third-party skill before using it. Confidence: 8/10. Source: learn. Files: research/solana-skills.md. Date: 2026-09-17.
+- solana-toolchain-pinning: [REPORTED] Pin Solana toolchain and package versions together before diagnosing integration failures. Confidence: 8/10. Source: learn. Files: research/solana-skills.md. Date: 2026-09-17.
+- solana-account-boundary-validation: [REPORTED] Validate account owner, account type, PDA seeds, canonical bump, signer, writable state, and account relationships before mutation. Confidence: 9/10. Source: learn. Files: research/solana-skills.md. Date: 2026-09-17.
+- solana-fast-to-live-testing: [REPORTED] Test fast with LiteSVM or Mollusk, integrate with Surfpool, then smoke-test the target cluster and fuzz risky paths. Confidence: 8/10. Source: learn. Files: research/solana-skills.md. Date: 2026-09-17.
+- solana-payment-fulfillment: [REPORTED] Verify confirmed payment transactions server-side and make fulfillment idempotent. Confidence: 9/10. Source: learn. Files: research/solana-skills.md. Date: 2026-09-17.
+- meteora-pool-state-before-actions: [REPORTED] Read current Meteora pool and position state before building any swap, deposit, withdrawal, or migration operation. Confidence: 9/10. Source: learn. Files: research/sendaifun-skills.md. Date: 2026-09-17.
+- meteora-quote-bounds-before-signing: [REPORTED] Refresh a Meteora quote immediately before execution and pass its minimum or maximum output bounds into the transaction. Confidence: 9/10. Source: learn. Files: research/sendaifun-skills.md. Date: 2026-09-17.
+- meteora-dlmm-active-bin-state: [REPORTED] Treat DLMM active bins as live state instead of fixed prices, and choose ranges from volatility and management capacity. Confidence: 8/10. Source: learn. Files: research/sendaifun-skills.md. Date: 2026-09-17.
+- meteora-dbc-migration-recheck: [REPORTED] Refuse DBC migration until graduation, then recheck the destination pool after every migration. Confidence: 9/10. Source: learn. Files: research/sendaifun-skills.md. Date: 2026-09-17.
+- meteora-composed-token-compatibility: [REPORTED] Verify token program and mint compatibility before composing Meteora Zap operations. Confidence: 9/10. Source: learn. Files: research/sendaifun-skills.md. Date: 2026-09-17.

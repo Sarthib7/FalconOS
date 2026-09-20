@@ -12,6 +12,8 @@
 
 ## Product path
 
+[VERIFIED, user-confirmed product direction, 2026-09-18] FalconOS is the umbrella product, with Falcon Investment Council as its current module in the agent-first market intelligence and risk advisory category. The present roadmap is advisory-only/read-only and makes no custody, pooling, signing, allocation, or execution claims. Future direction may include pooled investing, curated portfolios, custom ETFs or stock baskets, custody, allocation, and execution. A possible regulated entity would be a separate Falcon investment-management brand, potentially Falcon Hedge Fund.
+
 [INFERRED, MVP boundary] FalconOS MVP ends with four results: a Solana and Base collector, one cited thesis from the selected existing agent using bounded Obsidian evidence, one paper-cycle outcome, and one review view that links the candidate, evidence, thesis, and outcome.
 
 [INFERRED, later scope] Broader strategies, a third chain, live capital, signing, investor pooling, and execution remain later work. An approved live cycle follows only after its own checks pass.

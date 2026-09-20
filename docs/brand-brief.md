@@ -36,7 +36,7 @@
 
 | Utility | What the design should explain | Delivery boundary |
 | --- | --- | --- |
-| Opportunity discovery | [INFERRED] Strategy filters for arbitrage, peg deviations, new token entries, and investment research. Each candidate has a source and expiry. | [VERIFIED, `src/sources.ts` and `src/scan.ts`] The current implementation compares USDC/EURC quotes on Solana and Base. Other strategies are planned. |
+| Opportunity discovery | [INFERRED] Strategy filters for arbitrage, peg deviations, new token entries, and investment research. Each candidate has a source and expiry. | [VERIFIED, `stablecoins/sources.ts` and `stablecoins/scan.ts`] The current implementation compares USDC/EURC quotes on Solana and Base. Other strategies are planned. |
 | Knowledge and agent decisions | [INFERRED] A candidate opens its evidence graph. Show supporting and conflicting evidence, the assigned agent, its thesis, and invalidation conditions. | [VERIFIED, `src/vault.ts`] The exporter creates linked notes. [INFERRED] Automatic graph retrieval and agent reasoning are later work. |
 | Cross-chain capital | [INFERRED] Show balances, reservations, required inventory, transfers in progress, and capital available on each chain. | [INFERRED] Pool ownership is unresolved. Deposit controls require a settled ownership model. |
 | Existing agent controls | [INFERRED] Show connected agents, their task, last successful run, allowed actions, and a pause control. | [VERIFIED, `src/cli.ts`] JSON output provides a CLI integration point. [INFERRED] Agent connections and per-agent permissions are later work. |

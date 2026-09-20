@@ -1,6 +1,6 @@
 # Idea context
 
-[VERIFIED, user instruction] Active idea: FalconOS multichain trading. Evidence: "we are focusing mukltichain cross liquidity pooling, arbitrge, stablecoinpeg , spiner, having cross multichain investing and trading oppotunies and executions." The current validation is appended under "Current idea: FalconOS multichain trading". The prior payout record below remains on standby.
+[VERIFIED, user instruction, 2026-09-20] Active idea: Falcon Investment Council (tokenized-equity advisory). The current validation is under "Current idea: Falcon Investment Council (tokenized-equity advisory)" at the end of this file. The multichain-trading and payout-recovery sections below are historical records. The payout record remains on standby per the user's earlier instruction.
 
 ## Historical record: payout recovery
 
@@ -126,7 +126,7 @@
 3. [INFERRED] Chain evidence materially improves the decision. Actual case records must establish this.
 4. [INFERRED] A useful prototype fits one to two weeks. Provider access and reliable data links remain untested.
 
-# Current idea: FalconOS multichain trading
+# Historical record: FalconOS multichain trading (superseded 2026-09-20)
 
 [VERIFIED, user request] Validation requested on 2026-09-05: "show me the draft here i will read. also first validate the idea $validate-idea". This section supersedes the earlier active-task description. It does not resume payout recovery.
 
@@ -237,3 +237,83 @@
 3. [INFERRED] One operator's own funds are the right first test. Ownership remains unanswered.
 4. [INFERRED] Robinhood should precede Tempo. Selected-asset liquidity and exit costs remain unmeasured.
 5. [INFERRED] The Obsidian graph improves decisions enough to justify maintenance. This needs comparison with the same agent using current source data alone.
+
+# Current idea: Falcon Investment Council (tokenized-equity advisory)
+
+[VERIFIED, user request, 2026-09-20] The user invoked `$validate-idea`. This section supersedes the multichain-trading section above as the active idea. It follows the confirmed domain decisions of 2026-09-18: FalconOS is the umbrella; Falcon Investment Council is the current module; the category is agent-first market intelligence and risk advisory; the product is advisory-only and read-only.
+
+## Chosen idea
+
+| Field | Value |
+| --- | --- |
+| Slug | falcon-investment-council |
+| Name | Falcon Investment Council |
+| One-liner | Read-only, fail-closed dislocation and risk verdicts for tokenized equities on Solana, consumable by agents. |
+| Wedge | [VERIFIED, repo] PreStocks pre-IPO basket in `dash/`: scaled-UI-correct price normalization, issuer cross-check, `NO_DATA` on disagreement. Tests 19/19 (2026-09-16). |
+| First buyer hypothesis | [INFERRED] Agent builders and tokenized-equity traders paying per advisory call (x402 pattern). Unproven. |
+| Why crypto | [VERIFIED, repo behavior] Verdicts read on-chain state directly: token-2022 `scaledUiAmountConfig`, `getTokenSupply`, executable DEX prices. Without the chain there is no evidence layer. |
+| Integration vs build | [VERIFIED, repo] Pure integration: RPC, Pyth, Jupiter/DEX, issuer APIs. No custom program needed. |
+| Completed at | 2026-09-20. Desk research by three read-only subagents plus repo evidence. |
+
+### Scores
+
+| Dimension | Score | Basis |
+| --- | --- | --- |
+| Founder fit | 3 | [VERIFIED, repo] Root cause of scaled-UI mispricing found on-chain; fail-closed engine built. |
+| MVP speed | 3 | [VERIFIED, status.md] Core built and smoke-tested 2026-09-16. |
+| Distribution | 2 | [REPORTED, StocklanaScan] Stocklana Main Track $100K plus PreStocks bounty $10K ($5K/$3K/$2K); research and analytics expressly invited. Deadline 2026-09-25 16:00 ET. No paid channel yet. |
+| Market pull | 2 | [REPORTED, DemandSignals] Problem evidence strong; willingness to pay unproven. |
+| Revenue path | 1 | [REPORTED, CompetitorScan] Messari/Nansen sell agent access via API/MCP/x402; AIXBT API $400/mo. No accepted Falcon price. |
+
+Total: 11/15. Threshold >= 8 = go.
+
+## validation
+
+| Field | Value |
+| --- | --- |
+| go_no_go | go |
+| confidence | 0.75 |
+| Condition | [INFERRED] Compete on fail-closed, provenance-tagged advisory verdicts. Do not compete on premium percentages; that layer is contested. |
+
+### demand_signals
+
+- [REPORTED, DemandSignals, 2026-09-20] Live dislocations at fetch time: OPENAI ~11.9% rich, SPACEX ~22.4% cheap, Neuralink ~28.8% rich (PreStocks API vs Jupiter).
+- [REPORTED, DemandSignals] Independent workaround repos: prestocks-pulse, Par (100 of 216 xStocks wrappers hold stale multipliers; NFLXx off 10x post-split), xorr, StockProof, Multiplier, AfterHours. All new, zero stars, hackathon-era.
+- [REPORTED, DemandSignals] Core tooling failed on the same seam: token-2022 PR #1480 reverted scaled-UI rounding; JS packages 0.15.0-0.18.0 needed correction.
+- [REPORTED, DemandSignals] Realized incidents: OpenAI policy says unauthorized SPV/tokenized interests may be void; CoinDesk reported ~40% token plunge; SpaceX xStocks allocations canceled after ~$557M inflow (secondary source).
+- [REPORTED, DemandSignals] Scale: RWA.xyz $3.01B distributed value, $12.9B monthly transfers; Solana tokenized-stock volume >$10B cumulative (June); PreStocks >$750M cumulative.
+- Rubric demand score: 3/3. Caveat: strongest workaround signals come from the same hackathon cohort.
+
+### risks
+
+| category | description | severity |
+| --- | --- | --- |
+| market | [REPORTED, CompetitorScan] PreStocks Terminal is live with premium/discount plus JSON/Markdown APIs; 6+ cohort projects overlap. StockProof already returns PASS/CAUTION/BLOCKED/UNVERIFIABLE in code, and Stocks on Solana advertises a discount-to-real-price column. Only the combined fail-closed verdict layer looks open, and that is inferred from negative search, not proven absence. | high |
+| team | [VERIFIED, status.md] Five days to deadline; T27 open; git diverged (42e87d8 vs ea2c053); submission unwritten. | high |
+| demand | [INFERRED] Willingness to pay unproven; cohort evidence expires after the hackathon. | medium |
+| technical | [VERIFIED, smoke 2026-09-16] Issuer API is a single mark source; OPENAI leg sits in NO_DATA at 800 bps disagreement; multiplier drift needs continuous re-verification. | medium |
+| regulatory | [INFERRED] Read-only advisory posture is the shield; the asset class itself carries legal risk (OpenAI void-transfer policy). Surface as risk flags, never advice language. | medium |
+
+### next_steps
+
+1. Resolve git divergence (user decision) and close T27: keep the 500 bps bound, present NO_DATA as the feature, add per-leg partial-basket reporting.
+2. Differentiate vs PreStocks Terminal: effective-multiplier proof, freshness and disagreement gates, verdict provenance, agent-consumable `council.advice`-shaped JSON endpoint.
+3. Optional: xStocks NAV-deviation coverage. [INFERRED, search-limited] CompetitorScan found no labeled publisher, but Stocks on Solana advertises discount coverage; verify what it publishes before claiming whitespace. Confirm the PreStocks bounty exclusivity rule first; it restricts pre-IPO tokens to PreStocks only.
+4. Submit to Stocklana Main Track plus Best Use of PreStocks before 2026-09-25 16:00 ET. Demo: live dislocation, live fail-closed refusal, agent consuming the verdict.
+5. Post-hackathon: five interviews ("how do you check fair value today?"), advisory API behind x402 per-call pricing. Continue when one person pays anything.
+
+### Correction, 2026-09-20
+
+The first version of this section called the xStocks deviation gap "verified" and the verdict layer "the only open ground". That converted a negative search result into proof of absence and ignored partial overlap the DemandSignals report itself named (Stocks on Solana's discount column, prestocks-pulse split-aware prices, StockProof's verdict enum). The claims above now carry INFERRED tags with their search limits. The go verdict and confidence are unchanged; the differentiation claim is narrower.
+
+## Source reports
+
+- [VERIFIED, artifact creation] [Validation report](validation-report-falcon-council-20260920.html).
+- [REPORTED, subagents 2026-09-20] CompetitorScan, DemandSignals, StocklanaScan transcripts; every claim cited to primary sources in the HTML report.
+
+## Least confident decisions
+
+1. [INFERRED] The verdict layer is enough differentiation for judges; they may reward the prettiest dashboard instead.
+2. [INFERRED] Agent builders paying per call is the right buyer. Nobody has paid yet.
+3. [INFERRED] xStocks expansion scoped optional; if it is the winning story, five days may not fit it safely.
+4. [INFERRED] NO_DATA-as-feature may read as "broken" in a two-minute demo; the script must sell the refusal.
