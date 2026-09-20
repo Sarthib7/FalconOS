@@ -56,7 +56,7 @@ pub fn build_graph(
 
     let issuer = "issuer:prestocks".to_string();
     add_node(issuer.clone(), "issuer", "PreStocks".to_string());
-    for fixed in ["dexscreener", "prestocks-issuer", "solana-rpc", "pyth"] {
+    for fixed in ["dexscreener", "prestocks-issuer", "solana-rpc"] {
         add_node(source_id(fixed), "source", fixed.to_string());
     }
     add_node("venue:solana".to_string(), "venue", "Solana".to_string());
@@ -72,15 +72,29 @@ pub fn build_graph(
         add_edge(aid.clone(), underlying, "asset-underlying");
         add_edge(aid.clone(), "venue:solana".to_string(), "asset-venue");
 
-        let feed = references
-            .get(&asset.asset_id)
-            .and_then(|value| value.as_ref())
-            .map(|value| value.feed_id.clone())
-            .unwrap_or_else(|| format!("unavailable:{}", asset.asset_id));
-        let feed_node = source_id(&format!("pyth-feed:{feed}"));
-        add_node(feed_node.clone(), "source", format!("Pyth feed {feed}"));
-        add_edge(aid.clone(), source_id("pyth"), "asset-source");
-        add_edge(aid, feed_node, "asset-source");
+        // Reference provenance comes from the actual reference used, never a
+        // hardcoded provider: issuer marks attribute to prestocks-issuer, Pyth
+        // feeds to a lazily added pyth source, absence stays visible.
+        match references.get(&asset.asset_id).and_then(|value| value.as_ref()) {
+            Some(reference) if reference.feed_id.starts_with("prestocks:") => {
+                let mark_node = source_id(&format!("issuer-mark:{}", asset.underlying));
+                add_node(mark_node.clone(), "source", format!("PreStocks mark {}", asset.underlying));
+                add_edge(aid.clone(), mark_node.clone(), "asset-reference");
+                add_edge(mark_node, source_id("prestocks-issuer"), "reference-source");
+            }
+            Some(reference) => {
+                add_node(source_id("pyth"), "source", "pyth".to_string());
+                let feed_node = source_id(&format!("pyth-feed:{}", reference.feed_id));
+                add_node(feed_node.clone(), "source", format!("Pyth feed {}", reference.feed_id));
+                add_edge(aid.clone(), feed_node.clone(), "asset-reference");
+                add_edge(feed_node, source_id("pyth"), "reference-source");
+            }
+            None => {
+                let missing_node = format!("evidence:reference-missing:{}", asset.underlying);
+                add_node(missing_node.clone(), "evidence", format!("{} reference unavailable", asset.underlying));
+                add_edge(aid, missing_node, "asset-reference");
+            }
+        }
     }
 
     let verdict_id = format!("verdict:{}", verdict.status());
@@ -88,6 +102,9 @@ pub fn build_graph(
     let basket_intent = "intent:propose-pre-ipo-basket".to_string();
     add_node(basket_intent.clone(), "intent", "propose pre-IPO basket".to_string());
     add_edge(basket_intent, verdict_id.clone(), "intent-verdict");
+    let snapshot_node = format!("snapshot:{}", &snapshot.sha256[..12]);
+    add_node(snapshot_node.clone(), "evidence", format!("snapshot {}", &snapshot.sha256[..12]));
+    add_edge(verdict_id.clone(), snapshot_node, "verdict-snapshot");
 
     for asset in &config.assets {
         let aid = asset_id(asset);
@@ -183,5 +200,44 @@ mod tests {
         assert!(graph.edges.len() >= 20, "edges={}", graph.edges.len());
         let ids = graph.nodes.iter().map(|node| node.id.as_str()).collect::<BTreeSet<_>>();
         assert!(graph.edges.iter().all(|edge| ids.contains(edge.from.as_str()) && ids.contains(edge.to.as_str())));
+    }
+
+    #[test]
+    fn issuer_mark_references_never_claim_pyth() {
+        let config = config();
+        let observed = "2026-09-20T12:00:00.000Z";
+        let captures = BTreeMap::new();
+        let verdict = Verdict::NoData { reasons: vec!["test".into()] };
+        let refs = [
+            ("mint-a".to_string(), Some(PythUnderlyingRef { feed_id: "prestocks:OPENAI".into(), spot: "100".into(), publish_time: observed.into() })),
+            ("mint-b".to_string(), None),
+        ]
+        .into_iter()
+        .collect();
+        let snapshot = build_snapshot(&config, &captures, observed);
+        let graph = build_graph(&config, &snapshot, &verdict, &refs);
+        let labels = graph.nodes.iter().map(|node| node.label.clone()).collect::<Vec<_>>();
+        assert!(!labels.iter().any(|label| label.to_lowercase().contains("pyth")), "issuer-only graph must not claim Pyth: {labels:?}");
+        assert!(labels.iter().any(|label| label == "PreStocks mark OPENAI"));
+        assert!(labels.iter().any(|label| label == "SPACEX reference unavailable"));
+    }
+
+    #[test]
+    fn configured_pyth_references_attribute_to_pyth() {
+        let config = config();
+        let observed = "2026-09-20T12:00:00.000Z";
+        let captures = BTreeMap::new();
+        let verdict = Verdict::NoData { reasons: vec!["test".into()] };
+        let refs = [
+            ("mint-a".to_string(), Some(PythUnderlyingRef { feed_id: "0xfeed-a".into(), spot: "100".into(), publish_time: observed.into() })),
+            ("mint-b".to_string(), Some(PythUnderlyingRef { feed_id: "0xfeed-b".into(), spot: "200".into(), publish_time: observed.into() })),
+        ]
+        .into_iter()
+        .collect();
+        let snapshot = build_snapshot(&config, &captures, observed);
+        let graph = build_graph(&config, &snapshot, &verdict, &refs);
+        let labels = graph.nodes.iter().map(|node| node.label.clone()).collect::<Vec<_>>();
+        assert!(labels.iter().any(|label| label == "Pyth feed 0xfeed-a"));
+        assert!(!labels.iter().any(|label| label.contains("PreStocks mark")));
     }
 }
