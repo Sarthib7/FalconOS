@@ -10,7 +10,8 @@
     "demo": "node src/cli.ts demo",
     "scan": "node src/cli.ts scan",
     "watch": "node src/cli.ts watch",
-    "dash": "node dash/cli.ts",
+    "dash": "cargo run --manifest-path engine/Cargo.toml --release --quiet --",
+    "dash:ts": "node dash/cli.ts",
     "test": "node --test test/*.test.ts stablecoins/test/*.test.ts perps/test/*.test.ts stocks/test/*.test.ts dash/test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
