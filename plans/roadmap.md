@@ -16,9 +16,9 @@
 
 [INFERRED, MVP boundary] FalconOS MVP ends with four results: a Solana and Base collector, one cited thesis from the selected existing agent using bounded Obsidian evidence, one paper-cycle outcome, and one review view that links the candidate, evidence, thesis, and outcome.
 
-[INFERRED, later scope] Broader strategies, a third chain, live capital, signing, investor pooling, and execution remain later work. An approved live cycle follows only after its own checks pass.
+[SUPERSEDED, 2026-09-20] The former "later scope" list is void where it names live capital, signing, investor pooling, or execution. Those belong, if ever, to a separate regulated Falcon entity (CONTEXT.md, 2026-09-18). Broader strategies and a third chain remain possible FalconOS research work. An approved live cycle is not a FalconOS milestone.
 
-[VERIFIED, user direction] The wider scope includes multichain liquidity, arbitrage, stablecoin pegs, new-token entries, investing, and execution. [INFERRED, sequence] Start with Solana and Base. Assess Robinhood Chain third. Tempo remains an alternative if asset-level evidence changes that choice.
+[VERIFIED, user direction, historical] The 2026-09-05 wider scope named multichain liquidity, arbitrage, stablecoin pegs, new-token entries, investing, and execution. [SUPERSEDED, 2026-09-20] Execution is out of FalconOS scope; the rest survives only as advisory research categories. [INFERRED, sequence] Start with Solana and Base. Assess Robinhood Chain third. Tempo remains an alternative if asset-level evidence changes that choice.
 
 ## Phase map
 
@@ -26,8 +26,8 @@
 | --- | --- | --- | --- | --- |
 | P0: Existing prototype | [VERIFIED] Quote to assessment, JSON evidence, and linked Obsidian note. | Existing repo | CP0 | [VERIFIED] Implemented. `tests 28`, `pass 28`, `fail 0`; typecheck exit `0`. |
 | P1: Evidence to agent decision | [INFERRED] Accept the collector, then connect one existing agent to verified evidence and bounded graph context. | CP0; D1 for agent choice | CP1A, CP1B | [VERIFIED, current scoped checks] CHK-05, CHK-06, and CHK-07 have evidence. CHK-08 automated checks pass, with desktop inspection open. [VERIFIED, collector_luna] CHK-09 is complete under the approved escalated ten-cycle watch. The historical `use_default` failure remains separate. [INFERRED] No real agent thesis run exists. |
-| P2: Capital-aware paper cycle | [INFERRED] Thesis to reserved inventory, simulated legs, reconciliation, and an outcome note. | CP1B, D2 | CP2 | [INFERRED] Planned. |
-| P3: Approved live cycle | [INFERRED] The selected executor completes one approved route and reconciles each leg. | CP2; exact live-action approval | CP3 | [INFERRED] Planned. This is not required for a paper-demo submission. |
+| P2: Capital-aware paper cycle | [SUPERSEDED, 2026-09-20] Paper/simulation remains a confirmed later advisory mode (CONTEXT.md Advisory modes), but this capital-reservation phase design is historical and awaits an advisory-only redesign. | — | — | [SUPERSEDED] Not active. |
+| P3: Approved live cycle | [SUPERSEDED, 2026-09-20] Live execution is not a FalconOS phase. It belongs, if ever, to a separate regulated Falcon entity. | — | — | [SUPERSEDED] Removed from the FalconOS roadmap. |
 | P4: Third chain and wider strategy | [INFERRED] One evidenced route or strategy reaches the same research and paper checks. | CP1A for research; CP2 for paper; CP3 controls for live work | CP4 | [INFERRED] Planned. Research may run beside P2. |
 | P5: Product and hackathon package | [INFERRED] A reviewer can inspect one candidate, its graph evidence, thesis, and paper outcome. | CP1B for UI; CP2 for complete demo | CP5 | [VERIFIED] Brand brief drafted. [INFERRED] UI, assets, and release checks remain open. |
 

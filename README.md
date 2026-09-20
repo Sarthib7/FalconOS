@@ -18,7 +18,7 @@
 
 [REPORTED, team roles, 2026-09-05] Root only orchestrates and reports. Luna agents perform implementation and local measurements. A fixture or synthetic test record is not live evidence.
 
-[INFERRED, MVP boundary] The first usable MVP has four results: a Solana and Base collector, one cited thesis from the selected existing agent, one paper-cycle outcome, and one review view that links the candidate, evidence, thesis, and outcome. Broader strategies, a third chain, live capital, and signing remain later work.
+[INFERRED, MVP boundary] The first usable MVP has four results: a Solana and Base collector, one cited thesis from the selected existing agent, one paper-cycle outcome, and one review view that links the candidate, evidence, thesis, and outcome. Broader strategies and a third chain remain later work. [SUPERSEDED, 2026-09-20] Live capital and signing are not later FalconOS work; they belong, if ever, to a separate regulated Falcon entity (CONTEXT.md, 2026-09-18).
 
 ## Run the demonstration
 
@@ -89,7 +89,7 @@ npm run watch -- --amount 10 --interval 300
 
 [VERIFIED, implementation] Every candidate keeps `netProfitUsdc: null` and `executionReady: false`. Gas estimates remain in USD. Sequential quotes assume inventory on both chains; they do not move capital. EURC follows the euro, so this pair is FX research. These scans do not detect dollar depegs.
 
-[INFERRED, later scope] LLM reasoning, automatic graph retrieval, capital pooling, peg strategies, sniping, and transaction signing remain planned. The [brand brief](docs/brand-brief.md) describes proposed views and includes a design prompt.
+[INFERRED, later scope] LLM reasoning and automatic graph retrieval remain planned for FalconOS. [SUPERSEDED, 2026-09-20] Capital pooling, peg execution strategies, sniping, and transaction signing are not planned FalconOS features; they belong, if ever, to a separate regulated Falcon entity (CONTEXT.md, 2026-09-18). The [brand brief](docs/brand-brief.md) describes proposed views and includes a design prompt.
 
 ## Check the code
 

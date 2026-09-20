@@ -22,4 +22,4 @@
 
 [VERIFIED, fixed test] `node --test --test-name-pattern='live assessment starts after collection completes' test/cli.test.ts` returned `tests 1`, `pass 1`, `fail 0`, `cancelled 0`, `skipped 0`.
 
-[INFERRED, spec limit] No `SPEC.md` exists in this repository. This scoped §B/§V record preserves the bug lesson without creating a new spec file.
+[VERIFIED, correction, 2026-09-20] `SPEC.md` now exists and carries §V invariants and §B backprop records. This note predates it; the bug lesson above stands, and the spec is the enforcement home.

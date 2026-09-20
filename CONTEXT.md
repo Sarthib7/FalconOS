@@ -1,6 +1,6 @@
 # FalconOS
 
-[VERIFIED, user direction, 2026-09-05] FalconOS is a multichain research and trading layer above existing agents. The user requested liquidity pooling, arbitrage, stablecoin peg strategies, sniping, investing, and execution. The user also selected Obsidian for a knowledge graph and continuous discovery.
+[VERIFIED, user-confirmed direction, 2026-09-18] FalconOS is the umbrella product. Falcon Investment Council is the current module: agent-first market intelligence and risk advisory, advisory-only and read-only. See "Confirmed domain decisions" below. [SUPERSEDED, 2026-09-20] The original 2026-09-05 framing ("a multichain research and trading layer" with liquidity pooling, arbitrage, sniping, and execution) is historical. Execution-adjacent capabilities belong, if ever, to a separate regulated Falcon entity, not to FalconOS.
 
 [VERIFIED, user authorization] The user requested: "ok document and update the plan" and "lets start building". This authorizes the local build. The previous validation verdict remains go validate. Starting the prototype does not establish customer demand.
 
@@ -21,11 +21,11 @@
 
 ## Product loop
 
-[INFERRED, plan] Research agents collect selected sources. The Obsidian graph connects evidence, assets, venues, strategies, and outcomes. An existing agent uses that evidence to propose opportunities. Live data and deterministic checks govern later execution. Confirmed outcomes return to the graph.
+[INFERRED, plan] Research agents collect selected sources. The Obsidian graph connects evidence, assets, venues, strategies, and outcomes. An existing agent uses that evidence to propose opportunities. Confirmed outcomes return to the graph. [SUPERSEDED, 2026-09-20] The former "later execution" clause is removed; execution is not on the FalconOS path.
 
 [INFERRED, MVP boundary] The first usable MVP ends with four results: a Solana and Base collector, one cited thesis from the selected existing agent, one paper-cycle outcome, and one review view that links the candidate, evidence, thesis, and outcome.
 
-[INFERRED, delivery boundary] Broader strategies, a third chain, live capital, signing, automatic note ingestion, and investor pooling belong to later slices. Coverage is explicit. A polling process cannot claim to discover every opportunity.
+[INFERRED, delivery boundary] Broader strategies, a third chain, and automatic note ingestion belong to later slices. Coverage is explicit. A polling process cannot claim to discover every opportunity. [SUPERSEDED, 2026-09-20] Live capital, signing, and investor pooling are not later FalconOS slices; they belong, if ever, to a separate regulated Falcon entity.
 
 ## Confirmed domain decisions
 

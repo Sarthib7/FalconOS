@@ -38,7 +38,7 @@
 
 [VERIFIED, correction, 2026-09-05] The earlier position paragraphs preserve intermediate 32-test and reported 36-test baselines. The prior local suite is 40/40. The saved final source/test evidence is 59/59 with exit `0`. CHK-05 and CHK-06 have bounded acceptance evidence. CHK-08 still has an open desktop item. The approved escalated ten-cycle watch completes CHK-09; the historical `use_default` failure remains separate. CP1A is not closed while the desktop item remains open.
 
-[INFERRED, MVP boundary] The first usable MVP ends with a Solana and Base collector, one cited thesis from the selected existing agent, one paper-cycle outcome, and one review view that links the candidate, evidence, thesis, and outcome. Broader strategies, a third chain, live capital, and signing remain later work.
+[INFERRED, MVP boundary] The first usable MVP ends with a Solana and Base collector, one cited thesis from the selected existing agent, one paper-cycle outcome, and one review view that links the candidate, evidence, thesis, and outcome. Broader strategies and a third chain remain later work. [SUPERSEDED, 2026-09-20] Live capital and signing are not later FalconOS work; they belong, if ever, to a separate regulated Falcon entity (CONTEXT.md, 2026-09-18).
 
 ## Phase index
 
@@ -48,8 +48,8 @@
 | --- | --- | --- |
 | P0: Prototype baseline | [Completed tasks](tasks.md#p0-existing-prototype) | [Current checks](checks.md#current-checks) |
 | P1: Collector and agent | [Collector](tasks.md#p1a-accept-the-evidence-collector), [agent](tasks.md#p1b-one-existing-agent-uses-graph-evidence) | [Collector acceptance](checks.md#p1a-collector-acceptance), [agent acceptance](checks.md#p1b-agent-and-graph-acceptance) |
-| P2: Paper cycle | [Paper tasks](tasks.md#p2-capital-aware-paper-cycle) | [Paper acceptance](checks.md#p2-paper-acceptance) |
-| P3: Approved live cycle | [Live tasks](tasks.md#p3-one-approved-live-cycle) | [Live acceptance](checks.md#p3-live-acceptance) |
+| P2: Paper cycle | [SUPERSEDED, 2026-09-20; historical links] [Paper tasks](tasks.md#p2-capital-aware-paper-cycle) | [Paper acceptance](checks.md#p2-paper-acceptance) |
+| P3: Approved live cycle | [SUPERSEDED, 2026-09-20; not a FalconOS phase] [Live tasks](tasks.md#p3-one-approved-live-cycle) | [Live acceptance](checks.md#p3-live-acceptance) |
 | P4: Third chain and strategies | [Extension tasks](tasks.md#p4-a-third-chain-and-wider-strategies) | [Breadth acceptance](checks.md#p4-breadth-acceptance) |
 | P5: Product and submission | [Design and demo](tasks.md#p5-product-design-and-hackathon-package) | [Demo acceptance](checks.md#p5-design-and-demonstration-acceptance) |
 

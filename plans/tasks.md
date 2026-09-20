@@ -54,6 +54,8 @@
 
 ## P2: Capital-aware paper cycle
 
+[SUPERSEDED, 2026-09-20] This phase design is historical. Paper/simulation remains a confirmed later advisory mode, but capital reservation and inventory ownership are not FalconOS work. Do not start these tasks.
+
 | Done | ID | State and owner | Task | Depends on | Checks |
 | --- | --- | --- | --- | --- | --- |
 | [ ] | P2-T01 | Waiting, Sarthi + root | [INFERRED] Choose capital ownership and the first route model. Document inventory on each chain and restoration rules. Use synthetic balances until reads are authorized. | D2, CP1B | CHK-13 |
@@ -62,6 +64,8 @@
 | [ ] | P2-T04 | Planned, root | [INFERRED] Reconcile the case set and review estimates against outcomes. Report unknown costs as unknown net results. | P2-T03 | CHK-14, CHK-15 |
 
 ## P3: One approved live cycle
+
+[SUPERSEDED, 2026-09-20] Live execution is not a FalconOS phase. It belongs, if ever, to a separate regulated Falcon entity (CONTEXT.md, 2026-09-18). Do not start these tasks.
 
 | Done | ID | State and owner | Task | Depends on | Checks |
 | --- | --- | --- | --- | --- | --- |

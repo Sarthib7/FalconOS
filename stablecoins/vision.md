@@ -26,7 +26,7 @@ Evidence quote: "Falcon is an **Arc-native autonomous liquidity and risk desk fo
 
 ## Next proof
 
-[INFERRED] Move the three stablecoin-owned source areas into this folder in one import cutover, then run `node --test stablecoins/test/sources.test.ts stablecoins/test/scan.test.ts` and verify that exact amounts and typed failure records retain their behavior.
+[VERIFIED, completed 2026-09-20] The stablecoin move is done: `stablecoins/scan.ts`, `stablecoins/sources.ts`, and their tests live in this folder, and the full suite passes 132/132. Next proof: keep the legacy plugin contract fenced from the Council contract when the shared type boundary is decided.
 
 ## Open decisions
 
