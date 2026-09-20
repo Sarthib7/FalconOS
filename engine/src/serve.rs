@@ -1,0 +1,308 @@
+use crate::council::{AssetConfig, CouncilConfig, build_snapshot, evaluate_council, render_advice};
+use crate::dexscreener::{AssetCaptures, DexAsset, fetch_asset};
+use crate::domain::{CanonicalSnapshot, Verdict};
+use crate::graph::{KnowledgeGraph, build_graph};
+use crate::prestocks::{fetch_prestocks, fetch_scaled_ui_multipliers, normalize_scaled_price};
+use crate::pyth::{PythAssetFeeds, PythUnderlyingRef, fetch_pyth_prices};
+use serde::Serialize;
+use std::collections::BTreeMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::RwLock;
+
+#[derive(Clone, Debug, Serialize)]
+pub struct AdviceEvidence {
+    pub asset_id: String,
+    pub underlying: String,
+    pub token_price: Option<String>,
+    pub liquidity: Option<String>,
+    pub underlying_price: Option<String>,
+    pub premium_bps: Option<i64>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct AdviceResponse {
+    pub status: String,
+    pub snapshot_sha256: String,
+    pub created_at: String,
+    pub reasons: Vec<String>,
+    pub evidence: Vec<AdviceEvidence>,
+    pub latency_ms: u128,
+}
+
+#[derive(Clone, Debug)]
+pub struct Evaluation {
+    pub snapshot: CanonicalSnapshot,
+    pub verdict: Verdict,
+    pub references: BTreeMap<String, Option<PythUnderlyingRef>>,
+    pub advice: AdviceResponse,
+    pub graph: KnowledgeGraph,
+    pub rendered: String,
+}
+
+pub fn config() -> CouncilConfig {
+    CouncilConfig {
+        assets: vec![
+            AssetConfig {
+                asset_id: "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF".into(),
+                underlying: "OPENAI".into(),
+                target_weight_bps: 6000,
+                price_scale: 6,
+                quantity_scale: 2,
+                min_liquidity: "500000".into(),
+                max_weight_bps: 8000,
+            },
+            AssetConfig {
+                asset_id: "PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh".into(),
+                underlying: "SPACEX".into(),
+                target_weight_bps: 4000,
+                price_scale: 6,
+                quantity_scale: 2,
+                min_liquidity: "500000".into(),
+                max_weight_bps: 8000,
+            },
+        ],
+        max_dislocation_bps: 500,
+        coherence_cap_ms: 120_000,
+    }
+}
+
+async fn fetch_dex(config: &CouncilConfig) -> BTreeMap<String, AssetCaptures> {
+    let mut handles = Vec::new();
+    for asset in &config.assets {
+        let dex = DexAsset {
+            asset_id: asset.asset_id.clone(),
+            price_scale: asset.price_scale,
+            quantity_scale: asset.quantity_scale,
+        };
+        let asset_id = asset.asset_id.clone();
+        handles.push(tokio::spawn(async move {
+            (asset_id, fetch_asset(&dex, None).await)
+        }));
+    }
+    let mut captures = BTreeMap::new();
+    for handle in handles {
+        if let Ok((asset_id, asset_captures)) = handle.await {
+            captures.insert(asset_id, asset_captures);
+        }
+    }
+    captures
+}
+
+fn env_feed(underlying: &str, role: &str) -> String {
+    let key = format!("PYTH_{}_{}_FEED_ID", underlying.to_ascii_uppercase(), role);
+    std::env::var(key).unwrap_or_default()
+}
+
+fn pyth_feeds(config: &CouncilConfig) -> Vec<PythAssetFeeds> {
+    config
+        .assets
+        .iter()
+        .map(|asset| PythAssetFeeds {
+            asset_id: asset.asset_id.clone(),
+            underlying: asset.underlying.clone(),
+            price_scale: asset.price_scale,
+            tokenized_feed_id: env_feed(&asset.underlying, "TOKENIZED"),
+            underlying_feed_id: env_feed(&asset.underlying, "UNDERLYING"),
+        })
+        .collect()
+}
+
+fn fixed(value: &str, scale: u32) -> String {
+    if scale == 0 {
+        return value.to_string();
+    }
+    let mut digits = value.to_string();
+    while digits.len() <= scale as usize {
+        digits.insert(0, '0');
+    }
+    let cut = digits.len() - scale as usize;
+    format!("{}.{}", &digits[..cut], &digits[cut..])
+}
+
+fn premium_bps(token: Option<&str>, reference: Option<&PythUnderlyingRef>, scale: u32) -> Option<i64> {
+    let token = token?.parse::<i128>().ok()?;
+    let underlying = crate::prestocks::scale_decimal_to_integer(&reference?.spot, scale)?.parse::<i128>().ok()?;
+    if underlying <= 0 {
+        return None;
+    }
+    let gap = (token - underlying).checked_mul(10_000)?.checked_div(underlying)?;
+    i64::try_from(gap).ok()
+}
+
+fn advice(config: &CouncilConfig, snapshot: &CanonicalSnapshot, verdict: &Verdict, references: &BTreeMap<String, Option<PythUnderlyingRef>>, latency_ms: u128) -> AdviceResponse {
+    let evidence = config
+        .assets
+        .iter()
+        .map(|asset| {
+            let price = snapshot
+                .captures
+                .get(&crate::council::capture_key(&asset.asset_id, "price"))
+                .and_then(|capture| capture.value.as_deref());
+            let liquidity = snapshot
+                .captures
+                .get(&crate::council::capture_key(&asset.asset_id, "liquidity"))
+                .and_then(|capture| capture.value.as_deref());
+            let reference = references.get(&asset.asset_id).and_then(|value| value.as_ref());
+            AdviceEvidence {
+                asset_id: asset.asset_id.clone(),
+                underlying: asset.underlying.clone(),
+                token_price: price.map(|value| fixed(value, asset.price_scale)),
+                liquidity: liquidity.map(|value| fixed(value, asset.quantity_scale)),
+                underlying_price: reference.map(|value| value.spot.clone()),
+                premium_bps: premium_bps(price, reference, asset.price_scale),
+            }
+        })
+        .collect();
+    AdviceResponse {
+        status: verdict.status().to_string(),
+        snapshot_sha256: snapshot.sha256.clone(),
+        created_at: snapshot.created_at.clone(),
+        reasons: verdict.reasons().to_vec(),
+        evidence,
+        latency_ms,
+    }
+}
+
+/// One full evaluation. Reference policy mirrors the preipo CLI: the
+/// PreStocks issuer mark is the default underlying reference (pre-IPO names
+/// have no Pyth equity feed). When an asset's Pyth feed IDs are configured
+/// through the environment, Pyth becomes that asset's reference and a
+/// configured-but-failing feed fails closed to NO_DATA. Unconfigured Pyth is
+/// not an error.
+pub async fn evaluate_once(config: &CouncilConfig) -> Evaluation {
+    let started = Instant::now();
+    let mints = config.assets.iter().map(|asset| asset.asset_id.clone()).collect::<Vec<_>>();
+    let feeds: Vec<PythAssetFeeds> = pyth_feeds(config)
+        .into_iter()
+        .filter(|feed| !feed.tokenized_feed_id.is_empty() || !feed.underlying_feed_id.is_empty())
+        .collect();
+    let pyth_key = std::env::var("PYTH_API_KEY").ok();
+    let (prestocks, multipliers, mut dex_captures, pyth) = tokio::join!(
+        fetch_prestocks(&mints, None),
+        fetch_scaled_ui_multipliers(&mints, None),
+        fetch_dex(config),
+        fetch_pyth_prices(&feeds, Duration::from_secs(900), None, pyth_key.as_deref()),
+    );
+    for asset in &config.assets {
+        if let Some(captures) = dex_captures.get_mut(&asset.asset_id) {
+            let multiplier = multipliers.get(&asset.asset_id).and_then(|value| value.as_deref());
+            let issuer = prestocks.issuer_prices.get(&asset.asset_id).and_then(|value| value.as_deref());
+            captures.price = normalize_scaled_price(&captures.price, asset.price_scale, multiplier, issuer, 500);
+        }
+    }
+    // Issuer-mark refs first; Pyth overlays only assets with configured feeds.
+    let mut references: BTreeMap<String, Option<PythUnderlyingRef>> = config
+        .assets
+        .iter()
+        .map(|asset| {
+            (
+                asset.asset_id.clone(),
+                prestocks.refs.get(&asset.asset_id).cloned().flatten(),
+            )
+        })
+        .collect();
+    for feed in &feeds {
+        let overlay = pyth.get(&feed.asset_id).and_then(|value| value.underlying.clone());
+        references.insert(feed.asset_id.clone(), overlay);
+    }
+    let created_at = crate::pyth::now_iso();
+    let snapshot = build_snapshot(config, &dex_captures, created_at);
+    let mut verdict = evaluate_council(config, &snapshot, &references);
+    // Fail closed only for CONFIGURED Pyth feeds that did not deliver.
+    let pyth_failure = feeds.iter().find_map(|feed| {
+        let result = pyth.get(&feed.asset_id)?;
+        if result.price.is_ok() && result.underlying.is_some() {
+            None
+        } else {
+            Some(format!(
+                "{} Pyth reference unavailable: {}",
+                feed.underlying, result.price.raw_excerpt
+            ))
+        }
+    });
+    if let Some(reason) = pyth_failure {
+        verdict = Verdict::NoData { reasons: vec![reason] };
+    }
+    let latency_ms = started.elapsed().as_millis();
+    let rendered = render_advice(&snapshot, &verdict, config, &references);
+    let graph = build_graph(config, &snapshot, &verdict, &references);
+    let advice = advice(config, &snapshot, &verdict, &references, latency_ms);
+    Evaluation { snapshot, verdict, references, advice, graph, rendered }
+}
+
+struct SharedState {
+    evaluation: RwLock<Evaluation>,
+}
+
+async fn read_request(stream: &mut TcpStream) -> Option<String> {
+    let mut bytes = Vec::with_capacity(1024);
+    let mut chunk = [0_u8; 1024];
+    while bytes.len() < 8192 {
+        let n = stream.read(&mut chunk).await.ok()?;
+        if n == 0 {
+            break;
+        }
+        bytes.extend_from_slice(&chunk[..n]);
+        if bytes.windows(4).any(|window| window == b"\r\n\r\n") {
+            break;
+        }
+    }
+    (bytes.len() <= 8192).then(|| String::from_utf8_lossy(&bytes).into_owned())
+}
+
+async fn handle_connection(mut stream: TcpStream, state: Arc<SharedState>) {
+    let request = read_request(&mut stream).await;
+    let (status, body) = if let Some(request) = request {
+        let mut parts = request.lines().next().unwrap_or_default().split_whitespace();
+        let method = parts.next().unwrap_or_default();
+        let path = parts.next().unwrap_or_default().split('?').next().unwrap_or_default();
+        let guard = state.evaluation.read().await;
+        match (method, path) {
+            ("GET", "/advice") => ("200 OK", serde_json::to_string(&guard.advice).unwrap_or_else(|_| "{}".into())),
+            ("GET", "/graph") => ("200 OK", serde_json::to_string(&guard.graph).unwrap_or_else(|_| "{}".into())),
+            _ => ("404 Not Found", r#"{"error":"not found"}"#.to_string()),
+        }
+    } else {
+        ("404 Not Found", r#"{"error":"not found"}"#.to_string())
+    };
+    let response = format!(
+        "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    let _ = stream.write_all(response.as_bytes()).await;
+}
+
+pub async fn run_server(config: CouncilConfig, port: u16, interval: Duration) -> std::io::Result<()> {
+    let initial = evaluate_once(&config).await;
+    let state = Arc::new(SharedState { evaluation: RwLock::new(initial) });
+    let listener = TcpListener::bind(("127.0.0.1", port)).await?;
+    let updater_state = Arc::clone(&state);
+    let updater_config = config.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(interval).await;
+            let next = evaluate_once(&updater_config).await;
+            *updater_state.evaluation.write().await = next;
+        }
+    });
+    loop {
+        tokio::select! {
+            result = listener.accept() => {
+                if let Ok((stream, _)) = result {
+                    tokio::spawn(handle_connection(stream, Arc::clone(&state)));
+                }
+            }
+            _ = tokio::signal::ctrl_c() => break,
+        }
+    }
+    Ok(())
+}
+
+pub async fn write_graph(config: &CouncilConfig, path: &str) -> std::io::Result<()> {
+    let evaluation = evaluate_once(config).await;
+    let json = serde_json::to_vec_pretty(&evaluation.graph).map_err(std::io::Error::other)?;
+    tokio::fs::write(path, json).await
+}
