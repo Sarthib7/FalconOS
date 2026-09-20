@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Candidate, Cycle, Scan } from './types.ts';
+import type { Candidate, Cycle, Scan } from '../src/types.ts';
 
 const MAX_AGE_MS = 10_000;
 const UNIT = 1_000_000n;
@@ -79,6 +79,10 @@ export function assess(cycle: Cycle, now: Date): Candidate {
         candidate.status = 'REJECT';
         candidate.reasons.push('PROVIDER_TIME_OUTSIDE_WINDOW');
       }
+      if (Number.isFinite(providerTime) && Number.isFinite(received) && providerTime > received) {
+        candidate.status = 'REJECT';
+        candidate.reasons.push('STALE_OR_INVALID_OBSERVATION_TIME');
+      }
     }
     if (leg.quote?.expiresAt !== null && leg.quote?.expiresAt !== undefined) {
       const expiry = Date.parse(leg.quote.expiresAt);
@@ -95,7 +99,7 @@ export function assess(cycle: Cycle, now: Date): Candidate {
 
 export function createScan(cycles: Cycle[], mode: Scan['mode'], now = new Date()): Scan {
   return {
-    schemaVersion: 1, id: randomUUID(), mode, assessedAt: now.toISOString(), cycles,
+    schemaVersion: 2, id: randomUUID(), mode, assessedAt: now.toISOString(), cycles,
     amountScale: {decimals: 6, verification: 'historically verified by RPC capture on 2026-09-05; runtime metadata revalidation not performed'},
     candidates: cycles.map(cycle => assess(cycle, now)),
   };

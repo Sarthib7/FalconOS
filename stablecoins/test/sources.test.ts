@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { ASSETS, collectCycles, normalizeQuote } from '../src/sources.ts';
-import type { Asset, Chain, QuoteRequest } from '../src/types.ts';
+import { ASSETS, collectCycles, normalizeQuote } from '../sources.ts';
+import type { Asset, Chain, FailureKind, QuoteRequest } from '../../src/types.ts';
 
 // Synthetic provider responses exercise contracts, not market prices.
 const EPOCH = Date.parse('2026-09-05T12:00:00.000Z');
@@ -58,7 +58,7 @@ interface MetadataFixture {
 }
 
 // This fixture is self-contained. It does not read ignored data/verification files.
-const metadata = JSON.parse(readFileSync(new URL('./fixtures/public-metadata.json', import.meta.url), 'utf8')) as MetadataFixture;
+const metadata = JSON.parse(readFileSync(new URL('../../test/fixtures/public-metadata.json', import.meta.url), 'utf8')) as MetadataFixture;
 
 function payload(url: URL): Record<string, unknown> {
   const solana = url.hostname === 'api.jup.ag';
@@ -193,7 +193,9 @@ test('F1/F3: keyless GETs compare exact intermediate quantities in both directio
     assert.equal(first.quote.outAmount, second.request.amount);
     assert.equal(second.quote.inAmount, first.quote.outAmount);
     assert.equal(first.error, null);
+    assert.equal(first.failure, null);
     assert.equal(first.httpStatus, 200);
+    assert.equal(second.failure, null);
     assert.ok(Date.parse(first.receivedAt) >= Date.parse(first.startedAt));
   }
   for (const { url, init } of h.calls) {
@@ -278,9 +280,29 @@ test('F2/F5: HTTP 429 stays visible and prevents only its dependent quote', asyn
   assert.equal(cycles[0]!.legs[0]!.error, 'HTTP 429');
   assert.equal(cycles[0]!.legs[0]!.httpStatus, 429);
   assert.deepEqual(cycles[0]!.legs[0]!.raw, { error: 'Too many requests' });
+  assert.deepEqual(cycles[0]!.legs[0]!.failure, {kind: 'rate_limit', retryable: true, retryAfterMs: null});
   assert.ok(cycles[1]!.legs[1]!.quote);
 });
 
+test('F2: server retry metadata is descriptive and parses Retry-After seconds', async () => {
+  const h = harness((url, index) => index === 0
+    ? Response.json({error: 'Service unavailable'}, {status: 503, headers: {'Retry-After': '3'}})
+    : Response.json(payload(url)));
+  const cycles = await collectCycles('10000000', h.options);
+  assert.equal(cycles[0]!.legs[0]!.error, 'HTTP 503');
+  assert.deepEqual(cycles[0]!.legs[0]!.failure, {kind: 'http_server', retryable: true, retryAfterMs: 3000});
+  assert.equal(cycles[0]!.legs.length, 1);
+});
+
+
+test('F2: non-rate-limit client responses are classified without retry metadata', async () => {
+  const h = harness((url, index) => index === 0
+    ? Response.json({error: 'bad request'}, {status: 400})
+    : Response.json(payload(url)));
+  const cycles = await collectCycles('10000000', h.options);
+  assert.equal(cycles[0]!.legs[0]!.error, 'HTTP 400');
+  assert.deepEqual(cycles[0]!.legs[0]!.failure, {kind: 'http_client', retryable: false, retryAfterMs: null});
+});
 test('F2: failed second quote preserves the first quote and raw invalid response', async () => {
   const h = harness((url, index) => index === 1
     ? Response.json({ code: 0, data: { routeSummary: { amountOut: '1' } } })
@@ -290,6 +312,7 @@ test('F2: failed second quote preserves the first quote and raw invalid response
   assert.equal(cycles[0]!.legs[1]!.quote, null);
   assert.match(cycles[0]!.legs[1]!.error!, /asset/);
   assert.deepEqual(cycles[0]!.legs[1]!.raw, { code: 0, data: { routeSummary: { amountOut: '1' } } });
+  assert.deepEqual(cycles[0]!.legs[1]!.failure, {kind: 'invalid_quote', retryable: false, retryAfterMs: null});
 });
 
 test('F2: response limit counts bytes and records a bounded prefix', async () => {
@@ -304,6 +327,7 @@ test('F2: response limit counts bytes and records a bounded prefix', async () =>
   const raw = failed.raw as { incomplete: boolean; bodyPrefix: string };
   assert.equal(raw.incomplete, true);
   assert.ok(Buffer.byteLength(raw.bodyPrefix) <= 2 * 1024 * 1024);
+  assert.deepEqual(failed.failure, {kind: 'invalid_body', retryable: false, retryAfterMs: null});
   assert.equal(h.calls.length, 3);
 });
 
@@ -312,6 +336,7 @@ test('F2: invalid JSON retains the response text', async () => {
   const cycles = await collectCycles('10000000', h.options);
   assert.equal(cycles[0]!.legs[0]!.raw, '<html>upstream failure</html>');
   assert.match(cycles[0]!.legs[0]!.error!, /not valid JSON/);
+  assert.deepEqual(cycles[0]!.legs[0]!.failure, {kind: 'invalid_body', retryable: false, retryAfterMs: null});
 });
 
 test('F2: transport failure remains an observation with no HTTP status', async () => {
@@ -323,16 +348,17 @@ test('F2: transport failure remains an observation with no HTTP status', async (
   assert.equal(cycles[0]!.legs[0]!.httpStatus, null);
   assert.equal(cycles[0]!.legs[0]!.raw, null);
   assert.equal(cycles[0]!.legs[0]!.error, 'network unavailable');
+  assert.deepEqual(cycles[0]!.legs[0]!.failure, {kind: 'connection', retryable: true, retryAfterMs: null});
   assert.ok(cycles[1]!.legs[1]!.quote);
 });
 
 test('F2: nested transport causes identify DNS, connection and TLS failures safely', async () => {
-  const failures: [Error, RegExp][] = [
-    [fetchFailure('ENOTFOUND', 'getaddrinfo ENOTFOUND api.jup.ag'), /DNS lookup failed \(ENOTFOUND\)/],
-    [fetchFailure('ECONNREFUSED', 'connect ECONNREFUSED 127.0.0.1:443'), /Connection failed \(ECONNREFUSED\)/],
-    [fetchFailure('CERT_HAS_EXPIRED', 'certificate has expired'), /TLS handshake failed \(CERT_HAS_EXPIRED\)/],
+  const failures: [Error, RegExp, FailureKind][] = [
+    [fetchFailure('ENOTFOUND', 'getaddrinfo ENOTFOUND api.jup.ag'), /DNS lookup failed \(ENOTFOUND\)/, 'dns'],
+    [fetchFailure('ECONNREFUSED', 'connect ECONNREFUSED 127.0.0.1:443'), /Connection failed \(ECONNREFUSED\)/, 'connection'],
+    [fetchFailure('CERT_HAS_EXPIRED', 'certificate has expired'), /TLS handshake failed \(CERT_HAS_EXPIRED\)/, 'tls'],
   ];
-  for (const [failure, expected] of failures) {
+  for (const [failure, expected, kind] of failures) {
     const h = harness((_url, index) => {
       if (index === 0) throw failure;
       return Response.json(payload(_url));
@@ -342,6 +368,7 @@ test('F2: nested transport causes identify DNS, connection and TLS failures safe
     assert.match(observation.error!, expected);
     assert.equal(observation.httpStatus, null);
     assert.equal(observation.raw, null);
+    assert.equal(observation.failure?.kind, kind);
     assert.ok(observation.error!.length <= 240);
   }
   const h = harness(() => {
@@ -361,6 +388,7 @@ test('F1: an injected fetcher cannot accept a redirected response', async () => 
   assert.equal(cycles[0]!.legs[0]!.quote, null);
   assert.equal(cycles[0]!.legs[0]!.error, 'Redirected response rejected');
   assert.equal(cycles[0]!.legs.length, 1);
+  assert.deepEqual(cycles[0]!.legs[0]!.failure, {kind: 'invalid_body', retryable: false, retryAfterMs: null});
 });
 
 test('F2: an interrupted body preserves its received prefix and HTTP status', async () => {
@@ -426,6 +454,7 @@ test('F2/F5: actual request timeout expires and caller cancellation remains auth
   assert.equal(cycles[0]!.legs[0]!.error, 'Request timed out after 20 ms');
   assert.equal(cycles[0]!.legs[0]!.httpStatus, null);
   assert.equal(cycles[0]!.legs[0]!.raw, null);
+  assert.deepEqual(cycles[0]!.legs[0]!.failure, {kind: 'timeout', retryable: true, retryAfterMs: null});
   assert.ok(cycles[1]!.legs[1]!.quote);
 
   const controller = new AbortController();

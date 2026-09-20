@@ -15,7 +15,7 @@ export function demoCycles(amount: string, now = new Date()): Cycle[] {
       inAmount: first ? amount : intermediate.toString(), outAmount: output.toString(),
       gasUsd: chain === 'base' ? '0.004234' : null,
       l1FeeUsd: null, providerTimestamp: null, expiresAt: null,
-    }, error: null,
+    }, error: null, failure: null,
   });
   return [
     {sourceChain: 'solana', destinationChain: 'base', legs: [

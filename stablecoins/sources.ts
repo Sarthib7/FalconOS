@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from 'node:timers/promises';
-import type { Asset, Chain, Cycle, Observation, Quote, QuoteRequest } from './types.ts';
+import type { Asset, Chain, Cycle, Observation, ObservationFailure, Quote, QuoteRequest } from '../src/types.ts';
 
 // A historical RPC capture on 2026-09-05 verified these addresses and six-decimal metadata.
 // Runtime metadata is not revalidated.
@@ -188,6 +188,41 @@ export function normalizeQuote(raw: unknown, request: QuoteRequest): Quote {
   };
 }
 
+function retryAfterMilliseconds(headers: Headers | null): number | null {
+  const value = headers?.get('retry-after')?.trim();
+  if (!value || !/^\d+$/.test(value)) return null;
+  const seconds = Number(value);
+  if (!Number.isSafeInteger(seconds) || seconds > Number.MAX_SAFE_INTEGER / 1000) return null;
+  return seconds * 1000;
+}
+
+function classifyFailure(error: unknown, httpStatus: number | null, headers: Headers | null): ObservationFailure {
+  const {code, message} = errorDetails(error);
+  const upper = `${code ?? ''} ${message ?? ''}`.toUpperCase();
+  const retryAfterMs = httpStatus === 429 || httpStatus === 503 ? retryAfterMilliseconds(headers) : null;
+  if (/\b(?:TIMEOUT|TIMED OUT)\b/.test(upper)) {
+    return {kind: 'timeout', retryable: true, retryAfterMs};
+  }
+  if (/\b(?:ABORT_ERR|ABORTED|CANCELLED|CANCELED)\b/.test(upper)) {
+    return {kind: 'cancelled', retryable: false, retryAfterMs};
+  }
+  const transport = transportKind(code, message);
+  if (transport === 'DNS') return {kind: 'dns', retryable: true, retryAfterMs};
+  if (transport === 'TLS') return {kind: 'tls', retryable: false, retryAfterMs};
+  if (transport === 'connection' || httpStatus === null) return {kind: 'connection', retryable: true, retryAfterMs};
+  if (message?.startsWith('Response body failed:')
+    || message === 'Response exceeds 2 MiB limit'
+    || message === 'Empty response body'
+    || message?.includes('response is not valid JSON')
+    || message === 'Redirected response rejected') {
+    return {kind: 'invalid_body', retryable: false, retryAfterMs};
+  }
+  if (httpStatus === 429) return {kind: 'rate_limit', retryable: true, retryAfterMs};
+  if (httpStatus >= 500 && httpStatus <= 599) return {kind: 'http_server', retryable: true, retryAfterMs};
+  if (httpStatus < 200 || httpStatus >= 300) return {kind: 'http_client', retryable: false, retryAfterMs};
+  return {kind: 'invalid_quote', retryable: false, retryAfterMs};
+}
+
 function requestUrl(request: QuoteRequest): URL {
   const solana = request.chain === 'solana';
   const url = new URL(solana
@@ -261,10 +296,11 @@ export async function collectCycles(amount: string, options: CollectOptions = {}
     if (request.chain === 'solana') lastJupiterStart = Date.parse(startedAt);
     const observation: Observation = {
       request, requestUrl: url.toString(), startedAt, receivedAt: startedAt,
-      httpStatus: null, raw: null, quote: null, error: null,
+      httpStatus: null, raw: null, quote: null, error: null, failure: null,
     };
     const timeout = AbortSignal.timeout(requestTimeoutMs);
     const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    let responseHeaders: Headers | null = null;
     try {
       const response = await fetcher(url, {
         method: 'GET', redirect: 'error', signal: requestSignal,
@@ -273,6 +309,8 @@ export async function collectCycles(amount: string, options: CollectOptions = {}
           : { accept: 'application/json' },
       });
       observation.httpStatus = response.status;
+      responseHeaders = response.headers;
+
       const body = await readBody(response);
       signal?.throwIfAborted();
       if (body.error) {
@@ -289,11 +327,13 @@ export async function collectCycles(amount: string, options: CollectOptions = {}
       observation.quote = normalizeQuote(observation.raw, request);
     } catch (error) {
       signal?.throwIfAborted();
-      observation.error = timeout.aborted
+      const message = timeout.aborted
         ? `Request timed out after ${requestTimeoutMs} ms`
         : observation.httpStatus === null
           ? formatTransportError(error)
           : error instanceof Error ? error.message : 'Unknown provider failure';
+      observation.error = message;
+      observation.failure = classifyFailure(timeout.aborted ? new Error('Request timed out') : error, observation.httpStatus, responseHeaders);
     } finally {
       observation.receivedAt = now().toISOString();
     }

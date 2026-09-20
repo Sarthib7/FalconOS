@@ -3,8 +3,8 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { demoCycles } from './demo.ts';
-import { createScan, inputAmount } from './scan.ts';
-import { collectCycles } from './sources.ts';
+import { createScan, inputAmount } from '../stablecoins/scan.ts';
+import { collectCycles } from '../stablecoins/sources.ts';
 import {
   buildAgentRequest,
   createAgentRun,
@@ -12,6 +12,7 @@ import {
   type AgentRoute,
   type AgentTransport,
 } from './agent.ts';
+import { errorResponse, PluginFailure, runPlugin } from './plugin.ts';
 import { exportScan, exportThesis } from './vault.ts';
 
 const HELP = `FalconOS quote research
@@ -20,6 +21,7 @@ node src/cli.ts demo                         Synthetic scan, no network
 node src/cli.ts scan --amount 100            One live Solana/Base scan
 node src/cli.ts watch --interval 300         Repeat live scans until Ctrl+C
 node src/cli.ts thesis --evidence runs/<id>.json --evidence-sha256 <hash> --route base-solana --task "..." --agent fixture
+node src/cli.ts plugin --data ./data                  Inbound read-only advisory
 
 Options:
   --amount <USDC>      0.01 to 500, up to six decimal places (default 100)
@@ -41,6 +43,15 @@ No wallet, taker, signing, transaction submission, or paid model calls.
 JSON output contains results and paths to the complete evidence.
 `;
 
+const PLUGIN_HELP = `FalconOS inbound read-only plugin
+
+node src/cli.ts plugin --data ./data < request.json
+
+Reads one bounded JSON request from stdin and emits one advisory/error JSON line.
+--data is host-configured evidence root. No wallet, signer, transaction, model,
+Codex, market, RPC, paid call, vault, or persistent output is available.
+`;
+
 function wholeNumber(value: string, name: string, min: number, max: number): number {
   if (!/^\d+$/.test(value)) throw new Error(`${name} must be a whole number`);
   const number = Number(value);
@@ -55,12 +66,46 @@ export interface CliDependencies {
   createAgentRun?: typeof createAgentRun;
   exportThesis?: typeof exportThesis;
   agentTransport?: AgentTransport;
+  pluginTransport?: AgentTransport;
+  pluginStdin?: AsyncIterable<Uint8Array | string>;
   now?: () => Date;
   pause?: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
   signal?: AbortSignal;
 }
 
+async function runPluginCli(argv: readonly string[], dependencies: CliDependencies): Promise<number> {
+  let values: {data?: string; help?: boolean};
+  let positionals: string[];
+  try {
+    const parsed = parseArgs({args: [...argv], allowPositionals: true, strict: true, options: {
+      data: {type: 'string', default: './data'},
+      help: {type: 'boolean', default: false},
+    }});
+    values = parsed.values;
+    positionals = parsed.positionals;
+    if (values.help) {
+      console.log(PLUGIN_HELP);
+      return 0;
+    }
+    if (positionals.length !== 0) throw new PluginFailure('INVALID_REQUEST', 'Plugin command accepts no positional arguments');
+  } catch (error) {
+    const message = error instanceof Error ? error.message.replace(/[\r\n\u0000-\u001f]/g, ' ') : 'Invalid plugin options';
+    console.log(JSON.stringify(errorResponse(new PluginFailure('INVALID_REQUEST', message), null)));
+    return 2;
+  }
+  const result = await runPlugin(dependencies.pluginStdin ?? process.stdin, {
+    dataDirectory: values.data ?? './data',
+    agentTransport: dependencies.pluginTransport,
+    buildAgentRequest: dependencies.buildAgentRequest,
+    createAgentRun: dependencies.createAgentRun,
+    now: dependencies.now,
+  });
+  console.log(JSON.stringify(result.response));
+  return result.exitCode;
+}
+
 export async function runCli(argv: readonly string[] = process.argv.slice(2), dependencies: CliDependencies = {}): Promise<number> {
+  if (argv[0] === 'plugin') return runPluginCli(argv.slice(1), dependencies);
   const {values, positionals} = parseArgs({args: [...argv], allowPositionals: true, strict: true, options: {
     amount: {type: 'string', default: '100'}, data: {type: 'string', default: './data'},
     vault: {type: 'string'}, interval: {type: 'string', default: '300'}, cycles: {type: 'string'},

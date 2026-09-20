@@ -17,6 +17,14 @@ export interface Quote {
   expiresAt: string | null;
 }
 
+export type FailureKind = 'dns' | 'connection' | 'tls' | 'timeout' | 'cancelled' | 'rate_limit' | 'http_server' | 'http_client' | 'invalid_body' | 'invalid_quote';
+
+export interface ObservationFailure {
+  kind: FailureKind;
+  retryable: boolean;
+  retryAfterMs: number | null;
+}
+
 export interface Observation {
   request: QuoteRequest;
   requestUrl: string;
@@ -26,6 +34,7 @@ export interface Observation {
   raw: unknown;
   quote: Quote | null;
   error: string | null;
+  failure: ObservationFailure | null;
 }
 
 export interface Cycle {
@@ -49,11 +58,68 @@ export interface Candidate {
 }
 
 export interface Scan {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   id: string;
   mode: 'live' | 'demo';
   assessedAt: string;
   amountScale: { decimals: 6; verification: 'historically verified by RPC capture on 2026-09-05; runtime metadata revalidation not performed' };
   cycles: Cycle[];
   candidates: Candidate[];
+}
+
+export interface PluginRequest {
+  schemaVersion: 1;
+  requestId: string;
+  agentId: string;
+  intent: {
+    route: 'solana-base' | 'base-solana';
+    amountUsdc: string;
+    objective: string;
+  };
+  sourceCutoff: string | 'now';
+  evidence: {
+    path: string;
+    sha256: string;
+  };
+  notes: Array<{path: string}>;
+}
+
+export interface PluginAdvisory {
+  schemaVersion: 1;
+  kind: 'advisory';
+  requestId: string;
+  agentId: string;
+  route: 'solana-base' | 'base-solana';
+  status: Candidate['status'];
+  fixture: boolean;
+  thesis: string;
+  citations: Array<{
+    evidenceId: string;
+    path: string;
+    sha256: string;
+    assessedAt: string;
+    supports: string;
+  }>;
+  invalidationConditions: string[];
+  expiresAt: string;
+  missingEvidence: string[];
+  authority: 'advisory-only';
+  executionReady: false;
+}
+
+export type PluginErrorCode =
+  | 'INVALID_JSON'
+  | 'INVALID_REQUEST'
+  | 'EVIDENCE_INVALID'
+  | 'ADVISORY_UNAVAILABLE'
+  | 'INTERNAL_ERROR';
+
+export interface PluginError {
+  schemaVersion: 1;
+  kind: 'error';
+  requestId: string | null;
+  code: PluginErrorCode;
+  message: string;
+  authority: 'advisory-only';
+  executionReady: false;
 }

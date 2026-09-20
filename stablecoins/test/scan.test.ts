@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assess, formatUnits, inputAmount } from '../src/scan.ts';
-import { demoCycles } from '../src/demo.ts';
+import { assess, formatUnits, inputAmount } from '../scan.ts';
+import { demoCycles } from '../../src/demo.ts';
 
 const now = new Date('2026-09-05T12:00:00.000Z');
 
@@ -59,6 +59,21 @@ test('F2: reject stale, invalid, and future provider timestamps without treating
     assert.equal(assess(cycle, now).status, 'REJECT');
     assert.ok(assess(cycle, now).reasons.includes('PROVIDER_TIME_OUTSIDE_WINDOW'));
   }
+});
+
+test('F2: provider timestamp cannot postdate receipt, while equal time is accepted', () => {
+  const cycle = demoCycles('100000000', now)[1]!;
+  const leg = cycle.legs[0]!;
+  leg.receivedAt = '2026-09-05T12:00:00.000Z';
+  leg.quote!.providerTimestamp = '2026-09-05T12:00:00.001Z';
+  const future = assess(cycle, now);
+  assert.equal(future.status, 'REJECT');
+  assert.ok(future.reasons.includes('STALE_OR_INVALID_OBSERVATION_TIME'));
+
+  leg.quote!.providerTimestamp = leg.receivedAt;
+  const equal = assess(cycle, now);
+  assert.equal(equal.status, 'REVIEW');
+  assert.equal(equal.reasons.includes('STALE_OR_INVALID_OBSERVATION_TIME'), false);
 });
 
 test('F2: bound input and reject malformed quote amounts', () => {

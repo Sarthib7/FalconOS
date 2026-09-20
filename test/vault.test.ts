@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, writeFile, mkdir, symlink, rm, readdir, open } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createScan } from '../src/scan.ts';
+import { createScan } from '../stablecoins/scan.ts';
 import { demoCycles } from '../src/demo.ts';
 import { buildAgentRequest, createAgentRun } from '../src/agent.ts';
 import { exportScan, exportThesis } from '../src/vault.ts';

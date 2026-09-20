@@ -1,8 +1,10 @@
+import { constants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { lstat, open } from 'node:fs/promises';
-import { join, normalize, parse, relative, resolve } from 'node:path';
-import type { Candidate, Chain, Cycle, Observation, Scan } from './types.ts';
-import { assess } from './scan.ts';
+import type { FileHandle } from 'node:fs/promises';
+import { join, normalize, parse, resolve } from 'node:path';
+import type { Candidate, Chain, Cycle, FailureKind, Observation, Scan } from './types.ts';
+import { assess } from '../stablecoins/scan.ts';
 
 export type AgentRoute = 'solana-base' | 'base-solana';
 export type AgentOrigin = 'fixture' | 'codex';
@@ -22,6 +24,11 @@ const UUID_V4 = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9
 const INTEGER = /^[1-9]\d{0,19}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const ASSET_SCALE_VERIFICATION = 'historically verified by RPC capture on 2026-09-05; runtime metadata revalidation not performed';
+const FAILURE_KINDS: Record<FailureKind, true> = {
+  dns: true, connection: true, tls: true, timeout: true, cancelled: true,
+  rate_limit: true, http_server: true, http_client: true, invalid_body: true, invalid_quote: true,
+};
+const FILE_FLAGS = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
 
 export interface AgentRequest {
   schemaVersion: 1;
@@ -174,12 +181,15 @@ function stringValue(value: unknown, name: string, maxBytes = MAX_THESIS_BYTES):
 }
 
 function safeRelativePath(value: string, name: string): string {
-  if (typeof value !== 'string' || value.length === 0 || value.includes('\u0000') || value.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(value)) {
+  if (typeof value !== 'string' || value.length === 0 || value.includes('\u0000')) {
     throw new Error(`${name} must be a relative path`);
   }
   const slashPath = value.replaceAll('\\', '/');
-  if (slashPath.split('/').some(component => component === '..')) throw new Error(`${name} cannot contain ..`);
   const normalized = normalize(slashPath).replaceAll('\\', '/');
+  if (normalized.startsWith('/') || /^[a-zA-Z]:/.test(normalized)) {
+    throw new Error(`${name} must be a relative path`);
+  }
+  if (slashPath.split('/').some(component => component === '..')) throw new Error(`${name} cannot contain ..`);
   if (normalized === '.' || normalized.startsWith('../') || normalized.includes('/../')) throw new Error(`${name} is outside the bundle`);
   return normalized;
 }
@@ -199,9 +209,11 @@ function amount(value: unknown, name: string): string {
   return value;
 }
 
-function validateObservation(value: unknown, name: string): Observation {
+function validateObservation(value: unknown, name: string, schemaVersion: 1 | 2): Observation {
   if (!isRecord(value)) throw new Error(`${name} must be an observation`);
-  exactKeys(value, ['request', 'requestUrl', 'startedAt', 'receivedAt', 'httpStatus', 'raw', 'quote', 'error'], name);
+  const keys = ['request', 'requestUrl', 'startedAt', 'receivedAt', 'httpStatus', 'raw', 'quote', 'error'];
+  if (schemaVersion === 2) keys.push('failure');
+  exactKeys(value, keys, name);
   const request = value.request;
   if (!isRecord(request)) throw new Error(`${name}.request must be an object`);
   exactKeys(request, ['chain', 'inputAsset', 'outputAsset', 'amount'], `${name}.request`);
@@ -217,6 +229,20 @@ function validateObservation(value: unknown, name: string): Observation {
     throw new Error(`${name}.httpStatus must be a number or null`);
   }
   if (value.error !== null) stringValue(value.error, `${name}.error`, 4096);
+  if (schemaVersion === 2) {
+    const failure = value.failure;
+    if (failure !== null) {
+      if (!isRecord(failure)) throw new Error(`${name}.failure must be an object or null`);
+      exactKeys(failure, ['kind', 'retryable', 'retryAfterMs'], `${name}.failure`);
+      if (typeof failure.kind !== 'string' || !Object.hasOwn(FAILURE_KINDS, failure.kind)) throw new Error(`${name}.failure.kind is invalid`);
+      if (typeof failure.retryable !== 'boolean') throw new Error(`${name}.failure.retryable must be boolean`);
+      if (failure.retryAfterMs !== null
+        && (typeof failure.retryAfterMs !== 'number' || !Number.isSafeInteger(failure.retryAfterMs) || failure.retryAfterMs < 0)) {
+        throw new Error(`${name}.failure.retryAfterMs must be a nonnegative integer or null`);
+      }
+    }
+    if ((value.error === null) !== (failure === null)) throw new Error(`${name}.failure must match error presence`);
+  }
   if (value.quote !== null) {
     if (!isRecord(value.quote)) throw new Error(`${name}.quote must be an object or null`);
     exactKeys(value.quote, ['inAmount', 'outAmount', 'gasUsd', 'l1FeeUsd', 'providerTimestamp', 'expiresAt'], `${name}.quote`);
@@ -232,14 +258,14 @@ function validateObservation(value: unknown, name: string): Observation {
   return value as unknown as Observation;
 }
 
-function validateCycle(value: unknown, name: string): Cycle {
+function validateCycle(value: unknown, name: string, schemaVersion: 1 | 2): Cycle {
   if (!isRecord(value)) throw new Error(`${name} must be a cycle`);
   exactKeys(value, ['sourceChain', 'destinationChain', 'legs'], name);
   const sourceChain = chain(value.sourceChain, `${name}.sourceChain`);
   const destinationChain = chain(value.destinationChain, `${name}.destinationChain`);
   if (sourceChain === destinationChain) throw new Error(`${name} must cross chains`);
   if (!Array.isArray(value.legs) || value.legs.length < 1 || value.legs.length > 2) throw new Error(`${name}.legs must contain one or two observations`);
-  const legs = value.legs.map((leg, index) => validateObservation(leg, `${name}.legs[${index}]`));
+  const legs = value.legs.map((leg, index) => validateObservation(leg, `${name}.legs[${index}]`, schemaVersion));
   return {sourceChain, destinationChain, legs};
 }
 
@@ -286,12 +312,13 @@ function candidateEqual(actual: Candidate, expected: Candidate): boolean {
 export function validateScan(value: unknown): Scan {
   if (!isRecord(value)) throw new Error('Evidence must contain a Scan object');
   exactKeys(value, ['schemaVersion', 'id', 'mode', 'assessedAt', 'cycles', 'amountScale', 'candidates'], 'Scan');
-  if (value.schemaVersion !== 1) throw new Error('Scan schemaVersion is unsupported');
+  if (value.schemaVersion !== 1 && value.schemaVersion !== 2) throw new Error('Scan schemaVersion is unsupported');
+  const schemaVersion: 1 | 2 = value.schemaVersion === 1 ? 1 : 2;
   if (typeof value.id !== 'string' || !UUID_V4.test(value.id)) throw new Error('Scan id is invalid');
   if (value.mode !== 'live' && value.mode !== 'demo') throw new Error('Scan mode is invalid');
   const assessedAt = isoTime(value.assessedAt, 'Scan.assessedAt');
   if (!Array.isArray(value.cycles) || value.cycles.length === 0) throw new Error('Scan.cycles is invalid');
-  const cycles = value.cycles.map((cycle, index) => validateCycle(cycle, `Scan.cycles[${index}]`));
+  const cycles = value.cycles.map((cycle, index) => validateCycle(cycle, `Scan.cycles[${index}]`, schemaVersion));
   for (const [cycleIndex, cycle] of cycles.entries()) {
     for (const [legIndex, leg] of cycle.legs.entries()) {
       if (isoTime(leg.startedAt, `Scan.cycles[${cycleIndex}].legs[${legIndex}].startedAt`) > assessedAt
@@ -308,7 +335,7 @@ export function validateScan(value: unknown): Scan {
   const expectedCandidates = cycles.map(cycle => assess(cycle, new Date(assessedAt)));
   if (candidates.some((candidate, index) => !candidateEqual(candidate, expectedCandidates[index]!))) throw new Error('Scan candidate does not match its cycle');
   return {
-    schemaVersion: 1,
+    schemaVersion,
     id: value.id,
     mode: value.mode,
     assessedAt: new Date(assessedAt).toISOString(),
@@ -360,32 +387,63 @@ async function realDirectory(directory: string, name: string): Promise<string> {
   return absoluteRoot;
 }
 
-async function existingFile(root: string, relativePath: string, name: string): Promise<string> {
+function filesystemCode(error: unknown): string | undefined {
+  if (!isRecord(error) || typeof error.code !== 'string') return undefined;
+  return error.code;
+}
+
+function fileOpenError(error: unknown, name: string): Error {
+  const code = filesystemCode(error);
+  if (code === 'ENOENT') return new Error(`${name} does not exist`);
+  if (code === 'ELOOP') return new Error(`${name} cannot use symlinks`);
+  if (code === 'ENOTDIR') return new Error(`${name} must be a regular file`);
+  return new Error(`${name} cannot be opened`);
+}
+
+// Node's fs.open has no dirfd/openat API on Darwin. Validate every component,
+// then atomically open the final inode with O_NOFOLLOW and fstat that descriptor.
+async function existingFile(root: string, relativePath: string, name: string): Promise<FileHandle> {
   const safePath = safeRelativePath(relativePath, name);
   const absoluteRoot = await realDirectory(root, 'Bundle root');
-  let current = absoluteRoot;
   const components = safePath.split('/');
-  for (const [index, component] of components.entries()) {
+  const filename = components.pop();
+  if (filename === undefined) throw new Error(`${name} must be a regular file`);
+  let current = absoluteRoot;
+  for (const component of components) {
     current = join(current, component);
     const stat = await lstat(current).catch(() => undefined);
     if (!stat) throw new Error(`${name} does not exist`);
     if (stat.isSymbolicLink()) throw new Error(`${name} cannot use symlinks`);
-    if (index < components.length - 1 && !stat.isDirectory()) throw new Error(`${name} has a non-directory parent`);
+    if (!stat.isDirectory()) throw new Error(`${name} has a non-directory parent`);
   }
-  const pathFromRoot = relative(absoluteRoot, current);
-  if (pathFromRoot.startsWith('..') || !pathFromRoot || !(await lstat(current)).isFile()) throw new Error(`${name} must be a regular file`);
-  return current;
+  const filePath = join(current, filename);
+  const preStat = await lstat(filePath).catch(() => undefined);
+  if (!preStat) throw new Error(`${name} does not exist`);
+  if (preStat.isSymbolicLink()) throw new Error(`${name} cannot use symlinks`);
+  if (!preStat.isFile()) throw new Error(`${name} must be a regular file`);
+  let file: FileHandle;
+  try {
+    file = await open(filePath, FILE_FLAGS);
+  } catch (error) {
+    throw fileOpenError(error, name);
+  }
+  try {
+    if (!(await file.stat()).isFile()) throw new Error(`${name} must be a regular file`);
+    return file;
+  } catch (error) {
+    await file.close().catch(() => undefined);
+    throw error;
+  }
 }
 
-async function readBounded(filePath: string, limit: number, name: string): Promise<Buffer> {
-  const handle = await open(filePath, 'r');
+async function readBounded(file: FileHandle, limit: number, name: string): Promise<Buffer> {
   try {
     const chunks: Buffer[] = [];
     let total = 0;
     while (total <= limit) {
       const size = Math.min(64 * 1024, limit + 1 - total);
       const buffer = Buffer.alloc(size);
-      const {bytesRead} = await handle.read(buffer, 0, size, null);
+      const {bytesRead} = await file.read(buffer, 0, size, null);
       if (bytesRead === 0) break;
       chunks.push(buffer.subarray(0, bytesRead));
       total += bytesRead;
@@ -393,7 +451,7 @@ async function readBounded(filePath: string, limit: number, name: string): Promi
     }
     return Buffer.concat(chunks, total);
   } finally {
-    await handle.close();
+    await file.close();
   }
 }
 
@@ -582,14 +640,15 @@ export async function createAgentRun(
 ): Promise<AgentRunRecord> {
   if (origin !== 'fixture' && origin !== 'codex') throw new Error('Agent origin is invalid');
   signal?.throwIfAborted();
-  const transportResult = origin === 'fixture'
-    ? fixtureAgent(bundle.request)
-    : transport
-      ? await transport(bundle.request, signal)
+  const transportResult = transport
+    ? await transport(bundle.request, signal)
+    : origin === 'fixture'
+      ? fixtureAgent(bundle.request)
       : (() => { throw new Error('Codex transport is not enabled'); })();
   signal?.throwIfAborted();
   const rawResponse = isTransportResult(transportResult) ? transportResult.response : transportResult;
   const execution = isTransportResult(transportResult) ? validateExecution(transportResult.execution) : undefined;
+  if (origin === 'fixture' && execution !== undefined) throw new Error('Fixture transport must not report execution metadata');
   if (origin === 'codex' && execution === undefined) throw new Error('Codex transport must report execution metadata');
   const response = validateAgentThesis(rawResponse, bundle.request, origin, nowTime(now).iso);
   return {

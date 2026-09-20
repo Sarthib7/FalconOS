@@ -74,6 +74,69 @@ test('P1-T07: altered bytes fail the expected evidence hash before parsing', asy
   );
 });
 
+test('P1-T07: legacy schema 1 and failure-bearing schema 2 scans validate', async t => {
+  const directory = await makeBundleDirectory(t);
+  const scan = JSON.parse(fixtureBytes.toString('utf8')) as Scan;
+  scan.schemaVersion = 2;
+  const failedCycle = scan.cycles[0]!;
+  const failedLeg = failedCycle.legs[0]!;
+  failedLeg.quote = null;
+  failedLeg.error = 'synthetic source unavailable';
+  failedLeg.failure = {kind: 'http_client', retryable: false, retryAfterMs: null};
+  scan.candidates[0] = {
+    ...scan.candidates[0]!,
+    status: 'UNAVAILABLE',
+    reasons: ['SOURCE_UNAVAILABLE'],
+    inputUsdc: null,
+    gasEstimatesUsd: [
+      {chain: 'solana', gas: null, l1Fee: null},
+      {chain: 'base', gas: '0.004234', l1Fee: null},
+    ],
+    intermediateEurc: null,
+    outputUsdc: null,
+    quotedDeltaUsdc: null,
+  };
+  for (const cycle of scan.cycles) {
+    for (const leg of cycle.legs) {
+      if (leg.failure === undefined) leg.failure = null;
+    }
+  }
+  const bytes = Buffer.from(JSON.stringify(scan));
+  await writeFile(evidencePath(directory), bytes);
+  const bundle = await buildAgentRequest(options(directory, {
+    expectedEvidenceSha256: createHash('sha256').update(bytes).digest('hex'),
+  }));
+  assert.equal(bundle.request.evidence[0]!.scan.schemaVersion, 2);
+  assert.deepEqual(bundle.request.evidence[0]!.scan.cycles[0]!.legs[0]!.failure, {
+    kind: 'http_client', retryable: false, retryAfterMs: null,
+  });
+
+  const invalidFailure = structuredClone(scan) as unknown as Record<string, unknown>;
+  const invalidCycles = invalidFailure.cycles as Array<{legs: Array<Record<string, unknown>>}>;
+  const invalidRecord = invalidCycles[0]!.legs[0]!.failure as Record<string, unknown>;
+  invalidRecord.kind = '__proto__';
+  const invalidBytes = Buffer.from(JSON.stringify(invalidFailure));
+  await writeFile(evidencePath(directory), invalidBytes);
+  await assert.rejects(
+    buildAgentRequest(options(directory, {
+      expectedEvidenceSha256: createHash('sha256').update(invalidBytes).digest('hex'),
+    })),
+    /failure\.kind is invalid/,
+  );
+
+  const missingFailure = structuredClone(scan) as unknown as Record<string, unknown>;
+  const cycles = missingFailure.cycles as Array<{legs: Array<Record<string, unknown>>}>;
+  delete cycles[0]!.legs[0]!.failure;
+  const missingBytes = Buffer.from(JSON.stringify(missingFailure));
+  await writeFile(evidencePath(directory), missingBytes);
+  await assert.rejects(
+    buildAgentRequest(options(directory, {
+      expectedEvidenceSha256: createHash('sha256').update(missingBytes).digest('hex'),
+    })),
+    /has unexpected fields/,
+  );
+});
+
 test('P1-T07: candidate and path tampering cannot enter a bundle', async t => {
   const directory = await makeBundleDirectory(t);
   await assert.rejects(buildAgentRequest(options(directory, {evidencePath: '../agent-evidence.json'})), /relative path|cannot contain/);
