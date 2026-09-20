@@ -77,9 +77,9 @@ pub fn evaluate_council(
     snapshot: &CanonicalSnapshot,
     references: &BTreeMap<String, Option<PythUnderlyingRef>>,
 ) -> Verdict {
-    if !snapshot.verify_hash() {
+    if !snapshot.revalidate(config.coherence_cap_ms) {
         return Verdict::NoData {
-            reasons: vec!["snapshot hash verification failed".into()],
+            reasons: vec!["snapshot readiness mismatch: hash, status, or conflicts do not re-derive from captures".into()],
         };
     }
     if snapshot.status != SnapshotStatus::Ready {
@@ -436,5 +436,75 @@ mod tests {
         let snap = build_snapshot(&cfg, &captures(Some("150000000"), Some("500000000")), "2026-09-20T12:00:01Z");
         let verdict = evaluate_council(&cfg, &snap, &refs);
         assert!(matches!(verdict, Verdict::Blocked { .. }));
+    }
+}
+
+#[cfg(test)]
+mod ingress_tests {
+    use super::*;
+    use crate::domain::{FieldCapture, SnapshotStatus};
+
+    fn cfg() -> CouncilConfig {
+        CouncilConfig {
+            assets: vec![AssetConfig {
+                asset_id: "mintA".into(),
+                underlying: "AAPLx".into(),
+                target_weight_bps: 10_000,
+                max_weight_bps: 10_000,
+                min_liquidity: "10".into(),
+                price_scale: 6,
+                quantity_scale: 2,
+            }],
+            max_dislocation_bps: 500,
+            coherence_cap_ms: 120_000,
+        }
+    }
+
+    fn fresh_captures(at: &str) -> BTreeMap<String, AssetCaptures> {
+        BTreeMap::from([(
+            "mintA".into(),
+            AssetCaptures {
+                price: FieldCapture::ok("fixture", "1", at, "raw", "150000000"),
+                liquidity: FieldCapture::ok("fixture", "1", at, "raw", "500000000"),
+            },
+        )])
+    }
+
+    #[test]
+    fn day_old_captures_cannot_publish() {
+        let cfg = cfg();
+        let refs = BTreeMap::new();
+        let snapshot = build_snapshot(
+            &cfg,
+            &fresh_captures("2026-09-19T12:00:00Z"),
+            "2026-09-20T12:00:00Z",
+        );
+        assert_eq!(snapshot.status, SnapshotStatus::NoData);
+        let verdict = evaluate_council(&cfg, &snapshot, &refs);
+        assert!(matches!(verdict, Verdict::NoData { .. }));
+        assert!(verdict
+            .reasons()
+            .iter()
+            .any(|reason| reason.contains("capture.time-stale")));
+    }
+
+    #[test]
+    fn forged_ready_status_is_rejected_at_ingress() {
+        let cfg = cfg();
+        let refs = BTreeMap::new();
+        let honest = build_snapshot(
+            &cfg,
+            &fresh_captures("2026-09-19T12:00:00Z"),
+            "2026-09-20T12:00:00Z",
+        );
+        let mut forged = honest.clone();
+        forged.status = SnapshotStatus::Ready;
+        forged.conflicts.clear();
+        // Attacker recomputes a self-consistent hash over the forged payload.
+        forged.sha256 = crate::domain::sha256_hex(forged.canonical_json().as_bytes());
+        assert!(forged.verify_hash(), "forgery is hash self-consistent");
+        let verdict = evaluate_council(&cfg, &forged, &refs);
+        assert!(matches!(verdict, Verdict::NoData { .. }));
+        assert!(verdict.reasons()[0].contains("readiness mismatch"));
     }
 }

@@ -112,8 +112,9 @@ pub fn parse_iso_ms(value: &str) -> Option<i64> {
 impl CanonicalSnapshot {
     /// Freeze one snapshot. Fail closed (V61/I10 parity with the TS basket
     /// contract): every capture needs a parseable UTC timestamp that is not
-    /// after local receipt (`created_at`), and the spread of capture times
-    /// must stay within `coherence_cap_ms` (TS `basket.coherence-cap`).
+    /// after local receipt (`created_at`) and not older than the cap; the
+    /// spread of capture times must also stay within `coherence_cap_ms`
+    /// (TS `basket.coherence-cap`).
     pub fn new(
         captures: BTreeMap<String, FieldCapture>,
         created_at: impl Into<String>,
@@ -130,10 +131,12 @@ impl CanonicalSnapshot {
             match parse_iso_ms(&capture.observed_at) {
                 None => conflicts.push(format!("capture.time-invalid:{key}")),
                 Some(ms) => {
-                    if let Some(created) = created_ms
-                        && ms > created
-                    {
-                        conflicts.push(format!("capture.time-future:{key}"));
+                    if let Some(created) = created_ms {
+                        if ms > created {
+                            conflicts.push(format!("capture.time-future:{key}"));
+                        } else if (created - ms) as u128 > u128::from(coherence_cap_ms) {
+                            conflicts.push(format!("capture.time-stale:{key}"));
+                        }
                     }
                     observed.push(ms);
                 }
@@ -168,6 +171,21 @@ impl CanonicalSnapshot {
             sha256,
             status,
         }
+    }
+
+    /// Re-derive readiness from the raw captures. A snapshot whose stored
+    /// status, conflicts, or hash disagree with the recomputation is treated
+    /// as forged/tampered. Council ingress must call this instead of
+    /// trusting caller-controlled fields.
+    pub fn revalidate(&self, coherence_cap_ms: u64) -> bool {
+        let rebuilt = Self::new(
+            self.captures.clone(),
+            self.created_at.clone(),
+            coherence_cap_ms,
+        );
+        rebuilt.status == self.status
+            && rebuilt.conflicts == self.conflicts
+            && rebuilt.sha256 == self.sha256
     }
 
     pub fn canonical_json(&self) -> String {
