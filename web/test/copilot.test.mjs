@@ -22,3 +22,11 @@ test('every inline script compiles', () => {
   assert.ok(scripts.length > 0);
   for (const script of scripts) assert.doesNotThrow(() => new Function(script));
 });
+
+test('sign path deserializes before wallet handoff and copilot stays out of the production build', async () => {
+  assert.match(html, /VersionedTransaction\.deserialize/);
+  assert.doesNotMatch(html, /signAndSendTransaction\(unsignedTransaction\)/);
+  assert.match(html, /Rebuild for the connected account/);
+  const vite = await readFile(new URL('../vite.config.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(vite, /copilot: entry/);
+});

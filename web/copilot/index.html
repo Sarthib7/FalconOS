@@ -130,6 +130,10 @@
       var walletConnected = false;
       var latestQuote = null;
       var unsignedTransaction = null;
+      var builtFor = null;
+      var quoteGeneration = 0;
+      var buildGeneration = 0;
+      var WEB3_URL = 'https://esm.sh/@solana/web3.js@1.95.8';
       var currentAdvice = 'NO_DATA';
       var provider = window.solana || null;
       var byId = function (id) { return document.getElementById(id); };
@@ -180,6 +184,26 @@
         button.disabled = !provider;
         byId('sign-button').disabled = !walletConnected || !unsignedTransaction;
       };
+      // Any account change invalidates the built transaction: the serialized
+      // message embeds the payer, so a different signer must rebuild.
+      var clearBuiltTransaction = function () {
+        buildGeneration += 1;
+        unsignedTransaction = null;
+        builtFor = null;
+        byId('sign-button').disabled = true;
+        byId('build-button').disabled = !latestQuote;
+      };
+      // Any amount/asset edit invalidates quote and transaction together so
+      // the ticket can never display a different trade from the one built.
+      var invalidateTicket = function () {
+        quoteGeneration += 1;
+        latestQuote = null;
+        text('out-amount', '—');
+        text('price-impact', '—');
+        setError('');
+        clearBuiltTransaction();
+        byId('build-button').disabled = true;
+      };
       var connectWallet = function () {
         if (!provider) return;
         if (walletConnected) { if (provider.disconnect) provider.disconnect(); setWallet(null); return; }
@@ -192,35 +216,57 @@
         return QUOTE_API + '?' + params.toString();
       };
       var getQuote = function () {
-        setError(''); unsignedTransaction = null; byId('build-button').disabled = true; byId('sign-button').disabled = true;
+        invalidateTicket();
+        var generation = quoteGeneration;
         var url; try { url = quoteUrl(); } catch (error) { setError(error.message); return; }
         byId('quote-button').disabled = true;
         fetch(url).then(function (response) { if (!response.ok) throw new Error('Quote unavailable (HTTP ' + response.status + ').'); return response.json(); }).then(function (quote) {
+          if (generation !== quoteGeneration) return; // stale response: inputs changed mid-flight
           latestQuote = quote;
           text('out-amount', escapeDisplay(quote.outAmount));
           text('price-impact', quote.priceImpactPct === undefined ? '—' : String(quote.priceImpactPct) + '%');
           byId('build-button').disabled = false;
-        }).catch(function (error) { latestQuote = null; text('out-amount', '—'); text('price-impact', '—'); setError(error.message || 'Quote unavailable.'); }).finally(function () { byId('quote-button').disabled = false; });
+        }).catch(function (error) { if (generation !== quoteGeneration) return; latestQuote = null; text('out-amount', '—'); text('price-impact', '—'); setError(error.message || 'Quote unavailable.'); }).finally(function () { byId('quote-button').disabled = false; });
       };
       var buildTransaction = function () {
         if (!latestQuote) { setError('Get a quote before building.'); return; }
         setError(''); byId('build-button').disabled = true;
-        fetch(SWAP_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteResponse: latestQuote, userPublicKey: walletKey(), wrapAndUnwrapSol: true }) }).then(function (response) { if (!response.ok) throw new Error('Transaction build unavailable (HTTP ' + response.status + ').'); return response.json(); }).then(function (swap) {
+        var generation = ++buildGeneration;
+        var forKey = walletKey();
+        fetch(SWAP_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteResponse: latestQuote, userPublicKey: forKey, wrapAndUnwrapSol: true }) }).then(function (response) { if (!response.ok) throw new Error('Transaction build unavailable (HTTP ' + response.status + ').'); return response.json(); }).then(function (swap) {
+          if (generation !== buildGeneration) return; // stale response: account or inputs changed mid-flight
           if (typeof swap.swapTransaction !== 'string' || !swap.swapTransaction) throw new Error('Jupiter returned no serialized transaction.');
           unsignedTransaction = swap.swapTransaction;
+          builtFor = forKey;
           text('trade-error', 'Unsigned transaction ready for review.');
-          byId('sign-button').disabled = !walletConnected;
-        }).catch(function (error) { unsignedTransaction = null; setError(error.message || 'Transaction build unavailable.'); }).finally(function () { byId('build-button').disabled = !latestQuote; });
+          byId('sign-button').disabled = !walletConnected || builtFor !== walletKey();
+        }).catch(function (error) { if (generation !== buildGeneration) return; unsignedTransaction = null; builtFor = null; setError(error.message || 'Transaction build unavailable.'); }).finally(function () { byId('build-button').disabled = !latestQuote; });
+      };
+      var base64ToBytes = function (value) {
+        var binary = window.atob(value);
+        var bytes = new Uint8Array(binary.length);
+        for (var index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+        return bytes;
       };
       var signAndSend = function () {
         if (!walletConnected || !unsignedTransaction || !provider || !provider.signAndSendTransaction) return;
-        provider.signAndSendTransaction(unsignedTransaction).then(function (result) { text('trade-error', 'Transaction submitted: ' + (result && result.signature ? shortKey(result.signature) : 'wallet response received')); }).catch(function (error) { setError(error && error.message ? error.message : 'Wallet declined or failed to submit.'); });
+        if (builtFor !== walletKey()) { setError('Account changed since this transaction was built. Rebuild for the connected account.'); clearBuiltTransaction(); return; }
+        var payload = unsignedTransaction;
+        byId('sign-button').disabled = true;
+        // Phantom requires a Transaction object, not base64 text: deserialize
+        // Jupiter's bytes as a VersionedTransaction before requesting a signature.
+        import(WEB3_URL).then(function (web3) {
+          var transaction = web3.VersionedTransaction.deserialize(base64ToBytes(payload));
+          return provider.signAndSendTransaction(transaction);
+        }).then(function (result) { text('trade-error', 'Transaction submitted: ' + (result && result.signature ? shortKey(result.signature) : 'wallet response received')); }).catch(function (error) { setError(error && error.message ? error.message : 'Wallet declined or failed to submit.'); }).finally(function () { byId('sign-button').disabled = !walletConnected || !unsignedTransaction || builtFor !== walletKey(); });
       };
       byId('wallet-connect-control').addEventListener('click', connectWallet);
       byId('quote-button').addEventListener('click', getQuote);
       byId('build-button').addEventListener('click', buildTransaction);
       byId('sign-button').addEventListener('click', signAndSend);
-      if (provider) { provider.on && provider.on('connect', function () { setWallet(provider); }); provider.on && provider.on('disconnect', function () { setWallet(null); }); provider.on && provider.on('accountChanged', function (key) { setWallet(key ? { publicKey: key } : null); }); }
+      byId('asset-select').addEventListener('change', invalidateTicket);
+      byId('usdc-amount').addEventListener('input', invalidateTicket);
+      if (provider) { provider.on && provider.on('connect', function () { setWallet(provider); clearBuiltTransaction(); }); provider.on && provider.on('disconnect', function () { setWallet(null); clearBuiltTransaction(); }); provider.on && provider.on('accountChanged', function (key) { setWallet(key ? { publicKey: key } : null); clearBuiltTransaction(); }); }
       setWallet(null);
       pollAdvice();
       window.setInterval(pollAdvice, 2000);
