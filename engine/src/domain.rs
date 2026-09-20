@@ -62,31 +62,121 @@ pub enum SnapshotStatus {
 pub struct CanonicalSnapshot {
     pub captures: BTreeMap<String, FieldCapture>,
     pub created_at: String,
+    pub conflicts: Vec<String>,
     pub sha256: String,
     pub status: SnapshotStatus,
 }
 
+/// Parse a UTC ISO-8601 timestamp (`YYYY-MM-DDTHH:MM:SS[.mmm]Z`) to epoch
+/// milliseconds. Mirrors the TS `Date.parse` + `isoTime` validation: any
+/// unparseable timestamp is a typed failure, never a guessed time.
+pub fn parse_iso_ms(value: &str) -> Option<i64> {
+    let rest = value.strip_suffix('Z')?;
+    let (date, time) = rest.split_at(rest.find('T')?);
+    let time = &time[1..];
+    let mut date_parts = date.split('-');
+    let year: i64 = date_parts.next()?.parse().ok()?;
+    let month: i64 = date_parts.next()?.parse().ok()?;
+    let day: i64 = date_parts.next()?.parse().ok()?;
+    if date_parts.next().is_some() || !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+    let (hms, millis) = match time.split_once('.') {
+        Some((hms, frac)) => {
+            if frac.is_empty() || frac.len() > 3 || frac.bytes().any(|b| !b.is_ascii_digit()) {
+                return None;
+            }
+            let scale = 10_i64.pow(3 - frac.len() as u32);
+            (hms, frac.parse::<i64>().ok()? * scale)
+        }
+        None => (time, 0),
+    };
+    let mut time_parts = hms.split(':');
+    let hour: i64 = time_parts.next()?.parse().ok()?;
+    let minute: i64 = time_parts.next()?.parse().ok()?;
+    let second: i64 = time_parts.next()?.parse().ok()?;
+    if time_parts.next().is_some() || hour > 23 || minute > 59 || second > 59 {
+        return None;
+    }
+    // Days since Unix epoch via civil-date algorithm (Howard Hinnant).
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = if y >= 0 { y } else { y - 399 } / 400;
+    let yoe = y - era * 400;
+    let mp = (month + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    Some(((days * 24 + hour) * 60 + minute) * 60_000 + second * 1_000 + millis)
+}
+
 impl CanonicalSnapshot {
-    pub fn new(captures: BTreeMap<String, FieldCapture>, created_at: impl Into<String>) -> Self {
+    /// Freeze one snapshot. Fail closed (V61/I10 parity with the TS basket
+    /// contract): every capture needs a parseable UTC timestamp that is not
+    /// after local receipt (`created_at`), and the spread of capture times
+    /// must stay within `coherence_cap_ms` (TS `basket.coherence-cap`).
+    pub fn new(
+        captures: BTreeMap<String, FieldCapture>,
+        created_at: impl Into<String>,
+        coherence_cap_ms: u64,
+    ) -> Self {
         let created_at = created_at.into();
-        let status = if !captures.is_empty() && captures.values().all(FieldCapture::is_ok) {
+        let mut conflicts = Vec::new();
+        let created_ms = parse_iso_ms(&created_at);
+        if created_ms.is_none() {
+            conflicts.push("snapshot.created-at-invalid".to_string());
+        }
+        let mut observed: Vec<i64> = Vec::with_capacity(captures.len());
+        for (key, capture) in &captures {
+            match parse_iso_ms(&capture.observed_at) {
+                None => conflicts.push(format!("capture.time-invalid:{key}")),
+                Some(ms) => {
+                    if let Some(created) = created_ms
+                        && ms > created
+                    {
+                        conflicts.push(format!("capture.time-future:{key}"));
+                    }
+                    observed.push(ms);
+                }
+            }
+        }
+        if let (Some(min), Some(max)) = (observed.iter().min(), observed.iter().max())
+            && (max - min) as u128 > u128::from(coherence_cap_ms)
+        {
+            conflicts.push("basket.coherence-cap".to_string());
+        }
+        conflicts.sort();
+        conflicts.dedup();
+        let status = if !captures.is_empty()
+            && captures.values().all(FieldCapture::is_ok)
+            && conflicts.is_empty()
+        {
             SnapshotStatus::Ready
         } else {
             SnapshotStatus::NoData
         };
-        let payload =
-            serde_json::json!({ "captures": captures, "created_at": created_at, "status": status });
+        let payload = serde_json::json!({
+            "captures": captures,
+            "conflicts": conflicts,
+            "created_at": created_at,
+            "status": status,
+        });
         let sha256 = sha256_hex(stable_json(&payload).as_bytes());
         Self {
             captures,
             created_at,
+            conflicts,
             sha256,
             status,
         }
     }
 
     pub fn canonical_json(&self) -> String {
-        let payload = serde_json::json!({ "captures": self.captures, "created_at": self.created_at, "status": self.status });
+        let payload = serde_json::json!({
+            "captures": self.captures,
+            "conflicts": self.conflicts,
+            "created_at": self.created_at,
+            "status": self.status,
+        });
         stable_json(&payload)
     }
 
@@ -207,10 +297,62 @@ mod tests {
     fn snapshot_fails_closed_when_a_capture_is_missing() {
         let captures = BTreeMap::from([(
             "price".to_string(),
-            FieldCapture::failed("x", "1", "t", "outage"),
+            FieldCapture::failed("x", "1", "2026-09-20T12:00:00Z", "outage"),
         )]);
-        let snapshot = CanonicalSnapshot::new(captures, "t");
+        let snapshot = CanonicalSnapshot::new(captures, "2026-09-20T12:00:01Z", 120_000);
         assert_eq!(snapshot.status, SnapshotStatus::NoData);
         assert!(snapshot.verify_hash());
+    }
+
+    #[test]
+    fn iso_parser_accepts_utc_and_rejects_garbage() {
+        assert_eq!(parse_iso_ms("1970-01-01T00:00:00Z"), Some(0));
+        assert_eq!(parse_iso_ms("1970-01-01T00:00:01.500Z"), Some(1_500));
+        assert_eq!(
+            parse_iso_ms("2026-09-20T17:27:16Z"),
+            Some(1_789_925_236_000)
+        );
+        for bad in ["t", "", "2026-09-20", "2026-09-20T17:27:16", "2026-13-01T00:00:00Z", "2026-09-20T24:00:00Z", "2026-09-20T17:27:16.1234Z"] {
+            assert_eq!(parse_iso_ms(bad), None, "{bad} must be rejected");
+        }
+    }
+
+    #[test]
+    fn coherence_cap_and_timestamp_validity_fail_closed() {
+        let ok = |at: &str| FieldCapture::ok("src", "1", at, "raw", "1");
+        let base = BTreeMap::from([
+            ("a".to_string(), ok("2026-09-20T12:00:00Z")),
+            ("b".to_string(), ok("2026-09-20T12:02:00.001Z")),
+        ]);
+        let spread = CanonicalSnapshot::new(base, "2026-09-20T12:02:01Z", 120_000);
+        assert_eq!(spread.status, SnapshotStatus::NoData);
+        assert!(spread.conflicts.contains(&"basket.coherence-cap".to_string()));
+
+        let future = CanonicalSnapshot::new(
+            BTreeMap::from([("a".to_string(), ok("2026-09-20T12:00:05Z"))]),
+            "2026-09-20T12:00:00Z",
+            120_000,
+        );
+        assert_eq!(future.status, SnapshotStatus::NoData);
+        assert!(future.conflicts.contains(&"capture.time-future:a".to_string()));
+
+        let invalid = CanonicalSnapshot::new(
+            BTreeMap::from([("a".to_string(), ok("t"))]),
+            "2026-09-20T12:00:00Z",
+            120_000,
+        );
+        assert_eq!(invalid.status, SnapshotStatus::NoData);
+        assert!(invalid.conflicts.contains(&"capture.time-invalid:a".to_string()));
+
+        let ready = CanonicalSnapshot::new(
+            BTreeMap::from([
+                ("a".to_string(), ok("2026-09-20T12:00:00Z")),
+                ("b".to_string(), ok("2026-09-20T12:01:59Z")),
+            ]),
+            "2026-09-20T12:02:00Z",
+            120_000,
+        );
+        assert_eq!(ready.status, SnapshotStatus::Ready);
+        assert!(ready.verify_hash());
     }
 }

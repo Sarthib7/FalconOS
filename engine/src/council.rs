@@ -67,7 +67,7 @@ pub fn build_snapshot(
             );
         }
     }
-    CanonicalSnapshot::new(fields, created_at)
+    CanonicalSnapshot::new(fields, created_at, config.coherence_cap_ms)
 }
 
 /// Deterministic council: a lead proposal is assembled only for a READY
@@ -229,6 +229,7 @@ fn missing_reasons(snapshot: &CanonicalSnapshot) -> Vec<String> {
         .filter(|(_, capture)| !capture.is_ok())
         .map(|(key, capture)| format!("{key}: {}", capture.raw_excerpt))
         .collect::<Vec<_>>();
+    reasons.extend(snapshot.conflicts.iter().cloned());
     if reasons.is_empty() {
         reasons.push("snapshot is not READY".into());
     }
@@ -383,16 +384,17 @@ mod tests {
         }
     }
     fn captures(price: Option<&str>, liquidity: Option<&str>) -> BTreeMap<String, AssetCaptures> {
+        let at = "2026-09-20T12:00:00Z";
         BTreeMap::from([(
             "mintA".into(),
             AssetCaptures {
                 price: price.map_or_else(
-                    || FieldCapture::failed("fixture", "1", "t", "outage"),
-                    |x| FieldCapture::ok("fixture", "1", "t", "raw", x),
+                    || FieldCapture::failed("fixture", "1", at, "outage"),
+                    |x| FieldCapture::ok("fixture", "1", at, "raw", x),
                 ),
                 liquidity: liquidity.map_or_else(
-                    || FieldCapture::failed("fixture", "1", "t", "outage"),
-                    |x| FieldCapture::ok("fixture", "1", "t", "raw", x),
+                    || FieldCapture::failed("fixture", "1", at, "outage"),
+                    |x| FieldCapture::ok("fixture", "1", at, "raw", x),
                 ),
             },
         )])
@@ -402,17 +404,17 @@ mod tests {
     fn published_blocked_nodata_transitions() {
         let cfg = config();
         let refs = BTreeMap::new();
-        let ready = build_snapshot(&cfg, &captures(Some("150000000"), Some("500000000")), "t");
+        let ready = build_snapshot(&cfg, &captures(Some("150000000"), Some("500000000")), "2026-09-20T12:00:01Z");
         assert!(matches!(
             evaluate_council(&cfg, &ready, &refs),
             Verdict::Published(_)
         ));
-        let blocked = build_snapshot(&cfg, &captures(Some("150000000"), Some("5")), "t");
+        let blocked = build_snapshot(&cfg, &captures(Some("150000000"), Some("5")), "2026-09-20T12:00:01Z");
         assert!(matches!(
             evaluate_council(&cfg, &blocked, &refs),
             Verdict::Blocked { .. }
         ));
-        let no_data = build_snapshot(&cfg, &captures(None, Some("500000000")), "t");
+        let no_data = build_snapshot(&cfg, &captures(None, Some("500000000")), "2026-09-20T12:00:01Z");
         assert!(matches!(
             evaluate_council(&cfg, &no_data, &refs),
             Verdict::NoData { .. }
@@ -428,10 +430,10 @@ mod tests {
             Some(PythUnderlyingRef {
                 feed_id: "x".into(),
                 spot: "100".into(),
-                publish_time: "t".into(),
+                publish_time: "2026-09-20T12:00:00Z".into(),
             }),
         );
-        let snap = build_snapshot(&cfg, &captures(Some("150000000"), Some("500000000")), "t");
+        let snap = build_snapshot(&cfg, &captures(Some("150000000"), Some("500000000")), "2026-09-20T12:00:01Z");
         let verdict = evaluate_council(&cfg, &snap, &refs);
         assert!(matches!(verdict, Verdict::Blocked { .. }));
     }

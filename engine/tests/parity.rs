@@ -86,12 +86,12 @@ fn captures(price: Option<&str>, liquidity: Option<&str>) -> BTreeMap<String, As
         "mint".into(),
         AssetCaptures {
             price: price.map_or_else(
-                || FieldCapture::failed("fixture", "1", "t", "outage"),
-                |v| FieldCapture::ok("fixture", "1", "t", "raw", v),
+                || FieldCapture::failed("fixture", "1", "2026-09-20T12:00:00Z", "outage"),
+                |v| FieldCapture::ok("fixture", "1", "2026-09-20T12:00:00Z", "raw", v),
             ),
             liquidity: liquidity.map_or_else(
-                || FieldCapture::failed("fixture", "1", "t", "outage"),
-                |v| FieldCapture::ok("fixture", "1", "t", "raw", v),
+                || FieldCapture::failed("fixture", "1", "2026-09-20T12:00:00Z", "outage"),
+                |v| FieldCapture::ok("fixture", "1", "2026-09-20T12:00:00Z", "raw", v),
             ),
         },
     )])
@@ -103,19 +103,19 @@ fn council_status_transitions_remain_fail_closed() {
     let refs = BTreeMap::new();
     let published = evaluate_council(
         &cfg,
-        &build_snapshot(&cfg, &captures(Some("100000000"), Some("500000000")), "t"),
+        &build_snapshot(&cfg, &captures(Some("100000000"), Some("500000000")), "2026-09-20T12:00:01Z"),
         &refs,
     );
     assert!(matches!(published, Verdict::Published(_)));
     let blocked = evaluate_council(
         &cfg,
-        &build_snapshot(&cfg, &captures(Some("100000000"), Some("1")), "t"),
+        &build_snapshot(&cfg, &captures(Some("100000000"), Some("1")), "2026-09-20T12:00:01Z"),
         &refs,
     );
     assert!(matches!(blocked, Verdict::Blocked { .. }));
     let no_data = evaluate_council(
         &cfg,
-        &build_snapshot(&cfg, &captures(None, Some("500000000")), "t"),
+        &build_snapshot(&cfg, &captures(None, Some("500000000")), "2026-09-20T12:00:01Z"),
         &refs,
     );
     assert!(matches!(no_data, Verdict::NoData { .. }));
@@ -130,11 +130,11 @@ fn perps_missing_registry_is_no_data() {
 fn snapshot_ready_only_when_every_capture_has_value() {
     let cfg = config();
     assert_eq!(
-        build_snapshot(&cfg, &captures(Some("100"), Some("100000")), "t").status,
+        build_snapshot(&cfg, &captures(Some("100"), Some("100000")), "2026-09-20T12:00:01Z").status,
         SnapshotStatus::Ready
     );
     assert_eq!(
-        build_snapshot(&cfg, &captures(Some("100"), None), "t").status,
+        build_snapshot(&cfg, &captures(Some("100"), None), "2026-09-20T12:00:01Z").status,
         SnapshotStatus::NoData
     );
 }
