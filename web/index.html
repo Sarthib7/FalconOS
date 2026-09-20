@@ -2074,30 +2074,13 @@ Original Alpine Vector symbol from the selected FalconOS brand board.
   'use strict';
   const root = document.getElementById('market-snap');
   if (!root || !window.fetch) return;
-  const fin = v => typeof v === 'number' && Number.isFinite(v);
   const N = v => Number(v.toFixed(3));
   const labels = { 'usd-coin': 'USDC', solana: 'SOL', 'jupiter-exchange-solana': 'JUP' };
   let snap = null, sel = 'usd-coin';
   function fmtPrice(v) { return v >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : v < 10 ? v.toFixed(4) : v.toFixed(2); }
-  function money(v) { if (v >= 1e9) return '
- + (v / 1e9).toFixed(2) + 'B'; if (v >= 1e6) return '
- + (v / 1e6).toFixed(1) + 'M'; if (v >= 1e3) return '
- + (v / 1e3).toFixed(1) + 'K'; return '
- + v.toFixed(0); }
+  function money(v) { if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B'; if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M'; if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K'; return '$' + v.toFixed(0); }
   function pct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
   function ago(sec) { const d = Date.now() / 1000 - sec; if (d < 0) return 'just now'; if (d < 90) return Math.round(d) + 's ago'; if (d < 5400) return Math.round(d / 60) + 'm ago'; if (d < 172800) return Math.round(d / 3600) + 'h ago'; return Math.round(d / 86400) + 'd ago'; }
-  function normOhlc(raw) {
-    if (!Array.isArray(raw) || raw.length < 2) return null;
-    let prevT = -Infinity; const out = [];
-    for (const row of raw) {
-      if (!Array.isArray(row) || row.length !== 5) return null;
-      const [t, o, h, l, c] = row;
-      if (!fin(t) || !fin(o) || !fin(h) || !fin(l) || !fin(c) || t <= 0 || t <= prevT || o <= 0 || h <= 0 || l <= 0 || c <= 0) return null;
-      if (!(h >= l && h >= o && h >= c && l <= o && l <= c)) return null;
-      prevT = t; out.push({ o, h, l, c });
-    }
-    return out;
-  }
   function svgCandles(cs, w, h) {
     const pad = 4, hi = Math.max(...cs.map(c => c.h)), lo = Math.min(...cs.map(c => c.l));
     const y = v => N(pad + (h - 2 * pad) * (1 - (v - lo) / ((hi - lo) || 1)));
@@ -2114,8 +2097,7 @@ Original Alpine Vector symbol from the selected FalconOS brand board.
   function render() {
     const inst = snap?.instruments?.[sel];
     if (!inst) return;
-    const cs = normOhlc(inst.ohlc);
-    document.getElementById('ms-chart').innerHTML = cs ? svgCandles(cs, 280, 120) : '';
+    document.getElementById('ms-chart').innerHTML = svgCandles(inst.ohlc, 280, 120);
     const up = inst.change24h >= 0;
     document.getElementById('ms-read').innerHTML = '<span>' + labels[sel] + '/USD</span><b>' + fmtPrice(inst.price) + '</b><span class="' + (up ? 'pos' : '') + '">' + pct(inst.change24h) + '</span><span class="muted">' + money(inst.vol24h) + ' 24h vol</span>';
   }
@@ -2123,14 +2105,11 @@ Original Alpine Vector symbol from the selected FalconOS brand board.
     .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
     .then(data => {
       if (!data?.instruments) throw new Error('bad snapshot');
-      for (const id of Object.keys(labels)) {
-        const s = data.instruments[id];
-        if (!s || !fin(s.price) || s.price <= 0) throw new Error('invalid ' + id);
-      }
       snap = data;
       const obsEl = document.getElementById('ms-observed');
-      obsEl.textContent = fin(data.observedAt) ? 'observed ' + ago(data.observedAt) : 'as of build';
-      if (fin(data.observedAt)) obsEl.title = new Date(data.observedAt * 1000).toISOString();
+      const observedAt = data.observedAt;
+      obsEl.textContent = typeof observedAt === 'number' && Number.isFinite(observedAt) ? 'observed ' + ago(observedAt) : 'as of build';
+      if (typeof observedAt === 'number' && Number.isFinite(observedAt)) obsEl.title = new Date(observedAt * 1000).toISOString();
       render();
       root.hidden = false;
       root.querySelectorAll('[data-ms]').forEach(btn => btn.addEventListener('click', () => {

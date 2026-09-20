@@ -2,7 +2,7 @@
 
 ## Purpose
 
-[VERIFIED, repository read] `web/` is an isolated React and Vite site that explains the FalconOS council and labels the current state of the three displayed domains: Stablecoins, Perps, and Stocks.
+[VERIFIED, repository read, 2026-09-16] `web/` is an isolated **Vite static** site. The production landing page is a self-contained dark Liquid Metal `index.html` (SPEC V55): council narrative, interactive Research/Strategy/Risk/Capital tour, and advisory-only copy. A separate `/dash` snapshot page shows illustrative market data; it is not live trading.
 
 
 [REPORTED, vision-cross-reference, 2026-09-15] Current context defines FalconOS as the umbrella for Falcon Skills, the FalconOS plugin, and Falcon Investment advisory. This surface must not imply that the council is an autonomous trader or that FalconOS provides custody, pooled capital, signing, or order submission. Source: `CONTEXT.md:30-44`.
@@ -14,7 +14,7 @@ Evidence quote: "FalconOS is the umbrella product." "Falcon Investment is a coun
 
 [VERIFIED, repository read] The waitlist is a disabled local preview. It sends and stores nothing, and it does not create a signup.
 
-[VERIFIED, repository read] `web/src` has no network request, client storage, signing, transaction construction, or transaction submission behavior.
+[VERIFIED, repository read, 2026-09-16] The landing page has no wallet connection, signing, transaction construction, or order submission. Runtime network fetches on the public landing are limited to same-origin static assets; the `/dash` build step may refresh a committed market snapshot when `COINGECKO_API_KEY` is present in the build environment.
 
 ## Boundaries
 
@@ -24,7 +24,7 @@ Evidence quote: "FalconOS is the umbrella product." "Falcon Investment is a coun
 
 ## Next proof
 
-[INFERRED] After the next site change, run `npm run build` from `web/`, open the built site locally, and verify that the waitlist produces no network or storage activity.
+[INFERRED, 2026-09-16] After the next site change: `npm --prefix web run build`, `npm --prefix web test`, and confirm `https://falconos.markets/` still returns HTTP 200 with V55 meta/canonical tags intact.
 
 ## Open decisions
 

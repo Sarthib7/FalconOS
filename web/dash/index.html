@@ -231,7 +231,7 @@
     </div>
   </footer>
 
-  <script>
+<script>
   (function () {
     'use strict';
     var SNAPSHOT = '/dash-snapshot.json';
@@ -246,7 +246,6 @@
     var model = null;
 
     function byId(id) { return document.getElementById(id); }
-    function fin(v) { return typeof v === 'number' && isFinite(v); }
     function N(v) { return Number(v.toFixed(3)); }
     async function fetchJson(url, ms) {
       var ctl = new AbortController();
@@ -264,22 +263,7 @@
     function money(v) { if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B'; if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M'; if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K'; return '$' + v.toFixed(0); }
     function pct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
     function ago(sec) { var d = Date.now() / 1000 - sec; if (d < 0) d = 0; if (d < 90) return Math.round(d) + 's ago'; if (d < 5400) return Math.round(d / 60) + 'm ago'; if (d < 172800) return Math.round(d / 3600) + 'h ago'; return Math.round(d / 86400) + 'd ago'; }
-    function iso(sec) { return fin(sec) ? new Date(sec * 1000).toISOString() : '—'; }
-    function normOhlc(raw) {
-      if (!Array.isArray(raw) || raw.length < 2) return null;
-      var out = [], prevT = -Infinity;
-      for (var i = 0; i < raw.length; i++) {
-        var row = raw[i];
-        if (!Array.isArray(row) || row.length !== 5) return null;
-        var t = row[0], o = row[1], h = row[2], l = row[3], c = row[4];
-        if (!fin(t) || !fin(o) || !fin(h) || !fin(l) || !fin(c)) return null;
-        if (t <= 0 || t <= prevT) return null;
-        if (o <= 0 || h <= 0 || l <= 0 || c <= 0) return null;
-        if (!(h >= l && h >= o && h >= c && l <= o && l <= c)) return null;
-        prevT = t; out.push({ o: o, h: h, l: l, c: c });
-      }
-      return out;
-    }
+    function iso(sec) { return typeof sec === 'number' && isFinite(sec) ? new Date(sec * 1000).toISOString() : '—'; }
 
     function svgCandles(cs, w, h) {
       var pad = 4, hi = Math.max.apply(0, cs.map(function (c) { return c.h; })), lo = Math.min.apply(0, cs.map(function (c) { return c.l; }));
@@ -293,22 +277,18 @@
       });
       return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" width="100%" height="100%" aria-hidden="true">' + s + '</svg>';
     }
-    function volatility(cs) { var r = []; for (var i = 1; i < cs.length; i++) r.push(Math.log(cs[i].c / cs[i - 1].c)); if (!r.length) return 0; var m = r.reduce(function (a, b) { return a + b; }, 0) / r.length; var v = r.reduce(function (a, b) { return a + (b - m) * (b - m); }, 0) / r.length; return Math.sqrt(v * r.length) * 100; }
 
-    function buildSnapshot(snap, mandate) {
+    function buildModel(snap, mandate) {
       if (!snap || !snap.instruments) throw new Error('bad snapshot');
-      var instruments = order.map(function (k) {
-        var s = snap.instruments[INSTR[k].id];
-        if (!s) throw new Error('missing ' + k);
-        var m = { key: k, sym: INSTR[k].sym, name: INSTR[k].name, price: s.price, vol24h: s.vol24h, change24h: s.change24h, updatedAt: s.updatedAt };
-        if (!fin(m.price) || m.price <= 0 || !fin(m.vol24h) || m.vol24h < 0 || !fin(m.change24h)) throw new Error('invalid ' + k);
-        return m;
+      var instruments = order.map(function (key) {
+        var source = snap.instruments[INSTR[key].id];
+        if (!source || !source.metrics || !Array.isArray(source.ohlc)) throw new Error('missing ' + key);
+        return { key: key, sym: INSTR[key].sym, name: INSTR[key].name, price: source.price, vol24h: source.vol24h, change24h: source.change24h, updatedAt: source.updatedAt, ohlc: source.ohlc, metrics: source.metrics };
       });
-      var cs = normOhlc(snap.instruments[INSTR[mandate].id].ohlc);
-      if (!cs) throw new Error('invalid snapshot ohlc');
-      var current = instruments.filter(function (x) { return x.key === mandate; })[0];
-      var observedAt = fin(snap.observedAt) ? snap.observedAt : current.updatedAt;
-      return { instruments: instruments, current: current, ohlc: cs, ohlcTf: '1D', observedAt: observedAt };
+      var current = instruments.filter(function (instrument) { return instrument.key === mandate; })[0];
+      if (!current) throw new Error('missing mandate');
+      var observedAt = typeof snap.observedAt === 'number' && isFinite(snap.observedAt) ? snap.observedAt : current.updatedAt;
+      return { instruments: instruments, current: current, ohlc: current.ohlc, metrics: current.metrics, observedAt: observedAt };
     }
 
     function setFresh(stateName, label) { var el = byId('dash-fresh'); el.setAttribute('data-state', stateName); byId('dash-fresh-label').textContent = label; }
@@ -336,16 +316,13 @@
       byId('dt-price-read').innerHTML = '<span>' + cur.sym + '/USD</span><b>' + fmtPrice(cur.price) + '</b><span class="' + (up ? 'up' : 'down') + '">' + pct(cur.change24h) + '</span><span class="muted">snapshot</span>';
       byId('dt-vol').textContent = money(cur.vol24h);
       byId('dt-vol-sym').textContent = cur.sym + ' · reported 24h volume';
-      var totVol = model.instruments.reduce(function (a, x) { return a + x.vol24h; }, 0) || 1;
       byId('dt-volshare').innerHTML = model.instruments.map(function (x) {
-        var share = x.vol24h / totVol * 100;
-        return '<li data-current="' + (x.key === cur.key) + '"><span class="sym">' + x.sym + '</span><span class="track"><span class="fill" style="width:' + N(share) + '%"></span></span><span class="val">' + share.toFixed(1) + '%</span></li>';
+        return '<li data-current="' + (x.key === cur.key) + '"><span class="sym">' + x.sym + '</span><span class="track"><span class="fill" style="width:' + N(x.metrics.volumeShare) + '%"></span></span><span class="val">' + x.metrics.volumeShare.toFixed(1) + '%</span></li>';
       }).join('');
-      var hi = Math.max.apply(0, model.ohlc.map(function (c) { return c.h; })), lo = Math.min.apply(0, model.ohlc.map(function (c) { return c.l; }));
       byId('dt-stat-change').innerHTML = '<span class="' + (up ? 'up' : 'down') + '">' + pct(cur.change24h) + '</span>';
-      byId('dt-stat-vol').textContent = volatility(model.ohlc).toFixed(2) + '%';
-      byId('dt-stat-high').textContent = fmtPrice(hi);
-      byId('dt-stat-low').textContent = fmtPrice(lo);
+      byId('dt-stat-vol').textContent = cur.metrics.volatility.toFixed(2) + '%';
+      byId('dt-stat-high').textContent = fmtPrice(cur.metrics.rangeHigh);
+      byId('dt-stat-low').textContent = fmtPrice(cur.metrics.rangeLow);
       byId('dt-stats-tf').textContent = '24h · 1D';
       byId('dash-instruments-body').innerHTML = model.instruments.map(function (x) {
         var u = x.change24h >= 0;
@@ -355,33 +332,20 @@
       byId('dt-live-tag').textContent = 'snapshot';
       byId('dt-state').innerHTML = '<span class="down">Snapshot</span>';
       var observed = byId('dt-observed');
-      observed.textContent = fin(model.observedAt) ? ago(model.observedAt) : '—';
+      observed.textContent = typeof model.observedAt === 'number' && isFinite(model.observedAt) ? ago(model.observedAt) : '—';
       observed.title = iso(model.observedAt);
       byId('dt-observed-inst').textContent = cur.sym + '/USD';
     }
 
     function selectMandate(mandate) {
       if (!snapData) return;
-      try {
-        model = buildSnapshot(snapData, mandate);
-        render();
-      } catch (e) {
-        model = null;
-        renderNoData();
-      }
+      try { model = buildModel(snapData, mandate); render(); } catch (e) { model = null; renderNoData(); }
     }
 
     async function load() {
       setFresh('loading', 'Loading');
-      try {
-        snapData = await fetchJson(SNAPSHOT, 6000);
-        model = buildSnapshot(snapData, state.mandate);
-        render();
-      } catch (e) {
-        snapData = null;
-        model = null;
-        renderNoData();
-      }
+      try { snapData = await fetchJson(SNAPSHOT, 6000); model = buildModel(snapData, state.mandate); render(); }
+      catch (e) { snapData = null; model = null; renderNoData(); }
     }
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-mandate]'), function (btn) {
