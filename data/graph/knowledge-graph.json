@@ -1,0 +1,246 @@
+{
+  "nodes": [
+    {
+      "id": "asset:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
+      "kind": "asset",
+      "label": "PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh"
+    },
+    {
+      "id": "asset:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+      "kind": "asset",
+      "label": "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF"
+    },
+    {
+      "id": "evidence:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh.liquidity",
+      "kind": "evidence",
+      "label": "SPACEX liquidity capture"
+    },
+    {
+      "id": "evidence:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh.price",
+      "kind": "evidence",
+      "label": "SPACEX price capture"
+    },
+    {
+      "id": "evidence:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF.liquidity",
+      "kind": "evidence",
+      "label": "OPENAI liquidity capture"
+    },
+    {
+      "id": "evidence:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF.price",
+      "kind": "evidence",
+      "label": "OPENAI price capture"
+    },
+    {
+      "id": "intent:monitor:OPENAI",
+      "kind": "intent",
+      "label": "monitor OPENAI dislocation"
+    },
+    {
+      "id": "intent:monitor:SPACEX",
+      "kind": "intent",
+      "label": "monitor SPACEX dislocation"
+    },
+    {
+      "id": "intent:propose-pre-ipo-basket",
+      "kind": "intent",
+      "label": "propose pre-IPO basket"
+    },
+    {
+      "id": "issuer:prestocks",
+      "kind": "issuer",
+      "label": "PreStocks"
+    },
+    {
+      "id": "snapshot:14fc290df890",
+      "kind": "evidence",
+      "label": "snapshot 14fc290df890"
+    },
+    {
+      "id": "source:dexscreener",
+      "kind": "source",
+      "label": "dexscreener"
+    },
+    {
+      "id": "source:issuer-mark:OPENAI",
+      "kind": "source",
+      "label": "PreStocks mark OPENAI"
+    },
+    {
+      "id": "source:issuer-mark:SPACEX",
+      "kind": "source",
+      "label": "PreStocks mark SPACEX"
+    },
+    {
+      "id": "source:prestocks-issuer",
+      "kind": "source",
+      "label": "prestocks-issuer"
+    },
+    {
+      "id": "source:solana-rpc",
+      "kind": "source",
+      "label": "solana-rpc"
+    },
+    {
+      "id": "underlying:OPENAI",
+      "kind": "asset",
+      "label": "OPENAI"
+    },
+    {
+      "id": "underlying:SPACEX",
+      "kind": "asset",
+      "label": "SPACEX"
+    },
+    {
+      "id": "venue:solana",
+      "kind": "venue",
+      "label": "Solana"
+    },
+    {
+      "id": "verdict:BLOCKED",
+      "kind": "verdict",
+      "label": "BLOCKED"
+    }
+  ],
+  "edges": [
+    {
+      "from": "asset:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
+      "to": "issuer:prestocks",
+      "kind": "asset-issuer"
+    },
+    {
+      "from": "asset:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
+      "to": "source:issuer-mark:SPACEX",
+      "kind": "asset-reference"
+    },
+    {
+      "from": "asset:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
+      "to": "underlying:SPACEX",
+      "kind": "asset-underlying"
+    },
+    {
+      "from": "asset:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
+      "to": "venue:solana",
+      "kind": "asset-venue"
+    },
+    {
+      "from": "asset:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+      "to": "issuer:prestocks",
+      "kind": "asset-issuer"
+    },
+    {
+      "from": "asset:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+      "to": "source:issuer-mark:OPENAI",
+      "kind": "asset-reference"
+    },
+    {
+      "from": "asset:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+      "to": "underlying:OPENAI",
+      "kind": "asset-underlying"
+    },
+    {
+      "from": "asset:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+      "to": "venue:solana",
+      "kind": "asset-venue"
+    },
+    {
+      "from": "evidence:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh.liquidity",
+      "to": "asset:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
+      "kind": "capture-asset"
+    },
+    {
+      "from": "evidence:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh.liquidity",
+      "to": "source:dexscreener",
+      "kind": "capture-source"
+    },
+    {
+      "from": "evidence:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh.price",
+      "to": "asset:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
+      "kind": "capture-asset"
+    },
+    {
+      "from": "evidence:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh.price",
+      "to": "source:dexscreener",
+      "kind": "capture-source"
+    },
+    {
+      "from": "evidence:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF.liquidity",
+      "to": "asset:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+      "kind": "capture-asset"
+    },
+    {
+      "from": "evidence:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF.liquidity",
+      "to": "source:dexscreener",
+      "kind": "capture-source"
+    },
+    {
+      "from": "evidence:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF.price",
+      "to": "asset:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+      "kind": "capture-asset"
+    },
+    {
+      "from": "evidence:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF.price",
+      "to": "source:dexscreener",
+      "kind": "capture-source"
+    },
+    {
+      "from": "intent:monitor:OPENAI",
+      "to": "asset:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+      "kind": "intent-asset"
+    },
+    {
+      "from": "intent:monitor:OPENAI",
+      "to": "verdict:BLOCKED",
+      "kind": "intent-verdict"
+    },
+    {
+      "from": "intent:monitor:SPACEX",
+      "to": "asset:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh",
+      "kind": "intent-asset"
+    },
+    {
+      "from": "intent:monitor:SPACEX",
+      "to": "verdict:BLOCKED",
+      "kind": "intent-verdict"
+    },
+    {
+      "from": "intent:propose-pre-ipo-basket",
+      "to": "verdict:BLOCKED",
+      "kind": "intent-verdict"
+    },
+    {
+      "from": "source:issuer-mark:OPENAI",
+      "to": "source:prestocks-issuer",
+      "kind": "reference-source"
+    },
+    {
+      "from": "source:issuer-mark:SPACEX",
+      "to": "source:prestocks-issuer",
+      "kind": "reference-source"
+    },
+    {
+      "from": "verdict:BLOCKED",
+      "to": "evidence:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh.liquidity",
+      "kind": "verdict-snapshot-evidence"
+    },
+    {
+      "from": "verdict:BLOCKED",
+      "to": "evidence:PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh.price",
+      "kind": "verdict-snapshot-evidence"
+    },
+    {
+      "from": "verdict:BLOCKED",
+      "to": "evidence:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF.liquidity",
+      "kind": "verdict-snapshot-evidence"
+    },
+    {
+      "from": "verdict:BLOCKED",
+      "to": "evidence:PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF.price",
+      "kind": "verdict-snapshot-evidence"
+    },
+    {
+      "from": "verdict:BLOCKED",
+      "to": "snapshot:14fc290df890",
+      "kind": "verdict-snapshot"
+    }
+  ]
+}
