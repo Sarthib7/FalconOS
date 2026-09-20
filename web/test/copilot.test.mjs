@@ -27,6 +27,9 @@ test('sign path deserializes before wallet handoff and copilot stays out of the 
   assert.match(html, /VersionedTransaction\.deserialize/);
   assert.doesNotMatch(html, /signAndSendTransaction\(unsignedTransaction\)/);
   assert.match(html, /Rebuild for the connected account/);
+  assert.match(html, /Ticket changed while preparing the transaction/);
+  assert.match(html, /signInFlight/);
+  assert.match(html, /generation !== buildGeneration/);
   const vite = await readFile(new URL('../vite.config.js', import.meta.url), 'utf8');
   assert.doesNotMatch(vite, /copilot: entry/);
 });

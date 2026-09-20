@@ -133,7 +133,7 @@
       var builtFor = null;
       var quoteGeneration = 0;
       var buildGeneration = 0;
-      var WEB3_URL = 'https://esm.sh/@solana/web3.js@1.95.8';
+      var WEB3_URL = window.__FALCON_WEB3_URL || 'https://esm.sh/@solana/web3.js@1.95.8';
       var currentAdvice = 'NO_DATA';
       var provider = window.solana || null;
       var byId = function (id) { return document.getElementById(id); };
@@ -248,17 +248,28 @@
         for (var index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
         return bytes;
       };
+      var signInFlight = false;
       var signAndSend = function () {
+        if (signInFlight) return;
         if (!walletConnected || !unsignedTransaction || !provider || !provider.signAndSendTransaction) return;
         if (builtFor !== walletKey()) { setError('Account changed since this transaction was built. Rebuild for the connected account.'); clearBuiltTransaction(); return; }
+        // Capture the exact trade authorized by this click. The module import
+        // below can take seconds; any edit or account change in that window
+        // must abort BEFORE the wallet opens.
         var payload = unsignedTransaction;
+        var signer = walletKey();
+        var generation = buildGeneration;
+        signInFlight = true;
         byId('sign-button').disabled = true;
         // Phantom requires a Transaction object, not base64 text: deserialize
         // Jupiter's bytes as a VersionedTransaction before requesting a signature.
         import(WEB3_URL).then(function (web3) {
+          if (generation !== buildGeneration || unsignedTransaction !== payload || builtFor !== signer || !walletConnected || walletKey() !== signer) {
+            throw new Error('Ticket changed while preparing the transaction. Nothing was sent; rebuild and review again.');
+          }
           var transaction = web3.VersionedTransaction.deserialize(base64ToBytes(payload));
           return provider.signAndSendTransaction(transaction);
-        }).then(function (result) { text('trade-error', 'Transaction submitted: ' + (result && result.signature ? shortKey(result.signature) : 'wallet response received')); }).catch(function (error) { setError(error && error.message ? error.message : 'Wallet declined or failed to submit.'); }).finally(function () { byId('sign-button').disabled = !walletConnected || !unsignedTransaction || builtFor !== walletKey(); });
+        }).then(function (result) { text('trade-error', 'Transaction submitted: ' + (result && result.signature ? shortKey(result.signature) : 'wallet response received')); }).catch(function (error) { setError(error && error.message ? error.message : 'Wallet declined or failed to submit.'); }).finally(function () { signInFlight = false; byId('sign-button').disabled = !walletConnected || !unsignedTransaction || builtFor !== walletKey(); });
       };
       byId('wallet-connect-control').addEventListener('click', connectWallet);
       byId('quote-button').addEventListener('click', getQuote);
