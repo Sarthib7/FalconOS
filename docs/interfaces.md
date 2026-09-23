@@ -77,7 +77,7 @@
 
 ## Falcon Investment perps council (first local vertical slice)
 
-[VERIFIED, local synthetic contract, 2026-09-11] `preps/perps.ts` defines separate perps contracts. It does not alter `src/plugin.ts` or the legacy stablecoin `plugin` command.
+[VERIFIED, local synthetic contract, 2026-09-11] `perps/perps.ts` (folder renamed from `preps/` on 2026-09-20) defines separate perps contracts. It does not alter `src/plugin.ts` or the legacy stablecoin `plugin` command.
 
 [VERIFIED, host boundary] `ContractRegistryEntry` is versioned and host-owned. It requires one exact native SOL-perpetual definition per venue (`phoenix` or `hyperliquid`) with native market identity, collateral/settlement, multiplier, precision, limits, fees, market-data sources, margin semantics, capabilities, capture/effective provenance, raw hash, and adapter version. Missing or conflicting registry entries resolve to `NO_DATA`; no alias or invented native ID is supplied.
 
@@ -108,3 +108,51 @@
 [VERIFIED, local audit contract, 2026-09-11] Direct publication with no lead proposal uses explicit `NOT_CALLED`/`FAILED` lead audit fields; an accepted lead proposal remains in the immutable audit when the independent risk transport later fails. Validated policy/account state is preserved on valid-request safe fallback. Malformed advice/Copilot fallbacks with no valid snapshot use explicit `snapshotEvidence: null`, remain visibly `NO_DATA`, are deeply frozen, and pass their own response validators.
 
 [BOUNDARY, local pure module, 2026-09-11] Perps canonicalization emits in-memory raw bytes/manifests, normalized projections, and content hashes only. It performs no durable append-only journal/persistence; durable audit storage is an external host prerequisite and is not claimed by this slice.
+
+## Falcon Investment stocks dashboard
+
+[VERIFIED, local command, 2026-09-23] `CARGO_NET_OFFLINE=true npm run dash -- demo` ran twice. Both commands exited `0`, and captured outputs matched (`identical_output=true`). The output begins `FalconOS Stocklana council demo [SYNTHETIC FIXTURE DATA]`, then reports `snapshot=READY  advice=PUBLISHED`, `snapshot=READY  advice=BLOCKED`, and `snapshot=NO_DATA  advice=NO_DATA`. It prints fixture source versions, snapshot hash prefixes, and graph counts. The header says `No market or RPC requests, wallet access, signing, or transactions.`
+
+[VERIFIED, source read: `engine/src/serve.rs`] The Rust engine owns the local HTTP API. The browser copilot consumes it. The engine binds to `127.0.0.1:8787` and serves `GET /advice` and `GET /graph`.
+
+`GET /advice` returns:
+
+```ts
+type AdviceResponse = {
+  status: 'PUBLISHED' | 'BLOCKED' | 'NO_DATA';
+  snapshot_sha256: string;
+  created_at: string;
+  execution_ready: false;
+  reasons: string[];
+  evidence: Array<{
+    asset_id: string;
+    underlying: string;
+    token_price: string | null;
+    liquidity: string | null;
+    underlying_price: string | null;
+    premium_bps: number | null;
+  }>;
+  citations: Array<{
+    asset_id: string;
+    field: 'price' | 'liquidity' | 'reference';
+    source_id: string;
+    source_version: string;
+    observed_at: string;
+    value: string;
+    raw_excerpt_sha256: string;
+  }>;
+  latency_ms: number;
+};
+```
+
+[VERIFIED, source read: `engine/src/serve.rs`] Published advice returns citations for all three fields per asset. `BLOCKED` and `NO_DATA` return an empty citation array. The snapshot hash covers each reference capture and its failure details.
+
+`GET /graph` returns `{ nodes: GraphNode[], edges: GraphEdge[] }`. Each node has `id`, `kind`, `label`, and `detail`. Each edge has `from`, `to`, and `kind`. **[VERIFIED, source read: `engine/src/graph.rs`]**
+
+## Local copilot transaction path
+
+[VERIFIED, source read: `web/copilot/execution.mjs`] Jupiter supplies quote and unsigned swap data. The browser uses the Surfpool RPC at `http://127.0.0.1:8899` for blockhash, simulation, and send calls. The local copilot accepts no devnet or public mainnet RPC target.
+
+[VERIFIED, source read: `web/copilot/index.html` and `web/vite.config.js`] The connected wallet signs after a successful Surfpool simulation and an explicit user click. The page checks the signed message before sending. Vite does not include `/copilot/` in production build entries.
+
+[VERIFIED, official Surfpool docs] Surfnet is a local Solana simulator with mainnet fork support. See the [Surfpool RPC overview](https://docs.surfpool.run/rpc/overview). This interface does not send a transaction to public mainnet.

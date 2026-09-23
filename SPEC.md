@@ -5,7 +5,7 @@ Build inbound read-only FalconOS plugin CLI + truthful local council website →
 
 ## §C CONSTRAINTS
 - FalconOS role: investment firm intake, research, deterministic policy, advisory result. External agents remain callers.
-- First slice read-only. ⊥ wallet, signer, transaction, capital reservation, pooled custody, execution.
+- The plugin and Rust engine remain read-only. `web/copilot/` has a separate local, dev-only Surfpool demo; the connected wallet signs, and the page sends only to the local mainnet fork.
 - External agent has no model authority. ⊥ caller-selected model, executable, adapter, reasoning setting, tool, policy override.
 - `src/codex.ts` remains internal FalconOS→Codex research adapter. ⊥ plugin surface.
 - Existing evidence/hash/cutoff validation stays authoritative: `buildAgentRequest`, `validateScan`, `validateAgentThesis`.
@@ -19,9 +19,10 @@ Build inbound read-only FalconOS plugin CLI + truthful local council website →
 - First evidence bundle: exactly one scan, at most 8 note paths, max 32 KiB/note, max 8 MiB serialized internal request, max 64 KiB advisory response.
 - Amount: decimal USDC string, `0.01` through `500`, ≤6 fractional digits; canonical integer units via existing `inputAmount`.
 - Supported route: `solana-base` or `base-solana`; current evidence remains USDC/EURC over Solana/Base.
-- T1-T8 plugin slice frozen. Website work remains isolated under `web/`; production deploy limited to static Cloudflare Pages artifact; ⊥ wallet, signer, transaction, production waitlist, analytics, or plugin contract expansion.
+- T1-T8 plugin slice frozen. Website work remains isolated under `web/`; production deploy limited to static Cloudflare Pages artifact; ⊥ wallet, signer, transaction, production waitlist, analytics, or plugin contract expansion. Vite excludes the local copilot from production output.
 - Pooled ETF product (FalconOS pools capital + issues ETF via Raydium/Meteora) ⊥ current scope; prerequisite: reverse advisory-only boundary (V11), add custody/execution/issuance, integrate AMM, complete securities/fund-law review before code.
-- `dash/` isolated Node/TS terminal dashboard (own deps; ⊥ root plugin zero-dep graph): performs read-only live GET/RPC fetches from configured providers, builds a `live`-provenance basket snapshot, runs the stocks council, renders advisory to terminal; ⊥ execution, custody, wallet, signer, order submission, persistent external writes; secrets via env only, never committed.
+- `engine/` Rust crate is the stocks live dashboard (⊥ root plugin zero-dep graph): read-only live GET/RPC from configured providers, basket snapshot, stocks council, terminal render, and local `127.0.0.1` `/advice` plus `/graph`. ⊥ execution, custody, wallet, signer, order submission. `graph --out` writes one operator-named local JSON file. Secrets via env only, never committed. Deleted `dash/` Node package ⊥ current surface.
+- `web/copilot/` is a local DEV-only client action demo. Jupiter V1 builds a route from mainnet market data; the page refreshes the blockhash, simulates, and sends only through Surfpool at `http://127.0.0.1:8899`. Wallet signing follows an explicit user click. This does not change the engine, plugin, or production boundary.
 
 ## §I INTERFACES
 
@@ -206,11 +207,21 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - ⊥ wallet, signer, transaction, pooled custody, capital, allocation, execution, ETF issuance; exact-key validation rejects them.
 ### I11. Falcon Investment stocks live dashboard
 
-- `dash/` isolated Node/TS package (own deps; ⊥ root plugin zero-dependency graph); command `node dash/cli.ts` renders a terminal advisory dashboard.
-- Read-only live adapters fetch per-asset `price`/`liquidity` evidence + optional info headlines via HTTP GET or public Solana RPC; each adapter yields a stocks `FieldCapture` with `provenance: live`, real `sourceId`/adapter/semantic version, provider-event + local-receipt time, and typed failure on error.
-- Host builds a `live` canonical basket snapshot from adapter captures, runs the stocks council (Lead + veto-only Risk), and renders basket/weights/risk/citations to the terminal; advisory-only, `executionReady: false`.
-- Provider/network/parse failure → typed capture failure → snapshot `NO_DATA`; the dashboard surfaces the failure and never fabricates evidence.
-- ⊥ order submission, custody, signing, capital movement; read-only display of live evidence + advisory. Secrets via env only.
+- `engine/` Rust crate. Root plugin stays zero-dependency and performs no live call. `dash/` Node package is deleted.
+- Commands: `npm run dash -- preipo` prints one terminal advisory. `npm run serve` binds `127.0.0.1:8787` and serves GET `/advice` and GET `/graph`. `falcon-engine graph --out PATH` writes one local graph JSON file.
+- Read-only adapters: DexScreener HTTP GET, PreStocks HTTP GET, public Solana RPC `getTokenSupply` plus the mint account. Optional Pyth Hermes only when `PYTH_<UNDERLYING>_TOKENIZED_FEED_ID` or `PYTH_<UNDERLYING>_UNDERLYING_FEED_ID` is set. Unconfigured Pyth is not an error. A configured feed that fails → `NO_DATA`.
+- Pool price: deepest USDC-quoted Solana pair for the mint when one has parseable liquidity (V67). Else the deepest pair. Then V66 scaled-UI normalize and issuer corroboration. The raw capture records pair and quote-token identity. Every asset also has a hash-bound issuer/Pyth `reference` capture. The engine snapshot is its own `FieldCapture` (`source_id`, `source_version`, `observed_at`, `raw_excerpt`, `value`). It does not emit the TypeScript `stocks/stocks.ts` snapshot.
+- Council on that snapshot: missing, invalid, or issuer disagreement → `NO_DATA` and no proposal. Ready prices with liquidity below the floor, or a token-vs-underlying gap above configured `max_dislocation_bps` (500), → `BLOCKED` and no proposal. Otherwise `PUBLISHED`, `executionReady: false`.
+- `GET /advice` returns `execution_ready: false` and source citations for published advice; `BLOCKED`/`NO_DATA` return no citations.
+- ⊥ headline fetch, order submission, custody, signing, capital movement. Secrets via env only.
+
+### I12. Local Surfpool copilot
+
+- Owner/provider: `web/copilot/`; consumer: the local user and connected browser wallet.
+- Scope: DEV-only local demo, excluded from the production Vite build. Jupiter V1 quote/build uses mainnet market data; `getLatestBlockhash`, `simulateTransaction`, and `sendTransaction` use only `http://127.0.0.1:8899`.
+- Before wallet signing, the page replaces the Jupiter blockhash with a current Surfpool blockhash and simulates those exact serialized message bytes with signature checks disabled. Missing or malformed simulation data, or `err !== null`, stops before the wallet opens.
+- The wallet signs only after the explicit **Sign & send** click. Before send, the page checks that the wallet preserved the simulated message and signed the connected account. Only the signed bytes go to Surfpool.
+- ⊥ public mainnet RPC, devnet RPC, engine signing, automatic signing, server-side key, or transaction submission from the engine.
 
 ## §V INVARIANTS
 
@@ -319,7 +330,7 @@ V55: ∀ local website visual system → approved dark Liquid Metal treatment + 
 
 V56: ∀ stocks basket proposal → specialist=`stocks`, authority=`non-binding-advisory`, executionReady=`false`; leg targetWeightBps integer ≥ 1, sum = 10000; missing/invalid leg evidence → basket `NO_DATA`; wallet/custody/pool/allocation/execution field ∉ schema
 
-V57: ∀ stocks canonical basket snapshot → per-asset evidence bytes/hash frozen; Lead & Risk consume identical bytes/hash; provenance ∈ {`synthetic`,`historical`,`live`}; `live` only via a `dash/` read-only adapter carrying real source identity + dual-time; root plugin emits no live call; missing/invalid/stale/incoherent → `NO_DATA`
+V57: ∀ `stocks/stocks.ts` canonical basket snapshot → per-asset evidence bytes/hash frozen; Lead & Risk consume identical bytes/hash; provenance ∈ {`synthetic`,`historical`,`live`}; `live` only from a read-only host outside the root plugin; current live host is `engine/`, which keeps its own snapshot (`observed_at` only, no TS provenance enum) and does not emit the TS snapshot; root plugin emits no live call; missing/invalid/stale/incoherent → `NO_DATA`
 
 V58: ∀ stocks advice run → exactly one Lead call + one independent Risk Review; Risk authority=`veto-only`; `BLOCK`/critical/failure → published `BLOCKED`/`NO_DATA` + proposal `null`; Client Agent owns decision/execution
 
@@ -333,11 +344,27 @@ V62: ∀ stocks non-ok capture → carries typed failure metadata (`retryable`, 
 
 V63: ∀ stocks registry → exact-key validated identity + scales + limits + fees + capabilities + corporate-action reference + provenance; per-leg `targetWeightBps` ≤ registry per-asset max-weight cap; invalid/missing critical metadata → `NO_DATA`
 
-V64: ∀ dash live fetch → read-only HTTP GET or public RPC read; ⊥ write/execution/custody/signing/order; secrets from env only, never committed; provider/network/parse failure → typed capture failure → snapshot `NO_DATA`
+V64: ∀ engine live fetch → read-only HTTP GET or public RPC read; ⊥ write/execution/custody/signing/order; secrets from env only, never committed; provider/network/parse failure → typed capture failure → snapshot `NO_DATA`
 
-V65: ∀ dash rendered output → advisory-only, `executionReady: false`; shows council basket/risk/citations + `live` provenance; ⊥ trade/order action or capital instruction
+V65: ∀ engine rendered output → advisory-only, `executionReady: false`; shows basket evidence, risk verdict, and citations when published; a non-published verdict shows the failure reason and no citations; ⊥ trade/order action or capital instruction
 
-V66: ∀ dash PreStocks/token-2022 scaled-UI mint price evidence → derive live multiplier from extension time-gate (`newMultiplier` when `now ≥ newMultiplierEffectiveTimestamp`, else current `multiplier`); cross-check extension vs `getTokenSupply` uiAmount/raw within 5bps; divide raw pool price by multiplier; corroborate normalized price vs issuer `tokenPrice` within 500bps; zero/malformed/missing multiplier, extension/supply disagreement, or issuer disagreement → typed price capture failure → `NO_DATA`
+V66: ∀ engine PreStocks/token-2022 scaled-UI mint price evidence in `engine/src/prestocks.rs` → derive live multiplier from extension time-gate (`newMultiplier` when `now ≥ newMultiplierEffectiveTimestamp`, else current `multiplier`); cross-check extension vs `getTokenSupply` uiAmount/raw within 5bps; divide raw pool price by multiplier; corroborate normalized price vs issuer `tokenPrice` within 500bps; zero/malformed/missing multiplier, extension/supply disagreement, or issuer disagreement → typed price capture failure → `NO_DATA`
+
+V67: ∀ engine DexScreener mint price → if ∃ Solana pair with base = mint, quote = USDC mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`, and parseable liquidity → select the deepest such pair; else select the deepest pair; ⊥ select a deeper non-USDC pair while a liquid USDC pair exists; the selected pair still passes V66 before a price value is admitted
+
+V68: ∀ engine pool ranking → compare parseable decimal liquidity exactly without truncation or fixed-width overflow; selected pair evidence records pair address and quote token address/symbol
+
+V69: ∀ engine per-asset reference → `reference` `FieldCapture` is part of the canonical snapshot and hash; capture source, observed time, raw feed ID/spot/publish time, and value bind to the council reference; missing, malformed, zero, mismatched, or configured-but-failed reference → snapshot `NO_DATA`
+
+V70: ∀ engine `/advice` → `execution_ready: false`; `citations` bind each published `price`, `liquidity`, and `reference` capture to source ID/version, observed time, value, and raw-excerpt hash; unpublished verdict → empty citations
+
+V71: ∀ local copilot transaction → Surfpool `http://127.0.0.1:8899` is the only RPC target; refresh blockhash, simulate the same message, and require present `err: null` before wallet signing; after explicit signing, message bytes and connected signer must match before send; copilot is absent from production build
+
+V72: ∀ PreStocks API rows for a configured mint → duplicate rows agree on symbol, mark, and token price; the accepted symbol equals the configured underlying; conflict or mismatch → failed reference capture and snapshot `NO_DATA`
+
+V73: ∀ engine fixed-point gap calculation → multiply by 10,000 with checked arithmetic; overflow → typed failure or `NO_DATA`, never panic or wrap
+
+V74: ∀ Solana `getTokenSupply.decimals` → validate its integer range before narrowing; an out-of-range value → failed capture and snapshot `NO_DATA`
 ## §T TASKS
 
 id|status|task|cites
@@ -368,8 +395,11 @@ T23|x|add `stocks/stocks.ts` synthetic canonical basket snapshot for Solana toke
 T24|x|add typed Stocks Specialist BasketProposal (integer bps weights, per-leg evidence) + independent veto-only RiskReview + publication gate + host transport boundary + exact `stocks.advice` validators|V56,V58,V59,I10
 T25|x|add deterministic synthetic stocks contract tests: `NO_DATA` on missing/invalid evidence, valid basket advisory path, weight-sum + veto/status-matrix rejections|V56,V57,V58,V59,I10
 T26|x|extend stocks snapshot to perps/stablecoins parity: rich registry, per-field source precedence + safe failover, provider-event vs local-receipt time, typed failure metadata; add deterministic parity tests|V60,V61,V62,V63,I10
-T27|~|scaffold isolated `dash/` Node/TS terminal dashboard: read-only live adapter(s) → `live` basket snapshot → stocks council → terminal render; typed failure → `NO_DATA`; verify against synthetic + one real keyless provider|V57,V64,V65,I11
-T28|x|add PreStocks scaled-UI multiplier normalization + issuer corroboration in `dash/prestocks.ts`; fail-closed multiplier parse tests|V66,I11
+T27|x|`engine/` Rust live dashboard replaces deleted `dash/`: read-only DexScreener + PreStocks + Solana RPC → basket snapshot → council → terminal `preipo`; `serve` on `127.0.0.1:8787` GET `/advice` and `/graph`; typed failure → `NO_DATA`|V57,V64,V65,V66,I11
+T28|x|PreStocks scaled-UI multiplier normalization + issuer corroboration in `engine/src/prestocks.rs`; fail-closed multiplier parse tests|V66,I11
+T29|x|DexScreener price selects the deepest USDC-quoted pool when one exists, else the deepest pool|V67,I11
+T30|~|make engine pool ranking exact; bind underlying references into snapshot hash; return complete advice citations|V68,V69,V70,I11
+T31|~|finish the local Surfpool-only wallet simulation and send path; exclude devnet and public mainnet RPC|V71,I12
 ## §B BUGS
 
 id|date|cause|fix
@@ -416,3 +446,12 @@ B40|2026-09-16|transform cell threw after deriving checks; artifact variable rol
 B41|2026-09-16|browser smoke clicked evidence link after keyboard test hid its Research tab panel|one-time browser smoke correction
 B42|2026-09-16|meta+og description present-tense live-use claim violated V48; landing test stripped <meta> so it went uncaught|V48
 B43|2026-09-16|dash PreStocks scaled-UI fix cited V66 before spec backprop; `parseScaledUiAccountState` accepted multiplier `0` & silently dropped invalid pending multiplier|V66
+B44|2026-09-22|deepest SPACEX pool quoted SPCXx; DexScreener `priceUsd` was not a USDC print; after scaled-UI /5, pool vs issuer gap was 963bps > 500 → basket `NO_DATA`|V67
+B45|2026-09-23|[VERIFIED, source read: `engine/src/dexscreener.rs` used `decimal_units(next, 0)`]|liquidity fractions were truncated and values beyond `u128` ranked as zero|V68
+B46|2026-09-23|[VERIFIED, source read: `engine/src/serve.rs` applied `pyth_failure` after `build_snapshot`]|configured Pyth failure changed the verdict after snapshot hashing, so failure evidence was unbound|V69
+B47|2026-09-23|[VERIFIED, source read: `engine/src/graph.rs` labeled DexScreener `usdc pool`]|fallback pool source detail claimed a USDC quote without evidence|V68
+B48|2026-09-23|[VERIFIED, source read: `engine/src/serve.rs` `AdviceResponse` omitted `execution_ready` and `citations`]|HTTP advice did not meet the rendered advisory contract|V70
+B49|2026-09-23|[VERIFIED, source read: `web/copilot/execution.mjs` allowlisted `devnet` and `web/copilot/index.html` accepted absent simulation `err`]|send target and simulation failure checks did not enforce the selected Surfpool-only boundary|V71
+B50|2026-09-23|[VERIFIED, source read: `engine/src/prestocks.rs:129` `entries.insert(...)`; `engine/src/council.rs:257` `reference.feed_id.starts_with("prestocks:")`]|conflicting mint rows overwrote each other, and PreStocks feed symbols were not matched to the configured underlying|V72
+B51|2026-09-23|[VERIFIED, source read: `engine/src/prestocks.rs:243,547`; `engine/src/council.rs:224,346`] each path multiplied a fixed-point gap by 10,000 without checked multiplication|V73
+B52|2026-09-23|[VERIFIED, source read: `engine/src/prestocks.rs:335`] `as_u64()? as u32` silently truncated out-of-range token decimal counts|V74

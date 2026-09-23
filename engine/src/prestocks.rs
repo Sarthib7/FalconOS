@@ -3,7 +3,7 @@ use crate::domain::FieldCapture;
 use crate::pyth::PythUnderlyingRef;
 use reqwest::Client;
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
 const PRESTOCKS_URL: &str = "https://prestocks.com/api/prestocks";
@@ -41,6 +41,7 @@ pub struct ScaledUiState {
 pub struct PreStocksData {
     pub refs: BTreeMap<String, Option<PythUnderlyingRef>>,
     pub issuer_prices: BTreeMap<String, Option<String>>,
+    pub error: Option<String>,
 }
 
 fn decimal(value: &str) -> bool {
@@ -98,6 +99,7 @@ pub fn scale_decimal_to_integer(value: &str, scale: u32) -> Option<String> {
 
 pub fn parse_prestocks(value: &Value) -> BTreeMap<String, PreStockEntry> {
     let mut entries = BTreeMap::new();
+    let mut invalid_mints = BTreeSet::new();
     let Some(rows) = value.as_array() else {
         return entries;
     };
@@ -112,28 +114,34 @@ pub fn parse_prestocks(value: &Value) -> BTreeMap<String, PreStockEntry> {
         else {
             continue;
         };
-        let Some(symbol) = object
+        if invalid_mints.contains(mint) {
+            continue;
+        }
+        let parsed = object
             .get("symbol")
             .and_then(Value::as_str)
-            .filter(|x| !x.is_empty())
-        else {
+            .filter(|symbol| !symbol.is_empty())
+            .zip(object.get("markPrice").and_then(number_decimal))
+            .zip(object.get("tokenPrice").and_then(number_decimal));
+        let Some(((symbol, mark_price), token_price)) = parsed else {
+            entries.remove(mint);
+            invalid_mints.insert(mint.to_string());
             continue;
         };
-        let Some(mark_price) = object.get("markPrice").and_then(number_decimal) else {
-            continue;
+        let entry = PreStockEntry {
+            mint: mint.to_string(),
+            symbol: symbol.to_string(),
+            mark_price,
+            token_price,
         };
-        let Some(token_price) = object.get("tokenPrice").and_then(number_decimal) else {
-            continue;
-        };
-        entries.insert(
-            mint.to_string(),
-            PreStockEntry {
-                mint: mint.to_string(),
-                symbol: symbol.to_string(),
-                mark_price,
-                token_price,
-            },
-        );
+        if let Some(existing) = entries.get(mint) {
+            if existing != &entry {
+                entries.remove(mint);
+                invalid_mints.insert(mint.to_string());
+            }
+        } else {
+            entries.insert(mint.to_string(), entry);
+        }
     }
     entries
 }
@@ -238,8 +246,14 @@ pub fn multipliers_agree(a: &str, b: &str, max_gap_bps: u32) -> bool {
     if b_units == 0 {
         return false;
     }
-    let gap = a_units.abs_diff(b_units);
-    (gap * 10_000) / b_units <= u128::from(max_gap_bps)
+    let Some(gap_bps) = a_units
+        .abs_diff(b_units)
+        .checked_mul(10_000)
+        .map(|scaled| scaled / b_units)
+    else {
+        return false;
+    };
+    gap_bps <= u128::from(max_gap_bps)
 }
 
 #[allow(non_snake_case)]
@@ -331,7 +345,7 @@ pub fn parseScaledUiAccountState(value: Value) -> Option<ScaledUiState> {
 fn parse_token_supply(value: &Value) -> Option<(String, u32, String)> {
     let supply = object(value)?.get("result")?.get("value")?.as_object()?;
     let amount = supply.get("amount")?.as_str()?.to_string();
-    let decimals = supply.get("decimals")?.as_u64()? as u32;
+    let decimals = u32::try_from(supply.get("decimals")?.as_u64()?).ok()?;
     let ui_amount = supply.get("uiAmountString")?.as_str()?.to_string();
     if !amount.chars().all(|c| c.is_ascii_digit()) {
         return None;
@@ -416,6 +430,7 @@ pub async fn fetch_prestocks(mints: &[String], url: Option<&str>) -> PreStocksDa
             return PreStocksData {
                 refs,
                 issuer_prices,
+                error: Some("prestocks http client unavailable".into()),
             };
         }
     };
@@ -426,10 +441,11 @@ pub async fn fetch_prestocks(mints: &[String], url: Option<&str>) -> PreStocksDa
         .await
     {
         Ok(response) => response,
-        Err(_) => {
+        Err(error) => {
             return PreStocksData {
                 refs,
                 issuer_prices,
+                error: Some(format!("prestocks fetch failed: {error}")),
             };
         }
     };
@@ -437,6 +453,7 @@ pub async fn fetch_prestocks(mints: &[String], url: Option<&str>) -> PreStocksDa
         return PreStocksData {
             refs,
             issuer_prices,
+            error: Some(format!("prestocks http {}", response.status())),
         };
     }
     let received_at = crate::pyth::now_iso();
@@ -446,6 +463,7 @@ pub async fn fetch_prestocks(mints: &[String], url: Option<&str>) -> PreStocksDa
             return PreStocksData {
                 refs,
                 issuer_prices,
+                error: Some("prestocks response unreadable".into()),
             };
         }
     };
@@ -455,6 +473,7 @@ pub async fn fetch_prestocks(mints: &[String], url: Option<&str>) -> PreStocksDa
             return PreStocksData {
                 refs,
                 issuer_prices,
+                error: Some("prestocks response was not valid JSON".into()),
             };
         }
     };
@@ -475,6 +494,7 @@ pub async fn fetch_prestocks(mints: &[String], url: Option<&str>) -> PreStocksDa
     PreStocksData {
         refs,
         issuer_prices,
+        error: None,
     }
 }
 
@@ -537,7 +557,18 @@ pub fn normalize_scaled_price(
             "normalized pool price invalid",
         );
     };
-    let gap_bps = pool_units.abs_diff(issuer_units) * 10_000 / issuer_units;
+    let Some(gap_bps) = pool_units
+        .abs_diff(issuer_units)
+        .checked_mul(10_000)
+        .map(|scaled| scaled / issuer_units)
+    else {
+        return FieldCapture::failed(
+            &capture.source_id,
+            &capture.source_version,
+            &capture.observed_at,
+            "price sanity gap calculation overflowed",
+        );
+    };
     if gap_bps > u128::from(sanity_bps) {
         return FieldCapture::failed(
             &capture.source_id,
@@ -656,6 +687,60 @@ mod tests {
             divide_integer_by_decimal("605000000", "5"),
             Some("121000000".into())
         );
+    }
+
+    #[test]
+    fn v72_conflicting_duplicate_mint_rows_are_omitted() {
+        let rows = json!([
+            {"symbol":"OPENAI","contract_address":"PreMint1","markPrice":100,"tokenPrice":101},
+            {"symbol":"OTHER","contract_address":"PreMint1","markPrice":100,"tokenPrice":101}
+        ]);
+        assert!(!parse_prestocks(&rows).contains_key("PreMint1"));
+
+        let consistent_rows = json!([
+            {"symbol":"OPENAI","contract_address":"PreMint1","markPrice":100,"tokenPrice":101},
+            {"symbol":"OPENAI","contract_address":"PreMint1","markPrice":100,"tokenPrice":101}
+        ]);
+        assert_eq!(
+            parse_prestocks(&consistent_rows)["PreMint1"].symbol,
+            "OPENAI"
+        );
+    }
+
+    #[test]
+    fn v73_multiplier_gap_overflow_fails_closed() {
+        assert!(!multipliers_agree(
+            "34028236692093846346337460743176",
+            "0.0000001",
+            10000
+        ));
+    }
+
+    #[test]
+    fn v73_price_sanity_gap_overflow_returns_failed_capture() {
+        let at = "2026-09-22T12:00:00Z";
+        let capture = FieldCapture::ok("dexscreener", "v1", at, "raw", "1");
+        let normalized = normalize_scaled_price(
+            &capture,
+            0,
+            Some("1"),
+            Some("340282366920938463463374607431768211455"),
+            500,
+        );
+        assert!(!normalized.is_ok());
+        assert!(normalized.raw_excerpt.contains("overflow"));
+    }
+
+    #[test]
+    fn v74_supply_decimals_outside_u32_are_rejected() {
+        let supply = json!({
+            "result": {"value": {
+                "amount": "1",
+                "decimals": 4294967296u64,
+                "uiAmountString": "1"
+            }}
+        });
+        assert!(parse_token_supply(&supply).is_none());
     }
 
     #[test]

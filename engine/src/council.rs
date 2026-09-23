@@ -31,6 +31,7 @@ pub fn capture_key(asset_id: &str, field: &str) -> String {
 pub fn build_snapshot(
     config: &CouncilConfig,
     captures: &BTreeMap<String, AssetCaptures>,
+    references: &BTreeMap<String, FieldCapture>,
     created_at: impl Into<String>,
 ) -> CanonicalSnapshot {
     let created_at = created_at.into();
@@ -66,6 +67,17 @@ pub fn build_snapshot(
                 ),
             );
         }
+        fields.insert(
+            capture_key(&asset.asset_id, "reference"),
+            references.get(&asset.asset_id).cloned().unwrap_or_else(|| {
+                FieldCapture::failed(
+                    "missing",
+                    "engine-v1",
+                    created_at.clone(),
+                    "reference capture missing",
+                )
+            }),
+        );
     }
     CanonicalSnapshot::new(fields, created_at, config.coherence_cap_ms)
 }
@@ -120,6 +132,33 @@ pub fn evaluate_council(
                     reasons: vec![format!("{}.{} capture missing", asset.underlying, field)],
                 };
             }
+        }
+        let reference_capture = snapshot
+            .captures
+            .get(&capture_key(&asset.asset_id, "reference"));
+        let reference = references.get(&asset.asset_id).and_then(Option::as_ref);
+        if !matches!((reference_capture, reference), (Some(capture), Some(reference)) if reference_capture_matches(capture, reference, &asset.underlying))
+        {
+            return Verdict::NoData {
+                reasons: vec![format!(
+                    "{} reference unavailable or not bound to snapshot",
+                    asset.underlying
+                )],
+            };
+        }
+        if reference
+            .and_then(|reference| {
+                scale_decimal_to_integer(&reference.spot, asset.price_scale)
+                    .and_then(|value| value.parse::<u128>().ok())
+            })
+            .is_none_or(|value| value == 0)
+        {
+            return Verdict::NoData {
+                reasons: vec![format!(
+                    "{} underlying reference unavailable or invalid",
+                    asset.underlying
+                )],
+            };
         }
     }
     for asset in &config.assets {
@@ -181,10 +220,19 @@ pub fn evaluate_council(
                     reasons: vec![format!("{} token price unparseable", asset.underlying)],
                 };
             };
-            if let Some(gap_bps) =
-                (token_units.abs_diff(underlying_units) * 10_000).checked_div(underlying_units)
-                && gap_bps > u128::from(config.max_dislocation_bps)
-            {
+            let Some(gap_bps) = token_units
+                .abs_diff(underlying_units)
+                .checked_mul(10_000)
+                .and_then(|scaled| scaled.checked_div(underlying_units))
+            else {
+                return Verdict::NoData {
+                    reasons: vec![format!(
+                        "{} dislocation gap calculation overflowed",
+                        asset.underlying
+                    )],
+                };
+            };
+            if gap_bps > u128::from(config.max_dislocation_bps) {
                 vetoes.push(format!(
                     "{} token dislocated {gap_bps}bps from underlying",
                     asset.underlying
@@ -212,6 +260,31 @@ pub fn evaluate_council(
         authority: "advisory-only".into(),
         execution_ready: false,
     })
+}
+
+fn reference_capture_matches(
+    capture: &FieldCapture,
+    reference: &PythUnderlyingRef,
+    expected_underlying: &str,
+) -> bool {
+    let expected_source = if let Some(symbol) = reference.feed_id.strip_prefix("prestocks:") {
+        if symbol != expected_underlying {
+            return false;
+        }
+        "prestocks-issuer"
+    } else {
+        "pyth"
+    };
+    let Ok(raw) = serde_json::from_str::<serde_json::Value>(&capture.raw_excerpt) else {
+        return false;
+    };
+    capture.source_id == expected_source
+        && capture.value.as_deref() == Some(reference.spot.as_str())
+        && raw.get("feed_id").and_then(serde_json::Value::as_str)
+            == Some(reference.feed_id.as_str())
+        && raw.get("spot").and_then(serde_json::Value::as_str) == Some(reference.spot.as_str())
+        && raw.get("publish_time").and_then(serde_json::Value::as_str)
+            == Some(reference.publish_time.as_str())
 }
 
 pub fn evaluate(
@@ -243,7 +316,7 @@ pub fn render_advice(
     references: &BTreeMap<String, Option<PythUnderlyingRef>>,
 ) -> String {
     let mut lines = vec![
-        "FalconOS · Stocks live dashboard   [advisory-only · executionReady=false]".to_string(),
+        "FalconOS · Stocks council   [advisory-only · executionReady=false]".to_string(),
         format!(
             "snapshot={}  advice={}  createdAt={}  hash={}",
             match snapshot.status {
@@ -286,7 +359,10 @@ pub fn render_advice(
                 underlying_units.parse::<u128>(),
             )
             && underlying > 0
-            && let Some(gap) = (token.abs_diff(underlying) * 10_000).checked_div(underlying)
+            && let Some(gap) = token
+                .abs_diff(underlying)
+                .checked_mul(10_000)
+                .and_then(|scaled| scaled.checked_div(underlying))
         {
             let sign = if token < underlying { '-' } else { '+' };
             extra = format!(
@@ -334,13 +410,14 @@ pub fn render_advice(
         lines.push("  none (advice not published)".into());
     } else {
         for asset in &config.assets {
-            for field in ["price", "liquidity"] {
+            for field in ["price", "liquidity", "reference"] {
                 if let Some(capture) = snapshot.captures.get(&capture_key(&asset.asset_id, field)) {
                     lines.push(format!(
-                        "  {:<10} {:<10} {}  sha256={}",
+                        "  {:<10} {:<10} {}@{}  sha256={}",
                         asset.underlying,
                         field,
                         capture.source_id,
+                        capture.source_version,
                         &sha256_hex(capture.raw_excerpt.as_bytes())[..12]
                     ));
                 }
@@ -400,21 +477,65 @@ mod tests {
         )])
     }
 
+    fn reference(at: &str, spot: &str) -> PythUnderlyingRef {
+        PythUnderlyingRef {
+            feed_id: "prestocks:AAPLx".into(),
+            spot: spot.into(),
+            publish_time: at.into(),
+        }
+    }
+
+    fn reference_captures(at: &str, spot: &str) -> BTreeMap<String, FieldCapture> {
+        let reference = reference(at, spot);
+        BTreeMap::from([(
+            "mintA".into(),
+            FieldCapture::ok(
+                "prestocks-issuer",
+                "engine-prestocks-reference-v1",
+                at,
+                serde_json::json!({
+                    "feed_id": reference.feed_id,
+                    "spot": reference.spot,
+                    "publish_time": reference.publish_time,
+                })
+                .to_string(),
+                spot,
+            ),
+        )])
+    }
+
     #[test]
     fn published_blocked_nodata_transitions() {
         let cfg = config();
-        let refs = BTreeMap::new();
-        let ready = build_snapshot(&cfg, &captures(Some("150000000"), Some("500000000")), "2026-09-20T12:00:01Z");
+        let observed = "2026-09-20T12:00:00Z";
+        let refs = BTreeMap::from([("mintA".into(), Some(reference(observed, "150")))]);
+        let ref_captures = reference_captures(observed, "150");
+        let ready = build_snapshot(
+            &cfg,
+            &captures(Some("150000000"), Some("500000000")),
+            &ref_captures,
+            "2026-09-20T12:00:01Z",
+        );
         assert!(matches!(
             evaluate_council(&cfg, &ready, &refs),
             Verdict::Published(_)
         ));
-        let blocked = build_snapshot(&cfg, &captures(Some("150000000"), Some("5")), "2026-09-20T12:00:01Z");
+        let blocked = build_snapshot(
+            &cfg,
+            &captures(Some("150000000"), Some("5")),
+            &ref_captures,
+            "2026-09-20T12:00:01Z",
+        );
         assert!(matches!(
             evaluate_council(&cfg, &blocked, &refs),
             Verdict::Blocked { .. }
         ));
-        let no_data = build_snapshot(&cfg, &captures(None, Some("500000000")), "2026-09-20T12:00:01Z");
+        let no_data = build_snapshot(
+            &cfg,
+            &captures(None, Some("500000000")),
+            &ref_captures,
+            "2026-09-20T12:00:01Z",
+        );
         assert!(matches!(
             evaluate_council(&cfg, &no_data, &refs),
             Verdict::NoData { .. }
@@ -424,18 +545,90 @@ mod tests {
     #[test]
     fn dislocation_is_veto_only() {
         let cfg = config();
-        let mut refs = BTreeMap::new();
-        refs.insert(
-            "mintA".into(),
-            Some(PythUnderlyingRef {
-                feed_id: "x".into(),
-                spot: "100".into(),
-                publish_time: "2026-09-20T12:00:00Z".into(),
-            }),
+        let observed = "2026-09-20T12:00:00Z";
+        let refs = BTreeMap::from([("mintA".into(), Some(reference(observed, "100")))]);
+        let snap = build_snapshot(
+            &cfg,
+            &captures(Some("150000000"), Some("500000000")),
+            &reference_captures(observed, "100"),
+            "2026-09-20T12:00:01Z",
         );
-        let snap = build_snapshot(&cfg, &captures(Some("150000000"), Some("500000000")), "2026-09-20T12:00:01Z");
         let verdict = evaluate_council(&cfg, &snap, &refs);
         assert!(matches!(verdict, Verdict::Blocked { .. }));
+    }
+
+    #[test]
+    fn published_verdict_requires_reference_bytes_bound_to_the_snapshot() {
+        // V69: the council reference must match the hash-bound capture.
+        let cfg = config();
+        let at = "2026-09-20T12:00:00Z";
+        let refs = BTreeMap::from([("mintA".into(), Some(reference(at, "150")))]);
+        let reference_fields = reference_captures(at, "149");
+        let snapshot = build_snapshot(
+            &cfg,
+            &captures(Some("150000000"), Some("500000000")),
+            &reference_fields,
+            "2026-09-20T12:00:01Z",
+        );
+        assert_eq!(snapshot.status, SnapshotStatus::Ready);
+        let verdict = evaluate_council(&cfg, &snapshot, &refs);
+        assert!(matches!(verdict, Verdict::NoData { .. }));
+        assert!(verdict.reasons()[0].contains("not bound to snapshot"));
+    }
+
+    #[test]
+    fn v72_prestocks_symbol_must_match_the_configured_underlying() {
+        let cfg = config();
+        let at = "2026-09-20T12:00:00Z";
+        let wrong_reference = PythUnderlyingRef {
+            feed_id: "prestocks:OTHER".into(),
+            spot: "150".into(),
+            publish_time: at.into(),
+        };
+        let raw = serde_json::json!({
+            "feed_id": wrong_reference.feed_id,
+            "spot": wrong_reference.spot,
+            "publish_time": wrong_reference.publish_time,
+        })
+        .to_string();
+        let references = BTreeMap::from([("mintA".into(), Some(wrong_reference))]);
+        let reference_fields = BTreeMap::from([(
+            "mintA".into(),
+            FieldCapture::ok("prestocks-issuer", "v1", at, raw, "150"),
+        )]);
+        let snapshot = build_snapshot(
+            &cfg,
+            &captures(Some("150000000"), Some("500000000")),
+            &reference_fields,
+            "2026-09-20T12:00:01Z",
+        );
+        assert!(matches!(
+            evaluate_council(&cfg, &snapshot, &references),
+            Verdict::NoData { .. }
+        ));
+    }
+
+    #[test]
+    fn v73_dislocation_gap_overflow_returns_no_data_and_renders() {
+        let mut cfg = config();
+        cfg.assets[0].price_scale = 0;
+        let at = "2026-09-20T12:00:00Z";
+        let references = BTreeMap::from([("mintA".into(), Some(reference(at, "1")))]);
+        let snapshot = build_snapshot(
+            &cfg,
+            &captures(
+                Some("340282366920938463463374607431768211455"),
+                Some("500000000"),
+            ),
+            &reference_captures(at, "1"),
+            "2026-09-20T12:00:01Z",
+        );
+        let verdict = evaluate_council(&cfg, &snapshot, &references);
+        assert!(matches!(verdict, Verdict::NoData { .. }));
+        assert!(
+            render_advice(&snapshot, &verdict, &cfg, &references)
+                .contains("Risk review: unavailable (NO_DATA)")
+        );
     }
 }
 
@@ -470,6 +663,29 @@ mod ingress_tests {
         )])
     }
 
+    fn reference_captures(at: &str, spot: &str) -> BTreeMap<String, FieldCapture> {
+        let reference = PythUnderlyingRef {
+            feed_id: "prestocks:AAPLx".into(),
+            spot: spot.into(),
+            publish_time: at.into(),
+        };
+        BTreeMap::from([(
+            "mintA".into(),
+            FieldCapture::ok(
+                "prestocks-issuer",
+                "engine-prestocks-reference-v1",
+                at,
+                serde_json::json!({
+                    "feed_id": reference.feed_id,
+                    "spot": reference.spot,
+                    "publish_time": reference.publish_time,
+                })
+                .to_string(),
+                spot,
+            ),
+        )])
+    }
+
     #[test]
     fn day_old_captures_cannot_publish() {
         let cfg = cfg();
@@ -477,15 +693,18 @@ mod ingress_tests {
         let snapshot = build_snapshot(
             &cfg,
             &fresh_captures("2026-09-19T12:00:00Z"),
+            &reference_captures("2026-09-19T12:00:00Z", "150"),
             "2026-09-20T12:00:00Z",
         );
         assert_eq!(snapshot.status, SnapshotStatus::NoData);
         let verdict = evaluate_council(&cfg, &snapshot, &refs);
         assert!(matches!(verdict, Verdict::NoData { .. }));
-        assert!(verdict
-            .reasons()
-            .iter()
-            .any(|reason| reason.contains("capture.time-stale")));
+        assert!(
+            verdict
+                .reasons()
+                .iter()
+                .any(|reason| reason.contains("capture.time-stale"))
+        );
     }
 
     #[test]
@@ -495,6 +714,7 @@ mod ingress_tests {
         let honest = build_snapshot(
             &cfg,
             &fresh_captures("2026-09-19T12:00:00Z"),
+            &reference_captures("2026-09-19T12:00:00Z", "150"),
             "2026-09-20T12:00:00Z",
         );
         let mut forged = honest.clone();

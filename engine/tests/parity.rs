@@ -6,6 +6,7 @@ use falcon_engine::prestocks::{
     divide_integer_by_decimal, effective_multiplier, multiplier_from_supply, multipliers_agree,
     parse_scaled_ui_account_state,
 };
+use falcon_engine::pyth::PythUnderlyingRef;
 use serde_json::json;
 use std::collections::BTreeMap;
 
@@ -97,25 +98,70 @@ fn captures(price: Option<&str>, liquidity: Option<&str>) -> BTreeMap<String, As
     )])
 }
 
+fn reference_data() -> (
+    BTreeMap<String, Option<PythUnderlyingRef>>,
+    BTreeMap<String, FieldCapture>,
+) {
+    let reference = PythUnderlyingRef {
+        feed_id: "prestocks:OPENAI".into(),
+        spot: "100".into(),
+        publish_time: "2026-09-20T12:00:00Z".into(),
+    };
+    let raw = json!({
+        "feed_id": &reference.feed_id,
+        "spot": &reference.spot,
+        "publish_time": &reference.publish_time,
+    })
+    .to_string();
+    (
+        BTreeMap::from([("mint".into(), Some(reference))]),
+        BTreeMap::from([(
+            "mint".into(),
+            FieldCapture::ok(
+                "prestocks-issuer",
+                "engine-prestocks-reference-v1",
+                "2026-09-20T12:00:00Z",
+                raw,
+                "100",
+            ),
+        )]),
+    )
+}
+
 #[test]
 fn council_status_transitions_remain_fail_closed() {
     let cfg = config();
-    let refs = BTreeMap::new();
+    let (refs, reference_captures) = reference_data();
     let published = evaluate_council(
         &cfg,
-        &build_snapshot(&cfg, &captures(Some("100000000"), Some("500000000")), "2026-09-20T12:00:01Z"),
+        &build_snapshot(
+            &cfg,
+            &captures(Some("100000000"), Some("500000000")),
+            &reference_captures,
+            "2026-09-20T12:00:01Z",
+        ),
         &refs,
     );
     assert!(matches!(published, Verdict::Published(_)));
     let blocked = evaluate_council(
         &cfg,
-        &build_snapshot(&cfg, &captures(Some("100000000"), Some("1")), "2026-09-20T12:00:01Z"),
+        &build_snapshot(
+            &cfg,
+            &captures(Some("100000000"), Some("1")),
+            &reference_captures,
+            "2026-09-20T12:00:01Z",
+        ),
         &refs,
     );
     assert!(matches!(blocked, Verdict::Blocked { .. }));
     let no_data = evaluate_council(
         &cfg,
-        &build_snapshot(&cfg, &captures(None, Some("500000000")), "2026-09-20T12:00:01Z"),
+        &build_snapshot(
+            &cfg,
+            &captures(None, Some("500000000")),
+            &reference_captures,
+            "2026-09-20T12:00:01Z",
+        ),
         &refs,
     );
     assert!(matches!(no_data, Verdict::NoData { .. }));
@@ -129,12 +175,25 @@ fn perps_missing_registry_is_no_data() {
 #[test]
 fn snapshot_ready_only_when_every_capture_has_value() {
     let cfg = config();
+    let (_, reference_captures) = reference_data();
     assert_eq!(
-        build_snapshot(&cfg, &captures(Some("100"), Some("100000")), "2026-09-20T12:00:01Z").status,
+        build_snapshot(
+            &cfg,
+            &captures(Some("100"), Some("100000")),
+            &reference_captures,
+            "2026-09-20T12:00:01Z"
+        )
+        .status,
         SnapshotStatus::Ready
     );
     assert_eq!(
-        build_snapshot(&cfg, &captures(Some("100"), None), "2026-09-20T12:00:01Z").status,
+        build_snapshot(
+            &cfg,
+            &captures(Some("100"), None),
+            &reference_captures,
+            "2026-09-20T12:00:01Z"
+        )
+        .status,
         SnapshotStatus::NoData
     );
 }

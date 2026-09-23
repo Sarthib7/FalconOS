@@ -1,6 +1,6 @@
 # Status
 
-[VERIFIED, session date] Last updated: 2026-09-16.
+[VERIFIED, session date] Last updated: 2026-09-23.
 [VERIFIED, tool ownership] Updated by: coordinator, root agent.
 ## Current build
 
@@ -345,3 +345,55 @@ The demo used synthetic responses. No live API call occurred.
 
 
 [Showing lines 1-300 of 760. Use :301 to continue]
+
+## Stocks dashboard and Surfpool copilot: 2026-09-23
+
+[VERIFIED, user instruction] The user resumed this work and chose `surfpool mainnet fork` as the execution target. Earlier instruction: "1 and ship devnet executions".
+
+[VERIFIED, Rust tests] `cargo test --manifest-path engine/Cargo.toml` returned `test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out` for unit tests and `test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out` for integration tests.
+
+[VERIFIED, web tests] `node --test web/test/copilot.test.mjs web/test/execution.test.mjs` returned `ℹ tests 9`, `ℹ pass 9`, and `ℹ fail 0`.
+
+[VERIFIED, local RPC smoke] `node web/scripts/surfpool-check.mjs` returned `{"rpc":"http://127.0.0.1:8899","mint":"PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF","accountOwner":"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb","recentBlockhash":"SURFNETxSAFEHASHxxxxxxxxxxxxxxxxxxxxxxxb2xx","lastValidBlockHeight":45719}`. This confirms an account read and blockhash response on the local RPC. It does not identify the running fork's launch network.
+
+[VERIFIED, sandbox output] Initial process inspection returned `zsh:1: operation not permitted: ps`. [VERIFIED, escalated read] Follow-up returned `Surfpool launch flag: --network mainnet`; the requested fork mode is confirmed.
+
+[VERIFIED, session scope] No live wallet transaction was simulated, signed, or sent. The smoke check read an account and a blockhash only.
+
+[VERIFIED, formatting] `rustfmt --edition 2024 --check` on the seven edited Rust files and `git diff --check` exited `0` with no output. The crate-wide `cargo fmt --manifest-path engine/Cargo.toml -- --check` exited `1` and printed diffs in untouched `engine/src/domain.rs` at lines 392, 400, and 408.
+
+[VERIFIED, command output] `rg -n '^T30\||^T31\|' SPEC.md` returned `395:T30|~|make engine pool ranking exact; bind underlying references into snapshot hash; return complete advice citations|V68,V69,V70,I11` and `396:T31|~|finish the local Surfpool-only wallet simulation and send path; exclude devnet and public mainnet RPC|V71,I12`.
+
+## Stocklana Main + PreStocks demo: 2026-09-23
+
+[VERIFIED, user instruction] The user selected the Main + PreStocks path and approved a repeatable Rust demo plus corrections to the submission draft.
+
+[Completed, owner=implementer] Added a deterministic offline Rust demo command, documented its local command contract, and corrected the related Stocklana claims. Files: `engine/src/demo.rs`, `engine/src/lib.rs`, `engine/src/main.rs`, `engine/src/council.rs`, `engine/README.md`, `docs/interfaces.md`, and `docs/stocklana-submission.md`.
+
+[VERIFIED, local demo command, 2026-09-23] `CARGO_NET_OFFLINE=true npm run dash -- demo` ran twice. Both commands exited `0`, and captured outputs matched (`identical_output=true`). Output included `PUBLISHED`, `BLOCKED`, and `NO_DATA`, all marked as synthetic fixture results.
+
+[VERIFIED, formatting and whitespace, 2026-09-23] The targeted `rustfmt --check` commands exited `0`. `git diff --check` exited `0` with no output. The crate test suite was not rerun in this task.
+
+[REPORTED, previous full-suite run, 2026-09-23] `npm test` returned `tests 113`, `pass 110`, `fail 3`. The failures were in `test/codex.test.ts:160`, `test/codex.test.ts:189`, and `test/plugin.test.ts:270`. This task did not rerun that suite.
+
+[Planned, owner=release] Confirm GitHub visibility and current source publication before using the repository link in a submission. Push and submission still need explicit user approval.
+
+## Stocklana completion audit: 2026-09-23
+
+[VERIFIED, regression tests] The new V72 tests failed before the fix: `cargo test --offline --manifest-path engine/Cargo.toml v72` reported two failed tests. The V73 tests reported three arithmetic-overflow panics. The V74 test showed `getTokenSupply.decimals` truncation. After the fixes, `cargo test --offline --manifest-path engine/Cargo.toml` returned `test result: ok. 33 passed; 0 failed` and `test result: ok. 4 passed; 0 failed`.
+
+[VERIFIED, Surfpool UI tests] `node --test web/test/copilot.test.mjs web/test/execution.test.mjs` returned `ℹ tests 12`, `ℹ pass 12`, and `ℹ fail 0`. Tests cover the Surfpool-only RPC allowlist, simulation refusal, signature status, confirmation success/failure/pending, and RPC timeout.
+
+[VERIFIED, formatting] `rustfmt --edition 2024 --check engine/src/prestocks.rs engine/src/council.rs` and `git diff --check` both exited `0` with no output.
+
+[VERIFIED, offline demo] `CARGO_NET_OFFLINE=true npm run dash -- demo` exited `0`. Output began `FalconOS Stocklana council demo [SYNTHETIC FIXTURE DATA]` and contained `advice=PUBLISHED`, `advice=BLOCKED`, and `advice=NO_DATA`. The header says `No market or RPC requests, wallet access, signing, or transactions.`
+
+[VERIFIED, full repository suite] Correction to the earlier reported suite count: this run of `npm test` exited `1`, with `tests 113`, `pass 111`, and `fail 2`. The failures were `test/codex.test.ts:172:1` (`Codex process timed out after 2000ms`) and `test/codex.test.ts:189:1` (expected `synthetic user stop`, received the same timeout). Neither file is in this change set.
+
+[VERIFIED, transaction scope] The Surfpool smoke check read one PreStocks mint account and a blockhash. No Jupiter route was simulated. No wallet connected or signed. No transaction was sent.
+
+[VERIFIED, local RPC status probe] A read-only `getSignatureStatuses` request to `http://127.0.0.1:8899` with a synthetic unknown signature returned `{"rpc":"http://127.0.0.1:8899","status":null}`. This confirms the local RPC method and response parser only.
+
+[VERIFIED, public link check] Opening `https://github.com/Sarthib7/FalconOS` returned `Failed to fetch https://github.com/Sarthib7/FalconOS: Cache miss`. Opening the API returned `URL https://api.github.com/repos/Sarthib7/FalconOS is not accessible via this tool.` The domain-filtered search returned `Empty search results`. Public access is not determined.
+
+[VERIFIED, source read] `SPEC.md` still shows T30 and T31 as `~`. `engine/src/dexscreener.rs:221` defines `compare_decimals`; `engine/src/council.rs:136-160,265-289` binds reference captures and checks PreStocks symbols; `engine/src/serve.rs:190-215` builds published citations; `web/copilot/execution.mjs:1-8` allowlists only the Surfpool RPC. Live route simulation and wallet execution remain unverified.
