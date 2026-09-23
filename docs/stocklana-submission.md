@@ -50,7 +50,7 @@ The live engine is configured for the PreStocks OPENAI and SPACEX mints. The off
 
 ### 2. A working end-to-end demo
 
-Run `CARGO_NET_OFFLINE=true npm run dash -- demo` from the repository root for a repeatable offline council run. The command passes fixed synthetic captures through the snapshot builder, council evaluator, terminal renderer, and graph builder. It shows `PUBLISHED`, `BLOCKED`, and `NO_DATA` results. It does not test live market feeds, wallet access, or transaction execution. **[VERIFIED, command output on 2026-09-23]**
+Run `npm run dash -- demo` from the repository root for a repeatable council run. Do not set `CARGO_NET_OFFLINE=true` before Cargo has cached its dependencies. A local empty-cache check failed with `error: no matching package named serde found`. **[VERIFIED, empty `CARGO_HOME`, 2026-09-23]** The demo passes fixed synthetic captures through the snapshot builder, council evaluator, terminal renderer, and graph builder. Its output says `No market or RPC requests, wallet access, signing, or transactions.` It prints `advice=PUBLISHED`, `advice=BLOCKED`, and `advice=NO_DATA`. **[VERIFIED, source `engine/src/demo.rs`; earlier local command `CARGO_NET_OFFLINE=true npm run dash -- demo`]** This command does not test live feeds, wallet access, or transaction execution. **[VERIFIED, source and command scope]**
 
 The live engine separately gathers issuer, Solana RPC, DEX, and optional Pyth evidence. It serves `/advice` and `/graph` locally. The browser copilot displays council evidence beside a client-owned trade ticket and can request a Jupiter quote and unsigned transaction. Those live paths require provider access and were not checked by the offline demo. **[VERIFIED, repository source and offline command scope]**
 
@@ -70,15 +70,15 @@ The live engine reads Token-2022 `scaledUiAmountConfig`, checks the effective mu
 
 ## Seven-step demo script
 
-Run the offline council demo first:
+Run the synthetic council demo first:
 
 ```sh
-CARGO_NET_OFFLINE=true npm run dash -- demo
+npm run dash -- demo
 ```
 
-It prints fixed synthetic evidence and one result for each council status. The hashes remain stable across runs. **[VERIFIED, two local runs on 2026-09-23: exit `0`; captured outputs matched]**
+It prints fixed synthetic evidence and one result for each council status. The hashes remain stable across runs. After Cargo caches its dependencies, you can set `CARGO_NET_OFFLINE=true` to require offline dependency resolution. **[VERIFIED, two local runs on 2026-09-23: exit `0`; captured outputs matched]**
 
-The remaining steps describe a separate live-data and Surfpool walkthrough. They require Jupiter and public data-provider access. This offline command does not establish that the live engine responds, that a Jupiter route simulates on the current Surfpool fork, or that a transaction confirms. **[VERIFIED, command scope and output on 2026-09-23]**
+The remaining steps describe a separate live-data and Surfpool walkthrough. They require Jupiter and public data-provider access. This synthetic fixture run does not establish that the live engine responds, that a Jupiter route simulates on the current Surfpool fork, or that a transaction confirms. **[VERIFIED, command scope and output on 2026-09-23]**
 
 Start the local mainnet fork in a separate terminal:
 
@@ -90,7 +90,7 @@ Surfpool documents `--network mainnet` and its default RPC port `8899` in the [C
 
 1. **Start the Rust engine.** From `engine/`, run:
    ```sh
-   /opt/homebrew/bin/cargo run --release -- serve
+   cargo run --release -- serve
    ```
    It listens only on `127.0.0.1:8787`, refreshes the evaluation, and serves the advice and graph contracts. The pre-IPO underlying reference is the PreStocks issuer mark; optional `PYTH_<ASSET>_<ROLE>_FEED_ID` environment variables switch an asset's reference to Pyth, and a configured-but-failing feed fails closed to `NO_DATA`. **[VERIFIED: repository source: `engine/src/serve.rs`]**
 
@@ -113,13 +113,13 @@ Run from the repository root unless a subshell changes directory.
 ### Engine tests
 
 ```sh
-(cd engine && /opt/homebrew/bin/cargo test)
+(cd engine && cargo test)
 ```
 
 ### Start the local HTTP engine
 
 ```sh
-(cd engine && /opt/homebrew/bin/cargo run --release -- serve)
+(cd engine && cargo run --release -- serve)
 ```
 
 Default address: `http://127.0.0.1:8787`.
@@ -137,7 +137,7 @@ The first two responses include `Access-Control-Allow-Origin: *`; the final comm
 ### Emit the knowledge-graph artifact
 
 ```sh
-(cd engine && /opt/homebrew/bin/cargo run --release -- graph --out ../data/graph/knowledge-graph.json)
+(cd engine && cargo run --release -- graph --out ../data/graph/knowledge-graph.json)
 ```
 
 ### Run the focused copilot test

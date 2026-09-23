@@ -397,3 +397,9 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, public link check] Opening `https://github.com/Sarthib7/FalconOS` returned `Failed to fetch https://github.com/Sarthib7/FalconOS: Cache miss`. Opening the API returned `URL https://api.github.com/repos/Sarthib7/FalconOS is not accessible via this tool.` The domain-filtered search returned `Empty search results`. Public access is not determined.
 
 [VERIFIED, source read] `SPEC.md` still shows T30 and T31 as `~`. `engine/src/dexscreener.rs:221` defines `compare_decimals`; `engine/src/council.rs:136-160,265-289` binds reference captures and checks PreStocks symbols; `engine/src/serve.rs:190-215` builds published citations; `web/copilot/execution.mjs:1-8` allowlists only the Surfpool RPC. Live route simulation and wallet execution remain unverified.
+
+## Stocklana fresh-cache demo check: 2026-09-23
+
+[VERIFIED, command output] `CARGO_HOME=/private/tmp/falconos-stocklana-fresh-cargo CARGO_NET_OFFLINE=true cargo run --manifest-path engine/Cargo.toml -- demo` exited `101` with `error: no matching package named serde found`. Offline Cargo resolution cannot build from this empty cache. This check does not prove a normal first build succeeds.
+
+[VERIFIED, source read and prior fixture output] Root `package.json` maps `dash` to Cargo. `engine/src/demo.rs` builds fixed fixtures and does not call the live adapters. The quick-start docs now omit offline mode for the first command and state that the demo process makes no market or RPC requests.
