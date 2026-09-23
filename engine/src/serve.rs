@@ -350,9 +350,14 @@ pub async fn evaluate_once(config: &CouncilConfig) -> Evaluation {
         .into_iter()
         .filter(|feed| !feed.tokenized_feed_id.is_empty() || !feed.underlying_feed_id.is_empty())
         .collect();
+    let expected_underlyings = config
+        .assets
+        .iter()
+        .map(|asset| (asset.asset_id.clone(), asset.underlying.clone()))
+        .collect::<BTreeMap<_, _>>();
     let pyth_key = std::env::var("PYTH_API_KEY").ok();
     let (prestocks, multipliers, mut dex_captures, pyth) = tokio::join!(
-        fetch_prestocks(&mints, None),
+        fetch_prestocks(&expected_underlyings, None),
         fetch_scaled_ui_multipliers(&mints, None),
         fetch_dex(config),
         fetch_pyth_prices(&feeds, Duration::from_secs(900), None, pyth_key.as_deref()),

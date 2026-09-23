@@ -146,6 +146,39 @@ pub fn parse_prestocks(value: &Value) -> BTreeMap<String, PreStockEntry> {
     entries
 }
 
+fn data_from_prestocks_entries(
+    expected_underlyings: &BTreeMap<String, String>,
+    entries: &BTreeMap<String, PreStockEntry>,
+    observed_at: &str,
+) -> PreStocksData {
+    let mut refs = BTreeMap::new();
+    let mut issuer_prices = BTreeMap::new();
+    for (mint, expected_underlying) in expected_underlyings {
+        refs.insert(mint.clone(), None);
+        issuer_prices.insert(mint.clone(), None);
+        let Some(entry) = entries
+            .get(mint)
+            .filter(|entry| entry.symbol.as_str() == expected_underlying.as_str())
+        else {
+            continue;
+        };
+        refs.insert(
+            mint.clone(),
+            Some(PythUnderlyingRef {
+                feed_id: format!("prestocks:{}", entry.symbol),
+                spot: entry.mark_price.clone(),
+                publish_time: observed_at.to_string(),
+            }),
+        );
+        issuer_prices.insert(mint.clone(), Some(entry.token_price.clone()));
+    }
+    PreStocksData {
+        refs,
+        issuer_prices,
+        error: None,
+    }
+}
+
 #[allow(non_snake_case)]
 pub fn parsePreStocks(value: &Value) -> BTreeMap<String, PreStockEntry> {
     parse_prestocks(value)
@@ -417,10 +450,13 @@ pub async fn fetch_scaled_ui_multipliers(
     results
 }
 
-pub async fn fetch_prestocks(mints: &[String], url: Option<&str>) -> PreStocksData {
+pub async fn fetch_prestocks(
+    expected_underlyings: &BTreeMap<String, String>,
+    url: Option<&str>,
+) -> PreStocksData {
     let mut refs = BTreeMap::new();
     let mut issuer_prices = BTreeMap::new();
-    for mint in mints {
+    for mint in expected_underlyings.keys() {
         refs.insert(mint.clone(), None);
         issuer_prices.insert(mint.clone(), None);
     }
@@ -478,24 +514,7 @@ pub async fn fetch_prestocks(mints: &[String], url: Option<&str>) -> PreStocksDa
         }
     };
     let entries = parse_prestocks(&body);
-    for mint in mints {
-        if let Some(entry) = entries.get(mint) {
-            refs.insert(
-                mint.clone(),
-                Some(PythUnderlyingRef {
-                    feed_id: format!("prestocks:{}", entry.symbol),
-                    spot: entry.mark_price.clone(),
-                    publish_time: received_at.clone(),
-                }),
-            );
-            issuer_prices.insert(mint.clone(), Some(entry.token_price.clone()));
-        }
-    }
-    PreStocksData {
-        refs,
-        issuer_prices,
-        error: None,
-    }
+    data_from_prestocks_entries(expected_underlyings, &entries, &received_at)
 }
 
 pub fn normalize_scaled_price(
@@ -705,6 +724,29 @@ mod tests {
             parse_prestocks(&consistent_rows)["PreMint1"].symbol,
             "OPENAI"
         );
+    }
+
+    #[test]
+    fn v72_mint_row_symbol_must_match_configured_underlying() {
+        let rows = json!([
+            {"symbol":"SPACEX","contract_address":"PreMint1","markPrice":100,"tokenPrice":101},
+            {"symbol":"SPACEX","contract_address":"PreMint2","markPrice":200,"tokenPrice":201}
+        ]);
+        let expected_underlyings = BTreeMap::from([
+            ("PreMint1".to_string(), "OPENAI".to_string()),
+            ("PreMint2".to_string(), "SPACEX".to_string()),
+        ]);
+        let entries = parse_prestocks(&rows);
+        let data =
+            data_from_prestocks_entries(&expected_underlyings, &entries, "2026-09-23T12:00:00Z");
+
+        assert!(data.refs["PreMint1"].is_none());
+        assert_eq!(data.issuer_prices["PreMint1"], None);
+        assert_eq!(
+            data.refs["PreMint2"].as_ref().unwrap().feed_id,
+            "prestocks:SPACEX"
+        );
+        assert_eq!(data.issuer_prices["PreMint2"], Some("201".into()));
     }
 
     #[test]
