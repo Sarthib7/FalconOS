@@ -3,34 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="FalconOS dashboard access is reserved for the private preview.">
-  <meta name="theme-color" content="#252a2b">
-  <title>FalconOS Dashboard · Private preview</title>
-  <style>
-    :root { color-scheme: dark; --bg: #252a2b; --fg: #eef1ed; --muted: #aab3b1; --border: #4b5554; --accent: #8ee8d1; }
-    * { box-sizing: border-box; }
-    body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, sans-serif; }
-    main { width: min(620px, calc(100% - 40px)); padding: 34px; border: 1px solid var(--border); }
-    .eyebrow { color: var(--accent); font: 11px/1.2 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
-    h1 { max-width: 12ch; margin: 18px 0 14px; font-size: clamp(42px, 8vw, 72px); line-height: 1.02; letter-spacing: -.04em; }
-    p { max-width: 48ch; color: var(--muted); }
-    a { color: var(--fg); }
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
-    .soon { padding: 10px 13px; border: 1px solid var(--border); background: transparent; color: var(--muted); font: 11px ui-monospace, monospace; text-transform: uppercase; }
-  </style>
+  <meta name="description" content="Open the FalconOS Devnet trading terminal.">
+  <meta name="theme-color" content="#090e0c">
+  <title>FalconOS Dashboard · Devnet terminal</title>
+  <link rel="stylesheet" href="/terminal.css">
 </head>
-<body>
-  <main>
-    <p class="eyebrow">FalconOS / Private preview</p>
-    <h1>Dashboard access is gated.</h1>
-    <p>The public landing page shows a read-only market snapshot. Login, wallet connection, sign-up, and the full dashboard will open to approved members later.</p>
-    <div class="actions">
-      <a href="/">Return to FalconOS</a>
-      <span class="soon">Login (Soon)</span>
-      <span class="soon">Connect wallet (Soon)</span>
-      <span class="soon">Sign up (Soon)</span>
-    </div>
+<body class="terminal-body">
+  <div class="terminal-shell">
+    <aside class="terminal-rail">
+      <a class="terminal-brand" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>FALCON<i class="wm-os">OS</i></span></a>
+      <div class="terminal-nav-group">
+        <p class="terminal-nav-label">Workspace</p>
+        <nav class="terminal-nav" aria-label="Workspace">
+          <a class="terminal-nav-link" href="/"><span class="terminal-nav-index">00</span><span>Home</span></a>
+          <a class="terminal-nav-link" href="/product/"><span class="terminal-nav-index">01</span><span>Product</span></a>
+          <a class="terminal-nav-link" href="/research/"><span class="terminal-nav-index">02</span><span>Research</span></a>
+          <a class="terminal-nav-link" href="/dash/" aria-current="page"><span class="terminal-nav-index">03</span><span>Dashboard</span></a>
+        </nav>
+      </div>
+      <div class="terminal-nav-group">
+        <p class="terminal-nav-label">Access</p>
+        <nav class="terminal-nav" aria-label="Access"><a class="terminal-nav-link" href="/#waitlist"><span class="terminal-nav-index">↗</span><span>Waitlist</span></a></nav>
+      </div>
+      <div class="terminal-rail-status"><span class="terminal-rail-status-label">Network</span><span class="terminal-rail-status-value"><i class="terminal-dot" aria-hidden="true"></i>Solana Devnet</span><p>Wallet access is available in the trading terminal.</p></div>
+    </aside>
+    <div class="terminal-workspace">
+      <header class="terminal-topbar">
+        <div class="terminal-path"><span>FalconOS</span><span>/</span><strong>Dashboard</strong></div>
+        <div class="terminal-top-meta"><span class="terminal-chip accent">Solana Devnet</span><span class="terminal-chip">Wallet access</span></div>
+      </header>
+      <div class="terminal-ticker" aria-label="Dashboard access status">
+        <div class="terminal-ticker-item"><span>CLUSTER</span><strong>Solana Devnet</strong></div>
+        <div class="terminal-ticker-item"><span>WALLET LOGIN</span><strong>Available</strong></div>
+        <div class="terminal-ticker-item"><span>ORDER SEND</span><strong>Manual approval</strong></div>
+      </div>
+  <main class="terminal-content terminal-gate">
+    <section class="terminal-panel">
+      <div>
+        <p class="eyebrow">FalconOS / Devnet terminal</p>
+        <h1>Open your trading terminal.</h1>
+        <p>Sign in with a Solana wallet, review Devnet balances, and create a token order against a verified CPMM pool. Every send needs a wallet signature.</p>
+        <div class="actions">
+          <a href="/app/">Open Devnet terminal</a>
+          <a href="/">Return to FalconOS</a>
+        </div>
+      </div>
+      <aside class="terminal-gate-status" aria-label="Access status">
+        <h2>Access state</h2>
+        <div class="terminal-gate-row"><span>Network</span><strong>Devnet</strong></div>
+        <div class="terminal-gate-row"><span>Wallet sign-in</span><strong>Enabled</strong></div>
+        <div class="terminal-gate-row"><span>Order execution</span><strong>Manual only</strong></div>
+        <div class="terminal-gate-row"><span>Strategy automation</span><strong>Disabled</strong></div>
+      </aside>
+    </section>
   </main>
-
+      <footer class="terminal-footer"><span>FalconOS dashboard</span><span>Devnet · manual wallet approval</span></footer>
+    </div>
+  </div>
 </body>
 </html>

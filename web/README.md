@@ -18,11 +18,12 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 - `/`: first impression, market snapshot, access state, and waitlist.
 - `/product/`: firm model, advisory pipeline, and product boundaries.
 - `/research/`: evidence format, research checks, and unresolved proof.
-- `/dash/`: private-preview gate. The full dashboard UI is not public.
+- `/dash/`: dashboard entry with a link to the Devnet terminal.
+- `/app/`: wallet sign-in, Devnet balances, a saved token list, a manual Raydium route ticket, and browser-local order history.
 
 ## Dashboard access
 
-The public build contains the landing page, two detail pages, and a private-preview gate at `/dash/`. The gate is also the local development page at `web/dash/index.html`. The former dashboard UI is not included in this branch.
+The public build includes the landing page, detail pages, the `/dash/` entry, and the `/app/` Devnet terminal. The local Vite server overrides `/dash/` and `/research/` with the localhost research terminal. `/app/` verifies wallet ownership in the browser and saves account preferences and order labels in that browser profile. It has no server session or cross-device sync. Its production trade module uses Solana Devnet and Raydium Devnet only. The stock council feed and historical strategy backtests are not connected to the production app.
 
 ## Waitlist pipeline
 

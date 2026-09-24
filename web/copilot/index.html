@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#171b1c">
+  <meta name="theme-color" content="#090e0c">
   <meta name="color-scheme" content="dark">
   <title>FalconOS · Copilot</title>
   <link rel="icon" type="image/png" href="/falcon-symbol.png">
@@ -28,7 +28,7 @@
     .intro-copy { max-width: 46ch; margin: 0; color: var(--muted); }
     .advisory { margin: 0 0 28px; padding: 12px 16px; border: 1px solid var(--border); border-left: 3px solid var(--accent); color: var(--muted); background: rgba(142,232,209,.04); font-size: 12px; }
     .advisory strong { color: var(--fg); font-family: ui-monospace, monospace; font-weight: 500; }
-    .panes { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .95fr) minmax(300px, .95fr); gap: 14px; align-items: start; }
+    .panes { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(300px, 420px); gap: 14px; align-items: start; }
     .pane { min-width: 0; border: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 90%, transparent); }
     .pane-head { min-height: 78px; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
     .pane h2 { margin: 5px 0 0; font: 400 24px/1.05 Georgia, serif; }
@@ -41,6 +41,7 @@
     .meta { margin: 0; color: var(--muted); font: 11px ui-monospace, monospace; }
     .reasons { min-height: 46px; margin: 0 0 22px; padding-left: 19px; color: var(--muted); }
     .reasons li + li { margin-top: 5px; }
+    .reasons li { overflow-wrap: anywhere; }
     .empty { margin: 0; padding: 18px; border: 1px dashed var(--border); color: var(--muted); font: 12px ui-monospace, monospace; }
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -65,82 +66,256 @@
     .warning { margin: 18px 0 8px; color: var(--amber); font: 11px ui-monospace, monospace; }
     .endorsement { min-height: 32px; margin: 0 0 12px; color: var(--muted); font-size: 11px; }
     .error { min-height: 20px; margin: 12px 0 0; color: var(--danger); font-size: 12px; }
-    .graph-wrap { min-height: 430px; position: relative; background: radial-gradient(circle at 50% 45%, rgba(142,232,209,.06), transparent 58%); }
-    #graph-svg { width: 100%; height: 430px; display: block; }
+    .activity-list { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+    .activity-item { display: grid; gap: 9px; padding: 13px; border: 1px solid var(--border); background: rgba(7,11,10,.4); }
+    .activity-head, .activity-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .activity-title { margin: 0; font: 12px ui-monospace, monospace; color: var(--fg); }
+    .activity-status { color: var(--amber); font: 10px ui-monospace, monospace; text-transform: uppercase; }
+    .activity-status.confirmed, .activity-status.finalized { color: var(--green); }
+    .activity-status.failed, .activity-status.lookup-failed { color: var(--danger); }
+    .activity-signature { display: block; color: var(--accent); font: 10px/1.5 ui-monospace, monospace; overflow-wrap: anywhere; }
+    .activity-copy { min-height: 30px; padding: 5px 9px; border: 1px solid var(--border); background: transparent; color: var(--fg); font: 10px ui-monospace, monospace; }
+    .activity-note { margin: 0; color: var(--muted); font: 10px/1.5 ui-monospace, monospace; }
+    .graph-wrap { min-height: 680px; position: relative; background: radial-gradient(circle at 62% 38%, rgba(142,232,209,.06), transparent 58%); }
+    #graph-svg { width: 100%; height: 680px; display: block; }
+    .advice-on-graph { position: absolute; left: 12px; top: 12px; z-index: 2; width: min(360px, 46%); max-height: 52%; overflow: auto; padding: 12px 14px; border: 1px solid var(--border); background: rgba(23,27,28,.92); }
+    .advice-on-graph h3 { margin: 0 0 8px; font: 400 22px/1 Georgia, serif; }
+    .advice-on-graph .reasons { min-height: 0; margin-bottom: 12px; }
+    .advice-on-graph table { font-size: 11px; }
+    .advice-on-graph th, .advice-on-graph td { padding: 6px 4px; }
+    .pane.graph.terminal { background: #070b0a; color: #c8f7d4; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; border-color: #1d3b32; }
+    .pane.graph.terminal h2, .pane.graph.terminal h3 { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .pane.graph.terminal .advice-on-graph { background: rgba(7,11,10,.94); border-color: #1d3b32; }
     .graph-help { margin: 12px 0 0; color: var(--muted); font: 10px ui-monospace, monospace; }
-    .node-label { pointer-events: none; fill: var(--fg); font: 10px ui-monospace, monospace; }
+    .node-label { pointer-events: none; fill: var(--fg); font: 9px ui-monospace, monospace; }
     .edge { stroke: #53615f; stroke-width: 1; opacity: .7; }
     .node { stroke: var(--bg); stroke-width: 2; cursor: pointer; }
     .node:focus { stroke: var(--accent); }
-    .node-tooltip { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 9px 11px; border: 1px solid var(--border); background: rgba(23,27,28,.95); color: var(--fg); font: 11px ui-monospace, monospace; }
-    @media (max-width: 1120px) { .panes { grid-template-columns: 1fr 1fr; } .pane.graph { grid-column: 1 / -1; } }
-    @media (max-width: 700px) { .topbar { min-height: 60px; } .topbar .eyebrow { display: none; } main { padding-top: 30px; } .intro { display: block; } .intro-copy { margin-top: 18px; } .panes { display: block; } .pane { margin-top: 14px; } .graph-wrap { min-height: 360px; } #graph-svg { height: 360px; } }
+    .node-tooltip { position: absolute; right: 12px; bottom: 12px; max-width: min(360px, calc(100% - 24px)); padding: 9px 11px; border: 1px solid var(--border); background: rgba(23,27,28,.95); color: var(--fg); font: 11px ui-monospace, monospace; }
+    @media (max-width: 900px) { .panes { display: block; } .pane + .pane { margin-top: 14px; } .graph-wrap, #graph-svg { min-height: 520px; height: 520px; } .advice-on-graph { position: static; width: auto; max-height: none; margin-top: 12px; } }
+    @media (max-width: 700px) { .topbar { min-height: 60px; } .topbar .eyebrow { display: none; } main { padding-top: 30px; } .intro { display: block; } .intro-copy { margin-top: 18px; } }
   </style>
+  <link rel="stylesheet" href="/terminal.css">
 </head>
-<body>
-  <header class="topbar">
-    <a class="logo" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>FALCON<i class="wm-os">OS</i></span></a>
-    <p class="eyebrow">Local copilot / client-owned execution</p>
-  </header>
-  <main>
+<body class="terminal-body">
+  <div class="terminal-shell">
+    <aside class="terminal-rail">
+      <a class="terminal-brand" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>FALCON<i class="wm-os">OS</i></span></a>
+      <div class="terminal-nav-group">
+        <p class="terminal-nav-label">Workspace</p>
+        <nav class="terminal-nav" aria-label="Workspace">
+          <a class="terminal-nav-link" href="/"><span class="terminal-nav-index">00</span><span>Home</span></a>
+          <a class="terminal-nav-link" href="/product/"><span class="terminal-nav-index">01</span><span>Product</span></a>
+          <a class="terminal-nav-link" href="/research/"><span class="terminal-nav-index">02</span><span>Research</span></a>
+          <a class="terminal-nav-link" href="/dash/"><span class="terminal-nav-index">03</span><span>Dashboard</span></a>
+          <a class="terminal-nav-link" href="/copilot/" aria-current="page"><span class="terminal-nav-index">04</span><span>Copilot</span></a>
+        </nav>
+      </div>
+      <div class="terminal-rail-status"><span class="terminal-rail-status-label">Execution owner</span><span class="terminal-rail-status-value"><i class="terminal-dot" aria-hidden="true"></i>Client-owned</span><p>Your wallet signs only after a successful simulation.</p></div>
+    </aside>
+    <div class="terminal-workspace">
+      <header class="terminal-topbar">
+        <div class="terminal-path"><span>FalconOS</span><span>/</span><strong>Local copilot</strong></div>
+        <div class="terminal-top-meta"><span class="eyebrow">Local copilot / client-owned execution</span><span class="terminal-chip accent">Dev only</span></div>
+      </header>
+      <div class="terminal-ticker" aria-label="Execution scope">
+        <div class="terminal-ticker-item"><span>QUOTE ROUTE</span><strong>Selected network</strong></div>
+        <div class="terminal-ticker-item"><span>SIMULATION</span><strong>Selected network RPC</strong></div>
+        <div class="terminal-ticker-item"><span>SIGNING</span><strong>Client wallet</strong></div>
+      </div>
+  <main class="terminal-content">
     <section class="intro">
       <div><p class="kicker">Falcon Investment Council / 01</p><h1>Advice beside action.</h1></div>
       <p class="intro-copy">A local decision surface for PreStocks. Inspect the council record, build an unsigned route, then decide in your own wallet.</p>
     </section>
     <p class="advisory"><strong>Advisory only.</strong> FalconOS does not custody funds, hold signing keys, or make investment decisions for you. Data is shown only when the local council provides it.</p>
     <section class="panes" aria-label="FalconOS copilot">
-      <article class="pane" aria-labelledby="advice-title">
-        <header class="pane-head"><div><p class="kicker">Council signal</p><h2 id="advice-title">Advice</h2></div><span id="advice-status" class="status-chip status-no-data">NO_DATA</span></header>
-        <div class="pane-body">
-          <p id="advice-meta" class="meta">Waiting for local council…</p>
-          <ul id="advice-reasons" class="reasons"><li>NO_DATA — no council response yet.</li></ul>
-          <div class="table-wrap"><table><thead><tr><th>Asset</th><th>Token price</th><th>Underlying</th><th>Premium bps</th></tr></thead><tbody id="evidence-body"><tr><td colspan="4"><p class="empty">No evidence published.</p></td></tr></tbody></table></div>
-        </div>
+      <article class="pane graph terminal" aria-labelledby="graph-title">
+        <header class="pane-head"><div><p class="kicker">Evidence topology</p><h2 id="graph-title">Graph</h2></div><span id="advice-status" class="status-chip status-no-data">NO_DATA</span></header>
+        <div class="pane-body"><div class="graph-wrap"><svg id="graph-svg" viewBox="0 0 960 680" role="img" aria-label="Council evidence graph"></svg><div class="advice-on-graph"><h3 id="advice-title">Advice</h3><p id="advice-meta" class="meta">Waiting for local council…</p><ul id="advice-reasons" class="reasons"><li>NO_DATA — no council response yet.</li></ul><div class="table-wrap"><table><thead><tr><th>Asset</th><th>Token price</th><th>Underlying</th><th>Premium bps</th></tr></thead><tbody id="evidence-body"><tr><td colspan="4"><p class="empty">No evidence published.</p></td></tr></tbody></table></div><h4>Evidence citations</h4><ul id="citation-list" class="reasons"><li>No citations published.</li></ul></div><div id="graph-tooltip" class="node-tooltip" hidden></div></div><p id="graph-state" class="graph-help">Loading graph…</p></div>
       </article>
       <article class="pane" aria-labelledby="trade-title">
-        <header class="pane-head"><div><p class="kicker">Client action</p><h2 id="trade-title">Trade ticket</h2></div><span class="meta">Jupiter / Solana</span></header>
+          <header class="pane-head"><div><p class="kicker">Client action</p><h2 id="trade-title">Trade ticket</h2></div><span id="trade-route-label" class="meta">Jupiter mainnet route / Surfpool fork</span></header>
         <div class="pane-body">
           <div class="wallet-row"><span id="wallet-state" class="wallet-state">Wallet not connected</span><button id="wallet-connect-control" class="button secondary" type="button">Connect wallet</button></div>
-          <div class="field"><label for="asset-select">PreStocks asset</label><select id="asset-select"><option value="PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF">OPENAI / PreStocks</option><option value="PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh">SPACEX / PreStocks</option></select></div>
-          <div class="field"><label for="usdc-amount">USDC amount</label><input id="usdc-amount" inputmode="decimal" min="0.000001" step="0.01" type="number" value="10" placeholder="10.00"></div>
+          <div class="field"><label for="network-select">Execution network</label><select id="network-select"><option value="surfpool">Surfpool mainnet fork</option><option value="devnet">Solana Devnet</option></select></div>
+          <div class="field"><label>Send target</label><p id="send-target-text">Surfpool local mainnet fork · <code>http://127.0.0.1:18488</code></p></div>
+          <div id="surfpool-controls">
+            <div class="field"><label for="asset-select">PreStocks asset</label><select id="asset-select"><option value="PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF">OPENAI / PreStocks</option><option value="PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh">SPACEX / PreStocks</option></select></div>
+            <div class="field"><label for="usdc-amount">USDC amount</label><input id="usdc-amount" inputmode="decimal" min="0.000001" step="0.000001" type="number" value="10" placeholder="10.00"></div>
+          </div>
+          <div id="devnet-controls" hidden>
+            <div class="field"><label for="devnet-pool">Raydium CPMM pool ID</label><input id="devnet-pool" type="text" autocomplete="off" spellcheck="false" placeholder="Devnet pool address"></div>
+            <div class="field"><label for="devnet-input-mint">Input token mint</label><input id="devnet-input-mint" type="text" autocomplete="off" spellcheck="false" placeholder="Devnet token you hold"></div>
+            <div class="field"><label for="devnet-output-mint">Output token mint</label><input id="devnet-output-mint" type="text" autocomplete="off" spellcheck="false" placeholder="Other token in the pool"></div>
+            <div class="field"><label for="devnet-amount">Input amount in base units</label><input id="devnet-amount" type="text" inputmode="numeric" autocomplete="off" placeholder="1000000"></div>
+            <p class="meta">Use an existing Devnet Raydium CPMM pool. The wallet needs an input token account and enough Devnet SOL for fees.</p>
+          </div>
           <div class="button-row single"><button id="quote-button" class="button" type="button">Get quote</button></div>
           <div class="quote-box" aria-live="polite"><div class="quote-stat"><span>Out amount</span><strong id="out-amount">—</strong></div><div class="quote-stat"><span>Price impact</span><strong id="price-impact">—</strong></div></div>
           <div class="button-row single"><button id="build-button" class="button secondary" type="button" disabled>Build transaction</button></div>
           <p id="trade-error" class="error" role="status"></p>
-          <p class="warning">Real mainnet trade. You sign, you own it.</p>
+          <p id="trade-warning" class="warning">Jupiter uses mainnet market data. Simulation and send use your local Surfpool fork. Your wallet signs only after a successful simulation. A BLOCKED or NO_DATA verdict does not send by itself.</p>
           <p id="endorsement" class="endorsement">Council status: NO_DATA</p>
           <div class="button-row single"><button id="sign-button" class="button danger" type="button" disabled>Sign &amp; send</button></div>
         </div>
       </article>
-      <article class="pane graph" aria-labelledby="graph-title">
-        <header class="pane-head"><div><p class="kicker">Evidence topology</p><h2 id="graph-title">Graph</h2></div><span class="meta">Local council</span></header>
-        <div class="pane-body"><div class="graph-wrap"><svg id="graph-svg" viewBox="0 0 640 430" role="img" aria-label="Council evidence graph"></svg><div id="graph-tooltip" class="node-tooltip" hidden></div></div><p id="graph-state" class="graph-help">Loading graph…</p></div>
-      </article>
+    </section>
+    <section class="pane activity-pane terminal" aria-labelledby="activity-title">
+      <header class="pane-head"><div><p class="kicker">Client-side order ledger</p><h2 id="activity-title">Transaction activity</h2></div><span class="terminal-chip accent">Local only</span></header>
+      <div class="pane-body">
+        <p class="meta">New copilot sends appear here with their network, status, and signature. Activity stays in this browser.</p>
+        <ol id="activity-list" class="activity-list" role="log" aria-live="polite"></ol>
+      </div>
     </section>
   </main>
+      <footer class="terminal-footer"><span>Local copilot</span><span>Client-owned execution · explicit wallet action</span></footer>
+    </div>
+  </div>
+  <script type="module" src="/copilot/execution-boot.mjs"></script>
   <script>
     (function () {
       'use strict';
       var COUNCIL = 'http://127.0.0.1:8787';
-      var QUOTE_API = 'https://lite-api.jup.ag/swap/v1/quote';
-      var SWAP_API = 'https://lite-api.jup.ag/swap/v1/swap';
       var USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
       var PLACEHOLDER = '11111111111111111111111111111111';
       var wallet = null;
       var walletConnected = false;
       var latestQuote = null;
+      var latestTrade = null;
       var unsignedTransaction = null;
       var builtFor = null;
       var quoteGeneration = 0;
       var buildGeneration = 0;
       var WEB3_URL = window.__FALCON_WEB3_URL || 'https://esm.sh/@solana/web3.js@1.95.8';
       var currentAdvice = 'NO_DATA';
+      var adviceHash = '';
       var provider = window.solana || null;
+      var activityStorageKey = 'falconos.copilot.activity.v1';
+      var activityStatuses = ['sent', 'confirmed', 'failed', 'pending', 'lookup-failed'];
+      var activityEntries = [];
       var byId = function (id) { return document.getElementById(id); };
       var text = function (id, value) { byId(id).textContent = value; };
       var escapeDisplay = function (value) { return value === null || value === undefined || value === '' ? '—' : String(value); };
       var shortKey = function (value) { return value.length > 12 ? value.slice(0, 5) + '…' + value.slice(-5) : value; };
       var setError = function (value) { text('trade-error', value || ''); };
+      var historicalSmokeTest = {
+        signature: '571MD2vFHNvHcws6Yxz3Ani1S7RvxBi4j1cMbTQ5mL5nEMu61XoQb9Pmc92nfiasJTPzNCmyop5GFti7jgMi6ECV',
+        network: 'Surfpool',
+        label: 'Surfpool smoke test · 0.01 SOL system transfer',
+        wallet: 'throwaway test wallet',
+        status: 'finalized',
+        time: 'Last checked 2026-09-24 12:44 UTC · slot 450000281',
+        note: 'Finalized on the current local fork. This was not a PreStocks order.'
+      };
+      // REPORTED: the previous session summary records this signature as a 0.01 SOL transfer from a throwaway wallet.
+      // VERIFIED: local Surfpool getSignatureStatuses returned finalized at slot 450000281 on 2026-09-24.
+      var readActivity = function () {
+        try {
+          var saved = JSON.parse(window.localStorage.getItem(activityStorageKey) || '[]');
+          if (!Array.isArray(saved)) return [];
+          return saved.filter(function (entry) {
+            return entry && typeof entry.signature === 'string' && typeof entry.network === 'string'
+              && typeof entry.label === 'string' && typeof entry.status === 'string' && activityStatuses.indexOf(entry.status) !== -1;
+          }).slice(0, 20);
+        } catch (_) { return []; }
+      };
+      var saveActivity = function () {
+        try { window.localStorage.setItem(activityStorageKey, JSON.stringify(activityEntries.slice(0, 20))); } catch (_) { /* Keep this session's in-memory activity. */ }
+      };
+      var appendActivity = function (entry) {
+        activityEntries.unshift(entry);
+        activityEntries = activityEntries.slice(0, 20);
+        saveActivity();
+        renderActivity();
+      };
+      var updateActivity = function (signature, status, note) {
+        activityEntries = activityEntries.map(function (entry) {
+          if (entry.signature !== signature) return entry;
+          return Object.assign({}, entry, { status: status, note: note || '' });
+        });
+        saveActivity();
+        renderActivity();
+      };
+      var formatBaseUnits = function (value, decimals) {
+        var amount = BigInt(value);
+        var scale = 10n ** BigInt(decimals);
+        var fraction = (amount % scale).toString().padStart(decimals, '0').replace(/0+$/, '');
+        return (amount / scale).toString() + (fraction ? '.' + fraction : '');
+      };
+      var renderActivity = function () {
+        var list = byId('activity-list');
+        list.innerHTML = '';
+        var entries = activityEntries.concat([historicalSmokeTest]);
+        entries.forEach(function (entry) {
+          var item = document.createElement('li');
+          item.className = 'activity-item';
+          var head = document.createElement('div');
+          head.className = 'activity-head';
+          var title = document.createElement('p');
+          title.className = 'activity-title';
+          title.textContent = entry.label;
+          var status = document.createElement('span');
+          status.className = 'activity-status ' + entry.status;
+          status.textContent = entry.status === 'lookup-failed' ? 'Status lookup failed' : entry.status;
+          head.appendChild(title);
+          head.appendChild(status);
+          var meta = document.createElement('div');
+          meta.className = 'activity-meta';
+          var detail = document.createElement('p');
+          detail.className = 'activity-note';
+          detail.textContent = [entry.network, entry.wallet, entry.time].filter(Boolean).join(' · ');
+          meta.appendChild(detail);
+          var copy = document.createElement('button');
+          copy.type = 'button';
+          copy.className = 'activity-copy';
+          copy.setAttribute('data-copy-signature', entry.signature);
+          copy.textContent = 'Copy signature';
+          meta.appendChild(copy);
+          var signature = document.createElement('code');
+          signature.className = 'activity-signature';
+          signature.textContent = entry.signature;
+          item.appendChild(head);
+          item.appendChild(meta);
+          item.appendChild(signature);
+          if (entry.note) {
+            var note = document.createElement('p');
+            note.className = 'activity-note';
+            note.textContent = entry.note;
+            item.appendChild(note);
+          }
+          list.appendChild(item);
+        });
+      };
+      var activityLabel = function (trade) {
+        if (trade.target === 'surfpool') {
+          var asset = trade.outputMint === 'PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF' ? 'OPENAI' : 'SPACEX';
+          if (trade.inputMint === USDC) return 'BUY ' + asset + ' / PreStocks · ' + formatBaseUnits(trade.amount, 6) + ' USDC';
+          if (trade.outputMint === USDC) return 'SELL ' + asset + ' / PreStocks';
+        }
+        return 'SWAP ' + shortKey(trade.inputMint) + ' → ' + shortKey(trade.outputMint) + ' · ' + trade.amount + ' input base units';
+      };
+      var copyActivitySignature = function (event) {
+        var button = event.target.closest('[data-copy-signature]');
+        if (!button) return;
+        if (!navigator.clipboard || !navigator.clipboard.writeText) { setError('Clipboard access is unavailable in this browser.'); return; }
+        var signature = button.getAttribute('data-copy-signature');
+        navigator.clipboard.writeText(signature).then(function () {
+          button.textContent = 'Copied';
+          window.setTimeout(function () { button.textContent = 'Copy signature'; }, 1400);
+        }).catch(function () { setError('Could not copy this signature.'); });
+      };
+      var renderNetwork = function () {
+        var target = byId('network-select').value;
+        var isSurfpool = target === 'surfpool';
+        byId('surfpool-controls').hidden = !isSurfpool;
+        byId('devnet-controls').hidden = isSurfpool;
+        text('send-target-text', isSurfpool ? 'Surfpool local mainnet fork · http://127.0.0.1:18488' : 'Solana Devnet · https://api.devnet.solana.com');
+        text('trade-route-label', isSurfpool ? 'Jupiter mainnet route / Surfpool fork' : 'Raydium Devnet CPMM / Solana Devnet');
+        text('trade-warning', isSurfpool
+          ? 'Jupiter uses mainnet market data. Simulation and send use your local Surfpool fork. Your wallet signs only after a successful simulation. A BLOCKED or NO_DATA verdict does not send by itself.'
+          : 'Raydium builds a Devnet CPMM route. Simulation and send use Solana Devnet. The quote must use the entered pool. Check the mints and amount before signing. A BLOCKED or NO_DATA verdict does not send by itself.');
+      };
       var renderStatus = function (status) {
         currentAdvice = status === 'PUBLISHED' || status === 'BLOCKED' ? status : 'NO_DATA';
         var chip = byId('advice-status');
@@ -149,27 +324,49 @@
         text('endorsement', currentAdvice === 'PUBLISHED' ? 'Council status: PUBLISHED' : 'Council does not endorse this trade right now');
       };
       var renderAdvice = function (payload) {
-        if (!payload || (payload.status !== 'PUBLISHED' && payload.status !== 'BLOCKED' && payload.status !== 'NO_DATA')) throw new Error('invalid advice response');
+        if (!payload || (payload.status !== 'PUBLISHED' && payload.status !== 'BLOCKED' && payload.status !== 'NO_DATA') || payload.execution_ready !== false || !Array.isArray(payload.citations)) throw new Error('invalid advice response');
+        if ((payload.status === 'PUBLISHED') !== (payload.citations.length > 0)) throw new Error('invalid advice citations');
         renderStatus(payload.status);
-        text('advice-meta', payload.created_at ? 'Snapshot ' + payload.created_at + (payload.latency_ms === undefined ? '' : ' · ' + payload.latency_ms + 'ms') : 'No snapshot published');
+        var hash = payload.snapshot_sha256 ? String(payload.snapshot_sha256).slice(0, 12) : '';
+        text('advice-meta', payload.created_at ? 'Snapshot ' + payload.created_at + (hash ? ' · ' + hash : '') + (payload.latency_ms === undefined ? '' : ' · ' + payload.latency_ms + 'ms') : 'No snapshot published');
+        if (payload.snapshot_sha256 && payload.snapshot_sha256 !== adviceHash) {
+          adviceHash = payload.snapshot_sha256;
+          loadGraph();
+        }
         var reasons = Array.isArray(payload.reasons) && payload.reasons.length ? payload.reasons : ['No council reason supplied.'];
         byId('advice-reasons').innerHTML = '';
         reasons.forEach(function (reason) { var item = document.createElement('li'); item.textContent = String(reason); byId('advice-reasons').appendChild(item); });
         var rows = Array.isArray(payload.evidence) ? payload.evidence : [];
         var body = byId('evidence-body');
         body.innerHTML = '';
-        if (!rows.length) { body.innerHTML = '<tr><td colspan="4"><p class="empty">No evidence published.</p></td></tr>'; return; }
+        if (!rows.length) body.innerHTML = '<tr><td colspan="4"><p class="empty">No evidence published.</p></td></tr>';
         rows.forEach(function (row) {
           var tr = document.createElement('tr');
-          [row.asset_id, row.token_price, row.underlying_price, row.premium_bps === null || row.premium_bps === undefined ? null : row.premium_bps].forEach(function (value) { var td = document.createElement('td'); td.textContent = escapeDisplay(value); tr.appendChild(td); });
+          [row.underlying || row.asset_id, row.token_price, row.underlying_price, row.premium_bps === null || row.premium_bps === undefined ? null : row.premium_bps].forEach(function (value, index) { var shown = value; if ((index === 1 || index === 2) && /^-?\d+\.\d+$/.test(String(shown))) shown = Number(shown).toFixed(2); var td = document.createElement('td'); td.textContent = escapeDisplay(shown); if (index === 0 && row.asset_id) td.title = String(row.asset_id); tr.appendChild(td); });
           body.appendChild(tr);
         });
+        var citationList = byId('citation-list');
+        citationList.innerHTML = '';
+        if (!payload.citations.length) {
+          var emptyCitation = document.createElement('li');
+          emptyCitation.textContent = 'No citations for unpublished advice.';
+          citationList.appendChild(emptyCitation);
+        } else {
+          payload.citations.forEach(function (citation) {
+            var item = document.createElement('li');
+            var hash = citation.raw_excerpt_sha256 ? String(citation.raw_excerpt_sha256).slice(0, 12) : 'missing hash';
+            item.textContent = [shortKey(String(citation.asset_id || 'unknown asset')), citation.field, citation.source_id, citation.source_version, citation.observed_at, citation.value, hash].map(escapeDisplay).join(' · ');
+            item.title = [citation.asset_id, citation.raw_excerpt_sha256].map(escapeDisplay).join(' · ');
+            citationList.appendChild(item);
+          });
+        }
       };
       var setNoData = function (message) {
         renderStatus('NO_DATA');
         text('advice-meta', 'Local council offline');
         byId('advice-reasons').innerHTML = '<li>' + (message || 'No council data available.') + '</li>';
         byId('evidence-body').innerHTML = '<tr><td colspan="4"><p class="empty">NO_DATA — evidence unavailable.</p></td></tr>';
+        byId('citation-list').innerHTML = '<li>No citations for unpublished advice.</li>';
       };
       var pollAdvice = function () {
         fetch(COUNCIL + '/advice', { cache: 'no-store' }).then(function (response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); }).then(renderAdvice).catch(function () { setNoData('NO_DATA — local council unavailable.'); });
@@ -198,6 +395,7 @@
       var invalidateTicket = function () {
         quoteGeneration += 1;
         latestQuote = null;
+        latestTrade = null;
         text('out-amount', '—');
         text('price-impact', '—');
         setError('');
@@ -209,38 +407,72 @@
         if (walletConnected) { if (provider.disconnect) provider.disconnect(); setWallet(null); return; }
         provider.connect().then(function (result) { setWallet({ publicKey: result.publicKey || provider.publicKey }); }).catch(function (error) { setError(error && error.message ? error.message : 'Wallet connection was not completed.'); });
       };
-      var quoteUrl = function () {
-        var amount = Number(byId('usdc-amount').value);
-        if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter a positive USDC amount.');
-        var params = new URLSearchParams({ inputMint: USDC, outputMint: byId('asset-select').value, amount: String(Math.round(amount * 1000000)), slippageBps: '50' });
-        return QUOTE_API + '?' + params.toString();
+      var usdcAmountUnits = function () {
+        var raw = byId('usdc-amount').value.trim();
+        if (!/^\d+(?:\.\d{1,6})?$/.test(raw)) throw new Error('Enter a positive USDC amount with up to six decimals.');
+        var parts = raw.split('.');
+        var whole = BigInt(parts[0]);
+        var fraction = BigInt((parts[1] || '').padEnd(6, '0') || '0');
+        var units = whole * 1000000n + fraction;
+        if (units <= 0n || units > 18446744073709551615n) throw new Error('USDC amount is outside the supported range.');
+        return units.toString();
       };
       var getQuote = function () {
         invalidateTicket();
         var generation = quoteGeneration;
-        var url; try { url = quoteUrl(); } catch (error) { setError(error.message); return; }
+        var exec = window.FALCON_EXEC;
+        var target = byId('network-select').value;
+        var request;
+        try {
+          if (target === 'surfpool') {
+            request = { target: target, inputMint: USDC, outputMint: byId('asset-select').value, amount: usdcAmountUnits() };
+          } else {
+            request = {
+              target: target,
+              poolId: byId('devnet-pool').value.trim(),
+              inputMint: byId('devnet-input-mint').value.trim(),
+              outputMint: byId('devnet-output-mint').value.trim(),
+              amount: byId('devnet-amount').value.trim(),
+            };
+            if (!request.poolId || !request.inputMint || !request.outputMint) throw new Error('Enter the Devnet pool ID and both token mints.');
+            if (!/^\d+$/.test(request.amount)) throw new Error('Enter the input amount in integer base units.');
+          }
+        } catch (error) { setError(error.message); return; }
+        if (!exec || !exec.getQuote) { setError('Quote service unavailable.'); return; }
         byId('quote-button').disabled = true;
-        fetch(url).then(function (response) { if (!response.ok) throw new Error('Quote unavailable (HTTP ' + response.status + ').'); return response.json(); }).then(function (quote) {
+        exec.getQuote(request).then(function (quote) {
           if (generation !== quoteGeneration) return; // stale response: inputs changed mid-flight
           latestQuote = quote;
-          text('out-amount', escapeDisplay(quote.outAmount));
-          text('price-impact', quote.priceImpactPct === undefined ? '—' : String(quote.priceImpactPct) + '%');
+          latestTrade = request;
+          var outputAmount = target === 'surfpool' ? quote.outAmount : quote.data.outputAmount;
+          var priceImpact = target === 'surfpool' ? quote.priceImpactPct : quote.data.priceImpactPct;
+          text('out-amount', escapeDisplay(outputAmount));
+          text('price-impact', priceImpact === undefined ? '—' : String(priceImpact) + '%');
           byId('build-button').disabled = false;
         }).catch(function (error) { if (generation !== quoteGeneration) return; latestQuote = null; text('out-amount', '—'); text('price-impact', '—'); setError(error.message || 'Quote unavailable.'); }).finally(function () { byId('quote-button').disabled = false; });
       };
       var buildTransaction = function () {
-        if (!latestQuote) { setError('Get a quote before building.'); return; }
+        if (!latestQuote || !latestTrade) { setError('Get a quote before building.'); return; }
+        var exec = window.FALCON_EXEC;
+        if (!exec || !exec.buildUnsignedSwap) { setError('Transaction builder unavailable.'); return; }
         setError(''); byId('build-button').disabled = true;
         var generation = ++buildGeneration;
         var forKey = walletKey();
-        fetch(SWAP_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteResponse: latestQuote, userPublicKey: forKey, wrapAndUnwrapSol: true }) }).then(function (response) { if (!response.ok) throw new Error('Transaction build unavailable (HTTP ' + response.status + ').'); return response.json(); }).then(function (swap) {
+        exec.buildUnsignedSwap(Object.assign({}, latestTrade, { quoteResponse: latestQuote, userPublicKey: forKey })).then(function (payload) {
           if (generation !== buildGeneration) return; // stale response: account or inputs changed mid-flight
-          if (typeof swap.swapTransaction !== 'string' || !swap.swapTransaction) throw new Error('Jupiter returned no serialized transaction.');
-          unsignedTransaction = swap.swapTransaction;
+          if (typeof payload !== 'string' || !payload) throw new Error('Swap service returned no serialized transaction.');
+          unsignedTransaction = payload;
           builtFor = forKey;
           text('trade-error', 'Unsigned transaction ready for review.');
           byId('sign-button').disabled = !walletConnected || builtFor !== walletKey();
         }).catch(function (error) { if (generation !== buildGeneration) return; unsignedTransaction = null; builtFor = null; setError(error.message || 'Transaction build unavailable.'); }).finally(function () { byId('build-button').disabled = !latestQuote; });
+      };
+      var bytesToBase64 = function (bytes) {
+        var parts = [];
+        for (var index = 0; index < bytes.length; index += 8192) {
+          parts.push(String.fromCharCode.apply(null, bytes.subarray(index, index + 8192)));
+        }
+        return btoa(parts.join(''));
       };
       var base64ToBytes = function (value) {
         var binary = window.atob(value);
@@ -251,7 +483,13 @@
       var signInFlight = false;
       var signAndSend = function () {
         if (signInFlight) return;
-        if (!walletConnected || !unsignedTransaction || !provider || !provider.signAndSendTransaction) return;
+        var exec = window.FALCON_EXEC;
+        var target = latestTrade && latestTrade.target;
+        var tradeForActivity = latestTrade && Object.assign({}, latestTrade);
+        var quoteForActivity = latestQuote;
+        var rpc = exec && exec.CLUSTERS && target ? exec.CLUSTERS[target] : '';
+        if (!exec || !target || target !== byId('network-select').value || !exec.isAllowedRpc(rpc)) { setError('Send target changed. Get a new quote before signing.'); return; }
+        if (!walletConnected || !unsignedTransaction || !provider || !provider.signTransaction) { setError('Connect a wallet that can sign without choosing the network.'); return; }
         if (builtFor !== walletKey()) { setError('Account changed since this transaction was built. Rebuild for the connected account.'); clearBuiltTransaction(); return; }
         // Capture the exact trade authorized by this click. The module import
         // below can take seconds; any edit or account change in that window
@@ -263,22 +501,99 @@
         byId('sign-button').disabled = true;
         // Phantom requires a Transaction object, not base64 text: deserialize
         // Jupiter's bytes as a VersionedTransaction before requesting a signature.
+        var blockhashWindow = null;
         import(WEB3_URL).then(function (web3) {
           if (generation !== buildGeneration || unsignedTransaction !== payload || builtFor !== signer || !walletConnected || walletKey() !== signer) {
             throw new Error('Ticket changed while preparing the transaction. Nothing was sent; rebuild and review again.');
           }
           var transaction = web3.VersionedTransaction.deserialize(base64ToBytes(payload));
-          return provider.signAndSendTransaction(transaction);
-        }).then(function (result) { text('trade-error', 'Transaction submitted: ' + (result && result.signature ? shortKey(result.signature) : 'wallet response received')); }).catch(function (error) { setError(error && error.message ? error.message : 'Wallet declined or failed to submit.'); }).finally(function () { signInFlight = false; byId('sign-button').disabled = !walletConnected || !unsignedTransaction || builtFor !== walletKey(); });
+          if (transaction.signatures.some(function (signature) { return signature.some(function (byte) { return byte !== 0; }); })) {
+            throw new Error('Swap transaction is already signed. Refusing to change its blockhash.');
+          }
+          return exec.getLatestBlockhash(rpc).then(function (latest) {
+            blockhashWindow = latest;
+            transaction.message.recentBlockhash = latest.blockhash;
+            var simulationPayload = bytesToBase64(transaction.serialize());
+            return exec.simulateEncoded(rpc, simulationPayload);
+          }).then(function () {
+            if (generation !== buildGeneration || unsignedTransaction !== payload || walletKey() !== signer) {
+              throw new Error('Ticket changed while preparing the transaction. Nothing was sent; rebuild and review again.');
+            }
+            return provider.signTransaction(transaction);
+          }).then(function (signed) {
+            if (generation !== buildGeneration || unsignedTransaction !== payload || builtFor !== signer || !walletConnected || walletKey() !== signer) {
+              throw new Error('Account changed before send. Nothing was sent.');
+            }
+            if (!signed || !signed.message || !signed.serialize || !signed.signatures) throw new Error('Wallet returned an invalid signed transaction. Nothing was sent.');
+            var expectedMessage = transaction.message.serialize();
+            var signedMessage = signed.message.serialize();
+            if (expectedMessage.length !== signedMessage.length || expectedMessage.some(function (byte, index) { return byte !== signedMessage[index]; })) {
+              throw new Error('Wallet changed the simulated transaction. Nothing was sent.');
+            }
+            var message = signed.message;
+            var signerKeys = message.staticAccountKeys || message.accountKeys || [];
+            var signerIndex = signerKeys.slice(0, message.header.numRequiredSignatures).findIndex(function (key) { return key.toString() === signer; });
+            if (signerIndex < 0 || !signed.signatures[signerIndex] || signed.signatures[signerIndex].every(function (byte) { return byte === 0; })) {
+              throw new Error('Wallet did not sign this transaction. Nothing was sent.');
+            }
+            return exec.getBlockHeight(rpc).then(function (height) {
+              if (!blockhashWindow || height > blockhashWindow.lastValidBlockHeight) {
+                throw new Error('Blockhash expired before send. Nothing was sent. Get a new quote and rebuild.');
+              }
+              if (generation !== buildGeneration || unsignedTransaction !== payload || builtFor !== signer || !walletConnected || walletKey() !== signer) {
+                throw new Error('Ticket changed before send. Nothing was sent. Get a new quote and rebuild.');
+              }
+              return exec.sendEncoded(rpc, bytesToBase64(signed.serialize()));
+            });
+          });
+        }).then(function (signature) {
+          var sentSignature = String(signature);
+          var outputAmount = target === 'surfpool' ? quoteForActivity.outAmount : quoteForActivity.data.outputAmount;
+          appendActivity({
+            signature: sentSignature,
+            network: target === 'surfpool' ? 'Surfpool local fork' : 'Solana Devnet',
+            label: activityLabel(tradeForActivity),
+            wallet: 'Wallet ' + shortKey(signer),
+            status: 'sent',
+            time: new Date().toLocaleString(),
+            note: outputAmount ? 'Quoted output: ' + outputAmount + ' token base units.' : ''
+          });
+          invalidateTicket();
+          var networkName = target === 'surfpool' ? 'Surfpool' : 'Devnet';
+          text('trade-error', 'Sent to ' + networkName + '. Checking status: ' + sentSignature);
+          return exec.waitForConfirmation(rpc, sentSignature).then(function (result) {
+            if (result.status === 'confirmed') {
+              updateActivity(sentSignature, 'confirmed', 'Transaction confirmed on ' + networkName + '.');
+              text('trade-error', 'Confirmed on ' + networkName + ': ' + sentSignature);
+            } else if (result.status === 'failed') {
+              updateActivity(sentSignature, 'failed', 'Transaction failed: ' + JSON.stringify(result.err));
+              text('trade-error', 'Failed on ' + networkName + ': ' + sentSignature + ' (' + JSON.stringify(result.err) + ')');
+            } else {
+              updateActivity(sentSignature, 'pending', 'Confirmation is still pending. Check the signature before retrying.');
+              text('trade-error', networkName + ' has not confirmed this transaction yet. Check before retrying: ' + sentSignature);
+            }
+          }).catch(function (error) {
+            updateActivity(sentSignature, 'lookup-failed', 'Transaction was sent. Status lookup failed: ' + (error.message || 'unknown error'));
+            text('trade-error', 'Sent to ' + networkName + '. Status lookup failed. Check before retrying: ' + sentSignature + ' (' + (error.message || 'unknown error') + ')');
+          });
+        }).catch(function (error) { setError(error && error.message ? error.message : 'Wallet declined or failed to submit.'); }).finally(function () { signInFlight = false; byId('sign-button').disabled = !walletConnected || !unsignedTransaction || builtFor !== walletKey(); });
       };
       byId('wallet-connect-control').addEventListener('click', connectWallet);
       byId('quote-button').addEventListener('click', getQuote);
       byId('build-button').addEventListener('click', buildTransaction);
       byId('sign-button').addEventListener('click', signAndSend);
+      byId('activity-list').addEventListener('click', copyActivitySignature);
+      byId('network-select').addEventListener('change', function () { invalidateTicket(); renderNetwork(); });
       byId('asset-select').addEventListener('change', invalidateTicket);
       byId('usdc-amount').addEventListener('input', invalidateTicket);
+      ['devnet-pool', 'devnet-input-mint', 'devnet-output-mint', 'devnet-amount'].forEach(function (id) {
+        byId(id).addEventListener('input', invalidateTicket);
+      });
       if (provider) { provider.on && provider.on('connect', function () { setWallet(provider); clearBuiltTransaction(); }); provider.on && provider.on('disconnect', function () { setWallet(null); clearBuiltTransaction(); }); provider.on && provider.on('accountChanged', function (key) { setWallet(key ? { publicKey: key } : null); clearBuiltTransaction(); }); }
       setWallet(null);
+      activityEntries = readActivity();
+      renderActivity();
+      renderNetwork();
       pollAdvice();
       window.setInterval(pollAdvice, 2000);
 
@@ -288,19 +603,45 @@
       var graphTooltip = byId('graph-tooltip');
       var renderGraph = function () {
         svg.innerHTML = '';
-        var width = 640; var height = 430;
-        var nodes = graph.nodes.map(function (node, index) { return Object.assign({}, node, { x: 80 + (index % 4) * 160, y: 80 + Math.floor(index / 4) * 130, vx: 0, vy: 0 }); });
+        var width = 960; var height = 680;
+        svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+        var columns = 2;
+        var nodes = graph.nodes.map(function (node, index) {
+          return Object.assign({}, node, { x: 700 + (index % columns) * 150, y: 40 + Math.floor(index / columns) * 64 });
+        });
         var byNode = {}; nodes.forEach(function (node) { byNode[node.id] = node; });
         var edges = graph.edges.map(function (edge) { return { data: edge, from: byNode[edge.from], to: byNode[edge.to] }; }).filter(function (edge) { return edge.from && edge.to; });
-        var edgeEls = edges.map(function (edge) { var line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); line.setAttribute('class', 'edge'); svg.appendChild(line); return { model: edge, element: line }; });
-        var nodeEls = nodes.map(function (node) { var group = document.createElementNS('http://www.w3.org/2000/svg', 'g'); group.setAttribute('tabindex', '0'); group.setAttribute('role', 'button'); group.setAttribute('aria-label', node.label + ' ' + node.kind); var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); circle.setAttribute('class', 'node'); circle.setAttribute('r', node.kind === 'asset' ? '11' : '8'); circle.setAttribute('fill', colors[node.kind] || colors.evidence); var label = document.createElementNS('http://www.w3.org/2000/svg', 'text'); label.setAttribute('class', 'node-label'); label.setAttribute('x', '14'); label.setAttribute('y', '4'); label.textContent = node.label; group.appendChild(circle); group.appendChild(label); group.addEventListener('mouseenter', function () { graphTooltip.hidden = false; graphTooltip.textContent = node.label + ' · ' + node.kind; }); group.addEventListener('mouseleave', function () { graphTooltip.hidden = true; }); group.addEventListener('focus', function () { graphTooltip.hidden = false; graphTooltip.textContent = node.label + ' · ' + node.kind; }); group.addEventListener('click', function () { graphTooltip.hidden = false; graphTooltip.textContent = node.label + ' · ' + node.kind; }); svg.appendChild(group); return { model: node, element: group }; });
-        var tick = function () {
-          nodes.forEach(function (node, index) { var row = Math.floor(index / 4); node.vx += (width / 2 - node.x) * .0008; node.vy += (height / 2 - node.y) * .0008; nodes.forEach(function (other, otherIndex) { if (index === otherIndex) return; var dx = node.x - other.x; var dy = node.y - other.y; var distance = Math.max(24, Math.sqrt(dx * dx + dy * dy)); var force = 24 / (distance * distance); node.vx += dx * force; node.vy += dy * force; }); node.vx *= .92; node.vy *= .92; node.x = Math.max(34, Math.min(width - 34, node.x + node.vx)); node.y = Math.max(26, Math.min(height - 26, node.y + node.vy)); });
-          edgeEls.forEach(function (edge) { edge.element.setAttribute('x1', edge.model.from.x); edge.element.setAttribute('y1', edge.model.from.y); edge.element.setAttribute('x2', edge.model.to.x); edge.element.setAttribute('y2', edge.model.to.y); });
-          nodeEls.forEach(function (entry) { entry.element.setAttribute('transform', 'translate(' + entry.model.x + ' ' + entry.model.y + ')'); });
-          if (nodes.length) window.requestAnimationFrame(tick);
-        };
-        tick();
+        edges.forEach(function (edge) {
+          var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('class', 'edge');
+          line.setAttribute('x1', edge.from.x); line.setAttribute('y1', edge.from.y);
+          line.setAttribute('x2', edge.to.x); line.setAttribute('y2', edge.to.y);
+          svg.appendChild(line);
+        });
+        var clip = function (value, max) { var text = String(value); return text.length > max ? text.slice(0, max - 1) + '…' : text; };
+        nodes.forEach(function (node) {
+          var group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          group.setAttribute('tabindex', '0'); group.setAttribute('role', 'button');
+          group.setAttribute('transform', 'translate(' + node.x + ' ' + node.y + ')');
+          var extra = node.detail || node.value || node.source || node.reason || '';
+          var caption = node.kind + ' · ' + node.label + (extra ? ' · ' + extra : '');
+          group.setAttribute('aria-label', caption);
+          var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('class', 'node'); circle.setAttribute('r', node.kind === 'asset' ? '7' : '5');
+          circle.setAttribute('fill', colors[node.kind] || colors.evidence);
+          var label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          label.setAttribute('class', 'node-label'); label.setAttribute('text-anchor', 'middle'); label.setAttribute('y', '16');
+          label.textContent = clip(node.kind + ' · ' + node.label, 22);
+          var detail = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          detail.setAttribute('class', 'node-label'); detail.setAttribute('text-anchor', 'middle'); detail.setAttribute('y', '28');
+          detail.textContent = clip(extra, 22);
+          group.appendChild(circle); group.appendChild(label); group.appendChild(detail);
+          group.addEventListener('mouseenter', function () { graphTooltip.hidden = false; graphTooltip.textContent = caption; });
+          group.addEventListener('mouseleave', function () { graphTooltip.hidden = true; });
+          group.addEventListener('focus', function () { graphTooltip.hidden = false; graphTooltip.textContent = caption; });
+          group.addEventListener('click', function () { graphTooltip.hidden = false; graphTooltip.textContent = caption; });
+          svg.appendChild(group);
+        });
       };
       var loadGraph = function () {
         fetch(COUNCIL + '/graph', { cache: 'no-store' }).then(function (response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); }).then(function (payload) { graph.nodes = Array.isArray(payload.nodes) ? payload.nodes : []; graph.edges = Array.isArray(payload.edges) ? payload.edges : []; renderGraph(); text('graph-state', graph.nodes.length ? graph.nodes.length + ' nodes · ' + graph.edges.length + ' edges · click a node for details' : 'NO_DATA — graph has no nodes.'); }).catch(function () { text('graph-state', 'NO_DATA — local graph unavailable.'); });

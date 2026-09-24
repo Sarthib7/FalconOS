@@ -5,13 +5,43 @@ import test from 'node:test';
 const html = await readFile(new URL('../copilot/index.html', import.meta.url), 'utf8');
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
 
-test('copilot surface contains wallet, advisory, trade, and PreStocks controls', () => {
+test('copilot surface contains Surfpool and Devnet wallet controls', () => {
   assert.match(html, /id="wallet-connect-control"/);
   assert.match(html, /Advisory only\./);
-  assert.match(html, /Real mainnet trade\. You sign, you own it\./);
+  assert.match(html, /A BLOCKED or NO_DATA verdict does not send by itself\./);
+  assert.match(html, /class="pane graph terminal"/);
+  assert.match(html, /\.pane\.graph\.terminal \{[^}]*font-family:\s*ui-monospace/);
+  assert.match(html, /node\.kind \+ ' · ' \+ node\.label/);
+  assert.match(html, /node\.detail \|\| node\.value \|\| node\.source \|\| node\.reason/);
+  assert.match(html, /id="network-select"/);
+  assert.match(html, /Surfpool mainnet fork/);
+  assert.match(html, /Solana Devnet/);
+  assert.match(html, /id="devnet-pool"/);
+  assert.match(html, /id="devnet-input-mint"/);
+  assert.match(html, /id="devnet-output-mint"/);
+  assert.match(html, /http:\/\/127\.0\.0\.1:18488/);
+  assert.match(html, /Jupiter uses mainnet market data/);
+  assert.match(html, /Raydium builds a Devnet CPMM route/);
+  assert.match(html, /exec\.getLatestBlockhash\(rpc\)/);
+  assert.match(html, /exec\.getBlockHeight\(rpc\)/);
+  assert.match(html, /exec\.simulateEncoded\(rpc, simulationPayload\)/);
+  assert.match(html, /payload\.execution_ready !== false/);
+  assert.match(html, /citation-list/);
+  assert.match(html, /api\.devnet\.solana\.com/);
+  assert.doesNotMatch(html, /api\.mainnet-beta\.solana\.com/);
+  assert.match(html, /exec\.sendEncoded\(rpc/);
+  assert.match(html, /exec\.waitForConfirmation\(rpc/);
+  assert.doesNotMatch(html, /signAndSendTransaction/);
   assert.match(html, /PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF/);
   assert.match(html, /PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh/);
   assert.match(html, /Council does not endorse this trade right now/);
+  assert.match(html, /row\.underlying \|\| row\.asset_id/);
+  assert.match(html, /payload\.snapshot_sha256 !== adviceHash/);
+  assert.ok(html.indexOf('class="pane graph terminal"') >= 0);
+  assert.ok(html.indexOf('class="pane graph terminal"') < html.indexOf('id="trade-title"'));
+  assert.ok(html.indexOf('class="advice-on-graph"') > html.indexOf('class="pane graph terminal"'));
+  assert.ok(html.indexOf('id="advice-title"') < html.indexOf('id="trade-title"'));
+  console.log('graph-before-trade advice-on-graph terminal font-family: ui-monospace node.kind node.detail value source reason Surfpool 18488 Devnet');
 });
 
 test('copilot page contains no private-key or seed handling strings', () => {
