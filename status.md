@@ -1,5 +1,15 @@
 # Status
 
+## Active treasury work: 2026-09-26
+
+[VERIFIED, user direction] The user approved the saved visual pitch and chose the local loop first. They then requested documentation PRs followed by small feature PRs.
+
+[INFERRED, branch scope] This PR adds the treasury contract and implementation plan. The four feature slices in [the PR sequence](plans/treasury-prs.md) follow it. Implementation task cells remain open until their code and checks land in the stack.
+
+[VERIFIED, published artifact] [Pitch PR #5](https://github.com/Sarthib7/FalconOS/pull/5) contains the saved HTML. This documentation branch is based on that branch and published main `4f8e78c`.
+
+[INFERRED, record correction] Earlier current-state labels below refer to their dated work. The treasury slice has a separate simulation boundary under I14.
+
 [VERIFIED, session date] Last updated: 2026-09-16.
 [VERIFIED, tool ownership] Updated by: coordinator, root agent.
 ## Current build

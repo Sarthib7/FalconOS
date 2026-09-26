@@ -108,3 +108,7 @@
 [VERIFIED, local audit contract, 2026-09-11] Direct publication with no lead proposal uses explicit `NOT_CALLED`/`FAILED` lead audit fields; an accepted lead proposal remains in the immutable audit when the independent risk transport later fails. Validated policy/account state is preserved on valid-request safe fallback. Malformed advice/Copilot fallbacks with no valid snapshot use explicit `snapshotEvidence: null`, remain visibly `NO_DATA`, are deeply frozen, and pass their own response validators.
 
 [BOUNDARY, local pure module, 2026-09-11] Perps canonicalization emits in-memory raw bytes/manifests, normalized projections, and content hashes only. It performs no durable append-only journal/persistence; durable audit storage is an external host prerequisite and is not claimed by this slice.
+
+## Treasury simulation addition, 2026-09-26
+
+[INFERRED, current interface index] Interface `I14` is defined in [the treasury simulation contract](treasury-contract.md). Owner: architect. Provider: `web/treasury/`. Consumers: the local treasury UI and tests. Version 1 is simulation-only and does not change the earlier plugin, stocks engine, or Devnet interfaces.
