@@ -92,10 +92,12 @@ async function page() {
     throw new Error(`Page condition timed out: ${expression}`);
   };
   const click = (id) => evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
+  const events = () => evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)}))?.events.length ?? 0`);
+  const event = async (id) => { const count = await events(); await click(id); await wait(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)}))?.events.length === ${count + 1}`); };
   const open = async () => { await send('Page.navigate', { url: `${origin}/treasury/` }); await wait('document.readyState === "complete" && (!document.getElementById("setup-panel").hidden || !document.getElementById("workspace").hidden || !document.getElementById("error-message").hidden)'); };
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1120, deviceScaleFactor: 1, mobile: false });
   await open();
-  return { target, send, evaluate, wait, click, open };
+  return { target, send, evaluate, wait, click, event, events, open };
 }
 function check(name, value, detail) {
   checks.push({ name, pass: Boolean(value), ...(detail ? { detail } : {}) });
@@ -123,10 +125,36 @@ try {
   const initial = await p.evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)}))`);
   check('V78: setup saves exact reserve, cap, and undelegated remainder', initial.setup.reserveUsdc === '200' && initial.setup.investmentCapUsdc === '500' && replayRun(initial).state.balances.undelegatedUnits === '300000000');
   if (!setupOnly) {
+    check('I14: slice 02 exposes only supported controls', await p.evaluate('!document.querySelector("#graph-nodes, #history-list, #export-run, #start-agent, #stop-agent")'));
+    await p.event('run-cycle');
+    check('V81: missing observation gives NO_DATA', await p.evaluate('document.getElementById("decision-status").textContent === "NO_DATA" && document.getElementById("position-balance").textContent === "0"'));
+    await p.event('scenario-healthy'); await p.event('run-cycle');
+    check('V78 V80: supply moves only the 500 delegated USDC', await p.evaluate('document.getElementById("position-balance").textContent === "500" && document.getElementById("idle-balance").textContent === "0" && document.getElementById("reserve-balance").textContent === "200"'));
+    await p.event('scenario-low'); await p.event('run-cycle');
+    check('V81: illiquid exit is blocked and retains position', await p.evaluate('document.getElementById("decision-status").textContent === "BLOCKED" && document.getElementById("position-balance").textContent === "500"'));
+    await p.event('scenario-stale'); await p.event('run-cycle');
+    check('V81: stale evidence gives NO_DATA without movement', await p.evaluate('document.getElementById("decision-status").textContent === "NO_DATA" && document.getElementById("position-balance").textContent === "500"'));
+    await p.event('scenario-unavailable'); await p.event('run-cycle');
+    check('V81: unavailable evidence gives NO_DATA', await p.evaluate('document.getElementById("decision-status").textContent === "NO_DATA"'));
+    await p.event('scenario-healthy');
+    await p.event('owner-redeem');
+    check('V80 V81: owner redemption returns delegated idle only', await p.evaluate('document.getElementById("position-balance").textContent === "0" && document.getElementById("idle-balance").textContent === "500" && document.getElementById("reserve-balance").textContent === "200"'));
     const saved = await p.evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`);
     await p.send('Page.reload'); await p.wait('!document.getElementById("workspace").hidden');
-    check('V83 V84: reload restores the saved setup and all four balances', await p.evaluate(`localStorage.getItem(${JSON.stringify(KEY)}) === ${JSON.stringify(saved)} && document.getElementById('reserve-balance').textContent === '200' && document.getElementById('undelegated-balance').textContent === '300' && document.getElementById('idle-balance').textContent === '500' && document.getElementById('position-balance').textContent === '0'`));
-    check('I14: setup slice exposes no unsupported action controls', await p.evaluate('!document.querySelector("[data-scenario], #run-cycle, #owner-redeem, #revoke-mandate, #graph-nodes, #history-list, #export-run, #start-agent, #stop-agent")'));
+    check('V83 V84: reload preserves the exact journal', await p.evaluate(`localStorage.getItem(${JSON.stringify(KEY)}) === ${JSON.stringify(saved)}`));
+    const other = await page();
+    await p.event('scenario-healthy'); await p.event('run-cycle');
+    await other.wait('document.getElementById("position-balance").textContent === "500"');
+    check('V82 V84: another tab receives saved balance changes', await other.evaluate('document.getElementById("position-balance").textContent === "500"'));
+    await call('Target.closeTarget', { targetId: other.target.targetId });
+    await p.click('revoke-mandate');
+    check('V80: revocation requires a visible confirmation', await p.evaluate('document.getElementById("revoke-dialog").open'));
+    await p.click('cancel-revoke');
+    check('V80: cancelling retains active authority', !(await p.evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).events.some(e => e.type === 'revoke')`)));
+    await p.click('revoke-mandate'); await p.event('confirm-revoke');
+    check('V80 V84: revocation disables agent movement', await p.evaluate('document.getElementById("run-cycle").disabled && document.getElementById("mandate-status").textContent === "Permanently revoked"'));
+    await p.event('owner-redeem');
+    check('V80: explicit owner exit works after revocation', await p.evaluate('document.getElementById("position-balance").textContent === "0" && document.getElementById("idle-balance").textContent === "500"'));
     await p.evaluate('scrollTo(0,0)'); await screenshot(p, 'desktop', true);
     for (const width of [390, 320]) {
       await p.send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: true });

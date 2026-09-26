@@ -1,4 +1,4 @@
-import { createRun, replayRun } from './domain.mjs';
+import { appendEvent, createRun, replayRun } from './domain.mjs';
 
 const KEY = 'falcon.treasury.simulation.v1';
 const MAX_RECORD_LENGTH = 256 * 1024;
@@ -66,5 +66,21 @@ export function createStore({ storage, locks } = {}) {
     });
   }
 
-  return { load, create };
+  async function dispatch(event, expectedRevision) {
+    return exclusive(() => {
+      const current = load();
+      if (!current) throw new Error('Create a simulation before running an action.');
+      if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new Error('A valid state revision is required.');
+      const run = appendEvent(current.run, event);
+      if (run === current.run) return current;
+      if (expectedRevision !== current.run.events.length) {
+        throw new Error('The simulation changed in another tab. Reload its saved state before trying again.');
+      }
+      const view = replayRun(run);
+      save(run);
+      return { run, view };
+    });
+  }
+
+  return { load, create, dispatch };
 }

@@ -10,6 +10,8 @@
 
 [VERIFIED, setup branch checks] `npm --prefix web test` returned `tests 84`, `pass 84`, `fail 0`. The static build exited `0`. `node web/test/treasury-browser.mjs` returned `passed: 12`, `total: 12`, `exceptions: []`. These checks cover setup, browser persistence, and its failure paths. Decision commands remain outside this slice.
 
+[VERIFIED, manual-decision branch checks] `npm --prefix web test` returned `tests 98`, `pass 98`, `fail 0`. Build exit: `0`. Browser: `passed: 23`, `total: 23`, `exceptions: []`. The UI completed synthetic supply, blocked exit, owner redemption, and revocation. Graph/history inspection and automatic cycles follow in separate slices.
+
 [INFERRED, record correction] Earlier current-state labels below refer to their dated work. The treasury slice has a separate simulation boundary under I14.
 
 [VERIFIED, session date] Last updated: 2026-09-16.

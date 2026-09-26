@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="Set a fixed Falcon treasury mandate and inspect saved synthetic balances.">
+  <meta name="description" content="Explore a Falcon treasury simulation with a fixed mandate, synthetic observations, and replayable decisions.">
   <title>Falcon | Treasury simulation</title>
   <link rel="stylesheet" href="./style.css">
   <script type="module" src="./app.mjs"></script>
@@ -19,15 +19,15 @@
 
     <main id="main">
       <section class="hero" aria-labelledby="page-title">
-        <div><p class="eyebrow">STAGE 01 / LOCAL LOOP</p><h1 id="page-title">Your rules.<br><em>A clear starting point.</em></h1></div>
-        <p class="hero-copy">Set a spending reserve and an investment cap. See each balance and restore your setup after reload.</p>
+        <div><p class="eyebrow">STAGE 01 / LOCAL LOOP</p><h1 id="page-title">Your rules.<br><em>Every move explained.</em></h1></div>
+        <p class="hero-copy">Set a spending reserve and an investment cap. Change the evidence. See what Falcon can do.</p>
       </section>
-      <div class="simulation-note"><span class="note-icon" aria-hidden="true">S</span><p><strong>Synthetic USDC. Saved setup.</strong> This page uses no wallet or live provider. No funds move. Your setup stays in this browser.</p></div>
+      <div class="simulation-note"><span class="note-icon" aria-hidden="true">S</span><p><strong>Synthetic USDC. Simulated actions.</strong> This page uses no wallet or live provider. Interest and fees are zero. History stays in this browser.</p></div>
       <div id="error-message" class="error-message" role="alert" hidden></div>
       <p id="action-message" class="action-message" role="status" aria-live="polite"></p>
 
       <section id="setup-panel" class="setup-panel panel" aria-labelledby="setup-title" hidden>
-        <div class="setup-intro"><p class="eyebrow">01 / SET YOUR MANDATE</p><h2 id="setup-title">Give Falcon a boundary.</h2><p>The reserve stays outside agent authority. Only the investment cap becomes delegated idle USDC.</p><div class="setup-example"><span class="tiny-label">ONE SAVED RUN</span><p>The mandate stays fixed in this run. Reload restores your setup and balances.</p></div></div>
+        <div class="setup-intro"><p class="eyebrow">01 / SET YOUR MANDATE</p><h2 id="setup-title">Give Falcon a boundary.</h2><p>The reserve stays outside agent authority. Only the investment cap becomes delegated idle USDC.</p><div class="setup-example"><span class="tiny-label">ONE SAVED RUN</span><p>The mandate stays fixed. You can revoke it and request a separate owner redemption.</p></div></div>
         <form id="setup-form">
           <p class="demo-note"><strong>Demo defaults</strong> are filled below. Edit them before creating your simulation.</p>
           <fieldset id="setup-fields">
@@ -36,7 +36,7 @@
               <label for="total-usdc">Total synthetic USDC<input id="total-usdc" name="totalUsdc" value="1000" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"><small>Your complete simulated balance.</small></label>
               <label for="reserve-usdc">Spending reserve<input id="reserve-usdc" name="reserveUsdc" value="200" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"><small>Excluded from agent actions.</small></label>
               <label for="investment-cap-usdc">Investment cap<input id="investment-cap-usdc" name="investmentCapUsdc" value="500" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"><small>Delegated to this simulation.</small></label>
-              <label for="min-liquidity-usdc">Minimum pool liquidity<input id="min-liquidity-usdc" name="minLiquidityUsdc" value="1000" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"><small>The minimum liquidity in your policy.</small></label>
+              <label for="min-liquidity-usdc">Minimum pool liquidity<input id="min-liquidity-usdc" name="minLiquidityUsdc" value="1000" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"><small>Below this floor, request redemption.</small></label>
               <label for="max-observation-age">Maximum evidence age <span class="field-unit">seconds</span><input id="max-observation-age" name="maxObservationAgeSeconds" value="60" type="number" min="1" max="3600" step="1" required><small>From 1 to 3,600 seconds.</small></label>
             </div>
             <p class="field-note">Reserve + investment cap must fit within the total. The remainder stays undelegated.</p>
@@ -57,11 +57,38 @@
           <div class="mandate-strip"><span id="mandate-status" class="status-badge">Active mandate</span><p>Cap <strong id="mandate-cap"></strong> USDC</p><p>Liquidity floor <strong id="mandate-liquidity"></strong> USDC</p><p>Evidence age limit <strong id="mandate-age"></strong></p></div>
         </section>
 
+        <section class="panel observations" aria-labelledby="observation-title">
+          <div class="section-heading compact"><div><p class="eyebrow">02 / CHOOSE THE EVIDENCE</p><h2 id="observation-title">Change the conditions.</h2></div><span class="subtle-badge">Synthetic observations only</span></div>
+          <p class="section-copy">Each button records one observation. Agent cycles use that saved observation until you choose another.</p>
+          <div class="scenario-buttons" role="group" aria-label="Record a synthetic observation">
+            <button id="scenario-healthy" type="button" data-scenario="healthy" aria-pressed="false"><span class="scenario-dot healthy"></span><span>Healthy liquidity</span><small>Enough for supply and exit</small></button>
+            <button id="scenario-low" type="button" data-scenario="low" aria-pressed="false"><span class="scenario-dot low"></span><span>Low liquidity</span><small>Test a blocked full exit</small></button>
+            <button id="scenario-stale" type="button" data-scenario="stale" aria-pressed="false"><span class="scenario-dot stale"></span><span>Stale evidence</span><small>Older than your age limit</small></button>
+            <button id="scenario-unavailable" type="button" data-scenario="unavailable" aria-pressed="false"><span class="scenario-dot unavailable"></span><span>Unavailable</span><small>Required data is missing</small></button>
+          </div>
+          <div id="observation-summary" class="observation-summary"><p id="observation-value">No observation recorded.</p><p><span id="observation-freshness"></span><span id="observation-age"></span></p><p id="observation-time"></p></div>
+        </section>
+
+        <div class="manual-decision">
+          <section id="decision-panel" class="panel decision-panel" aria-labelledby="decision-title">
+            <p id="decision-eyebrow" class="eyebrow">LATEST DECISION</p><h2 id="decision-title">Ready when you are.</h2><span id="decision-status" class="status-badge">Awaiting a cycle</span><p id="decision-amount" class="decision-amount"></p><p id="decision-time" class="small-note"></p><ul id="decision-reasons" class="decision-reasons"><li>Choose synthetic evidence, then run one cycle.</li></ul><div class="outcome-box"><span class="tiny-label">SIMULATED OUTCOME</span><p id="decision-outcome">No movement has been simulated.</p></div>
+          </section>
+        </div>
+
+        <section class="panel control-panel" aria-labelledby="control-title">
+          <div><p class="eyebrow">03 / RUN ONE CYCLE</p><h2 id="control-title">Act within the mandate.</h2><p class="section-copy">Each click runs one cycle against the saved observation. Evidence never refreshes automatically.</p></div>
+          <div class="agent-controls"><button id="run-cycle" class="button primary" type="button">Run one cycle</button></div>
+          <p id="event-count" class="small-note">0 / 200 events saved</p>
+        </section>
+
+        <section class="owner-panel" aria-labelledby="owner-title"><div><p class="eyebrow">OWNER CONTROLS</p><h2 id="owner-title">You keep the exit.</h2><p class="section-copy">Revocation permanently stops agent movements in this run. Owner redemption stays available with fresh evidence and enough liquidity.</p></div><div class="owner-controls"><button id="owner-redeem" class="button" type="button">Redeem as owner</button><button id="revoke-mandate" class="button danger" type="button">Revoke mandate</button></div></section>
+
       </div>
     </main>
     <footer><span>Falcon / Treasury simulation</span><span>One browser. One saved run. No real funds.</span></footer>
   </div>
 
-  <noscript><p class="noscript">Enable JavaScript to save and inspect your simulation setup.</p></noscript>
+  <dialog id="revoke-dialog" aria-labelledby="revoke-title" aria-describedby="revoke-description"><form method="dialog"><p class="eyebrow">OWNER CONFIRMATION</p><h2 id="revoke-title">Revoke this mandate?</h2><p id="revoke-description">The agent cannot move funds again in this run. Revocation does not redeem the position. You can request owner redemption separately.</p><div class="dialog-actions"><button id="cancel-revoke" class="button" value="cancel" autofocus>Keep mandate</button><button id="confirm-revoke" class="button danger" value="confirm">Permanently revoke</button></div></form></dialog>
+  <noscript><p class="noscript">Enable JavaScript to run this local simulation.</p></noscript>
 </body>
 </html>

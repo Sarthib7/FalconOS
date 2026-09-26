@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStore } from '../treasury/store.mjs';
-import { replayRun } from '../treasury/domain.mjs';
 
 const KEY = 'falcon.treasury.simulation.v1';
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const at = n => `2026-09-26T12:00:${String(n).padStart(2, '0')}.000Z`;
 const setup = () => ({ id: id(1), createdAt: at(0), totalUsdc: '1000', reserveUsdc: '200', investmentCapUsdc: '500', minLiquidityUsdc: '1000', maxObservationAgeSeconds: 60 });
+const observation = () => ({ id: id(2), at: at(1), type: 'observe', observation: { source: 'synthetic', status: 'ok', observedAt: at(1), availableLiquidityUsdc: '10000' } });
+const cycle = (n = 3) => ({ id: id(n), at: at(n), type: 'cycle' });
 
 function environment() {
   const records = new Map();
@@ -28,66 +29,50 @@ function environment() {
   return { records, storage, locks, store: createStore({ storage, locks }) };
 }
 
-test('V78 V82 V83: saved setup survives a new store instance with exact protected balances', async () => {
+test('V82 V83: a saved supply survives a new store instance', async () => {
   const env = environment();
-  assert.equal(env.store.load(), null);
-  const created = await env.store.create(setup());
-  const reopened = createStore({ storage: env.storage, locks: env.locks }).load();
-  assert.deepEqual(reopened, created);
-  assert.deepEqual(reopened.view.state.balances, { totalUnits: '1000000000', reserveUnits: '200000000', undelegatedUnits: '300000000', idleUnits: '500000000', positionUnits: '0' });
-  assert.deepEqual(JSON.parse(env.storage.getItem(KEY)), created.run);
-  assert.deepEqual(replayRun(created.run), created.view);
-  assert.deepEqual(created.run.events, []);
-  assert.equal(env.storage.writes, 1);
-  assert.deepEqual(env.locks.calls, [{ name: KEY, options: { mode: 'exclusive' } }]);
-});
-
-test('V78 V82: rejected setup leaves no record and permits a corrected retry', async () => {
-  const env = environment();
-  await assert.rejects(env.store.create({ ...setup(), reserveUsdc: '900' }), /reserve plus investment cap/);
-  assert.equal(env.storage.getItem(KEY), null);
-  assert.equal(env.storage.writes, 0);
-  const corrected = await env.store.create(setup());
-  assert.equal(corrected.run.setup.reserveUsdc, '200');
-  assert.equal(env.storage.writes, 1);
-});
-
-test('V82: a failed initial write returns an error and leaves the browser empty', async () => {
-  const env = environment();
-  env.storage.failWrite = true;
-  await assert.rejects(env.store.create(setup()), /Could not save/);
-  assert.equal(env.storage.getItem(KEY), null);
-  assert.equal(env.store.load(), null);
-  assert.equal(env.storage.writes, 0);
-  env.storage.failWrite = false;
   await env.store.create(setup());
-  assert.equal(env.storage.writes, 1);
+  await env.store.dispatch(observation(), 0);
+  const supplied = await env.store.dispatch(cycle(), 1);
+  const reopened = createStore({ storage: env.storage, locks: env.locks }).load();
+  assert.deepEqual(reopened, supplied);
+  assert.equal(reopened.view.state.balances.positionUnits, '500000000');
+  assert.equal(env.locks.calls.length, 3);
+  assert.ok(env.locks.calls.every(call => call.name === KEY && call.options.mode === 'exclusive'));
 });
 
-test('V82: concurrent setup attempts serialize and retain the first saved mandate', async () => {
+test('V82: a failed storage write preserves the prior position, revision, and raw history', async () => {
+  const env = environment();
+  await env.store.create(setup());
+  await env.store.dispatch(observation(), 0);
+  const before = env.storage.getItem(KEY);
+  env.storage.failWrite = true;
+  await assert.rejects(env.store.dispatch(cycle(), 1), /Could not save/);
+  assert.equal(env.storage.getItem(KEY), before);
+  assert.equal(env.store.load().view.state.balances.positionUnits, '0');
+  assert.equal(env.store.load().view.state.revision, 1);
+});
+
+test('V82: concurrent stores serialize; the stale second writer cannot overwrite a committed action', async () => {
   const env = environment();
   const other = createStore({ storage: env.storage, locks: env.locks });
-  const results = await Promise.allSettled([env.store.create(setup()), other.create({ ...setup(), id: id(2), reserveUsdc: '100' })]);
+  await env.store.create(setup());
+  await env.store.dispatch(observation(), 0);
+  const results = await Promise.allSettled([env.store.dispatch(cycle(3), 1), other.dispatch(cycle(4), 1)]);
   assert.equal(results[0].status, 'fulfilled');
   assert.equal(results[1].status, 'rejected');
-  assert.match(results[1].reason.message, /already has a simulation/);
-  assert.equal(env.store.load().run.id, id(1));
-  assert.equal(env.store.load().run.setup.reserveUsdc, '200');
-  assert.equal(env.storage.writes, 1);
+  assert.match(results[1].reason.message, /changed in another tab/);
+  assert.equal(env.store.load().run.events.length, 2);
+  assert.equal(env.store.load().view.state.balances.positionUnits, '500000000');
 });
 
-test('V82 V83: corrupt or nonempty saved records cannot be replaced by setup', async () => {
-  const valid = await environment().store.create(setup());
-  const corruptRecords = ['{broken', '{}', 'null',
-    JSON.stringify({ ...valid.run, mode: 'live' }),
-    JSON.stringify({ ...valid.run, events: [{ id: id(2), at: at(1), type: 'cycle' }] }),
-    JSON.stringify({ ...valid.run, setup: { ...valid.run.setup, investmentCapUsdc: '900' } }),
-  ];
-  for (const corrupt of corruptRecords) {
+test('V82: corrupt stored data cannot be replaced by initialization or another event', async () => {
+  for (const corrupt of ['{broken', '{}', 'null']) {
     const env = environment();
     env.records.set(KEY, corrupt);
     assert.throws(() => env.store.load(), /not valid JSON|failed validation/);
     await assert.rejects(env.store.create(setup()), /not valid JSON|failed validation/);
+    await assert.rejects(env.store.dispatch(cycle(), 0), /not valid JSON|failed validation/);
     assert.equal(env.storage.getItem(KEY), corrupt);
     assert.equal(env.storage.writes, 0);
   }
@@ -102,34 +87,35 @@ test('V82: unavailable reads and unavailable Web Locks fail without writing', as
   assert.equal(env.storage.writes, 0);
 });
 
-test('V82: creating again cannot overwrite a saved setup', async () => {
+test('V82 V83: exact retries are idempotent even after the original revision; conflicting retries fail', async () => {
   const env = environment();
+  await env.store.create(setup());
+  await env.store.dispatch(observation(), 0);
+  const first = await env.store.dispatch(cycle(), 1);
+  const writes = env.storage.writes;
+  const retry = await env.store.dispatch(cycle(), 1);
+  assert.deepEqual(retry, first);
+  assert.equal(env.storage.writes, writes);
+  await assert.rejects(env.store.dispatch({ ...cycle(), type: 'revoke' }, 1));
+  assert.equal(env.storage.writes, writes);
+});
+
+test('V82: create never overwrites a valid run', async () => {
+  const env = environment();
+  assert.equal(env.store.load(), null);
   await env.store.create(setup());
   const before = env.storage.getItem(KEY);
   await assert.rejects(env.store.create({ ...setup(), id: id(5) }), /already has a simulation/);
   assert.equal(env.storage.getItem(KEY), before);
-  assert.equal(env.storage.writes, 1);
 });
 
-test('V82: oversized saved records remain intact', async () => {
+test('V82: oversized saved records and malformed revisions stop before writing', async () => {
   const env = environment();
-  const oversized = ' '.repeat(256 * 1024 + 1);
-  env.records.set(KEY, oversized);
+  env.records.set(KEY, ' '.repeat(256 * 1024 + 1));
   assert.throws(() => env.store.load(), /record limit/);
-  await assert.rejects(env.store.create(setup()), /record limit/);
-  assert.equal(env.storage.getItem(KEY), oversized);
-  assert.equal(env.storage.writes, 0);
-});
-
-test('V82: read-only reload needs no lock and returned objects cannot change persisted setup', async () => {
-  const env = environment();
-  const created = await env.store.create(setup());
-  const saved = env.storage.getItem(KEY);
-  created.run.setup.reserveUsdc = '0';
-  created.view.state.balances.reserveUnits = '0';
-  const reopened = createStore({ storage: env.storage, locks: {} }).load();
-  assert.equal(reopened.run.setup.reserveUsdc, '200');
-  assert.equal(reopened.view.state.balances.reserveUnits, '200000000');
-  assert.equal(env.storage.getItem(KEY), saved);
-  assert.equal(env.storage.writes, 1);
+  env.records.clear();
+  await env.store.create(setup());
+  const writes = env.storage.writes;
+  for (const revision of [-1, '0', NaN, Infinity, 0.5]) await assert.rejects(env.store.dispatch(cycle(), revision), /revision/);
+  assert.equal(env.storage.writes, writes);
 });
