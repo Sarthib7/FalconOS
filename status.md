@@ -8,6 +8,8 @@
 
 [VERIFIED, published artifact] [Pitch PR #5](https://github.com/Sarthib7/FalconOS/pull/5) contains the saved HTML. This documentation branch is based on that branch and published main `4f8e78c`.
 
+[VERIFIED, setup branch checks] `npm --prefix web test` returned `tests 84`, `pass 84`, `fail 0`. The static build exited `0`. `node web/test/treasury-browser.mjs` returned `passed: 12`, `total: 12`, `exceptions: []`. These checks cover setup, browser persistence, and its failure paths. Decision commands remain outside this slice.
+
 [INFERRED, record correction] Earlier current-state labels below refer to their dated work. The treasury slice has a separate simulation boundary under I14.
 
 [VERIFIED, session date] Last updated: 2026-09-16.
