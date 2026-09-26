@@ -3,7 +3,10 @@
 ## §G GOAL
 Build inbound read-only FalconOS plugin CLI + truthful local council website → external Client Agent gets validated advice while retaining decision/execution authority.
 
+[VERIFIED, user direction, 2026-09-26] Add accepted Stage 01 treasury MVP through local simulation first. [INFERRED, active slice] Owner mandate → decision graph → checked simulated settlement → browser-local replay. Existing modules retain their current boundaries.
+
 ## §C CONSTRAINTS
+- [INFERRED, 2026-09-26 addition] `web/treasury/` isolated simulation under I14; no wallet, signing, chain/model/provider requests, real funds, yield claims, or hidden background operation. Public static hosting is a later release action; each browser retains separate history.
 - FalconOS role: investment firm intake, research, deterministic policy, advisory result. External agents remain callers.
 - First slice read-only. ⊥ wallet, signer, transaction, capital reservation, pooled custody, execution.
 - External agent has no model authority. ⊥ caller-selected model, executable, adapter, reasoning setting, tool, policy override.
@@ -212,6 +215,15 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - Provider/network/parse failure → typed capture failure → snapshot `NO_DATA`; the dashboard surfaces the failure and never fabricates evidence.
 - ⊥ order submission, custody, signing, capital movement; read-only display of live evidence + advisory. Secrets via env only.
 
+### I14. Treasury simulation
+
+- [INFERRED, contract] [Treasury contract](docs/treasury-contract.md) fixes version 1 Run, Event, View, Graph, Decision, Entry, and store exports. Coordinator owns interface changes.
+- [INFERRED, surface] `web/treasury/` static Vite entry. Pure `domain.mjs`, guarded browser-local `store.mjs`, UI `app.mjs`. `createRun`, `appendEvent`, `replayRun`, `buildGraph`, `decide`, `formatUsdc` exported by domain.
+- [INFERRED, data] Six-decimal USDC inputs persist in the command journal; replay returns integer-unit strings; BigInt arithmetic. Initial balances split reserve, undelegated cash, delegated idle, and position. Zero simulated fees/interest.
+- [INFERRED, authority] Owner creates fixed mandate and investment budget. Agent cycle may supply, hold, or redeem only delegated balances. Owner may permanently revoke or request explicit redemption. Real account authority is outside this simulation.
+- [INFERRED, persistence] One versioned `localStorage` record under Web Lock `falcon.treasury.simulation.v1`. Reload, validate, replay, revision-check, apply, persist, then render success. No silent reset or truncation.
+- [INFERRED, verification] `node --test web/test/treasury-*.test.mjs`; `npm --prefix web test`; Vite build; browser setup → supply → blocked exit → owner redemption → reload/export. Negative checks must demonstrate graph/authority guards reject unsafe actions.
+
 ## §V INVARIANTS
 
 V1: ∀ plugin process → read exactly one bounded (≤8 MiB) JSON object from stdin, emit exactly one bounded (≤64 KiB) JSON response line to stdout, diagnostics ⊥ stdout
@@ -338,6 +350,17 @@ V64: ∀ dash live fetch → read-only HTTP GET or public RPC read; ⊥ write/ex
 V65: ∀ dash rendered output → advisory-only, `executionReady: false`; shows council basket/risk/citations + `live` provenance; ⊥ trade/order action or capital instruction
 
 V66: ∀ dash PreStocks/token-2022 scaled-UI mint price evidence → derive live multiplier from extension time-gate (`newMultiplier` when `now ≥ newMultiplierEffectiveTimestamp`, else current `multiplier`); cross-check extension vs `getTokenSupply` uiAmount/raw within 5bps; divide raw pool price by multiplier; corroborate normalized price vs issuer `tokenPrice` within 500bps; zero/malformed/missing multiplier, extension/supply disagreement, or issuer disagreement → typed price capture failure → `NO_DATA`
+V77: [INFERRED] ∀ treasury record/view/outcome → explicit `mode: simulation`; synthetic observations; zero simulated interest/fees; no wallet/provider/model/chain call or real capital claim. Existing V11,V51,V64,V65 advisory boundaries remain unchanged outside I14.
+V78: [INFERRED] ∀ treasury money → exact decimal ingress ≤6 fractional digits, integer units ≤u64; `reserve + investmentCap ≤ total`; conservation holds across every event; agent cannot debit reserve or undelegated cash.
+V79: [INFERRED] ∀ treasury agent decision → `decide(graph)` reads only validated typed graph nodes and required edges; missing dependency → blocked action; pre-action graph, decision, and outcome reproducible from journal.
+V80: [INFERRED] ∀ treasury supply → fresh available evidence, permitted mandate, liquid venue, positive delegated idle, position after action ≤cap; revoked mandate blocks every agent movement; owner redemption is explicit separate command.
+V81: [INFERRED] ∀ missing/unavailable/future/stale observation → `NO_DATA`; insufficient full-redemption liquidity → `BLOCKED`, prior position preserved; successful redemption credits delegated idle only.
+V82: [INFERRED] ∀ treasury mutation → exclusive Web Lock, fresh validated replay, expected revision match, one successful storage write before success; corrupt/unavailable/full storage or unsupported locks → visible error, no false success or replacement.
+V83: [INFERRED] ∀ treasury event → exact schema, UUID, monotonic UTC time, at most 200 retained events; duplicate identical ID is idempotent; conflicting ID reuse rejected; reload reproduces state/decisions; no silent journal truncation.
+V84: [INFERRED] ∀ treasury UI → clear simulation labels, visible evidence age/errors/outcomes, keyboard controls and responsive layout; agent loop starts only on user action, stops on error/revocation/page close, stays stopped after reload; export contains validated replayable history.
+V85: [INFERRED] ∀ treasury setup submission → capture form values before disabling inputs; a valid visible mandate creates the same persisted mandate; rejected submission preserves the form for correction.
+V86: [INFERRED] ∀ treasury graph → node details and required relationships are available to assistive technology at desktop and mobile widths; graphical arrows alone do not carry relationship meaning.
+
 ## §T TASKS
 
 id|status|task|cites
@@ -370,6 +393,14 @@ T25|x|add deterministic synthetic stocks contract tests: `NO_DATA` on missing/in
 T26|x|extend stocks snapshot to perps/stablecoins parity: rich registry, per-field source precedence + safe failover, provider-event vs local-receipt time, typed failure metadata; add deterministic parity tests|V60,V61,V62,V63,I10
 T27|~|scaffold isolated `dash/` Node/TS terminal dashboard: read-only live adapter(s) → `live` basket snapshot → stocks council → terminal render; typed failure → `NO_DATA`; verify against synthetic + one real keyless provider|V57,V64,V65,I11
 T28|x|add PreStocks scaled-UI multiplier normalization + issuer corroboration in `dash/prestocks.ts`; fail-closed multiplier parse tests|V66,I11
+T34|x|save accepted pitch; index treasury product/architecture, ADRs, contract, cloud path, implementation plan, and current-state correction|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
+T35|.|build local treasury vertical slice: owner setup → graph-first simulated supply/hold/redeem → persisted replay → interactive UI|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
+T36|.|verify treasury invariants, failure preservation, negative controls, full web suite, static build, and browser workflow|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
+T37|.|prove one exact Kamino USDC supply/redemption path on selected test environment; verify reserve settings, receipt ownership, rounding, and confirmed balances|I14,V78,V81
+T38|.|prepare shareable HTTPS simulation release; verify browser storage isolation, mobile flow, and deployment target before user-authorized publication|I14,V77,V82,V84
+T39|.|specify and prove restricted agent authority, durable server reconciliation, and funded launch prerequisites before automatic real execution|I14,V78,V80,V81
+T40|~|publish treasury documentation and four independently verified feature slices as small draft PRs, based on fresh remote main and excluding unrelated worktree changes|I14,V77,V82,V84,V85,V86
+
 ## §B BUGS
 
 id|date|cause|fix

@@ -1,5 +1,13 @@
 # FalconOS
 
+## Treasury MVP work, 2026-09-26
+
+[VERIFIED, user direction] The user approved the staged treasury pitch and selected the local simulation loop first. Start with the [current documentation index](docs/README.md), [implementation plan](plans/treasury-mvp.md), or [saved interactive pitch](docs/pitches/falcon-stages.html).
+
+[INFERRED, scope] The `/treasury/` slice has synthetic balances and observations. Funded lending and restricted automatic execution require later proofs. The earlier advisory and Devnet modules retain their boundaries.
+
+## Earlier modules and evidence
+
 [VERIFIED, local implementation] FalconOS collects public Solana and Base quotes and writes linked Obsidian notes. The first slice compares USDC/EURC in both directions. See [`src/cli.ts`](src/cli.ts) and [`stablecoins/sources.ts`](stablecoins/sources.ts).
 
 [VERIFIED, user-confirmed product direction, 2026-09-18] FalconOS is the umbrella product. Falcon Investment Council is the current module, in the agent-first market intelligence and risk advisory category. [CONTEXT.md](CONTEXT.md) defines the active scope. Start with the [plan index](plans/README.md) for phases, tasks, checkpoints, and passing criteria.

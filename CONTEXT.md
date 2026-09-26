@@ -1,5 +1,15 @@
 # FalconOS
 
+## Active treasury direction: 2026-09-26
+
+[VERIFIED, new user direction] The user accepted the [staged Falcon pitch](docs/pitches/falcon-stages.html), requested the spec and MVP, and confirmed: "Local loop first, let's do that." The user also requested a future cloud path so others can test it.
+
+[INFERRED, scoped change] Falcon's new product direction is a personal stablecoin treasury agent within owner-set rules. The active slice is an isolated, explicitly simulated treasury loop. It does not expand the authority of the existing advisory engine, plugin, or Devnet terminal. The complete Stage 01 lending and delegated-execution design remains proposed until its integration gates pass.
+
+[INFERRED, record correction] The earlier statements that exclude every future Falcon treasury execution path describe the prior direction. The new accepted pitch supersedes that product direction for the treasury work. Earlier implementation boundaries remain effective for their named modules. Start with [the new documentation index](docs/README.md), [the plan](plans/treasury-mvp.md), and SPEC I14.
+
+## Earlier advisory direction and evidence
+
 [VERIFIED, user-confirmed direction, 2026-09-18] FalconOS is the umbrella product. Falcon Investment Council is the current module: agent-first market intelligence and risk advisory, advisory-only and read-only. See "Confirmed domain decisions" below. [SUPERSEDED, 2026-09-20] The original 2026-09-05 framing ("a multichain research and trading layer" with liquidity pooling, arbitrage, sniping, and execution) is historical. Execution-adjacent capabilities belong, if ever, to a separate regulated Falcon entity, not to FalconOS.
 
 [VERIFIED, user authorization] The user requested: "ok document and update the plan" and "lets start building". This authorizes the local build. The previous validation verdict remains go validate. Starting the prototype does not establish customer demand.
