@@ -41,6 +41,7 @@ export default defineConfig({
         research: entry('./research/index.html'),
         dash: entry('./dash/index.html'),
         app: entry('./app/index.html'),
+        treasury: entry('./treasury/index.html'),
       },
     },
   },

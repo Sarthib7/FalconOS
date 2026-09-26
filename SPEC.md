@@ -394,7 +394,7 @@ T26|x|extend stocks snapshot to perps/stablecoins parity: rich registry, per-fie
 T27|~|scaffold isolated `dash/` Node/TS terminal dashboard: read-only live adapter(s) → `live` basket snapshot → stocks council → terminal render; typed failure → `NO_DATA`; verify against synthetic + one real keyless provider|V57,V64,V65,I11
 T28|x|add PreStocks scaled-UI multiplier normalization + issuer corroboration in `dash/prestocks.ts`; fail-closed multiplier parse tests|V66,I11
 T34|x|save accepted pitch; index treasury product/architecture, ADRs, contract, cloud path, implementation plan, and current-state correction|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
-T35|.|build local treasury vertical slice: owner setup → graph-first simulated supply/hold/redeem → persisted replay → interactive UI|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
+T35|~|build local treasury vertical slice: owner setup → graph-first simulated supply/hold/redeem → persisted replay → interactive UI|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
 T36|.|verify treasury invariants, failure preservation, negative controls, full web suite, static build, and browser workflow|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
 T37|.|prove one exact Kamino USDC supply/redemption path on selected test environment; verify reserve settings, receipt ownership, rounding, and confirmed balances|I14,V78,V81
 T38|.|prepare shareable HTTPS simulation release; verify browser storage isolation, mobile flow, and deployment target before user-authorized publication|I14,V77,V82,V84
@@ -447,3 +447,4 @@ B40|2026-09-16|transform cell threw after deriving checks; artifact variable rol
 B41|2026-09-16|browser smoke clicked evidence link after keyboard test hid its Research tab panel|one-time browser smoke correction
 B42|2026-09-16|meta+og description present-tense live-use claim violated V48; landing test stripped <meta> so it went uncaught|V48
 B43|2026-09-16|dash PreStocks scaled-UI fix cited V66 before spec backprop; `parseScaledUiAccountState` accepted multiplier `0` & silently dropped invalid pending multiplier|V66
+B55|2026-09-26|[VERIFIED, isolated browser regression: `Total USDC must be an unsigned USDC decimal string with at most six fractional digits.`] setup disabled fields before constructing FormData, so visible values were absent|V85; snapshot before disabling; `web/test/treasury-browser.mjs`
