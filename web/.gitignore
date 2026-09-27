@@ -1,1 +1,4 @@
 dist/
+dist-treasury/
+dist-mesh/
+.local/
