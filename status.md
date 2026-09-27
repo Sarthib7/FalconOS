@@ -2,6 +2,12 @@
 
 ## Supabase connection: 2026-09-27
 
+[VERIFIED, setup and API evidence] Task `CF-AGENT-SETUP`, owner `coordinator`, status `Completed` for signup work: all 14 Codex skill files exist and five MCP servers are registered. Main, bindings, and public documentation are enabled. Builds and observability remain disabled after the user questioned repeated authentication. Main MCP returned the Pages configuration and D1 inventory; no further login is needed for the repair. Unrelated Codex settings were preserved. The [Cloudflare record](docs/verification/2026-09-27-cloudflare-email.md) contains sanitized evidence and the pending signup candidate.
+
+[VERIFIED, continued user direction] The user said "go ahead", then requested the landing email form to work. Task `LP-LIVE-EMAIL`, owner `email implementer`, status `In Progress`: production has no `WAITLIST_DB` or `WAITLIST_IP_SALT`; account D1 inventory returned `total_count: 0`. Focused tests returned `pass 27`, `fail 0`; the local migration proof returned `8/8`. Local Pages returned first signup `201`, duplicate `200`, and one persisted entry. All `39/39` static files remain unchanged. The reviewed source slice and deployable artifact are ready. Approval for creating the hosted tables and applying the release is pending. The current form saves early-access signups. Email delivery and account sign-in remain separate requirements.
+
+[REPORTED, runtime discovery] Task `SB-RUNTIME`, owner `release`, status `Blocked`: a fresh Supabase agent found no tool exposing the exact session-pooler hostname. The API already accepts `PGPASSWORD` separately from its connection URL. The exact hostname, certificate verification, private application password, and hosted API connection remain unverified. Supabase OAuth does not provide the application's database password.
+
 [VERIFIED, user approval and application] The user replied "yes yes" to applying the reviewed schema and restricted role with login disabled. Task `SB-APPLY`, owner `release`, status `Completed`: Supabase returned `{"success":true}` and recorded migration `20260927114601`, `falcon_mesh_initial_private`. Task `SB-VERIFY`, owner `reviewer`, status `Completed`: hosted comparison `passed: 21`, `total: 21`; the coordinator reran the saved comparator with exit `0`. All five tables have zero rows. Runtime login activation and API deployment remain pending.
 
 [VERIFIED, user preference and browser output] The user uses Brave Browser. The executable returned `Brave Browser 154.1.96.59`. Task `BRAVE-CHECK`, owner `browser verifier`, status `Completed`: dashboard `passed: 95`, `total: 95`, `exceptions: []`, `remoteRequests: []`, process exit `0`. This used an isolated profile and synthetic records. Live API and wallet behavior remain untested in Brave.
@@ -13,7 +19,7 @@
 | SB-INSPECT | Supabase inspector | Completed | [VERIFIED] Preflight found no mesh schema or application role before application. |
 | SB-COMPAT | compatibility reviewer | Completed | [VERIFIED] Full SQL history and permissions: `41/41` local checks. Hosted connection remains untested. |
 | SB-CANDIDATE | coordinator | Completed | [VERIFIED] The exact three reviewed files were applied after user approval. |
-| SB-RUNTIME | release | Planned | [NOT DETERMINED] Exact pooler hostname requested. Secure login, TLS, and hosted API connection remain pending. |
+| SB-RUNTIME | release | Blocked | [NOT DETERMINED] Exact pooler hostname and private runtime credential. Secure login, TLS, and hosted API connection remain pending. |
 | KM-UPLOAD | API implementer | Completed | [VERIFIED] V112 negative control: `pass 0`, `fail 4`. Full corrected mesh suite: `pass 101`, `fail 0`. |
 
 [VERIFIED, current evidence] The [Supabase verification record](docs/verification/2026-09-27-supabase.md) contains exact catalog responses, SQL hashes, local and hosted results, and limits. The [applied setup](docs/supabase-setup.md) created five private tables and a restricted role with login disabled. This supersedes the earlier pending hosted-schema state. The explicit grants cover the reviewed table and column operations; database login remains disabled.

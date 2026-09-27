@@ -1,0 +1,198 @@
+[
+  {
+    "results": [
+      {
+        "type": "index",
+        "name": "waitlist_entries_ip_created_idx",
+        "tbl_name": "waitlist_entries",
+        "sql": "CREATE INDEX waitlist_entries_ip_created_idx\n  ON waitlist_entries (ip_hash, created_at)"
+      },
+      {
+        "type": "table",
+        "name": "waitlist_entries",
+        "tbl_name": "waitlist_entries",
+        "sql": "CREATE TABLE waitlist_entries (\n  email TEXT PRIMARY KEY,\n  source TEXT NOT NULL,\n  ip_hash TEXT NOT NULL,\n  created_at TEXT NOT NULL DEFAULT (datetime('now')),\n  updated_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+      },
+      {
+        "type": "table",
+        "name": "waitlist_rate_limits",
+        "tbl_name": "waitlist_rate_limits",
+        "sql": "CREATE TABLE waitlist_rate_limits (\n  ip_hash TEXT PRIMARY KEY,\n  window_start INTEGER NOT NULL,\n  attempts INTEGER NOT NULL\n)"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  },
+  {
+    "results": [
+      {
+        "cid": 0,
+        "name": "email",
+        "type": "TEXT",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "source",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "ip_hash",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": "datetime('now')",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": "datetime('now')",
+        "pk": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  },
+  {
+    "results": [
+      {
+        "cid": 0,
+        "name": "ip_hash",
+        "type": "TEXT",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "window_start",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "attempts",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  },
+  {
+    "results": [
+      {
+        "seq": 0,
+        "name": "waitlist_entries_ip_created_idx",
+        "unique": 0,
+        "origin": "c",
+        "partial": 0
+      },
+      {
+        "seq": 1,
+        "name": "sqlite_autoindex_waitlist_entries_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  },
+  {
+    "results": [
+      {
+        "seqno": 0,
+        "cid": 2,
+        "name": "ip_hash"
+      },
+      {
+        "seqno": 1,
+        "cid": 3,
+        "name": "created_at"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  },
+  {
+    "results": [
+      {
+        "seq": 0,
+        "name": "sqlite_autoindex_waitlist_rate_limits_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  },
+  {
+    "results": [
+      {
+        "entry_count": 1,
+        "expected_fixture_count": 1
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "rate_limit_rows": 1,
+        "total_attempts": 2
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  },
+  {
+    "results": [
+      {
+        "outbox_tables": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  }
+]

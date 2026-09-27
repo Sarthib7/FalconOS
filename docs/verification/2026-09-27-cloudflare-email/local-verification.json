@@ -1,0 +1,24 @@
+{
+  "catalogQueries": 9,
+  "allQueriesSucceeded": true,
+  "definitionsMatch0001": true,
+  "entryColumnCount": 5,
+  "rateLimitColumnCount": 3,
+  "entry_count": 1,
+  "expected_fixture_count": 1,
+  "rate_limit_rows": 1,
+  "total_attempts": 2,
+  "outbox_tables": 0,
+  "artifactFiles": 41,
+  "privateRuntimeFilesInArtifact": 0,
+  "artifactAllHashesUnchanged": true,
+  "workerSha256": "1be288ad5ee65977b3d65a45464f3599d3e4c1d306e9939236a88c065f6ed86d",
+  "httpProof": "pages-http-proof.json",
+  "staticComparison": "static-comparison.json",
+  "gitIntegrationRisk": "Verified origin/main lacks the new helper and keeps the old handler. A later main Git deployment can replace an ad-hoc Function release unless the reviewed source pair is integrated into main.",
+  "providerTraffic": "Not measured in Pages; provider settings absent and responses not_configured. Separate SQLite proof recorded providerCalls0.",
+  "runtimeHarnessCorrections": [
+    "Initial --no-bundle startup failed on a Wrangler middleware import. Normal bundling started successfully.",
+    "Node built-in WebSocket could not connect to the local inspector. Wrangler ws client connected, but Runtime.evaluate reported Cannot find default execution context. Instrumentation stopped. No provider-traffic measurement is claimed."
+  ]
+}

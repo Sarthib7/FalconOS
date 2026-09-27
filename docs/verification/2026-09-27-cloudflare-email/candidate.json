@@ -1,0 +1,88 @@
+{
+  "status": "PROPOSED; no hosted writes performed",
+  "account_id": "f646b35b9c52945d4a7e6d19909981d8",
+  "pages_project": "falconos",
+  "environment": "production",
+  "verified_before": {
+    "pages_bindings": [],
+    "pages_environment_variable_names": [],
+    "d1_api_total": 0,
+    "pagination_exhausted": true
+  },
+  "changes": [
+    {
+      "action": "Create D1 database",
+      "name": "falconos-waitlist",
+      "location": "Provider default"
+    },
+    {
+      "action": "Execute exact reviewed SQL after empty catalog verification",
+      "file": "web/migrations/0001_waitlist.sql",
+      "creates": [
+        "waitlist_entries",
+        "waitlist_rate_limits",
+        "waitlist_entries_ip_created_idx"
+      ]
+    },
+    {
+      "action": "Bind created D1 database to existing production Pages project",
+      "binding": "WAITLIST_DB",
+      "database_id": "Use returned creation ID; no guessed ID"
+    },
+    {
+      "action": "Set production Pages secret privately",
+      "name": "WAITLIST_IP_SALT",
+      "generation": "32 cryptographically random bytes encoded as hexadecimal; generate only after approval; pass through stdin; never print, capture, or commit value"
+    },
+    {
+      "action": "Publish reviewed Function pair with existing static artifact",
+      "files": [
+        "web/functions/api/waitlist.js",
+        "web/functions/_waitlist-email.js"
+      ]
+    }
+  ],
+  "not_included": [
+    "0002_waitlist_email_outbox.sql",
+    "RESEND_API_KEY",
+    "WAITLIST_FROM_EMAIL",
+    "confirmation delivery",
+    "account sign-in",
+    "preview environment changes",
+    "customer records"
+  ],
+  "source_sha256": {
+    "web/migrations/0001_waitlist.sql": "adef9fb6982eedd1627cd9ceadf700a049ade5d75586d06f11ca5bcba074a6d1",
+    "web/functions/api/waitlist.js": "d567061aa7fde5963d167fceaaa96511c9e4bfe3bedb4ea620f5aba878179b44",
+    "web/functions/_waitlist-email.js": "9402a4da61c82c7282b0f43e101351e53af458f15026c346fec9e6a705544250"
+  },
+  "verification": {
+    "focused_suites": "27 tests,27 passed,0 failed,0 skipped; exit0",
+    "sqlite_candidate_history": "8/8 checks; first capture201; duplicate200; providerCalls0; existing2 entries and2 rate-limit rows preserved through full history",
+    "limits": "Local SQLite and fixture provider responses do not prove hosted D1 behavior or inbox delivery.",
+    "local_pages": "HTTP checks6/6, first201, duplicate200, persisted1 entry, all39 static HTTP responses unchanged; see local-verification.json and pages-http-proof.json.",
+    "proposed_hosted_probe": {
+      "email": "cloudflare-smoke-20260927@falconos.invalid",
+      "source": "release-verification",
+      "checks": [
+        "first201",
+        "duplicate200",
+        "exact stored record"
+      ],
+      "cleanup": "Delete only this exact email with the expected source after verification; retain rate-limit accounting."
+    }
+  },
+  "application_notes": [
+    "The user must approve the reviewed hosted database/schema change. The coordinator owns application and release.",
+    "Recheck source hashes and remote configuration before writes.",
+    "Existing plaintext or secret values must remain private if configuration changes before application.",
+    "D1 binding update must preserve unrelated settings.",
+    "Use only the reviewed0001 file, not automatic full migrations apply.",
+    "After publication, verify persisted signup only through an explicitly approved test address or user submission."
+  ],
+  "source_persistence": {
+    "base_commit": "bfa82caaf5bdf2208ce057a7db6397302ebfaeae",
+    "slice_commit": "b1a86787605b6d97bb3a9cafd706060fd641535e",
+    "method": "Port the reviewed eight-file slice onto main before publication; do not merge the full MVP branch."
+  }
+}
