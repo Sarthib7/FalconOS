@@ -1,7 +1,10 @@
-use crate::council::{AssetConfig, CouncilConfig, build_snapshot, evaluate_council, render_advice};
+use crate::council::{
+    AssetConfig, CouncilCheck, CouncilConfig, build_snapshot, evaluate_council_with_checks,
+    render_advice,
+};
 use crate::dexscreener::{AssetCaptures, DexAsset, fetch_asset};
-use crate::domain::{CanonicalSnapshot, FieldCapture, Verdict, sha256_hex};
-use crate::graph::{KnowledgeGraph, build_graph};
+use crate::domain::{CanonicalSnapshot, FieldCapture, Proposal, Verdict, sha256_hex};
+use crate::graph::{GraphEdge, KnowledgeGraph, build_graph};
 use crate::prestocks::{fetch_prestocks, fetch_scaled_ui_multipliers, normalize_scaled_price};
 use crate::pyth::{PythAssetFeeds, PythPriceResult, PythUnderlyingRef, fetch_pyth_prices};
 use serde::Serialize;
@@ -47,10 +50,133 @@ pub struct AdviceResponse {
     pub latency_ms: u128,
 }
 
+#[derive(Clone, Debug, Serialize)]
+struct DashboardAssetPolicy {
+    asset_id: String,
+    underlying: String,
+    target_weight_bps: u32,
+    max_weight_bps: u32,
+    min_liquidity_units: String,
+    price_scale: u32,
+    quantity_scale: u32,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct DashboardPolicy {
+    max_dislocation_bps: u32,
+    coherence_cap_ms: u64,
+    assets: Vec<DashboardAssetPolicy>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct DashboardCapture {
+    asset_id: String,
+    field: String,
+    source_id: String,
+    source_version: String,
+    observed_at: String,
+    available: bool,
+    value: Option<String>,
+    raw_excerpt_sha256: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct DashboardGraphNode {
+    id: String,
+    kind: String,
+    label: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct DashboardGraph {
+    nodes: Vec<DashboardGraphNode>,
+    edges: Vec<GraphEdge>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct DashboardResponse {
+    advice: AdviceResponse,
+    proposal: Option<Proposal>,
+    policy: DashboardPolicy,
+    checks: Vec<CouncilCheck>,
+    captures: Vec<DashboardCapture>,
+    graph: DashboardGraph,
+}
+
+fn dashboard_response(config: &CouncilConfig, evaluation: &Evaluation) -> DashboardResponse {
+    let proposal = match &evaluation.verdict {
+        Verdict::Published(proposal) => Some(proposal.clone()),
+        Verdict::Blocked { .. } | Verdict::NoData { .. } => None,
+    };
+    let policy = DashboardPolicy {
+        max_dislocation_bps: config.max_dislocation_bps,
+        coherence_cap_ms: config.coherence_cap_ms,
+        assets: config
+            .assets
+            .iter()
+            .map(|asset| DashboardAssetPolicy {
+                asset_id: asset.asset_id.clone(),
+                underlying: asset.underlying.clone(),
+                target_weight_bps: asset.target_weight_bps,
+                max_weight_bps: asset.max_weight_bps,
+                min_liquidity_units: asset.min_liquidity.clone(),
+                price_scale: asset.price_scale,
+                quantity_scale: asset.quantity_scale,
+            })
+            .collect(),
+    };
+    let captures = config
+        .assets
+        .iter()
+        .flat_map(|asset| {
+            ["price", "liquidity", "reference"]
+                .into_iter()
+                .filter_map(|field| {
+                    let capture = evaluation
+                        .snapshot
+                        .captures
+                        .get(&crate::council::capture_key(&asset.asset_id, field))?;
+                    Some(DashboardCapture {
+                        asset_id: asset.asset_id.clone(),
+                        field: field.to_string(),
+                        source_id: capture.source_id.clone(),
+                        source_version: capture.source_version.clone(),
+                        observed_at: capture.observed_at.clone(),
+                        available: capture.is_ok(),
+                        value: capture.value.clone(),
+                        raw_excerpt_sha256: sha256_hex(capture.raw_excerpt.as_bytes()),
+                    })
+                })
+        })
+        .collect();
+    let graph = DashboardGraph {
+        nodes: evaluation
+            .graph
+            .nodes
+            .iter()
+            .map(|node| DashboardGraphNode {
+                id: node.id.clone(),
+                kind: node.kind.clone(),
+                label: node.label.clone(),
+            })
+            .collect(),
+        edges: evaluation.graph.edges.clone(),
+    };
+    DashboardResponse {
+        advice: evaluation.advice.clone(),
+        proposal,
+        policy,
+        checks: evaluation.checks.clone(),
+        captures,
+        graph,
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Evaluation {
     pub snapshot: CanonicalSnapshot,
     pub verdict: Verdict,
+    pub checks: Vec<CouncilCheck>,
     pub references: BTreeMap<String, Option<PythUnderlyingRef>>,
     pub advice: AdviceResponse,
     pub graph: KnowledgeGraph,
@@ -400,7 +526,9 @@ pub async fn evaluate_once(config: &CouncilConfig) -> Evaluation {
     let reference_captures =
         reference_captures(config, &prestocks, &feeds, &pyth, &references, &created_at);
     let snapshot = build_snapshot(config, &dex_captures, &reference_captures, created_at);
-    let verdict = evaluate_council(config, &snapshot, &references);
+    let council = evaluate_council_with_checks(config, &snapshot, &references);
+    let verdict = council.verdict;
+    let checks = council.checks;
     let latency_ms = started.elapsed().as_millis();
     let rendered = render_advice(&snapshot, &verdict, config, &references);
     let graph = build_graph(config, &snapshot, &verdict, &references);
@@ -408,6 +536,7 @@ pub async fn evaluate_once(config: &CouncilConfig) -> Evaluation {
     Evaluation {
         snapshot,
         verdict,
+        checks,
         references,
         advice,
         graph,
@@ -417,6 +546,7 @@ pub async fn evaluate_once(config: &CouncilConfig) -> Evaluation {
 
 struct SharedState {
     evaluation: RwLock<Evaluation>,
+    config: CouncilConfig,
 }
 
 async fn read_request(stream: &mut TcpStream) -> Option<String> {
@@ -460,6 +590,11 @@ async fn handle_connection(mut stream: TcpStream, state: Arc<SharedState>) {
                 "200 OK",
                 serde_json::to_string(&guard.graph).unwrap_or_else(|_| "{}".into()),
             ),
+            ("GET", "/dashboard") => (
+                "200 OK",
+                serde_json::to_string(&dashboard_response(&state.config, &guard))
+                    .unwrap_or_else(|_| "{}".into()),
+            ),
             _ => ("404 Not Found", r#"{"error":"not found"}"#.to_string()),
         }
     } else {
@@ -480,6 +615,7 @@ pub async fn run_server(
     let initial = evaluate_once(&config).await;
     let state = Arc::new(SharedState {
         evaluation: RwLock::new(initial),
+        config: config.clone(),
     });
     let listener = TcpListener::bind(("127.0.0.1", port)).await?;
     let updater_state = Arc::clone(&state);
