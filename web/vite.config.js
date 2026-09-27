@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-// Multi-page static build. The public landing page stays unchanged.
+// Multi-page static build with the React landing and Control Centre.
 // `/app/` is the wallet-owned Devnet terminal. The local research terminal
 // and the separate copilot page remain development routes.
 const entry = (path) => fileURLToPath(new URL(path, import.meta.url));
@@ -32,6 +32,8 @@ function localTerminalRoutes() {
 
 export default defineConfig({
   appType: 'mpa',
+  resolve: { dedupe: ['@solana/web3.js'] },
+  server: { fs: { deny: ['.env', '.env.*', '*.{crt,pem,key,p12,pfx,cer,der}', '.npmrc', '.yarnrc.yml', '**/.git/**', '**/.local/**'] } },
   plugins: [localTerminalRoutes()],
   build: {
     rollupOptions: {
@@ -41,6 +43,9 @@ export default defineConfig({
         research: entry('./research/index.html'),
         dash: entry('./dash/index.html'),
         app: entry('./app/index.html'),
+        treasury: entry('./treasury/index.html'),
+        mesh: entry('./mesh/index.html'),
+        dashboard: entry('./dashboard/index.html'),
       },
     },
   },

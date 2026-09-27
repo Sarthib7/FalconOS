@@ -212,6 +212,18 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - Provider/network/parse failure → typed capture failure → snapshot `NO_DATA`; the dashboard surfaces the failure and never fabricates evidence.
 - ⊥ order submission, custody, signing, capital movement; read-only display of live evidence + advisory. Secrets via env only.
 
+### I14. Treasury simulation
+
+- [VERIFIED, source: `web/treasury/domain.mjs`, `store.mjs`] Browser-local synthetic USDC uses canonical replay, exact integer balances and fixed owner authority. Versioned records retain decision input and outcomes. Legacy records remain readable. Mutations use revision checks and Web Locks.
+
+### I15. Knowledge viewer
+
+- [VERIFIED, release scope] `web/mesh/` is a browser client. This website checkout includes pure graph fixtures, analysis and transaction validation helpers. The service, Postgres database and worker are outside this release. The viewer requires a separately configured API.
+
+### I16. React Control Centre
+
+- [VERIFIED, source: `web/dashboard/`] Overview, Decisions, Knowledge and Connections preserve the active OpenDesign interface. The dashboard uses retained synthetic samples and its own browser storage key. [Website release](docs/website-release.md) records the checked artifact and service boundary.
+
 ## §V INVARIANTS
 
 V1: ∀ plugin process → read exactly one bounded (≤8 MiB) JSON object from stdin, emit exactly one bounded (≤64 KiB) JSON response line to stdout, diagnostics ⊥ stdout
@@ -338,6 +350,45 @@ V64: ∀ dash live fetch → read-only HTTP GET or public RPC read; ⊥ write/ex
 V65: ∀ dash rendered output → advisory-only, `executionReady: false`; shows council basket/risk/citations + `live` provenance; ⊥ trade/order action or capital instruction
 
 V66: ∀ dash PreStocks/token-2022 scaled-UI mint price evidence → derive live multiplier from extension time-gate (`newMultiplier` when `now ≥ newMultiplierEffectiveTimestamp`, else current `multiplier`); cross-check extension vs `getTokenSupply` uiAmount/raw within 5bps; divide raw pool price by multiplier; corroborate normalized price vs issuer `tokenPrice` within 500bps; zero/malformed/missing multiplier, extension/supply disagreement, or issuer disagreement → typed price capture failure → `NO_DATA`
+
+[INFERRED, contracts] The following invariants cover browser behavior and planned service boundaries. This website release does not claim that a hosted mesh service is implemented.
+
+V77: [INFERRED] ∀ treasury record/view/outcome → explicit `mode: simulation`; synthetic observations; zero simulated interest/fees; no wallet/provider/model/chain call or real capital claim. Existing V11,V51,V64,V65 advisory boundaries remain unchanged outside I14.
+V78: [INFERRED] ∀ treasury money → exact decimal ingress ≤6 fractional digits, integer units ≤u64; `reserve + investmentCap ≤ total`; conservation holds across every event; agent cannot debit reserve or undelegated cash.
+V79: [INFERRED] ∀ treasury agent decision → `decide(graph)` reads only validated typed graph nodes and required edges; missing dependency → blocked action; pre-action graph, decision, and outcome reproducible from journal.
+V80: [INFERRED] ∀ treasury supply → fresh available evidence, permitted mandate, liquid venue, positive delegated idle, position after action ≤cap; revoked mandate blocks every agent movement; owner redemption is explicit separate command.
+V81: [INFERRED] ∀ missing/unavailable/future/stale observation → `NO_DATA`; insufficient full-redemption liquidity → `BLOCKED`, prior position preserved; successful redemption credits delegated idle only.
+V82: [INFERRED] ∀ treasury mutation → exclusive Web Lock, fresh validated replay, expected revision match, one successful storage write before success; corrupt/unavailable/full storage or unsupported locks → visible error, no false success or replacement.
+V83: [INFERRED] ∀ treasury event → exact schema, UUID, monotonic UTC time, at most 200 retained events; duplicate identical ID is idempotent; conflicting ID reuse rejected; reload reproduces state/decisions; no silent journal truncation.
+V84: [INFERRED] ∀ treasury UI → clear simulation labels, visible evidence age/errors/outcomes, keyboard controls and responsive layout; agent loop starts only on user action, stops on error/revocation/page close, stays stopped after reload; export contains validated replayable history.
+V85: [INFERRED] ∀ treasury setup submission → capture form values before disabling inputs; a valid visible mandate creates the same persisted mandate; rejected submission preserves the form for correction.
+V86: [INFERRED] ∀ treasury graph → node details and required relationships are available to assistive technology at desktop and mobile widths; graphical arrows alone do not carry relationship meaning.
+V87: [INFERRED] ∀ schema 2 run → supported pinned policy, complete saved records, and replay agreement; unknown policy or altered snapshot → visible rejection without storage replacement. Schema 1 upgrade preserves commands and labels reconstruction.
+V88: [INFERRED] ∀ decision check → actual evaluation order, explicit pass/block/no-data/skip, valid evidence IDs; selecting check opens matching input graph; skipped check cannot claim approval.
+V89: [INFERRED] ∀ historical graph inspection → original decision time, evidence age, policy, and outcome; current state distinct; evidence highlighting available through text and keyboard.
+V90: [INFERRED] ∀ treasury export confirmation → describe the exported schema; legacy command-only export cannot claim saved policy or input snapshots.
+V91: [INFERRED] ∀ mesh source → retain exact content bytes, SHA-256, source identity, observation/capture times, immutable revision; source batch and compare-and-swap heads commit atomically; identical retry never restores old head.
+V92: [INFERRED] ∀ mesh read/write/traversal → owner derived from verified server credential before access; request owner override forbidden; hidden owner cannot leak through source, node, edge, history, or error.
+V93: [INFERRED] ∀ mesh analysis → typed relationship traversal before calculation; recorded ordered paths and supporting revisions; missing/conflicting/stale/future/unavailable evidence or reached traversal bound → NO_DATA; combined position exit uses exact integer sums.
+V94: [INFERRED] ∀ saved mesh analysis → one consistent current-head snapshot plus exact graph, policy and result; immutable across later source changes; repeated request returns original result, conflicting reuse rejected.
+V95: [INFERRED] ∀ mesh HTTP mutation → validated bounded body, authenticated owner, commit before success; failures visible; secrets and SQL details absent from errors/logs; no automatic schema change at startup.
+V96: [INFERRED] ∀ mesh viewer → server-derived analysis, source and path inspection, historical cutoff, explicit coverage and fixture labels; keyboard/mobile controls; token retained only in memory; failed fetch cannot show previous result as current; responses from an earlier credential generation cannot enter the current session.
+V97: [INFERRED] ∀ mesh MVP completion claim → distinguish fixture foundation, live connectors, terminal integration, Devnet lending proof, and hosting; existing Raydium swap does not prove treasury lending supply/redemption.
+V98: [INFERRED] ∀ source label or URL → well-formed Unicode without control characters before persistence; accepted source text must round-trip through Postgres text and JSONB snapshots.
+V99: [INFERRED] ∀ live capture → server-owned fixed connector, retained complete response bytes and verified hashes, explicit network/genesis/slot; caller-authored live evidence and synthetic replacement of live heads rejected; failed current capture cannot reuse old success.
+V100: [INFERRED] ∀ live public analysis → live source partition, linked document and observed account evidence, freshness and coverage checks; OBSERVED never means lending approval; mixed synthetic/live evidence rejected; idempotency includes mode.
+V101: [INFERRED] ∀ Devnet lending intent → current live analysis plus coherent verified-network account capture and exact-message simulation; first submission rechecks original analysis freshness and source heads under the owner lock; fixed reserve/mints/ABI, sole wallet signer, no extra instructions or lookup tables; estimates distinguish maximum supply input from observed transfer and provide no claimed minimum-output guarantee; prepared facts identify their retained analysis.
+V102: [INFERRED] ∀ lending submission → valid wallet signature over exact retained intent before durable registration; register signature and signed bytes before broadcast; one owner cannot register one signature under two intents; explicit retries broadcast only identical validated bytes while the blockhash remains valid; uncertain sends remain pending, or unverified when expired and absent; confirmed receipt requires exact transaction and reconciled transaction-local token deltas; events and owner scope survive reload.
+V103: [INFERRED] ∀ browser wallet → Wallet Standard capability discovery, explicit selected account on Devnet, account/capability change invalidates pending signing; token/key storage absent; unsupported signing capability shown without silent broadcast fallback.
+V104: [INFERRED] ∀ React landing port → preserve the active OpenDesign falconos-landing.html design, assets, synthetic scenarios, graph inspection, export and reduced motion; existing preview routes remain available; product readiness claims reflect measured progress.
+V105: [INFERRED] ∀ landing email submission → bounded validated request, durable address capture before success, visible backend errors, input retained for retry; email delivery claims require provider evidence and must distinguish registration from sending; development servers cannot serve local databases, salts or operator tokens.
+V106: [INFERRED] ∀ confirmation email → validated sender address, durable outbox enqueued atomically with registration, one stable provider idempotency key, bounded fixed-provider request, retained acceptance ID before accepted claim; retry ambiguity outside provider idempotency window requires review; missing delivery configuration never becomes a sent claim.
+V107: [INFERRED] ∀ dashboard view → React renders active OpenDesign layout, assets and interactions at `/dashboard/`; preserve overview/decisions/knowledge/connections hashes, keyboard/mobile controls and reduced motion; all four font faces load their matching source assets; source originals remain unchanged.
+V108: [INFERRED] ∀ dashboard persistence → fixed preview namespace for both storage and locks; treasury default key unchanged; corrupt state, failed writes or stale revisions cannot replace saved history; samples cause no writes; reload leaves loop stopped.
+V109: [INFERRED] ∀ dashboard decision → canonical treasury rules and exact integer balances; retained source samples and knowledge analyses match canonical replay/projection at saved cutoff; source display preserves exact retained text.
+V110: [INFERRED] ∀ current dashboard preview → evidence age refreshes decision validity; historical selection stays pinned to its original graph and cutoff; bounded loop stops on hidden page, unmount, storage change, error, revocation or ten saved cycles; Stop stays available during a pending cycle and cancels its queued storage lock; a synchronous commit already entered remains recorded.
+V111: [INFERRED] ∀ dashboard export or connection claim → describes actual record fields and connection state; sample analysis cannot claim service capture or execution authority; source content treated as data; dialogs close and restore focus without stale event races; delayed clipboard results apply only to their original open export.
+
 ## §T TASKS
 
 id|status|task|cites
