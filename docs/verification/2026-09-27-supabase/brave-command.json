@@ -1,0 +1,13 @@
+{
+  "command": "/Users/sarthiborkar/.nvm/versions/node/v24.19.0/bin/node",
+  "args": [
+    "web/test/dashboard-browser.mjs"
+  ],
+  "cwd": "/Volumes/Sarthi MAC/FalconOS",
+  "envOverrides": {
+    "CHROME_BIN": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+    "FALCON_DASHBOARD_EVIDENCE": "/private/tmp/falcon-brave-dashboard-Ojcv5O/run-2",
+    "FALCON_DASHBOARD_WEB_ROOT": "/Volumes/Sarthi MAC/FalconOS/web/dist",
+    "FALCON_DASHBOARD_SOURCE": "/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61"
+  }
+}

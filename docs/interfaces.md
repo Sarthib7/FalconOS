@@ -1,5 +1,7 @@
 # First research slice interfaces
 
+[VERIFIED, I15 hosting approval, 2026-09-27] Owner: coordinator. Status: In Progress. Supabase project `mcmxfwkhdzzsfpvldgdw` is the approved PostgreSQL target. The [reviewed setup](supabase-setup.md) retains the existing tables and API contract. The browser still calls the Node API. Application login and hosted API connectivity remain pending.
+
 [INFERRED, I16, 2026-09-27] Owner: coordinator. Provider: canonical treasury domain/store plus retained OpenDesign samples. Consumer: React `/dashboard/`. Status: Verified locally. Root browser returned `passed:95`, `total:95`; see [verification](verification/2026-09-27-dashboard.md). [Control Centre contract](control-centre.md) fixes its storage namespace, four view routes, evidence/export semantics and verification. The treasury store gains an optional internal key with its existing default preserved. Backend APIs and existing wallet interfaces remain unchanged.
 
 [INFERRED, I15, 2026-09-27] Owner: coordinator. Provider: mesh service and Postgres. Consumer: mesh viewer and Devnet lending terminal. Status: local integration. [Knowledge mesh contract](knowledge-mesh.md) defines source revisions, owner scope, graph traversal, immutable analyses, HTTP errors and verification. A confirmed user-wallet round trip remains unverified.

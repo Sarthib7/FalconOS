@@ -1,0 +1,175 @@
+{
+  "source": "docs/verification/2026-09-27-supabase/hosted-verification.json",
+  "source_sha256": "520b2beb897ae8c3e672cca0460d41c29755167544b196d8e496d5a966dc6951",
+  "baseline": "/Volumes/Sarthi MAC/FalconOS/docs/verification/2026-09-27-supabase/local-catalog.json",
+  "baseline_sha256": "99831bdd8c70c1c528c45135c46a766a59fe0f8e076718d7fc007576d0839987",
+  "server_version": "17.6",
+  "schema_acl": "{postgres=UC/postgres,falcon_mesh_app=U/postgres}",
+  "checks": [
+    {
+      "name": "catalog namespace",
+      "passed": true,
+      "evidence": {
+        "expected_rows": 1,
+        "actual_rows": 1
+      }
+    },
+    {
+      "name": "catalog tables",
+      "passed": true,
+      "evidence": {
+        "expected_rows": 5,
+        "actual_rows": 5
+      }
+    },
+    {
+      "name": "catalog columns",
+      "passed": true,
+      "evidence": {
+        "expected_rows": 33,
+        "actual_rows": 33
+      }
+    },
+    {
+      "name": "catalog constraints",
+      "passed": true,
+      "evidence": {
+        "expected_rows": 26,
+        "actual_rows": 26
+      }
+    },
+    {
+      "name": "catalog indexes",
+      "passed": true,
+      "evidence": {
+        "expected_rows": 13,
+        "actual_rows": 13
+      }
+    },
+    {
+      "name": "database identity",
+      "passed": true,
+      "evidence": "postgres"
+    },
+    {
+      "name": "schema owner",
+      "passed": true,
+      "evidence": "postgres"
+    },
+    {
+      "name": "exact app role attributes",
+      "passed": true,
+      "evidence": [
+        {
+          "rolname": "falcon_mesh_app",
+          "rolsuper": false,
+          "rolinherit": false,
+          "rolcanlogin": false,
+          "rolcreatedb": false,
+          "rolbypassrls": false,
+          "rolcreaterole": false,
+          "rolreplication": false
+        }
+      ]
+    },
+    {
+      "name": "no parent memberships for app",
+      "passed": true,
+      "evidence": [
+        {
+          "member": "postgres",
+          "grantor": "supabase_admin",
+          "set_option": false,
+          "admin_option": true,
+          "granted_role": "falcon_mesh_app",
+          "inherit_option": false
+        }
+      ]
+    },
+    {
+      "name": "one automatic creator admin membership",
+      "passed": true,
+      "evidence": [
+        {
+          "member": "postgres",
+          "grantor": "supabase_admin",
+          "set_option": false,
+          "admin_option": true,
+          "granted_role": "falcon_mesh_app",
+          "inherit_option": false
+        }
+      ]
+    },
+    {
+      "name": "index health inventory",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "all indexes valid ready and live",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "index uniqueness",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "schema privilege inventory",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "schema privilege values",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "table privilege inventory",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "only SELECT INSERT table privileges for app",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "column privilege inventory",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "column SELECT INSERT REFERENCES privileges",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "only head revision column can UPDATE",
+      "passed": true,
+      "evidence": [
+        [
+          "falcon_mesh_app",
+          "source_heads",
+          "revision_id"
+        ]
+      ]
+    },
+    {
+      "name": "app CONNECT without database CREATE",
+      "passed": true,
+      "evidence": {
+        "create": false,
+        "connect": true,
+        "temporary": true
+      }
+    }
+  ],
+  "passed": 21,
+  "total": 21,
+  "blind_spots": [
+    "This compares returned catalog evidence, not a runtime login or TLS connection.",
+    "It checks all listed schema/table/column privileges for four roles, not every database object or every role."
+  ]
+}

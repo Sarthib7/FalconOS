@@ -1,0 +1,12 @@
+{
+  "passed": 95,
+  "total": 95,
+  "exceptions": [],
+  "remoteRequests": [],
+  "failed": [],
+  "screenshotCount": 16,
+  "artifactDir": "/private/tmp/falcon-brave-dashboard-Ojcv5O/run-2/browser-KwOby3",
+  "root": "/Volumes/Sarthi MAC/FalconOS/web/dist",
+  "limitations": "Isolated synthetic browser records. Source screenshots execute original scripts with outbound HTTP blocked. No live service, wallet, hosting or email delivery tested.",
+  "version": "Brave Browser 154.1.96.59"
+}

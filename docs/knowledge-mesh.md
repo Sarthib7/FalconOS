@@ -65,6 +65,8 @@
 
 ## Interface and hosting
 
+[VERIFIED, hosting correction, 2026-09-27] The user selected Supabase project `mcmxfwkhdzzsfpvldgdw` and approved the reviewed five-table schema and restricted role. This replaces the earlier Railway PostgreSQL plan below. Railway remains the selected API host. The [Supabase setup](supabase-setup.md) records permissions, connection requirements, and measured deployment state. This approval leaves application login disabled.
+
 [INFERRED, UI] `/mesh/` has connection controls, synthetic scenario load, entity search, a selectable relationship graph, source inspector, and persisted analysis history. The viewer reads backend results. It does not calculate recommendations. Select a historical record to show its saved graph and evidence ages at that record's time. A failed refresh or analysis visibly invalidates the current-result label. Show exact highlighted paths and a text relationship list. Use a separate Vite artifact to avoid publishing unrelated work.
 
 [INFERRED, deployment] Cloudflare Pages hosts the static viewer. A separate Railway Falcon project runs the API and Postgres. Start without a worker. Keep database access private, set exact viewer origins, and configure backups before using retained real evidence. Railway target, credentials, region, actual resource cost, and hosted recovery are not yet verified. Prepare a reviewable candidate before any deployment or persistent hosted schema change.

@@ -39,10 +39,14 @@ npm --prefix web run build:site
 npm --prefix web run preview:local
 ```
 
-[INFERRED, tests] Set the test URL to an initialized disposable database. Tests deliberately write fixtures. Browser checks require installed Chrome and a free port 8791, so stop the preview mesh API first.
+[INFERRED, tests] Set the test URL to an initialized disposable database. Tests deliberately write fixtures. Browser checks require a free port 8791, so stop the preview mesh API first.
+
+[VERIFIED, user preference, 2026-09-27] Use Brave for browser checks. The existing harnesses accept executable overrides. The local executable returned `Brave Browser 154.1.96.59`.
 
 ```bash
 export FALCON_MESH_TEST_DATABASE_URL='postgresql://localhost/falcon_mesh_test'
+export CHROME_BIN='/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'
+export FALCON_CHROME_BIN="$CHROME_BIN"
 npm --prefix mesh test
 npm --prefix web test
 npm --prefix web run build:mesh
@@ -53,3 +57,5 @@ node web/test/landing-browser.mjs
 [VERIFIED, source: `live.mjs`, `kamino.mjs`] Live capture reads official Kamino documents and Solana Devnet RPC. Browser regression tests inject network and wallet responses. Those checks cannot prove actual wallet compatibility or a confirmed chain transaction.
 
 [INFERRED, hosting] The planned host is the personal Railway workspace for the API and PostgreSQL. Cloudflare Pages serves the browser. Deployment, hosted database setup and real-fund testing remain separate actions. See the [mesh contract](../docs/knowledge-mesh.md) and [email contract](../docs/landing-email.md).
+
+[VERIFIED, hosting correction, 2026-09-27] The user selected Supabase for PostgreSQL and approved the reviewed schema setup. This replaces the preceding Railway PostgreSQL plan. Railway remains the selected API host. See [the current Supabase setup](../docs/supabase-setup.md) for permissions, connection requirements, and measured deployment state.

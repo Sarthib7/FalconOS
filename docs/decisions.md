@@ -1,5 +1,18 @@
 # Decisions
 
+## Supabase mesh storage, 2026-09-27
+
+[VERIFIED, DEC-2026-09-27-02] Owner: coordinator. The user provided access to Supabase project `mcmxfwkhdzzsfpvldgdw`. The user then approved the reviewed schema and restricted role with login disabled. This replaces the earlier Railway PostgreSQL choice; the personal Railway workspace remains selected for the API.
+
+[VERIFIED, reviewed scope] Retain the existing Node API, PostgreSQL tables, and owner filtering. Apply the exact schema, lending migration, and permission candidate. The [setup record](supabase-setup.md) links the SQL and verification evidence. The earlier option was Railway PostgreSQL. No second graph database is part of this choice.
+
+[INFERRED, consequence] Browser and store interfaces remain unchanged. The API needs separately configured runtime credentials and a verified TLS connection before hosted use.
+
+### Least confident decisions
+
+1. [NOT DETERMINED] The runtime endpoint and connection mode require verification from the chosen API host.
+2. [NOT DETERMINED] Hosted recovery and API operating costs are not established by the schema tests.
+
 ## Local Devnet swap builder
 
 [VERIFIED, user instruction, 2026-09-23] The user approved finishing Surfpool and Devnet execution before starting Meteora DBC work.

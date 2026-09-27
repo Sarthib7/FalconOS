@@ -2,9 +2,11 @@
 
 [VERIFIED, user configuration] The selected project is `mcmxfwkhdzzsfpvldgdw`. Codex OAuth returned `Successfully logged in.` A fresh Codex process can call its Supabase MCP tools. The current conversation's tool registry did not reload after registration.
 
+[VERIFIED, hosted application, 2026-09-27] The user approved the reviewed setup. Supabase returned `{"success":true}` and recorded migration `20260927114601`, named `falcon_mesh_initial_private`. The hosted catalog and permission comparison passed `21/21`. All five tables contain zero rows. The role remains `NOLOGIN`. See the [hosted verification](verification/2026-09-27-supabase.md#hosted-application-after-approval). This supersedes the earlier unapplied candidate state.
+
 ## Target and scope
 
-[VERIFIED, captured MCP result] PostgreSQL returned `17.6`. The `falcon_mesh` schema and its five expected tables are absent. The [catalog response](verification/2026-09-27-supabase/schema-mcp.json) records the exact queries and results. The [role response](verification/2026-09-27-supabase/roles-watchers-mcp.json) contains `postgres` with `rolcreaterole: true` and no `falcon_mesh_app` role.
+[VERIFIED, pre-application MCP result] PostgreSQL returned `17.6`. Before application, the `falcon_mesh` schema and its five expected tables were absent. The [catalog response](verification/2026-09-27-supabase/schema-mcp.json) records the exact queries and results. The [role response](verification/2026-09-27-supabase/roles-watchers-mcp.json) contains `postgres` with `rolcreaterole: true` and no `falcon_mesh_app` role at that time.
 
 [REPORTED, inspector metadata] Supabase's user migration list returned `[]`. A name search found no waitlist objects. That search does not inspect object contents or prove that no other signup implementation exists. See the [reported metadata](verification/2026-09-27-supabase/reported-metadata.json).
 
@@ -28,7 +30,7 @@
 
 [VERIFIED, local proof] The candidate passed `41/41` migration and permission checks on disposable PostgreSQL `17.7`. The resulting catalog contains five tables, 33 columns, 26 constraints, and 13 indexes. Seeded version 1 rows retained their exact fingerprints through the lending migration. See the [proof and limits](verification/2026-09-27-supabase.md).
 
-[VERIFIED, coordinator command] The full mesh suite returned `tests 101`, `pass 101`, `fail 0`, `skipped 0`. Each connection used the effective `falcon_mesh_app` role. This proves the tested SQL permissions, not a hosted login, TLS, or pooler connection. The hosted service runs `17.6`; it has not received this setup.
+[VERIFIED, coordinator command] The full mesh suite returned `tests 101`, `pass 101`, `fail 0`, `skipped 0`. Each connection used the effective `falcon_mesh_app` role. This proves the tested SQL permissions, not a hosted login, TLS, or pooler connection. The hosted service runs `17.6`; its later catalog verification is recorded above.
 
 ## Runtime connection
 

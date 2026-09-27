@@ -2,16 +2,21 @@
 
 ## Supabase connection: 2026-09-27
 
+[VERIFIED, user approval and application] The user replied "yes yes" to applying the reviewed schema and restricted role with login disabled. Task `SB-APPLY`, owner `release`, status `Completed`: Supabase returned `{"success":true}` and recorded migration `20260927114601`, `falcon_mesh_initial_private`. Task `SB-VERIFY`, owner `reviewer`, status `Completed`: hosted comparison `passed: 21`, `total: 21`; the coordinator reran the saved comparator with exit `0`. All five tables have zero rows. Runtime login activation and API deployment remain pending.
+
+[VERIFIED, user preference and browser output] The user uses Brave Browser. The executable returned `Brave Browser 154.1.96.59`. Task `BRAVE-CHECK`, owner `browser verifier`, status `Completed`: dashboard `passed: 95`, `total: 95`, `exceptions: []`, `remoteRequests: []`, process exit `0`. This used an isolated profile and synthetic records. Live API and wallet behavior remain untested in Brave.
+
 [VERIFIED, user direction] Continue through a fresh sub-agent after Supabase OAuth setup. Project: `mcmxfwkhdzzsfpvldgdw`. Codex returned `Successfully logged in.` and `auth_status: o_auth`. This replaces the earlier pending project choice. The current agent tool registry does not expose Supabase; a fresh Codex process completed read-only catalog inspection through the saved login.
 
 | Task | Owner | Status | Scope |
 | --- | --- | --- | --- |
-| SB-INSPECT | Supabase inspector | Complete | [VERIFIED] Target has no `falcon_mesh` schema or `falcon_mesh_app` role. Metadata only. |
-| SB-COMPAT | compatibility reviewer | Complete locally | [VERIFIED] Full SQL history and permissions: `41/41` local checks. Hosted connection remains untested. |
-| SB-CANDIDATE | coordinator | Review ready | [VERIFIED] Three reviewed SQL files. Hosted schema approval and runtime credentials remain pending. |
-| KM-UPLOAD | API implementer | Complete locally | [VERIFIED] V112 negative control: `pass 0`, `fail 4`. Full corrected mesh suite: `pass 101`, `fail 0`. |
+| SB-INSPECT | Supabase inspector | Completed | [VERIFIED] Preflight found no mesh schema or application role before application. |
+| SB-COMPAT | compatibility reviewer | Completed | [VERIFIED] Full SQL history and permissions: `41/41` local checks. Hosted connection remains untested. |
+| SB-CANDIDATE | coordinator | Completed | [VERIFIED] The exact three reviewed files were applied after user approval. |
+| SB-RUNTIME | release | Planned | [NOT DETERMINED] Exact pooler hostname requested. Secure login, TLS, and hosted API connection remain pending. |
+| KM-UPLOAD | API implementer | Completed | [VERIFIED] V112 negative control: `pass 0`, `fail 4`. Full corrected mesh suite: `pass 101`, `fail 0`. |
 
-[VERIFIED, current evidence] The [Supabase verification record](docs/verification/2026-09-27-supabase.md) contains exact catalog responses, SQL hashes, local results, and limits. The [setup candidate](docs/supabase-setup.md) creates five private tables and a restricted role with login disabled. No hosted schema change occurred.
+[VERIFIED, current evidence] The [Supabase verification record](docs/verification/2026-09-27-supabase.md) contains exact catalog responses, SQL hashes, local and hosted results, and limits. The [applied setup](docs/supabase-setup.md) created five private tables and a restricted role with login disabled. This supersedes the earlier pending hosted-schema state. The explicit grants cover the reviewed table and column operations; database login remains disabled.
 
 [VERIFIED, correction] The Git publication section below records the earlier mesh failure and pending project choice. The new `101/101` result supersedes that mesh result after the V112 fix. Supabase project selection is now complete. Hosted email configuration is still pending.
 
