@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Explore a Falcon treasury simulation with a fixed mandate, synthetic observations, and replayable decisions.">
+  <title>Falcon | Decision graph</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to treasury</a>
+  <div class="shell">
+    <header class="masthead">
+      <a class="brand" href="/treasury/" aria-label="Falcon decision graph"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 6h26L18 16l-5 11-2-12z" fill="currentColor"/></svg>FALCON</a>
+      <span class="mode-badge"><span class="dot"></span> Decision graph prototype</span>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="page-title">
+        <div><p class="eyebrow">STAGE 01 / DECISION GRAPH</p><h1 id="page-title">Your rules.<br><em>Every move explained.</em></h1></div>
+        <p class="hero-copy">Follow the evidence through your rules. Inspect why Falcon would supply, hold, or redeem.</p>
+      </section>
+      <div class="simulation-note"><span class="note-icon" aria-hidden="true">S</span><p><strong>Synthetic USDC. Simulated actions.</strong> This page uses no wallet or live provider. Interest and fees are zero. History stays in this browser.</p></div>
+      <p class="hosting-note">Saved on this device. Each browser has its own history. The loop stops when you leave.</p>
+      <div id="error-message" class="error-message" role="alert" hidden></div>
+      <p id="action-message" class="action-message" role="status" aria-live="polite"></p>
+
+      <section id="setup-panel" class="setup-panel panel" aria-labelledby="setup-title" hidden>
+        <div class="setup-intro"><p class="eyebrow">01 / SET YOUR MANDATE</p><h2 id="setup-title">Give Falcon a boundary.</h2><p>The reserve stays outside agent authority. Only the investment cap becomes delegated idle USDC.</p><div class="setup-example"><span class="tiny-label">ONE SAVED RUN</span><p>The mandate stays fixed. You can revoke it, redeem as owner, and export its history.</p></div></div>
+        <form id="setup-form">
+          <p class="demo-note"><strong>Demo defaults</strong> are filled below. Edit them before creating your simulation.</p>
+          <fieldset id="setup-fields">
+            <legend class="sr-only">Synthetic balances and policy</legend>
+            <div class="form-grid">
+              <label for="total-usdc">Total synthetic USDC<input id="total-usdc" name="totalUsdc" value="1000" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"><small>Your complete simulated balance.</small></label>
+              <label for="reserve-usdc">Spending reserve<input id="reserve-usdc" name="reserveUsdc" value="200" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"><small>Excluded from agent actions.</small></label>
+              <label for="investment-cap-usdc">Investment cap<input id="investment-cap-usdc" name="investmentCapUsdc" value="500" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"><small>Delegated to this simulation.</small></label>
+              <label for="min-liquidity-usdc">Minimum pool liquidity<input id="min-liquidity-usdc" name="minLiquidityUsdc" value="1000" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"><small>Below this floor, request redemption.</small></label>
+              <label for="max-observation-age">Maximum evidence age <span class="field-unit">seconds</span><input id="max-observation-age" name="maxObservationAgeSeconds" value="60" type="number" min="1" max="3600" step="1" required><small>From 1 to 3,600 seconds.</small></label>
+            </div>
+            <p class="field-note">Reserve + investment cap must fit within the total. The remainder stays undelegated.</p>
+            <button id="create-run" class="button primary" type="submit">Create simulation <span aria-hidden="true">→</span></button>
+          </fieldset>
+        </form>
+      </section>
+
+      <div id="workspace" hidden>
+        <section aria-labelledby="balances-title">
+          <div class="section-heading"><div><p class="eyebrow">CURRENT STATE</p><h2 id="balances-title">Every USDC has a place.</h2></div><p class="total-label">Total <strong id="total-balance"></strong> <span>USDC</span></p></div>
+          <div class="balances">
+            <article class="balance-card"><span class="tiny-label">OUTSIDE AUTHORITY</span><h3>Spending reserve</h3><p><strong id="reserve-balance">0</strong><span>USDC</span></p></article>
+            <article class="balance-card"><span class="tiny-label">OUTSIDE AUTHORITY</span><h3>Undelegated cash</h3><p><strong id="undelegated-balance">0</strong><span>USDC</span></p></article>
+            <article class="balance-card delegated"><span class="tiny-label">WITHIN THE MANDATE</span><h3>Delegated idle</h3><p><strong id="idle-balance">0</strong><span>USDC</span></p></article>
+            <article class="balance-card delegated"><span class="tiny-label">SIMULATED POSITION</span><h3>Supplied USDC</h3><p><strong id="position-balance">0</strong><span>USDC</span></p></article>
+          </div>
+          <div class="mandate-strip"><span id="mandate-status" class="status-badge">Active mandate</span><p>Cap <strong id="mandate-cap"></strong> USDC</p><p>Liquidity floor <strong id="mandate-liquidity"></strong> USDC</p><p>Evidence age limit <strong id="mandate-age"></strong></p></div>
+        </section>
+
+        <section class="panel observations" aria-labelledby="observation-title">
+          <div class="section-heading compact"><div><p class="eyebrow">02 / CHOOSE THE EVIDENCE</p><h2 id="observation-title">Change the conditions.</h2></div><span class="subtle-badge">Synthetic observations only</span></div>
+          <p class="section-copy">Each button records one observation. Agent cycles use that saved observation until you choose another.</p>
+          <div class="scenario-buttons" role="group" aria-label="Record a synthetic observation">
+            <button id="scenario-healthy" type="button" data-scenario="healthy" aria-pressed="false"><span class="scenario-dot healthy"></span><span>Healthy liquidity</span><small>Enough for supply and exit</small></button>
+            <button id="scenario-low" type="button" data-scenario="low" aria-pressed="false"><span class="scenario-dot low"></span><span>Low liquidity</span><small>Test a blocked full exit</small></button>
+            <button id="scenario-stale" type="button" data-scenario="stale" aria-pressed="false"><span class="scenario-dot stale"></span><span>Stale evidence</span><small>Older than your age limit</small></button>
+            <button id="scenario-unavailable" type="button" data-scenario="unavailable" aria-pressed="false"><span class="scenario-dot unavailable"></span><span>Unavailable</span><small>Required data is missing</small></button>
+          </div>
+          <details class="custom-evidence">
+            <summary>Set your own synthetic evidence</summary>
+            <form id="custom-evidence-form">
+              <fieldset id="custom-evidence-fields">
+                <legend class="sr-only">Custom synthetic liquidity observation</legend>
+                <label for="custom-liquidity">Available pool liquidity <span class="field-unit">USDC</span><input id="custom-liquidity" name="liquidity" value="1500" type="text" inputmode="decimal" required maxlength="27" autocomplete="off"></label>
+                <label for="custom-evidence-age">Evidence age <span class="field-unit">seconds</span><input id="custom-evidence-age" name="age" value="0" type="number" min="0" max="86400" step="1" required></label>
+                <button id="record-custom-evidence" class="button" type="submit">Record evidence</button>
+              </fieldset>
+              <p class="small-note">This creates a synthetic observation. Run a cycle to apply your rules to it.</p>
+            </form>
+          </details>
+          <div id="observation-summary" class="observation-summary"><p id="observation-value">No observation recorded.</p><p><span id="observation-freshness"></span><span id="observation-age"></span></p><p id="observation-time"></p></div>
+        </section>
+
+        <section class="panel control-panel" aria-labelledby="control-title">
+          <div><p class="eyebrow">03 / EVALUATE</p><h2 id="control-title">Apply the rules.</h2><p class="section-copy">Run one cycle, or run up to 10 cycles at five-second intervals. Evidence never refreshes automatically.</p></div>
+          <div class="agent-controls"><button id="run-cycle" class="button primary" type="button">Run one cycle</button><button id="start-agent" class="button" type="button">Run agent</button><button id="stop-agent" class="button" type="button" disabled>Stop agent</button></div>
+          <div class="loop-strip"><p id="loop-status" role="status" aria-live="polite">Agent stopped.</p><p id="event-count">0 / 200 events saved</p></div>
+        </section>
+
+        <div class="decision-layout">
+          <section class="panel graph-panel" aria-labelledby="graph-title">
+            <div class="section-heading compact"><div><p class="eyebrow">04 / FOLLOW THE DECISION</p><h2 id="graph-title">The decision graph.</h2></div><span id="graph-context" class="subtle-badge">Current state</span></div>
+            <p class="section-copy">Select a node to read its data. Select a rule check to trace the evidence used in that decision.</p>
+            <p id="graph-snapshot" class="small-note"></p>
+            <div class="graph-canvas">
+              <svg id="graph-connections" viewBox="0 0 900 330" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="graph-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 8 4 0 8z" fill="currentColor"/></marker></defs><g id="graph-paths"></g></svg>
+              <div id="graph-nodes" class="graph-nodes" role="group" aria-label="Decision graph nodes"></div>
+            </div>
+            <p id="graph-evidence-label" class="graph-evidence-label" role="status">Select a saved decision to trace its checks.</p>
+            <ul id="graph-relations" class="graph-relations" aria-label="Graph relationships"></ul>
+            <div id="graph-result" class="graph-result" hidden>
+              <div class="result-connector" data-source="graph-nodes" data-target="graph-decision-card">Input graph <span aria-hidden="true">↓</span><span class="sr-only">leads to the decision</span></div>
+              <div class="result-cards">
+                <article id="graph-decision-card" class="result-card"><span class="tiny-label">DECISION</span><h3 id="graph-decision-title"></h3><p id="graph-decision-detail"></p></article>
+                <span class="result-arrow" data-source="graph-decision-card" data-target="graph-outcome-card" aria-label="Decision leads to simulated outcome">→</span>
+                <article id="graph-outcome-card" class="result-card outcome-card"><span class="tiny-label">SIMULATED OUTCOME</span><h3 id="graph-outcome-status"></h3><p id="graph-outcome-detail"></p></article>
+              </div>
+            </div>
+            <div id="rule-checks-panel" class="rule-checks-panel" hidden><h3 id="rule-checks-title">Rule checks</h3><p class="small-note">In evaluation order. Select a check to inspect its original evidence. Skipped checks do not permit an action.</p><ol id="decision-checks" class="decision-checks"></ol></div>
+            <p id="graph-record-label" class="small-note"></p>
+            <button id="show-current" class="text-button" type="button" hidden>Return to current state →</button>
+          </section>
+
+          <section id="decision-panel" class="panel decision-panel" aria-labelledby="decision-title">
+            <div class="decision-summary"><p id="decision-eyebrow" class="eyebrow">LATEST DECISION</p><h2 id="decision-title">Ready when you are.</h2><span id="decision-status" class="status-badge">Awaiting a cycle</span><p id="decision-amount" class="decision-amount"></p><p id="decision-time" class="small-note"></p><p id="decision-policy" class="small-note"></p></div>
+            <ul id="decision-reasons" class="decision-reasons"><li>Choose synthetic evidence, then run one cycle.</li></ul>
+            <button id="inspect-decision" class="text-button" type="button" hidden>Inspect this decision's input →</button>
+            <div id="node-inspector" class="node-inspector" aria-live="polite"><p id="node-context" class="tiny-label inspector-label">CURRENT INPUT</p><div class="inspector-heading"><h3 id="node-title">Mandate</h3><span id="node-kind" class="tiny-label"></span></div><p id="node-detail"></p><dl id="node-facts" class="node-facts"></dl><div id="node-rules" class="node-rules"></div><details><summary>Inspect node data</summary><pre id="node-data"></pre></details></div>
+            <div class="outcome-box"><span class="tiny-label">SIMULATED OUTCOME</span><p id="decision-outcome">No movement has been simulated.</p></div><p id="history-balances" class="small-note" hidden></p>
+          </section>
+        </div>
+
+        <section class="owner-panel" aria-labelledby="owner-title"><div><p class="eyebrow">OWNER CONTROLS</p><h2 id="owner-title">You keep the exit.</h2><p class="section-copy">Revocation permanently stops agent movements in this run. Owner redemption stays available with fresh evidence and enough liquidity.</p></div><div class="owner-controls"><button id="owner-redeem" class="button" type="button">Redeem as owner</button><button id="revoke-mandate" class="button danger" type="button">Revoke mandate</button></div></section>
+
+        <section class="panel history-panel" aria-labelledby="history-title">
+          <div class="section-heading compact"><div><p class="eyebrow">THE SAVED RECORD</p><h2 id="history-title">Replay every step.</h2></div><button id="export-run" class="button" type="button">Export JSON ↓</button></div><p class="section-copy">Select an event to inspect its input graph and outcome. Records include the rule version. This browser record can be edited by its owner.</p><p id="legacy-history-note" class="legacy-history-note" hidden></p><p id="empty-history" class="empty-state">Your run is saved. Record an observation to begin.</p><ol id="history-list" class="history-list"></ol><p id="run-id" class="record-id"></p>
+        </section>
+      </div>
+    </main>
+    <footer><span>Falcon / Treasury simulation</span><span>One browser. One saved run. No real funds.</span></footer>
+  </div>
+
+  <dialog id="revoke-dialog" aria-labelledby="revoke-title" aria-describedby="revoke-description"><form method="dialog"><p class="eyebrow">OWNER CONFIRMATION</p><h2 id="revoke-title">Revoke this mandate?</h2><p id="revoke-description">The agent cannot move funds again in this run. Revocation does not redeem the position. You can request owner redemption separately.</p><div class="dialog-actions"><button id="cancel-revoke" class="button" value="cancel" autofocus>Keep mandate</button><button id="confirm-revoke" class="button danger" value="confirm">Permanently revoke</button></div></form></dialog>
+  <noscript><p class="noscript">Enable JavaScript to run this local simulation.</p></noscript>
+</body>
+</html>

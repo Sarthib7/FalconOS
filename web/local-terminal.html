@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090e0c">
+  <meta name="color-scheme" content="dark">
+  <title>FalconOS · Local Market Terminal</title>
+  <link rel="stylesheet" href="/terminal.css">
+  <link rel="stylesheet" href="/local-terminal.css">
+  <script type="module" src="/local-terminal.mjs"></script>
+</head>
+<body class="terminal-body local-terminal-body">
+  <div class="terminal-shell">
+    <aside class="terminal-rail">
+      <a class="terminal-brand" href="/" aria-label="FalconOS home">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg>
+        <span>FALCON<i class="wm-os">OS</i></span>
+      </a>
+      <div class="terminal-nav-group">
+        <p class="terminal-nav-label">Workspace</p>
+        <nav class="terminal-nav" aria-label="Workspace">
+          <a class="terminal-nav-link" href="/"><span class="terminal-nav-index">00</span><span>Home</span></a>
+          <a class="terminal-nav-link" href="/product/"><span class="terminal-nav-index">01</span><span>Product</span></a>
+          <a class="terminal-nav-link" href="/research/" data-route="research"><span class="terminal-nav-index">02</span><span>Research</span></a>
+          <a class="terminal-nav-link" href="/dash/" data-route="dashboard"><span class="terminal-nav-index">03</span><span>Dashboard</span></a>
+          <a class="terminal-nav-link" href="/copilot/"><span class="terminal-nav-index">04</span><span>Copilot</span></a>
+        </nav>
+      </div>
+      <div class="terminal-nav-group">
+        <p class="terminal-nav-label">Data</p>
+        <nav class="terminal-nav" aria-label="Data state">
+          <a class="terminal-nav-link" href="/dash/#live-data"><span class="terminal-nav-index">●</span><span>Live evidence</span></a>
+          <a class="terminal-nav-link" href="/dash/#strategy"><span class="terminal-nav-index">◇</span><span>Strategy</span></a>
+          <a class="terminal-nav-link" href="/dash/#research-graph"><span class="terminal-nav-index">⌘</span><span>Evidence graph</span></a>
+        </nav>
+      </div>
+      <div class="terminal-rail-status">
+        <span class="terminal-rail-status-label">Local engine</span>
+        <span class="terminal-rail-status-value"><i class="terminal-dot" id="rail-dot" aria-hidden="true"></i><span id="rail-state">Connecting</span></span>
+        <p>Read-only market data. Advisory output only.</p>
+      </div>
+    </aside>
+
+    <div class="terminal-workspace">
+      <header class="terminal-topbar">
+        <div class="terminal-path"><span>FalconOS</span><span>/</span><strong id="page-path">Dashboard</strong></div>
+        <div class="terminal-top-meta">
+          <span class="terminal-chip" id="refresh-chip">POLL · 5S</span>
+          <span class="terminal-chip" id="engine-chip">ENGINE · CONNECTING</span>
+          <span class="terminal-chip accent">LOCAL / READ ONLY</span>
+        </div>
+      </header>
+
+      <div class="terminal-ticker" id="ticker" aria-label="Current market values">
+        <div class="terminal-ticker-item"><span>FEED</span><strong>Waiting for engine</strong></div>
+      </div>
+
+      <main class="terminal-content local-content">
+        <div class="local-alert" id="connection-alert" role="status" hidden>
+          <strong>ENGINE UNAVAILABLE</strong>
+          <span>Start the local engine on 127.0.0.1:8787 to load live evidence.</span>
+        </div>
+
+        <section id="dashboard-view" aria-labelledby="dashboard-title">
+          <div class="local-heading">
+            <div>
+              <p class="eyebrow">Stocklana / live council</p>
+              <h1 id="dashboard-title">Market command view.</h1>
+              <p class="lead">Live token prices, issuer references, liquidity, and council advice from the local cached evaluation.</p>
+            </div>
+            <div class="local-status-block">
+              <span class="local-label">Council</span>
+              <strong class="local-state state-pending" id="council-status">WAITING</strong>
+              <span class="local-muted" id="snapshot-meta">No snapshot loaded</span>
+            </div>
+          </div>
+
+          <div class="local-kpis" aria-label="Current evaluation summary">
+            <article class="local-kpi"><span class="local-label">Live instruments</span><strong id="asset-count">—</strong><small>Configured assets</small></article>
+            <article class="local-kpi"><span class="local-label">Evidence captures</span><strong id="capture-count">—</strong><small id="capture-health">Waiting for source data</small></article>
+            <article class="local-kpi"><span class="local-label">Evaluation time</span><strong id="evaluation-latency">—</strong><small>Engine processing time</small></article>
+            <article class="local-kpi"><span class="local-label">Execution</span><strong>DISABLED</strong><small>Advisory only</small></article>
+          </div>
+
+          <div class="local-grid local-grid-main" id="live-data">
+            <section class="local-panel local-panel-wide" aria-labelledby="market-title">
+              <div class="local-panel-head"><div><p class="eyebrow">01 / Market tape</p><h2 id="market-title">Current evidence</h2></div><span class="local-panel-meta" id="market-updated">Waiting for capture</span></div>
+              <div class="local-table-wrap">
+                <table class="local-table">
+                  <thead><tr><th>Asset</th><th>Token / USD</th><th>Issuer / USD</th><th>Gap</th><th>Liquidity / USD</th><th>Source time</th></tr></thead>
+                  <tbody id="market-rows"><tr><td colspan="6" class="local-empty">No market data loaded.</td></tr></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="local-panel" aria-labelledby="analysis-title">
+              <div class="local-panel-head"><div><p class="eyebrow">02 / Council readout</p><h2 id="analysis-title">Analysis</h2></div><span class="local-tag" id="analysis-tag">PENDING</span></div>
+              <p class="local-copy" id="analysis-summary">The engine has not returned an evaluation.</p>
+              <ul class="local-reasons" id="analysis-reasons"><li>Waiting for council output.</li></ul>
+              <div class="local-record"><span>Snapshot hash</span><code id="snapshot-hash">—</code></div>
+              <div class="local-record"><span>Proposal</span><code id="proposal-state">No proposal loaded</code></div>
+            </section>
+
+            <section class="local-panel local-panel-wide" aria-labelledby="checks-title">
+              <div class="local-panel-head"><div><p class="eyebrow">03 / Live policy tests</p><h2 id="checks-title">Council rule checks</h2></div><span class="local-panel-meta">Engine evaluation · current snapshot</span></div>
+              <p class="local-copy">These checks run in the Rust council. A missing input stays NO DATA. A block is a policy veto.</p>
+              <div class="local-table-wrap">
+                <table class="local-table local-check-table"><thead><tr><th>Result</th><th>Rule</th><th>Asset</th><th>Observed</th><th>Threshold</th><th>Evidence / reason</th></tr></thead><tbody id="dashboard-check-rows"><tr><td colspan="6" class="local-empty">Waiting for engine checks.</td></tr></tbody></table>
+              </div>
+            </section>
+
+            <section class="local-panel" id="strategy" aria-labelledby="strategy-title">
+              <div class="local-panel-head"><div><p class="eyebrow">04 / Allocation policy</p><h2 id="strategy-title">Configured policy</h2></div><span class="local-tag">ACTIVE POLICY</span></div>
+              <dl class="local-policy" id="policy-values"><div><dt>Strategy</dt><dd>Waiting for engine</dd></div></dl>
+              <div class="local-table-wrap local-table-wrap-narrow">
+                <table class="local-table local-strategy-table"><thead><tr><th>Underlying</th><th>Target</th><th>Max</th><th>Liquidity floor / USD</th></tr></thead><tbody id="strategy-rows"><tr><td colspan="4" class="local-empty">Policy not loaded.</td></tr></tbody></table>
+              </div>
+              <p class="local-footnote">Targets and limits come from engine configuration. They are not holdings or fills.</p>
+            </section>
+
+            <section class="local-panel local-panel-wide" aria-labelledby="capture-title">
+              <div class="local-panel-head"><div><p class="eyebrow">05 / Provenance ledger</p><h2 id="capture-title">Source captures</h2></div><span class="local-panel-meta">Raw excerpt omitted · hash retained</span></div>
+              <div class="local-table-wrap">
+                <table class="local-table local-capture-table">
+                  <thead><tr><th>Instrument / field</th><th>Value</th><th>Source</th><th>Version</th><th>Observed</th><th>Raw hash</th></tr></thead>
+                  <tbody id="capture-rows"><tr><td colspan="6" class="local-empty">No source captures loaded.</td></tr></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="local-panel" aria-labelledby="backtest-title">
+              <div class="local-panel-head"><div><p class="eyebrow">06 / Historical validation</p><h2 id="backtest-title">Backtests</h2></div><span class="local-tag local-tag-muted">UNAVAILABLE</span></div>
+              <p class="local-copy">The engine has no historical price series or backtest route. No strategy return is shown.</p>
+              <div class="local-record"><span>Backtest result</span><code>NOT AVAILABLE</code></div>
+              <div class="local-record"><span>Current council check</span><code id="council-check">Waiting for evaluation</code></div>
+            </section>
+
+            <section class="local-panel" aria-labelledby="history-title">
+              <div class="local-panel-head"><div><p class="eyebrow">07 / Activity</p><h2 id="history-title">Trade history</h2></div><span class="local-tag local-tag-muted">NO SOURCE</span></div>
+              <p class="local-copy">This dashboard does not read wallet history or Surfpool transactions. The local engine provides market evidence and advisory output only.</p>
+              <div class="local-record"><span>Latest transaction</span><code>NOT CONNECTED</code></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="research-view" aria-labelledby="research-title" hidden>
+          <div class="local-heading">
+            <div><p class="eyebrow">Research / stock strategy lab</p><h1 id="research-title">Study the rules behind each signal.</h1><p class="lead">Review Falcon’s active allocation policy, research strategy templates, and checks from the current live snapshot.</p></div>
+            <div class="local-status-block"><span class="local-label">Record state</span><strong class="local-state state-pending" id="research-status">WAITING</strong><span class="local-muted" id="research-time">No record loaded</span></div>
+          </div>
+
+          <div class="local-grid local-grid-research">
+            <section class="local-panel" aria-labelledby="thesis-title"><div class="local-panel-head"><div><p class="eyebrow">01 / Current evaluation</p><h2 id="thesis-title">Decision record</h2></div><span class="local-tag" id="research-tag">PENDING</span></div><p class="local-copy" id="research-thesis">The current snapshot has not loaded.</p><ul class="local-reasons" id="research-reasons"><li>Waiting for council output.</li></ul><div class="local-record"><span>Snapshot</span><code id="research-hash">—</code></div></section>
+            <section class="local-panel" aria-labelledby="policy-record-title"><div class="local-panel-head"><div><p class="eyebrow">02 / Active Falcon policy</p><h2 id="policy-record-title">Allocation rules</h2></div><span class="local-tag">ACTIVE CONFIG</span></div><p class="local-copy">This is an allocation policy. It does not define stock entry or exit signals, holdings, or returns.</p><dl class="local-policy" id="research-policy"><div><dt>Policy</dt><dd>Waiting for engine</dd></div></dl><div class="local-table-wrap local-table-wrap-narrow"><table class="local-table local-strategy-table"><thead><tr><th>Underlying</th><th>Target</th><th>Cap</th><th>Liquidity floor</th></tr></thead><tbody id="research-strategy-rows"><tr><td colspan="4" class="local-empty">Policy not loaded.</td></tr></tbody></table></div></section>
+            <section class="local-panel local-panel-wide" aria-labelledby="strategy-library-title"><div class="local-panel-head"><div><p class="eyebrow">03 / Stock strategy library</p><h2 id="strategy-library-title">Research templates</h2></div><span class="local-tag local-tag-muted">REFERENCE ONLY</span></div><p class="local-copy">These strategy names come from the referenced terminal projects. Falcon does not implement or run them. Each needs historical market data before a backtest can report results.</p><div class="local-table-wrap"><table class="local-table local-strategy-library"><thead><tr><th>Strategy</th><th>Rule idea</th><th>Inputs to study</th><th>Falcon status</th><th>Validation</th></tr></thead><tbody>
+              <tr><td>SMA crossover</td><td>Compare short and long simple moving averages for a trend change.</td><td>Daily close series</td><td><span class="local-state-pill state-off">NOT IMPLEMENTED</span></td><td><span class="local-state-pill state-off">NOT BACKTESTED</span></td></tr>
+              <tr><td>EMA crossover</td><td>Compare short and long exponential moving averages for a trend change.</td><td>Daily close series</td><td><span class="local-state-pill state-off">NOT IMPLEMENTED</span></td><td><span class="local-state-pill state-off">NOT BACKTESTED</span></td></tr>
+              <tr><td>Mean reversion</td><td>Study moves away from a rolling mean and possible return toward it.</td><td>Price history, chosen window</td><td><span class="local-state-pill state-off">NOT IMPLEMENTED</span></td><td><span class="local-state-pill state-off">NOT BACKTESTED</span></td></tr>
+              <tr><td>Breakout</td><td>Study closes beyond a prior price range.</td><td>OHLC bars, range window</td><td><span class="local-state-pill state-off">NOT IMPLEMENTED</span></td><td><span class="local-state-pill state-off">NOT BACKTESTED</span></td></tr>
+              <tr><td>RSI momentum</td><td>Study a relative strength index against chosen entry and exit levels.</td><td>Price history, RSI window</td><td><span class="local-state-pill state-off">NOT IMPLEMENTED</span></td><td><span class="local-state-pill state-off">NOT BACKTESTED</span></td></tr>
+              <tr><td>MACD</td><td>Study moving average convergence, divergence, and signal line crosses.</td><td>Price history, MACD periods</td><td><span class="local-state-pill state-off">NOT IMPLEMENTED</span></td><td><span class="local-state-pill state-off">NOT BACKTESTED</span></td></tr>
+              <tr><td>Bollinger Bands</td><td>Study price against a rolling mean and volatility bands.</td><td>Price history, window and width</td><td><span class="local-state-pill state-off">NOT IMPLEMENTED</span></td><td><span class="local-state-pill state-off">NOT BACKTESTED</span></td></tr>
+              <tr><td>Dual momentum</td><td>Study absolute trend and relative strength across assets.</td><td>Aligned asset price history</td><td><span class="local-state-pill state-off">NOT IMPLEMENTED</span></td><td><span class="local-state-pill state-off">NOT BACKTESTED</span></td></tr>
+              <tr><td>VWAP reversion</td><td>Study price distance from the session volume weighted average.</td><td>Intraday price and volume</td><td><span class="local-state-pill state-off">NOT IMPLEMENTED</span></td><td><span class="local-state-pill state-off">NOT BACKTESTED</span></td></tr>
+            </tbody></table></div><p class="local-footnote">Reference list: <a href="https://github.com/Hitheshkaranth/OpenTerminalUI" target="_blank" rel="noopener noreferrer">OpenTerminalUI strategy templates</a>. Tooling references: <a href="https://github.com/achannarasappa/ticker" target="_blank" rel="noopener noreferrer">ticker</a> and <a href="https://github.com/andriy-git/stocksTUI" target="_blank" rel="noopener noreferrer">stocksTUI</a>.</p></section>
+            <section class="local-panel local-panel-wide" aria-labelledby="research-checks-title"><div class="local-panel-head"><div><p class="eyebrow">04 / Live policy tests</p><h2 id="research-checks-title">Current council checks</h2></div><span class="local-panel-meta">Live engine results · not strategy backtests</span></div><div class="local-table-wrap"><table class="local-table local-check-table"><thead><tr><th>Result</th><th>Rule</th><th>Asset</th><th>Observed</th><th>Threshold</th><th>Evidence / reason</th></tr></thead><tbody id="research-check-rows"><tr><td colspan="6" class="local-empty">Waiting for engine checks.</td></tr></tbody></table></div></section>
+            <section class="local-panel local-panel-wide" aria-labelledby="research-captures-title"><div class="local-panel-head"><div><p class="eyebrow">05 / Evidence inventory</p><h2 id="research-captures-title">Capture details</h2></div><span class="local-panel-meta">Raw excerpt omitted · hash retained</span></div><div class="local-table-wrap"><table class="local-table local-capture-table"><thead><tr><th>Instrument / field</th><th>Status</th><th>Value</th><th>Source / version</th><th>Observed</th><th>Raw hash</th></tr></thead><tbody id="research-capture-rows"><tr><td colspan="6" class="local-empty">No evidence loaded.</td></tr></tbody></table></div></section>
+            <section class="local-panel" aria-labelledby="method-title"><div class="local-panel-head"><div><p class="eyebrow">06 / Validation boundary</p><h2 id="method-title">What can run now</h2></div></div><ul class="local-method-list"><li><strong>Live council checks</strong><span>Run against the current cached token, issuer, and liquidity captures.</span></li><li><strong>Strategy signals</strong><span>None of the reference templates runs in Falcon.</span></li><li><strong>Backtests</strong><span>Unavailable until a historical stock price series and backtest route exist.</span></li><li><strong>Trade history</strong><span>No wallet history source is connected to this page.</span></li></ul></section>
+          </div>
+        </section>
+
+        <section class="local-panel local-graph-panel" id="research-graph" aria-labelledby="graph-title">
+          <div class="local-panel-head"><div><p class="eyebrow">07 / Council structure</p><h2 id="graph-title">Evidence graph</h2></div><span class="local-panel-meta" id="graph-meta">Waiting for graph data</span></div>
+          <p class="local-copy">Shows current assets, source captures, intents, and the council verdict. It contains no wallet transaction history.</p>
+          <div class="local-graph-wrap"><svg id="evidence-graph" role="img" aria-label="Council evidence graph" viewBox="0 0 1040 520"></svg></div>
+          <div class="local-graph-legend"><span><i class="legend-source"></i>Source</span><span><i class="legend-asset"></i>Asset</span><span><i class="legend-evidence"></i>Evidence</span><span><i class="legend-intent"></i>Intent</span><span><i class="legend-verdict"></i>Verdict</span></div>
+        </section>
+      </main>
+
+      <footer class="terminal-footer"><span>Falcon Investment Council · Local preview</span><span>Market evidence only · No execution</span></footer>
+    </div>
+  </div>
+</body>
+</html>

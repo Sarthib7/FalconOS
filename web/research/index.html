@@ -4,55 +4,43 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="FalconOS research records connect source evidence, market snapshots, theses, risk decisions, and outcomes.">
-  <meta name="theme-color" content="#252a2b">
+  <meta name="theme-color" content="#090e0c">
   <meta name="color-scheme" content="dark">
   <link rel="canonical" href="https://falconos.markets/research/">
   <link rel="icon" type="image/png" href="/falcon-symbol.png">
   <title>FalconOS · Research</title>
-  <style>
-    :root { color-scheme: dark; --bg: #252a2b; --surface: #2b3132; --fg: #eef1ed; --muted: #aab3b1; --border: #4b5554; --accent: #8ee8d1; --warn: #f0a88d; --gutter: clamp(22px, 5vw, 72px); }
-    * { box-sizing: border-box; }
-    body { min-width: 320px; margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, sans-serif; }
-    a { color: inherit; }
-    .container { width: min(1180px, calc(100% - var(--gutter) * 2)); margin: 0 auto; }
-    .topnav { border-bottom: 1px solid var(--border); }
-    .topnav-inner { min-height: 86px; display: flex; align-items: center; gap: 30px; }
-    .logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 600 14px ui-monospace, monospace; letter-spacing: .04em; }
-    .logo svg { width: 24px; height: 24px; }
-    .wm { display: inline-flex; align-items: center; }
-    .wm-os { margin-left: 3px; padding: 1px 4px 2px; background: var(--fg); color: var(--bg); font-style: italic; }
-    nav { display: flex; gap: 22px; margin-left: auto; font: 11px ui-monospace, monospace; letter-spacing: .05em; text-transform: uppercase; }
-    nav a { color: var(--muted); text-decoration: none; }
-    nav a:hover, nav a:focus-visible { color: var(--fg); }
-    main { padding: 92px 0 120px; }
-    .eyebrow { margin: 0; color: var(--accent); font: 11px/1.2 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
-    h1 { max-width: 800px; margin: 18px 0 20px; font: 400 clamp(54px, 8vw, 112px)/.98 Georgia, serif; letter-spacing: -.045em; }
-    .lead { max-width: 650px; margin: 0; color: var(--muted); font-size: 19px; }
-    .research-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; margin-top: 80px; }
-    .card { padding: 24px; border: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 36%, transparent); }
-    .card h2 { margin: 16px 0 12px; font: 400 32px/1.05 Georgia, serif; }
-    .card p { max-width: 48ch; margin: 0; color: var(--muted); }
-    .record { margin-top: 22px; border-top: 1px solid var(--border); }
-    .record-row { display: grid; grid-template-columns: 150px 1fr; gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--border); }
-    .record-row dt { color: var(--muted); font: 10px ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; }
-    .record-row dd { margin: 0; font-family: ui-monospace, monospace; font-size: 12px; }
-    .checks, .program { display: grid; gap: 12px; margin: 22px 0 0; padding: 0; list-style: none; }
-    .checks li, .program li { padding: 12px 14px; border-left: 2px solid var(--accent); background: color-mix(in oklch, var(--accent) 7%, transparent); color: var(--muted); }
-    .checks li strong, .program li strong { display: block; margin-bottom: 3px; color: var(--fg); font: 11px ui-monospace, monospace; text-transform: uppercase; }
-    .program li { border-left-color: var(--border); background: color-mix(in oklch, var(--surface) 54%, transparent); }
-    .unknown { border-left-color: var(--warn) !important; background: color-mix(in oklch, var(--warn) 7%, transparent) !important; }
-    .back { display: inline-block; margin-top: 58px; color: var(--muted); font: 12px ui-monospace, monospace; }
-    @media (max-width: 720px) { .topnav-inner { flex-wrap: wrap; padding: 18px 0; } nav { width: 100%; margin-left: 0; justify-content: space-between; } main { padding-top: 60px; } .research-grid { grid-template-columns: 1fr; margin-top: 54px; } .record-row { grid-template-columns: 1fr; gap: 4px; } }
-  </style>
+  <link rel="stylesheet" href="/terminal.css">
 </head>
-<body>
-  <header class="topnav">
-    <div class="container topnav-inner">
-      <a class="logo" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span class="wm">FALCON<i class="wm-os">OS</i></span></a>
-      <nav aria-label="Page navigation"><a href="/">Home</a><a href="/product/">Product</a><a href="/#waitlist">Waitlist</a></nav>
-    </div>
-  </header>
-  <main>
+<body class="terminal-body">
+  <div class="terminal-shell">
+    <aside class="terminal-rail">
+      <a class="terminal-brand" href="/" aria-label="FalconOS home"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg><span>FALCON<i class="wm-os">OS</i></span></a>
+      <div class="terminal-nav-group">
+        <p class="terminal-nav-label">Workspace</p>
+        <nav class="terminal-nav" aria-label="Workspace">
+          <a class="terminal-nav-link" href="/"><span class="terminal-nav-index">00</span><span>Home</span></a>
+          <a class="terminal-nav-link" href="/product/"><span class="terminal-nav-index">01</span><span>Product</span></a>
+          <a class="terminal-nav-link" href="/research/" aria-current="page"><span class="terminal-nav-index">02</span><span>Research</span></a>
+          <a class="terminal-nav-link" href="/dash/"><span class="terminal-nav-index">03</span><span>Dashboard</span></a>
+        </nav>
+      </div>
+      <div class="terminal-nav-group">
+        <p class="terminal-nav-label">Access</p>
+        <nav class="terminal-nav" aria-label="Access"><a class="terminal-nav-link" href="/#waitlist"><span class="terminal-nav-index">↗</span><span>Waitlist</span></a></nav>
+      </div>
+      <div class="terminal-rail-status"><span class="terminal-rail-status-label">Research mode</span><span class="terminal-rail-status-value"><i class="terminal-dot" aria-hidden="true"></i>Evidence format</span><p>Source, timestamp, thesis, risk, and open questions.</p></div>
+    </aside>
+    <div class="terminal-workspace">
+      <header class="terminal-topbar">
+        <div class="terminal-path"><span>FalconOS</span><span>/</span><strong>Research</strong></div>
+        <div class="terminal-top-meta"><span class="terminal-chip accent">Evidence view</span><span class="terminal-chip">Read only</span></div>
+      </header>
+      <div class="terminal-ticker" aria-label="Research status">
+        <div class="terminal-ticker-item"><span>SOURCE</span><strong>Attached</strong></div>
+        <div class="terminal-ticker-item"><span>RISK</span><strong>Separate review</strong></div>
+        <div class="terminal-ticker-item"><span>OUTCOME</span><strong>Planned</strong></div>
+      </div>
+  <main class="terminal-content">
     <div class="container">
       <p class="eyebrow">Research / 02</p>
       <h1>Evidence before allocation.</h1>
@@ -111,5 +99,8 @@
       <a class="back" href="/">← Return to the first view</a>
     </div>
   </main>
+      <footer class="terminal-footer"><span>Falcon Investment Council</span><span>Evidence before allocation</span></footer>
+    </div>
+  </div>
 </body>
 </html>

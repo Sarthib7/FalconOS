@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090e0c">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="FalconOS Devnet trading terminal with wallet sign-in, portfolio data, and order history.">
+  <title>FalconOS · Devnet Terminal</title>
+  <link rel="icon" type="image/png" href="/falcon-symbol.png">
+  <link rel="stylesheet" href="/terminal.css">
+  <link rel="stylesheet" href="/app/app.css">
+  <script type="module" src="/app/app.mjs"></script>
+</head>
+<body class="terminal-body app-body">
+  <div class="terminal-shell">
+    <aside class="terminal-rail app-rail">
+      <a class="terminal-brand" href="/" aria-label="FalconOS home">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M30 194L171 39L129 151Z"/><path d="M138 195L218 70L190 195Z"/></svg>
+        <span>FALCON<i class="wm-os">OS</i></span>
+      </a>
+      <div class="terminal-nav-group">
+        <p class="terminal-nav-label">Trading terminal</p>
+        <nav class="terminal-nav" aria-label="Terminal sections">
+          <a class="terminal-nav-link" href="#overview"><span class="terminal-nav-index">00</span><span>Overview</span></a>
+          <a class="terminal-nav-link" href="#portfolio"><span class="terminal-nav-index">01</span><span>Portfolio</span></a>
+          <a class="terminal-nav-link" href="#trade"><span class="terminal-nav-index">02</span><span>Trade</span></a>
+          <a class="terminal-nav-link" href="#strategy"><span class="terminal-nav-index">03</span><span>Strategies</span></a>
+          <a class="terminal-nav-link" href="#activity"><span class="terminal-nav-index">04</span><span>Activity</span></a>
+        </nav>
+      </div>
+      <div class="terminal-nav-group">
+        <p class="terminal-nav-label">Research</p>
+        <nav class="terminal-nav" aria-label="Research links">
+          <a class="terminal-nav-link" href="/research/"><span class="terminal-nav-index">↗</span><span>Research notes</span></a>
+          <a class="terminal-nav-link" href="/dash/"><span class="terminal-nav-index">↗</span><span>Market dashboard</span></a>
+        </nav>
+      </div>
+      <div class="terminal-rail-status">
+        <span class="terminal-rail-status-label">Network</span>
+        <span class="terminal-rail-status-value"><i class="terminal-dot" aria-hidden="true"></i>Solana Devnet</span>
+        <p>Every quote, simulation, send, and status check uses the Devnet RPC.</p>
+      </div>
+    </aside>
+
+    <div class="terminal-workspace">
+      <header class="terminal-topbar app-topbar">
+        <div class="terminal-path"><span>FalconOS</span><span>/</span><strong>Devnet Terminal</strong></div>
+        <div class="terminal-top-meta">
+          <span class="terminal-chip accent">DEVNET</span>
+          <span class="terminal-chip" id="session-chip">WALLET · SIGN IN</span>
+          <button class="app-wallet-button" id="connect-wallet" type="button">Sign in with wallet</button>
+          <button class="app-logout-button" id="sign-out" type="button" hidden>Sign out</button>
+        </div>
+      </header>
+
+      <div class="terminal-ticker app-ticker" aria-label="Network and account status">
+        <div class="terminal-ticker-item"><span>CLUSTER</span><strong>DEVNET</strong></div>
+        <div class="terminal-ticker-item"><span>TRADE SENDS</span><strong>WALLET APPROVAL ONLY</strong></div>
+        <div class="terminal-ticker-item"><span>STRATEGY AUTO-EXECUTION</span><strong>OFF</strong></div>
+        <div class="terminal-ticker-item"><span>ACCOUNT DATA</span><strong>THIS BROWSER</strong></div>
+      </div>
+
+      <main class="terminal-content app-content">
+        <div class="app-status" id="app-status" role="status" aria-live="polite">Connect a Solana wallet to start a Devnet session.</div>
+
+        <section class="app-login" id="login-view" aria-labelledby="login-title">
+          <div class="app-login-copy">
+            <p class="eyebrow">FalconOS / wallet access</p>
+            <h1 id="login-title">Your trading desk, on Devnet.</h1>
+            <p class="app-lead">Sign a short message to verify wallet ownership in this browser. The sign-in message does not approve a transaction or spend fees.</p>
+            <button class="app-primary-button app-login-button" id="login-action" type="button">Connect and sign in</button>
+            <p class="app-note">A wallet extension with message signing is required. Keep your wallet network set to Devnet.</p>
+          </div>
+          <aside class="app-login-status" aria-label="App capabilities">
+            <p class="eyebrow">SESSION CHECKLIST</p>
+            <div><span>Wallet proof</span><strong>Ed25519 verified</strong></div>
+            <div><span>Trading cluster</span><strong>Solana Devnet</strong></div>
+            <div><span>Order signing</span><strong>Wallet prompt</strong></div>
+            <div><span>Local history</span><strong>Saved by wallet</strong></div>
+          </aside>
+        </section>
+
+        <section class="app-workspace" id="workspace-view" hidden>
+          <section class="app-heading" id="overview" aria-labelledby="overview-title">
+            <div>
+              <p class="eyebrow">FalconOS / Devnet account</p>
+              <h1 id="overview-title">Account terminal.</h1>
+              <p class="app-lead">Live Devnet balances and transactions. Local saved portfolio and order journal.</p>
+            </div>
+            <div class="app-account-block">
+              <span class="app-label">Signed-in wallet</span>
+              <code id="wallet-address">—</code>
+              <span class="app-muted" id="wallet-connection-state">Proof verified · wallet not connected</span>
+            </div>
+          </section>
+
+          <div class="app-kpis" aria-label="Devnet account summary">
+            <article class="app-kpi"><span class="app-label">SOL balance</span><strong id="sol-balance">—</strong><small id="balance-source">Devnet RPC · refresh to load</small></article>
+            <article class="app-kpi"><span class="app-label">Token balances</span><strong id="token-count">—</strong><small>Legacy SPL Token + Token-2022</small></article>
+            <article class="app-kpi"><span class="app-label">Recent transactions</span><strong id="chain-tx-count">—</strong><small>Latest confirmed signatures</small></article>
+            <article class="app-kpi"><span class="app-label">Saved orders</span><strong id="saved-order-count">0</strong><small>Stored in this browser</small></article>
+          </div>
+
+          <div class="app-grid">
+            <section class="app-panel app-panel-wide" id="portfolio" aria-labelledby="portfolio-title">
+              <div class="app-panel-head">
+                <div><p class="eyebrow">01 / Account</p><h2 id="portfolio-title">Devnet portfolio</h2></div>
+                <button class="app-secondary-button" id="refresh-account" type="button">Refresh account</button>
+              </div>
+              <p class="app-panel-copy">Amounts come from the connected wallet's Devnet token accounts. No fiat value is inferred for test tokens.</p>
+              <div class="app-table-wrap">
+                <table class="app-table">
+                  <thead><tr><th>Token mint</th><th>Amount</th><th>Decimals</th><th>Source</th></tr></thead>
+                  <tbody id="portfolio-rows"><tr><td colspan="4" class="app-empty">Connect the wallet to load Devnet balances.</td></tr></tbody>
+                </table>
+              </div>
+              <form class="app-watch-form" id="watch-form">
+                <label for="watch-mint">Save a token mint</label>
+                <div><input id="watch-mint" name="watchMint" inputmode="text" autocomplete="off" maxlength="44" placeholder="Devnet token mint address" required><button class="app-secondary-button" type="submit">Save mint</button></div>
+              </form>
+              <div class="app-watchlist" id="watchlist" aria-live="polite"></div>
+            </section>
+
+            <section class="app-panel" id="strategy" aria-labelledby="strategy-title">
+              <div class="app-panel-head"><div><p class="eyebrow">02 / Research</p><h2 id="strategy-title">Strategy status</h2></div><span class="app-tag app-tag-warn">ADVISORY ONLY</span></div>
+              <div class="app-state-list">
+                <div><span>Production council feed</span><strong class="state-off">NOT CONNECTED</strong></div>
+                <div><span>Stock entry / exit rules</span><strong class="state-off">NOT IMPLEMENTED</strong></div>
+                <div><span>Historical backtests</span><strong class="state-off">UNAVAILABLE</strong></div>
+                <div><span>Automatic order execution</span><strong class="state-off">DISABLED</strong></div>
+              </div>
+              <p class="app-panel-copy">The current council and stock strategy templates run only in the local research view. They do not authorize this Devnet ticket.</p>
+              <a class="app-text-link" href="/research/">Review research and test status ↗</a>
+            </section>
+
+            <section class="app-panel app-panel-wide" id="trade" aria-labelledby="trade-title">
+              <div class="app-panel-head"><div><p class="eyebrow">03 / Order ticket</p><h2 id="trade-title">Buy or sell a Devnet token</h2></div><span class="app-tag">RAYDIUM ROUTER</span></div>
+              <p class="app-panel-copy">Raydium selects a Devnet route for your token pair. FalconOS checks each pool and mint hop against live Devnet account data. BUY spends the quote token for the asset token. SELL reverses that pair.</p>
+              <div class="app-order-grid">
+                <div class="app-field"><label for="order-side">Side</label><select id="order-side"><option value="BUY">BUY asset</option><option value="SELL">SELL asset</option></select></div>
+                <div class="app-field"><label for="order-amount">Amount to spend</label><input id="order-amount" inputmode="decimal" autocomplete="off" placeholder="0.00"></div>
+                <div class="app-field app-field-wide"><label for="asset-mint">Asset token mint</label><input id="asset-mint" autocomplete="off" maxlength="44" placeholder="Devnet SPL token mint"></div>
+                <div class="app-field app-field-wide"><label for="quote-mint">Quote token mint</label><input id="quote-mint" autocomplete="off" maxlength="44" placeholder="Devnet SPL token mint"></div>
+              </div>
+              <div class="app-button-row"><button class="app-primary-button" id="get-quote" type="button">Get Devnet quote</button><button class="app-primary-button" id="sign-send" type="button" disabled>Simulate, sign, and send</button></div>
+              <div class="app-quote" id="quote-panel" hidden>
+                <div><span>Input</span><strong id="quote-input">—</strong></div>
+                <div><span>Quoted output</span><strong id="quote-output">—</strong></div>
+                <div><span>Price impact</span><strong id="quote-impact">—</strong></div>
+                <div><span>Pool route</span><strong id="quote-pool">—</strong></div>
+              </div>
+              <p class="app-trade-notice">Raydium quote requests use 50 bps slippage. No wallet signature happens until you press <strong>Simulate, sign, and send</strong>. The transaction is simulated on Devnet first. This ticket does not use mainnet stock prices or a trading strategy.</p>
+              <p class="app-trade-result" id="trade-result" role="status" aria-live="polite">No order quoted.</p>
+            </section>
+
+            <section class="app-panel app-panel-wide" id="activity" aria-labelledby="activity-title">
+              <div class="app-panel-head"><div><p class="eyebrow">04 / Audit trail</p><h2 id="activity-title">Order and wallet activity</h2></div><button class="app-secondary-button" id="refresh-history" type="button">Refresh history</button></div>
+              <div class="app-table-wrap">
+                <table class="app-table">
+                  <thead><tr><th>Time</th><th>Activity</th><th>State</th><th>Signature / slot</th></tr></thead>
+                  <tbody id="activity-rows"><tr><td colspan="4" class="app-empty">Sign in to load saved orders and Devnet transactions.</td></tr></tbody>
+                </table>
+              </div>
+              <p class="app-panel-copy">Order labels are saved in this browser. Devnet signatures are queried from the wallet address and remain on-chain.</p>
+            </section>
+          </div>
+        </section>
+      </main>
+      <footer class="terminal-footer"><span>FalconOS Devnet terminal</span><span>Wallet-owned keys · manual approval required</span></footer>
+    </div>
+  </div>
+</body>
+</html>

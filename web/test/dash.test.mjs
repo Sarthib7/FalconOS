@@ -5,14 +5,13 @@ import { deriveMetrics, normalizeSnapshot, validOhlc, validPrice } from '../snap
 
 const html = await readFile(new URL('../dash/index.html', import.meta.url), 'utf8');
 
-test('V57: dashboard route exposes private-preview gate', () => {
-  assert.match(html, /Dashboard access is gated\./);
-  assert.match(html, /public landing page shows a read-only market snapshot/i);
-  assert.match(html, /Login \(Soon\)/);
-  assert.match(html, /Connect wallet \(Soon\)/);
-  assert.match(html, /Sign up \(Soon\)/);
-  assert.doesNotMatch(html, /id="dt-price"/);
-  assert.doesNotMatch(html, /Market stats/);
+test('dashboard route links to the Devnet terminal and states its execution boundary', () => {
+  assert.match(html, /href="\/app\/"/);
+  assert.match(html, /Open Devnet terminal/);
+  assert.match(html, /Solana Devnet/);
+  assert.match(html, /Manual approval/);
+  assert.match(html, /Strategy automation/);
+  assert.doesNotMatch(html, /Login \(Soon\)/);
 });
 
 test('validOhlc rejects zero and negative price values', () => {

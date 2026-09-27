@@ -5,13 +5,25 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "node local-web.mjs dev",
+    "build:site": "vite build",
+    "preview:local": "node local-web.mjs preview",
     "snapshot": "node snapshot.mjs",
     "prebuild": "node snapshot.mjs",
     "build": "vite build",
+    "build:treasury": "vite build --config vite.treasury.config.js",
+    "build:mesh": "vite build --config vite.mesh.config.js",
     "test": "node --test test/*.test.mjs",
+    "test:dashboard": "node --test test/dashboard.test.mjs",
+    "test:dashboard:browser": "node test/dashboard-browser.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
     "vite": "^8.3.0"
+  },
+  "dependencies": {
+    "@wallet-standard/app": "1.1.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

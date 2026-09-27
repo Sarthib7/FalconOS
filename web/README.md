@@ -1,5 +1,28 @@
 # FalconOS web
 
+## Current React preview
+
+[VERIFIED, source: `landing/`, `index.html`] The current landing is a React port of OpenDesign project `886c2e41-d9d4-45e0-a67d-148f20cfca61`. It preserves the active treasury design, local fonts and synthetic scenarios. The source project stays unchanged.
+
+[VERIFIED, source: `dashboard/`, `vite.config.js`] The same build includes the React [Control Centre](dashboard/README.md) at `/dashboard/`. It has Overview, Decisions, Knowledge and Connections views. Its saved simulation has a separate storage key. Earlier advisory pages remain labelled HTML references under `/design-reference/`.
+
+[VERIFIED, local command: `npm --prefix web run preview:local`] The local launcher returned `http://127.0.0.1:4183/`. It serves the site and the signup API. Use Node 24.12 or later for the local SQLite adapter.
+
+```bash
+npm --prefix web run dev:local
+```
+
+[INFERRED, production build preview] Stop the development server before starting preview on the same port.
+
+```bash
+npm --prefix web run build:site
+npm --prefix web run preview:local
+```
+
+[VERIFIED, source: `local-web.mjs`, `waitlist-local.mjs`] Registration is stored in `web/.local/waitlist.sqlite`. The launcher generates a local salt. Both files are excluded from Git. An existing unknown database schema fails visibly. Optional `RESEND_API_KEY` and `WAITLIST_FROM_EMAIL` configure confirmation delivery. Without them, successful signup means the address was saved. Provider acceptance does not prove inbox delivery.
+
+[INFERRED, verification commands] Run `npm --prefix web test` and `node web/test/landing-browser.mjs` after the build. The browser script uses temporary SQLite and provider fixtures. The `/mesh/` route also needs the [mesh API](../mesh/README.md).
+
 ## Cloudflare Pages settings
 
 This is an isolated Vite static site. No Wrangler configuration is required for a Pages dashboard deployment.
@@ -15,14 +38,25 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 
 ## Public pages
 
-- `/`: first impression, market snapshot, access state, and waitlist.
+[INFERRED, graph candidate, 2026-09-27] `/treasury/` is the decision-graph prototype. It uses synthetic evidence and browser-local history. The static build includes this route. Its public release still needs target verification and publication approval. See [graph contract](../docs/decision-graph.md).
+
+- `/`: React treasury landing, interactive synthetic graph scenarios, and waitlist.
 - `/product/`: firm model, advisory pipeline, and product boundaries.
 - `/research/`: evidence format, research checks, and unresolved proof.
-- `/dash/`: private-preview gate. The full dashboard UI is not public.
+- `/dash/`: dashboard entry with a link to the Devnet terminal.
+- `/app/`: wallet sign-in, Devnet balances, a saved token list, a manual Raydium route ticket, and browser-local order history.
 
 ## Dashboard access
 
-The public build contains the landing page, two detail pages, and a private-preview gate at `/dash/`. The gate is also the local development page at `web/dash/index.html`. The former dashboard UI is not included in this branch.
+### Separate graph preview
+
+[INFERRED, preview recipe] Run `npm --prefix web run build:treasury` from the repository root. It creates `web/dist-treasury/` with only the `/treasury/` page and its bundled assets. This command does not run the market snapshot hook or copy the shared public directory. Use this artifact for a separate static Pages preview project. Do not replace the existing FalconOS production site with this smaller artifact.
+
+[INFERRED, release boundary] Upload only the reviewed artifact directory. Account, project name, and preview URL remain unverified. The prototype needs no Pages Functions or database binding. Browser history remains specific to each origin. Publication follows local verification and release approval.
+
+[VERIFIED, official configuration reference] Vite documents [build output and entry options](https://vite.dev/config/build-options.html) and disabling the [public directory](https://vite.dev/config/shared-options.html#publicdir).
+
+The public build includes the landing page, detail pages, the `/dash/` entry, and the `/app/` Devnet terminal. The local Vite server overrides `/dash/` and `/research/` with the localhost research terminal. `/app/` verifies wallet ownership in the browser and saves account preferences and order labels in that browser profile. It has no server session or cross-device sync. Its production trade module uses Solana Devnet and Raydium Devnet only. The stock council feed and historical strategy backtests are not connected to the production app.
 
 ## Waitlist pipeline
 
@@ -30,10 +64,12 @@ The landing form posts to `POST /api/waitlist`. The Pages Function is `web/funct
 
 Configure these user-managed Cloudflare bindings before enabling submissions:
 
-- `WAITLIST_DB`: D1 database with `web/migrations/0001_waitlist.sql` applied.
+- `WAITLIST_DB`: D1 database with the reviewed `web/migrations/0001_waitlist.sql` and `0002_waitlist_email_outbox.sql` applied.
 - `WAITLIST_IP_SALT`: secret used to hash the client IP before rate-limit storage.
 
-The endpoint validates JSON content, email shape, request size, and same-origin requests. An atomic D1 counter limits each hashed client IP to five attempts per hour, including repeated submissions of one email. It stores the normalized email, source, hashed client IP, and timestamps. Local Vite dev serves the form but does not execute Pages Functions.
+[VERIFIED, source: `functions/api/waitlist.js`] The endpoint validates JSON content, email shape, request size, and same-origin requests. An atomic counter limits each hashed client IP to five attempts per hour. It stores the normalized email, source, hashed client IP, and timestamps.
+
+[VERIFIED, correction: `vite.config.js`, `waitlist-local.mjs`] The earlier statement that local Vite cannot process signup is obsolete. `dev:local` and `preview:local` mount the same handler with a local SQLite adapter. Hosted D1 bindings and inbox delivery remain unverified. Optional delivery uses the outbox and sender settings described in the [email contract](../docs/landing-email.md).
 
 ## Custom domain (manual)
 
