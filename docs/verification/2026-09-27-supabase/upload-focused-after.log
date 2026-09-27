@@ -1,0 +1,14 @@
+✔ V92: empty or malformed token configuration fails closed (20.000917ms)
+✔ V95: configured CORS origins are exact and HTTPS except loopback (22.838958ms)
+✔ V112: known-length overflow returns a complete error and drains the remaining upload (185.76375ms)
+✔ V112: chunked overflow returns a complete error and drains the remaining upload (38.399333ms)
+✔ V112: known-length unsupported content type returns a complete error and drains the remaining upload (8.506417ms)
+✔ V112: chunked unauthorized request returns a complete error and drains the remaining upload (14.672417ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1071.566708

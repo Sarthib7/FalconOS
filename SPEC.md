@@ -440,6 +440,7 @@ V108: [INFERRED] ∀ dashboard persistence → fixed preview namespace for both 
 V109: [INFERRED] ∀ dashboard decision → canonical treasury rules and exact integer balances; retained source samples and knowledge analyses match canonical replay/projection at saved cutoff; source display preserves exact retained text.
 V110: [INFERRED] ∀ current dashboard preview → evidence age refreshes decision validity; historical selection stays pinned to its original graph and cutoff; bounded loop stops on hidden page, unmount, storage change, error, revocation or ten saved cycles; Stop stays available during a pending cycle and cancels its queued storage lock; a synchronous commit already entered remains recorded.
 V111: [INFERRED] ∀ dashboard export or connection claim → describes actual record fields and connection state; sample analysis cannot claim service capture or execution authority; source content treated as data; dialogs close and restore focus without stale event races; delayed clipboard results apply only to their original open export.
+V112: [INFERRED] ∀ rejected mesh POST while client remains connected → complete typed HTTP error; drain unread input without retaining it; oversized fixed-length or chunked body never reaches storage; existing request timeout remains bounded.
 
 ## §T TASKS
 
@@ -579,3 +580,4 @@ B79|2026-09-27|[REPORTED, dashboard review: delayed clipboard completion updates
 B80|2026-09-27|[VERIFIED, source inspection: `App.jsx` cancels timers only; `Decisions.jsx` disables Stop during busy state] a cycle waiting for a storage lock cannot be stopped before it writes|V110; keep Stop enabled and abort a loop's queued lock request
 B81|2026-09-27|[VERIFIED, web suite `tests 158`, `pass 157`, `fail 1`; isolated polling test also returned `pending` after 304ms] a success fixture required two polls within 100ms of wall time|one-time test correction: use a controlled clock for the polling outcome assertions; production deadlines stay unchanged
 B82|2026-09-27|[REPORTED, UI build review: CSS retained `[EMBEDDED_ASSET]` from a sanitized reading copy] source font hashes were correct but CSS did not reference those assets|V107; bind four font faces to the retained TTF files and assert their loaded browser status
+B83|2026-09-27|[VERIFIED, pre-commit mesh suite: `tests 97`, `pass 95`, `fail 2`, oversized HTTP upload returned `ECONNRESET`; REPORTED, focused probe: 4 resets in 20 uploads] forced connection close races a client still uploading rejected input|V112; drain unread input and preserve the typed error response

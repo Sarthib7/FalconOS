@@ -1,0 +1,82 @@
+✖ V112: known-length overflow returns a complete error and drains the remaining upload (2018.227667ms)
+✖ V112: chunked overflow returns a complete error and drains the remaining upload (2008.709542ms)
+✖ V112: known-length unsupported content type returns a complete error and drains the remaining upload (2027.685042ms)
+✖ V112: chunked unauthorized request returns a complete error and drains the remaining upload (2045.38875ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8283.057583
+
+✖ failing tests:
+
+test at mesh/test/http.test.mjs:38:3
+✖ V112: known-length overflow returns a complete error and drains the remaining upload (2018.227667ms)
+  AssertionError [ERR_ASSERTION]: the server must drain the upload after sending the error
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///Volumes/Sarthi%20MAC/FalconOS/mesh/test/http.test.mjs:81:14)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at mesh/test/http.test.mjs:38:3
+✖ V112: chunked overflow returns a complete error and drains the remaining upload (2008.709542ms)
+  AssertionError [ERR_ASSERTION]: the server must drain the upload after sending the error
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///Volumes/Sarthi%20MAC/FalconOS/mesh/test/http.test.mjs:81:14)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at mesh/test/http.test.mjs:38:3
+✖ V112: known-length unsupported content type returns a complete error and drains the remaining upload (2027.685042ms)
+  AssertionError [ERR_ASSERTION]: the server must drain the upload after sending the error
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///Volumes/Sarthi%20MAC/FalconOS/mesh/test/http.test.mjs:81:14)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at mesh/test/http.test.mjs:38:3
+✖ V112: chunked unauthorized request returns a complete error and drains the remaining upload (2045.38875ms)
+  AssertionError [ERR_ASSERTION]: the server must drain the upload after sending the error
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///Volumes/Sarthi%20MAC/FalconOS/mesh/test/http.test.mjs:81:14)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

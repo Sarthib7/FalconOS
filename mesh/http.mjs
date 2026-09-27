@@ -148,7 +148,7 @@ export function createApi({ store, lending = null, tokenHashes, allowedOrigins =
       if (response.headersSent) { response.destroy(); return; }
       const known = error instanceof MeshError && Object.hasOwn(STATUSES, error.code);
       const code = known ? error.code : 'STORAGE_UNAVAILABLE';
-      if (request.method === 'POST') { response.setHeader('Connection', 'close'); request.resume(); }
+      if (request.method === 'POST') request.resume();
       send(STATUSES[code], { error: { code, message: known ? error.message : 'Mesh storage could not complete the request.' } });
     }
   });
