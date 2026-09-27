@@ -119,5 +119,10 @@ body::after{content:"";position:fixed;top:8%;right:0;width:36%;height:84%;border
 .waitlist-field input{display:block;width:100%;min-width:0;min-height:48px;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:2px;color:var(--fg);font:16px var(--font-body)}
 .waitlist-field input::placeholder{color:var(--muted)}.waitlist-field input:disabled,.waitlist-form button:disabled{opacity:.65}
 .waitlist-status{grid-column:1/-1;min-height:20px;font:12px/1.7 var(--font-mono);color:var(--muted);overflow-wrap:anywhere}.waitlist-status.is-error{color:var(--amber)}
+.waitlist-form.is-complete{border-color:var(--accent);align-items:center}
+.waitlist-success{display:flex;align-items:center;gap:16px;min-width:0}.waitlist-success>div{min-width:0}.waitlist-success strong{display:block;color:var(--accent);font:400 24px/1.3 var(--font-display)}.waitlist-success span{display:block;margin-top:4px;color:var(--muted);font:12px/1.7 var(--font-mono);overflow-wrap:anywhere}
+.waitlist-check{width:48px;height:48px;flex:none;color:var(--accent);animation:waitlist-confirm 320ms var(--ease) both}.waitlist-check circle{fill:var(--accent-soft);stroke:currentColor;stroke-width:1}.waitlist-check path{stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:30;stroke-dashoffset:0;animation:waitlist-check 360ms 100ms var(--ease) both}
+@keyframes waitlist-confirm{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+@keyframes waitlist-check{from{stroke-dashoffset:30}to{stroke-dashoffset:0}}
 @media(min-width:769px) and (max-width:1100px){.site-nav a[href="#waitlist"]{display:none}.site-nav{flex-wrap:wrap;gap:8px 16px}.nav-inner{gap:16px}.nav-action{font-size:12px;padding-inline:12px}}
 @media(max-width:768px){.site-nav.is-open{flex-wrap:wrap;gap:8px 24px}.waitlist-form{grid-template-columns:minmax(0,1fr);padding:20px}.waitlist{padding-bottom:48px}.product-links{gap:12px 24px}}
