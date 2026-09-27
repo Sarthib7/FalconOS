@@ -1,0 +1,14 @@
+[
+  {
+    "path": "mesh/schema.sql",
+    "sha256": "ea5c5ff852396a6afadaa13d0ab9e8d686d86234e2df0efa4044535b0cd1dc2d"
+  },
+  {
+    "path": "mesh/migrations/0002_lending.sql",
+    "sha256": "94b7b14821ca6271ab3a84b9ca7bc372808aae3bc949983297842e1a0cdbf9d8"
+  },
+  {
+    "path": "mesh/deploy/supabase-permissions.sql",
+    "sha256": "ac1f0cd8a6ee599602af42e2ad042288053b627ac0fcbd469fef89a3835b08f6"
+  }
+]

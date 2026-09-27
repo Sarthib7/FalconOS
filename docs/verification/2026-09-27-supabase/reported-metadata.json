@@ -1,0 +1,92 @@
+{
+  "provenance": "REPORTED by fresh ephemeral Codex subprocess; parent agent observed the subprocess tool completion and final stdout, not the raw MCP SQL result blocks.",
+  "projectRef": "mcmxfwkhdzzsfpvldgdw",
+  "projectUrl": "https://mcmxfwkhdzzsfpvldgdw.supabase.co",
+  "execution": {
+    "sessionId": 46861,
+    "threadId": "01a0e298-1b28-7dc3-bcd0-16c4af451ed2",
+    "exitCode": 0,
+    "sandbox": "read-only",
+    "approvalPolicy": "on-request",
+    "approvalsReviewer": "auto_review",
+    "calls": "Supabase execute_sql catalog reads completed. No mutations, customer rows, credential values or content reads requested.",
+    "rawMcpResultArtifact": null
+  },
+  "toolAvailability": {
+    "currentSubagentSupabaseTools": false,
+    "freshCodexSupabaseTools": true,
+    "metadataCallsSucceeded": true,
+    "catalogSqlSucceeded": true,
+    "firstHarnessRestriction": "MCP tool call requires approval, but approval policy is never",
+    "firstHarnessRestrictionWasDatabaseFailure": false
+  },
+  "migrations": [],
+  "serverVersion": "17.6",
+  "serverVersionNum": "170006",
+  "schemaFilter": "Excluded information_schema and schema names beginning pg_.",
+  "schemas": ["auth", "extensions", "graphql", "graphql_public", "pgbouncer", "public", "realtime", "storage", "vault"],
+  "falconMeshSchemaExists": false,
+  "expectedMeshTables": {
+    "source_revisions": false,
+    "source_heads": false,
+    "analyses": false,
+    "lending_intents": false,
+    "lending_events": false
+  },
+  "publicTables": [],
+  "waitlistSearch": {
+    "method": "Case-insensitive names containing waitlist. Definitions and content were not searched.",
+    "schemas": [],
+    "relations": [],
+    "routines": [],
+    "types": [],
+    "constraints": [],
+    "triggers": [],
+    "policies": []
+  },
+  "publicSchemaOwner": "pg_database_owner",
+  "publicSchemaAcl": "{pg_database_owner=UC/pg_database_owner,=U/pg_database_owner,postgres=U/pg_database_owner,anon=U/pg_database_owner,authenticated=U/pg_database_owner,service_role=U/pg_database_owner}",
+  "publicSchemaSelectedGrants": [
+    {"grantee": "anon", "privilege": "USAGE", "grantor": "pg_database_owner", "grantOption": false},
+    {"grantee": "authenticated", "privilege": "USAGE", "grantor": "pg_database_owner", "grantOption": false},
+    {"grantee": "PUBLIC", "privilege": "USAGE", "grantor": "pg_database_owner", "grantOption": false}
+  ],
+  "targetRelationAcls": [],
+  "targetRelationAclScope": "Tables, views, materialized views and sequences in public or matching schemas, plus waitlist-named relations.",
+  "defaultAcls": [
+    {
+      "creator": "postgres", "schemas": ["public", "storage"],
+      "S": "{postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}",
+      "f": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "r": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}"
+    },
+    {
+      "creator": "supabase_admin", "schemas": ["extensions"],
+      "S": "{postgres=r*w*U*/supabase_admin}",
+      "f": "{postgres=X*/supabase_admin}",
+      "r": "{postgres=a*r*w*d*D*x*t*m*/supabase_admin}"
+    },
+    {
+      "creator": "supabase_admin", "schemas": ["graphql", "graphql_public", "public"],
+      "S": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}",
+      "f": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+      "r": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}"
+    },
+    {
+      "creator": "supabase_admin", "schemas": ["realtime"],
+      "S": "{postgres=rwU/supabase_admin,dashboard_user=rwU/supabase_admin}",
+      "f": "{postgres=X/supabase_admin,dashboard_user=X/supabase_admin}",
+      "r": "{postgres=a*r*wdDxtm/supabase_admin,dashboard_user=arwdDxtm/supabase_admin}"
+    },
+    {
+      "creator": "supabase_auth_admin", "schemas": ["auth"],
+      "S": "{postgres=rwU/supabase_auth_admin,dashboard_user=rwU/supabase_auth_admin}",
+      "f": "{postgres=X/supabase_auth_admin,dashboard_user=X/supabase_auth_admin}",
+      "r": "{postgres=arwdDxtm/supabase_auth_admin,dashboard_user=arwdDxtm/supabase_auth_admin}"
+    }
+  ],
+  "globalDefaultAcls": [],
+  "meshOrWaitlistDefaultAcls": [],
+  "explicitPublicDefaultAclEntries": [],
+  "notInspected": ["role inheritance", "implicit privileges", "event triggers", "PostgREST exposed schemas", "customer row counts", "customer rows"]
+}

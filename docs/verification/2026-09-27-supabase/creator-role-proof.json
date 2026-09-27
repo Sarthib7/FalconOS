@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "actor": {
+    "current_user": "proof_creator",
+    "rolsuper": false,
+    "rolcreaterole": true
+  },
+  "memberships": [
+    {
+      "granted_role": "proof_app",
+      "member": "proof_creator",
+      "grantor": "falcon_proof_admin",
+      "admin_option": true,
+      "inherit_option": false,
+      "set_option": false
+    }
+  ],
+  "note": "The membership is automatic PostgreSQL17 behavior. The app is not a member of any parent role. All test role changes were rolled back."
+}

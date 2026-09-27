@@ -1,5 +1,20 @@
 # Status
 
+## Supabase connection: 2026-09-27
+
+[VERIFIED, user direction] Continue through a fresh sub-agent after Supabase OAuth setup. Project: `mcmxfwkhdzzsfpvldgdw`. Codex returned `Successfully logged in.` and `auth_status: o_auth`. This replaces the earlier pending project choice. The current agent tool registry does not expose Supabase; a fresh Codex process completed read-only catalog inspection through the saved login.
+
+| Task | Owner | Status | Scope |
+| --- | --- | --- | --- |
+| SB-INSPECT | Supabase inspector | Complete | [VERIFIED] Target has no `falcon_mesh` schema or `falcon_mesh_app` role. Metadata only. |
+| SB-COMPAT | compatibility reviewer | Complete locally | [VERIFIED] Full SQL history and permissions: `41/41` local checks. Hosted connection remains untested. |
+| SB-CANDIDATE | coordinator | Review ready | [VERIFIED] Three reviewed SQL files. Hosted schema approval and runtime credentials remain pending. |
+| KM-UPLOAD | API implementer | Complete locally | [VERIFIED] V112 negative control: `pass 0`, `fail 4`. Full corrected mesh suite: `pass 101`, `fail 0`. |
+
+[VERIFIED, current evidence] The [Supabase verification record](docs/verification/2026-09-27-supabase.md) contains exact catalog responses, SQL hashes, local results, and limits. The [setup candidate](docs/supabase-setup.md) creates five private tables and a restricted role with login disabled. No hosted schema change occurred.
+
+[VERIFIED, correction] The Git publication section below records the earlier mesh failure and pending project choice. The new `101/101` result supersedes that mesh result after the V112 fix. Supabase project selection is now complete. Hosted email configuration is still pending.
+
 ## Git publication: 2026-09-27
 
 [VERIFIED, user request] Commit the existing work one commit at a time, then push. Owner: coordinator. Branch: `mvp/knowledge-mesh-complete`. This branch preserves the pending MVP and email work without replacing the live `main` release. Local runtime files and credentials are excluded.
