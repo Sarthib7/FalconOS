@@ -1,5 +1,7 @@
 # FalconOS plan index
 
+[VERIFIED, current direction, 2026-09-26] The active plan is [Treasury MVP](treasury-mvp.md), following the user's accepted pitch and local-loop-first choice. The [documentation index](../docs/README.md) links the spec, contract, and ADRs. The earlier plans and results below retain their historical scope.
+
 [VERIFIED, user request, 2026-09-05] This index answers: "make a proper plan and toodos with checkpoints , checks, test, passing ctritial, phases, and index them."
 
 ## Start here

@@ -1,5 +1,13 @@
 # First research slice interfaces
 
+[INFERRED, I16, 2026-09-27] Owner: coordinator. Provider: canonical treasury domain/store plus retained OpenDesign samples. Consumer: React `/dashboard/`. Status: Verified locally. Root browser returned `passed:95`, `total:95`; see [verification](verification/2026-09-27-dashboard.md). [Control Centre contract](control-centre.md) fixes its storage namespace, four view routes, evidence/export semantics and verification. The treasury store gains an optional internal key with its existing default preserved. Backend APIs and existing wallet interfaces remain unchanged.
+
+[INFERRED, I15, 2026-09-27] Owner: coordinator. Provider: mesh service and Postgres. Consumer: mesh viewer and Devnet lending terminal. Status: local integration. [Knowledge mesh contract](knowledge-mesh.md) defines source revisions, owner scope, graph traversal, immutable analyses, HTTP errors and verification. A confirmed user-wallet round trip remains unverified.
+
+[VERIFIED, source: `web/landing/`, `web/functions/api/waitlist.js`] React owns the treasury landing. `POST /api/waitlist` persists registrations before success. Optional confirmation delivery records provider acceptance separately. The [email contract](landing-email.md) defines local SQLite, hosted D1 and outbox boundaries.
+
+[INFERRED, I14 amendment, 2026-09-27] Owner: coordinator. Provider: treasury domain and store. Consumer: treasury UI. Status: Completed. [Decision graph contract](decision-graph.md) defines version 2 runs, saved records, rule checks, compatibility, errors, and verification. Existing commands remain unchanged.
+
 [VERIFIED, prior implementation check, 2026-09-05] The local suite returned `tests 40`, `pass 40`, `fail 0`, `cancelled 0`, `skipped 0`, and typecheck exited `0`. The registry fixture checks all four configured assets against the saved historical capture. The live CLI records assessment time after collection.
 
 [REPORTED, preliminary source freeze, 2026-09-05] Root earlier reported `npm run typecheck` exit `0`, agent plus vault tests `22/22`, CLI tests `11/11`, and the full suite `tests 57`, `pass 57`, `fail 0`, `cancelled 0`, `skipped 0`. This result is superseded by the final 59-test evidence below. It did not establish a real agent thesis.
@@ -151,8 +159,117 @@ type AdviceResponse = {
 
 ## Local copilot transaction path
 
-[VERIFIED, source read: `web/copilot/execution.mjs`] Jupiter supplies quote and unsigned swap data. The browser uses the Surfpool RPC at `http://127.0.0.1:8899` for blockhash, simulation, and send calls. The local copilot accepts no devnet or public mainnet RPC target.
+[INFERRED, approved interface contract] The local client has two explicit targets. Surfpool quote/build uses Jupiter mainnet data. Its blockhash, simulation, send, and status calls use only `http://127.0.0.1:18488`. Devnet quote/build uses Raydium's Devnet swap API. Its pool checks, blockhash, simulation, send, and status calls use only `https://api.devnet.solana.com`.
 
-[VERIFIED, source read: `web/copilot/index.html` and `web/vite.config.js`] The connected wallet signs after a successful Surfpool simulation and an explicit user click. The page checks the signed message before sending. Vite does not include `/copilot/` in production build entries.
+[VERIFIED, official Raydium SDK demo source, read 2026-09-23] The Devnet API host is `https://transaction-v1-devnet.raydium.io`. Its sample calls `/compute/swap-base-in`, reads `data.routePlan[].poolId`, and posts the quote response to `/transaction/swap-base-in`. The demo pool reader uses direct RPC for Devnet CPMM pools. See [Raydium Devnet API sample](https://github.com/raydium-io/raydium-sdk-V2-demo/blob/master/src/api/swap.ts) and [CPMM SDK sample](https://github.com/raydium-io/raydium-sdk-V2-demo/blob/master/src/cpmm/swap.ts).
 
-[VERIFIED, official Surfpool docs] Surfnet is a local Solana simulator with mainnet fork support. See the [Surfpool RPC overview](https://docs.surfpool.run/rpc/overview). This interface does not send a transaction to public mainnet.
+[INFERRED, Devnet safety contract] A Devnet quote is usable only when the selected RPC confirms a Raydium CPMM pool account, its on-chain mint pair matches the requested mints, and the quote names that pool as its sole route with the requested amount and direction. The transaction builder must return exactly one unsigned transaction. Missing pool state, route mismatch, or a multi-transaction response stops before wallet signing.
+
+[INFERRED, signer contract] The page gets a fresh blockhash from the selected RPC, simulates those exact message bytes, then requests wallet signing after the explicit **Sign & send** click. It verifies the signed message and connected signer before sending. Before send, it checks block height against the blockhash expiry. The page gets confirmation status from the same RPC.
+
+[VERIFIED, local implementation tests, 2026-09-23] `npm --prefix web test` returned `tests 40`, `pass 40`, `fail 0`, `cancelled 0`, `skipped 0`. Fetch calls use test doubles. This verifies the client checks against fixtures, not the live Jupiter, Raydium, Surfpool, or Devnet services.
+
+[VERIFIED, source read: `web/vite.config.js`] Vite does not include `/copilot/` in production build entries. The dev-only route does not change engine or plugin execution boundaries.
+
+## Trading terminal graphs
+
+[VERIFIED, source read: `engine/src/graph.rs:7-27,160-202`] The engine graph response has `nodes` and `edges`. Nodes carry `id`, `kind`, `label`, and `detail`. Edges carry `from`, `to`, and `kind`. The builder emits intent, verdict, snapshot, asset, source, and evidence records.
+
+[VERIFIED, source read: `web/copilot/index.html:101-103,434-440,476-479`] The local page has one SVG graph. It fetches `/graph` from the council service. It places nodes with fixed two-column coordinates. The page has a separate trade ticket. It has no trade-history graph or graph tabs.
+
+[VERIFIED, source read: `web/dash/index.html:24-31` and `web/vite.config.js:4-19`] `/dash/` remains a private-preview gate. Vite serves `/copilot/` only in development and omits it from the production build.
+
+[VERIFIED, user direction, 2026-09-23] The user asked for a terminal-style local trading view with trade, intent, and knowledge/decision graphs, animated behavior, and live values instead of hardcoded sample values.
+
+[INFERRED, pending interface work] Trade history needs a read-only transaction source and a UI view. The current graph builder does not emit wallet transactions. The user identified the trade graph but has not confirmed whether it should show recent wallet swaps or this session's ticket steps. No live RPC query occurred in this documentation update.
+
+## Local stocks dashboard response
+
+[VERIFIED, source read, 2026-09-24] `Evaluation` keeps one advice response, proposal verdict, canonical snapshot, references, and evidence graph. `/advice` omits proposal legs and per-capture provenance when the council status is `BLOCKED` or `NO_DATA` (`engine/src/serve.rs:38-58,190-215`).
+
+[VERIFIED, implemented interface, 2026-09-24] Provider: Rust engine `127.0.0.1:8787`. Consumers: Vite development views at `/dash/` and `/research/`. Input: `GET /dashboard`, with no request body. The response is derived from the engine's current cached evaluation. It makes no additional provider calls.
+
+```ts
+type DashboardResponse = {
+  advice: AdviceResponse;
+  proposal: Proposal | null;
+  policy: {
+    max_dislocation_bps: number;
+    coherence_cap_ms: number;
+    assets: Array<{
+      asset_id: string;
+      underlying: string;
+      target_weight_bps: number;
+      max_weight_bps: number;
+      min_liquidity_units: string;
+      price_scale: number;
+      quantity_scale: number;
+    }>;
+  };
+  captures: Array<{
+    asset_id: string;
+    field: 'price' | 'liquidity' | 'reference';
+    source_id: string;
+    source_version: string;
+    observed_at: string;
+    available: boolean;
+    value: string | null;
+    raw_excerpt_sha256: string;
+  }>;
+  graph: {
+    nodes: Array<{ id: string; kind: string; label: string }>;
+    edges: Array<{ from: string; to: string; kind: string }>;
+  };
+};
+```
+
+Compatibility: `/advice` and `/graph` keep their current shapes. `proposal` is populated only for `PUBLISHED`. Policy values describe configured limits and target weights, not live holdings. Capture metadata omits raw excerpts. The graph projection omits node details, which may contain raw source failures. `BLOCKED` and `NO_DATA` keep their failures visible through advice reasons and capture availability. Historical backtests remain unavailable because the engine has no history route.
+
+[INFERRED, local route boundary] Vite development middleware serves the dashboard and research views. The production `/dash/` HTML remains the private-preview gate. The public landing page remains unchanged. No browser page sends a wallet transaction through this endpoint.
+
+[VERIFIED, local endpoint read, 2026-09-24] `curl -sS -D - http://127.0.0.1:8787/dashboard | head -c 2600` returned `HTTP/1.1 200 OK` and `Content-Length: 9226`. The response reported `"status":"BLOCKED"`, `"execution_ready":false`, and reasons `OPENAI token dislocated 2990bps from underlying` and `SPACEX token dislocated 2098bps from underlying`. The capture records were observed at `2026-09-24T10:11:55.000Z` and `2026-09-24T10:11:56.000Z`.
+
+## Local stock strategy research view
+
+[VERIFIED, source read: `engine/src/council.rs:28-45,105-174,611-665` and `engine/src/serve.rs:96-104,165-170,525-544`, 2026-09-24] The engine adds `checks` to `GET /dashboard`. It records rule status, observed value, threshold, unit, evidence capture keys, and reason. The same evaluator returns both the council verdict and checks. `PASS` means the rule ran and passed. `BLOCK` means the rule vetoed the proposal. `NO_DATA` means a required input failed or the rule did not run after an earlier failure. A skipped check includes the stop reason.
+
+```ts
+type CouncilCheck = {
+  id: string;
+  scope: 'snapshot' | 'portfolio' | 'asset';
+  asset_id: string | null;
+  status: 'PASS' | 'BLOCK' | 'NO_DATA';
+  observed: string | null;
+  threshold: string | null;
+  unit: string | null;
+  evidence_capture_keys: string[];
+  reason: string | null;
+};
+
+type DashboardResponseExtension = {
+  checks: CouncilCheck[];
+};
+```
+
+[VERIFIED, source read: `web/local-terminal.html:147-169`, 2026-09-24] `/research/` separates the live Falcon allocation policy from a static stock strategy library. The library labels its templates `NOT IMPLEMENTED` and `NOT BACKTESTED`. It links to [OpenTerminalUI](https://github.com/Hitheshkaranth/OpenTerminalUI), [ticker](https://github.com/achannarasappa/ticker), and [stocksTUI](https://github.com/andriy-git/stocksTUI). The page states that historical backtests need a history source and route.
+
+## Production Devnet app browser boundary
+
+[VERIFIED, official SIWS specification read, 2026-09-24] [Sign In With Solana](https://github.com/phantom/sign-in-with-solana) defines domain, address, URI, version, chain ID, nonce, issue time, and expiry fields. Its Devnet chain ID may be `solana:devnet`. The wallet signs a message, not a blockchain transaction.
+
+[VERIFIED, implementation contract, source read 2026-09-24] Provider: browser-injected Solana wallet. Consumer: production `/app/`. Input: wallet public key and a fresh SIWS-formatted message bound to the current origin. The sign-in message omits `chainId`; the separate trade path is fixed to Devnet. Output: an Ed25519-verified local session proof. The page stores the signed proof in this browser and rechecks its origin, nonce shape, issue time, expiry, and signature after reload. This matches `SPEC.md` I13 and `web/app/app.mjs:269`.
+
+[VERIFIED, Phantom SIWS specification, read 2026-09-24] The specification says: “If not provided, the wallet must not include Chain ID in the message.” Source: [Phantom Sign In With Solana specification](https://github.com/phantom/sign-in-with-solana).
+
+[INFERRED, storage boundary, 2026-09-24] Provider and consumer: browser local storage. Keys include the wallet address and Devnet network. Records contain only public wallet addresses, saved mint addresses, order fields, transaction signatures, and status labels. No private key or signed transaction is stored. This persistence is local to one browser profile. It is not server authentication or cross-device sync. No production API may trust this browser-only proof.
+
+[INFERRED, Devnet data boundary, 2026-09-24] Provider: `https://api.devnet.solana.com`. Consumer: `/app/`. Read methods: `getBalance`, `getTokenAccountsByOwner` for legacy SPL Token and Token-2022 accounts, `getSignaturesForAddress`, and `getTokenSupply`. The app uses this exact RPC for portfolio, recent transaction, token-decimal, simulation, send, and confirmation calls.
+
+[INFERRED, Devnet order boundary, 2026-09-24] Provider: the existing `web/copilot/execution.mjs` Devnet quote and transaction builder. Input: configured Raydium CPMM pool, input mint, output mint, base-unit amount, and connected wallet. Output: one unsigned transaction after on-chain pool owner, discriminator, mint-pair, quote-route, and response-count checks. The browser then simulates the exact message, requests wallet signing after an explicit user action, verifies the returned message and signer, checks blockhash expiry, sends to Devnet, and records the signature and confirmation state.
+
+[BOUNDARY, strategy status, 2026-09-24] The production app has no connection to the localhost-only council API. The research templates remain reference-only, and the current council is advisory-only. A Devnet swap quote is not a stock strategy signal. The app must show those states as unavailable until a production data and strategy API exists.
+
+[VERIFIED, correction, source read 2026-09-24] The preceding provider assignment is superseded. Production `/app/` imports `web/app/devnet-execution.mjs`, which fixes RPC calls to `DEVNET_RPC` from `web/app/data.mjs`. The local `/copilot/` page continues to use `web/copilot/execution.mjs`. The production build check must confirm that Surfpool and Jupiter endpoint strings are absent from the app bundle.
+## Treasury simulation addition, 2026-09-26
+
+[INFERRED, current interface index] Interface `I14` is defined in [the treasury simulation contract](treasury-contract.md). Owner: architect. Provider: `web/treasury/`. Consumers: the local treasury UI and tests. Version 1 is simulation-only and does not change the earlier plugin, stocks engine, or Devnet interfaces.

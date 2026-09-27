@@ -1,0 +1,6 @@
+{
+  "candidateFiles": 39,
+  "reviewedFiles": 39,
+  "identical": true,
+  "scope": "All file paths and SHA-256 hashes in the two build outputs; excludes source and backend state."
+}

@@ -1,0 +1,31 @@
+✔ V107,V109: extracted data retains the active source payload and all five canonical treasury runs (371.314083ms)
+✔ V109: all eight retained source hashes and four graph projections match their exact source content (26.424334ms)
+✔ V109,V111: twelve knowledge analyses reproduce at saved cutoffs and exclude unrelated positions (142.012541ms)
+✔ V108: dashboard namespace isolates storage and locks while the treasury default remains unchanged (13.59525ms)
+✔ V108: corrupt dashboard bytes cannot be replaced by create, dispatch or export (12.66125ms)
+✔ V108: quota failure preserves committed dashboard state and cannot create an unsaved run (13.391083ms)
+✔ V108: two dashboard stores serialize writes, reject stale revisions and preserve exact retries (16.553625ms)
+✔ V108: unavailable dashboard storage or Web Locks cannot write another namespace (0.570042ms)
+✔ V110 B80: stopping a cycle queued behind another native Web Lock preserves saved bytes (32.521625ms)
+✔ V110 B80: cancellation before a granted callback enters prevents its write (1.951958ms)
+✔ V110 B80: abort after the synchronous commit enters preserves its recorded result (9.322ms)
+✔ V82 V83: a saved supply survives a new store instance and JSON export replays it (44.565958ms)
+✔ V82: a failed storage write preserves the prior position, revision, and raw history (21.894333ms)
+✔ V82: concurrent stores serialize; the stale second writer cannot overwrite a committed action (16.348333ms)
+✔ V82: corrupt stored data cannot be replaced by initialization or another event (6.109417ms)
+✔ V82: unavailable reads and unavailable Web Locks fail without writing (6.155667ms)
+✔ V82 V83: exact retries are idempotent even after the original revision; conflicting retries fail (299.798459ms)
+✔ V82: create never overwrites a valid run and an empty browser has no export (13.420042ms)
+✔ V82: oversized saved records and malformed revisions stop before writing (20.499417ms)
+✔ V87: stored policy and decision snapshots survive reload and export (48.79125ms)
+✔ V87: altered saved decisions and unsupported policies cannot be overwritten (14.341083ms)
+✔ V82 V87: failed legacy upgrade preserves bytes; successful upgrade retains commands (13.086958ms)
+✔ V83 V87: all 200 decision records fit the supported storage bound and replay (8973.347292ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10002.095167

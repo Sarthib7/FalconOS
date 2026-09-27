@@ -1,0 +1,331 @@
+✖ V92: composite owner keys isolate identical revision IDs and every saved read (22.677042ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 77.83675
+
+✖ failing tests:
+
+test at ../../../private/tmp/falcon-owner-negative-2_ylggml/test/store.test.mjs:94:1
+✖ V92: composite owner keys isolate identical revision IDs and every saved read (22.677042ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   analysis: {
+  +     at: '2026-09-27T12:00:00.000Z',
+  +     availableLiquidityUnits: '600000000',
+  +     coverage: {
+  +       edgeLimit: 128,
+  +       maxHops: 3,
+  +       nodeLimit: 64,
+  +       status: 'complete',
+  +       visitedEdgeIds: [
+  +         'edge:shared-observation',
+  +         'edge:shared-protocol',
+  +         'edge:shared-asset',
+  +         'edge:one-supply',
+  +         'edge:position-one-asset',
+  +         'edge:two-supply',
+  +         'edge:position-two-asset'
+  +       ],
+  +       visitedNodeIds: [
+  +         'observation:shared',
+  +         'reserve:shared',
+  +         'protocol:demo',
+  +         'asset:usdc',
+  +         'position:one',
+  +         'position:two'
+  +       ]
+  +     },
+  +     graphRevision: '1f73c2dcbb79eb31a295e5eeb1be3c99b5da6ac2dcbd246e732429e3197015e4',
+  +     mode: 'synthetic',
+  +     observationId: 'observation:shared',
+  +     policyVersion: 'mesh-liquidity/1',
+  +     positionResults: [
+  +       {
+  +         amountUnits: '200000000',
+  +         pathEdgeIds: [
+  +           'edge:shared-observation',
+  +           'edge:one-supply'
+  +         ],
+  +         pathNodeIds: [
+  +           'observation:shared',
+  +           'reserve:shared',
+  +           'position:one'
+  +         ],
+  +         positionId: 'position:one',
+  +         reason: 'Synthetic reserve liquidity covers the combined full exit. This analysis does not authorize execution.',
+  +         reserveId: 'reserve:shared',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c',
+  +           'c99968d1-b0ee-49f9-9409-3ab331cf9246'
+  +         ],
+  +         status: 'READY'
+  +       },
+  +       {
+  +         amountUnits: '300000000',
+  +         pathEdgeIds: [
+  +           'edge:shared-observation',
+  +           'edge:two-supply'
+  +         ],
+  +         pathNodeIds: [
+  +           'observation:shared',
+  +           'reserve:shared',
+  +           'position:two'
+  +         ],
+  +         positionId: 'position:two',
+  +         reason: 'Synthetic reserve liquidity covers the combined full exit. This analysis does not authorize execution.',
+  +         reserveId: 'reserve:shared',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c',
+  +           'c99968d1-b0ee-49f9-9409-3ab331cf9246'
+  +         ],
+  +         status: 'READY'
+  +       }
+  +     ],
+  +     schemaVersion: 1,
+  +     sourceRevisionIds: [
+  +       '808b1030-5dca-40e1-95c6-c5c46613e30c',
+  +       'c99968d1-b0ee-49f9-9409-3ab331cf9246'
+  +     ],
+  +     status: 'READY',
+  +     summary: 'Synthetic reserve liquidity covers the combined full exit. This analysis does not authorize execution.',
+  +     totalAffectedUnits: '500000000'
+  +   },
+  +   createdAt: '2026-09-27T12:00:00.000Z',
+  +   graph: {
+  +     asOf: '2026-09-27T12:00:00.000Z',
+  +     coverage: {
+  +       edgeLimit: 512,
+  +       nodeLimit: 256,
+  +       sourceLimit: 32,
+  +       status: 'complete'
+  +     },
+  +     edges: [
+  +       {
+  +         id: 'edge:one-supply',
+  +         relation: 'supplied_to',
+  +         source: 'position:one',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'reserve:shared'
+  +       },
+  +       {
+  +         id: 'edge:position-one-asset',
+  +         relation: 'denominated_in',
+  +         source: 'position:one',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'asset:usdc'
+  +       },
+  +       {
+  +         id: 'edge:position-two-asset',
+  +         relation: 'denominated_in',
+  +         source: 'position:two',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'asset:usdc'
+  +       },
+  +       {
+  +         id: 'edge:position-unrelated-asset',
+  +         relation: 'denominated_in',
+  +         source: 'position:unrelated',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'asset:usdc'
+  +       },
+  +       {
+  +         id: 'edge:shared-asset',
+  +         relation: 'denominated_in',
+  +         source: 'reserve:shared',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'asset:usdc'
+  +       },
+  +       {
+  +         id: 'edge:shared-observation',
+  +         relation: 'observes',
+  +         source: 'observation:shared',
+  +         sourceRevisionIds: [
+  +           'c99968d1-b0ee-49f9-9409-3ab331cf9246'
+  +         ],
+  +         target: 'reserve:shared'
+  +       },
+  +       {
+  +         id: 'edge:shared-protocol',
+  +         relation: 'operated_by',
+  +         source: 'reserve:shared',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'protocol:demo'
+  +       },
+  +       {
+  +         id: 'edge:two-supply',
+  +         relation: 'supplied_to',
+  +         source: 'position:two',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'reserve:shared'
+  +       },
+  +       {
+  +         id: 'edge:unrelated-asset',
+  +         relation: 'denominated_in',
+  +         source: 'reserve:unrelated',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'asset:usdc'
+  +       },
+  +       {
+  +         id: 'edge:unrelated-protocol',
+  +         relation: 'operated_by',
+  +         source: 'reserve:unrelated',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'protocol:demo'
+  +       },
+  +       {
+  +         id: 'edge:unrelated-supply',
+  +         relation: 'supplied_to',
+  +         source: 'position:unrelated',
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ],
+  +         target: 'reserve:unrelated'
+  +       }
+  +     ],
+  +     issues: [],
+  +     mode: 'synthetic',
+  +     nodes: [
+  +       {
+  +         id: 'asset:usdc',
+  +         kind: 'asset',
+  +         label: 'Synthetic USDC',
+  +         properties: {},
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ]
+  +       },
+  +       {
+  +         id: 'observation:shared',
+  +         kind: 'observation',
+  +         label: 'Synthetic shared reserve liquidity',
+  +         properties: {
+  +           availableLiquidityUnits: '600000000',
+  +           status: 'ok'
+  +         },
+  +         sourceRevisionIds: [
+  +           'c99968d1-b0ee-49f9-9409-3ab331cf9246'
+  +         ]
+  +       },
+  +       {
+  +         id: 'position:one',
+  +         kind: 'position',
+  +         label: 'First shared position',
+  +         properties: {
+  +           amountUnits: '200000000'
+  +         },
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ]
+  +       },
+  +       {
+  +         id: 'position:two',
+  +         kind: 'position',
+  +         label: 'Second shared position',
+  +         properties: {
+  +           amountUnits: '300000000'
+  +         },
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ]
+  +       },
+  +       {
+  +         id: 'position:unrelated',
+  +         kind: 'position',
+  +         label: 'Unrelated position',
+  +         properties: {
+  +           amountUnits: '700000000'
+  +         },
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ]
+  +       },
+  +       {
+  +         id: 'protocol:demo',
+  +         kind: 'protocol',
+  +         label: 'Synthetic lending protocol',
+  +         properties: {},
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ]
+  +       },
+  +       {
+  +         id: 'reserve:shared',
+  +         kind: 'reserve',
+  +         label: 'Shared lending reserve',
+  +         properties: {},
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ]
+  +       },
+  +       {
+  +         id: 'reserve:unrelated',
+  +         kind: 'reserve',
+  +         label: 'Other lending reserve',
+  +         properties: {},
+  +         sourceRevisionIds: [
+  +           '808b1030-5dca-40e1-95c6-c5c46613e30c'
+  +         ]
+  +       }
+  +     ],
+  +     revision: '1f73c2dcbb79eb31a295e5eeb1be3c99b5da6ac2dcbd246e732429e3197015e4',
+  +     schemaVersion: 1,
+  +     sources: [
+  +       {
+  +         capturedAt: '2026-09-27T12:00:00.000Z',
+  +         observedAt: '2026-09-27T12:00:00.000Z',
+  +         revisionId: '808b1030-5dca-40e1-95c6-c5c46613e30c',
+  +         sha256: '036ca59713933a7fd1e5de25f1004442baa99678c6020503d999c711ee37fe16',
+  +         sourceKey: 'demo/structure',
+  +         sourceUrl: 'synthetic://falcon/demo/structure'
+  +       },
+  +       {
+  +         capturedAt: '2026-09-27T12:00:00.000Z',
+  +         observedAt: '2026-09-27T12:00:00.000Z',
+  +         revisionId: 'c99968d1-b0ee-49f9-9409-3ab331cf9246',
+  +         sha256: 'aecf368744c7147505edff5d5e6a9689454dd3d71269e8ffd54d16e27547c435',
+  +         sourceKey: 'demo/liquidity',
+  +         sourceUrl: 'synthetic://falcon/demo/liquidity'
+  +       }
+  +     ]
+  +   },
+  +   id: 'ee822a28-1c5f-489f-b46a-3b506ebc180e',
+  +   requestId: 'd0be3f9d-01c0-4130-a909-e2b47a12917b'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-owner-negative-2_ylggml/test/store.test.mjs:114:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { id: 'ee822a28-1c5f-489f-b46a-3b506ebc180e', requestId: 'd0be3f9d-01c0-4130-a909-e2b47a12917b', createdAt: '2026-09-27T12:00:00.000Z', graph: { asOf: '2026-09-27T12:00:00.000Z', mode: 'synthetic', edges: [Array], nodes: [Array], issues: [], sources: [Array], coverage: [Object], revision: '1f73c2dcbb79eb31a295e5eeb1be3c99b5da6ac2dcbd246e732429e3197015e4', schemaVersion: 1 }, analysis: { at: '2026-09-27T12:00:00.000Z', mode: 'synthetic', status: 'READY', summary: 'Synthetic reserve liquidity covers the combined full exit. This analysis does not authorize execution.', coverage: [Object], graphRevision: '1f73c2dcbb79eb31a295e5eeb1be3c99b5da6ac2dcbd246e732429e3197015e4', observationId: 'observation:shared', policyVersion: 'mesh-liquidity/1', schemaVersion: 1, positionResults: [Array], sourceRevisionIds: [Array], totalAffectedUnits: '500000000', availableLiquidityUnits: '600000000' } },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

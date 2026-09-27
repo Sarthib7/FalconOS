@@ -1,0 +1,158 @@
+✖ V87: new runs pin the rule policy and save the complete replay record for every event (3.477ms)
+✖ V87: schema 1 reads without mutation and upgrades only on a successful new append (2.034166ms)
+✖ V87: unknown policy, incomplete records, and altered saved evidence or results reject replay and append (0.67475ms)
+✖ V87: saved record comparison accepts reordered keys and rejects non-data or missing fields (0.331458ms)
+✖ V88: supply checks name the exact evaluated rules and input evidence in order (0.274208ms)
+✖ V88: missing relationships, authority, and evidence failures skip later checks without approval (0.349542ms)
+✖ V88: changed graph liquidity changes supply, hold, and redemption checks without changing protected balances (0.24725ms)
+✖ V88: owner redemption explicitly skips agent authority and supply floor but checks available liquidity (0.921042ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 0
+ℹ fail 8
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 57.502167
+
+✖ failing tests:
+
+test at ../../../private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:371:1
+✖ V87: new runs pin the rule policy and save the complete replay record for every event (3.477ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:373:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:389:1
+✖ V87: schema 1 reads without mutation and upgrades only on a successful new append (2.034166ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'treasury-rules/1'
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:393:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'treasury-rules/1',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:412:1
+✖ V87: unknown policy, incomplete records, and altered saved evidence or results reject replay and append (0.67475ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /policy version is unsupported/. Input:
+  
+  'Error: Run has missing or unknown fields.'
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:435:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: Run has missing or unknown fields.
+        at exactKeys (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/treasury/domain.mjs:27:11)
+        at replayRun (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/treasury/domain.mjs:298:3)
+        at file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:435:25
+        at getActual (node:assert:611:5)
+        at strict.throws (node:assert:759:24)
+        at TestContext.<anonymous> (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:435:12)
+        at Test.runInAsyncScope (node:async_hooks:227:14)
+        at Test.run (node:internal/test_runner/test:1382:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+        at Test.postRun (node:internal/test_runner/test:1522:19),
+    expected: /policy version is unsupported/,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at ../../../private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:442:1
+✖ V87: saved record comparison accepts reordered keys and rejects non-data or missing fields (0.331458ms)
+  TypeError: Cannot read properties of undefined (reading '1')
+      at TestContext.<anonymous> (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:444:65)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:456:1
+✖ V88: supply checks name the exact evaluated rules and input evidence in order (0.274208ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'treasury-rules/1'
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:458:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'treasury-rules/1',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:472:1
+✖ V88: missing relationships, authority, and evidence failures skip later checks without approval (0.349542ms)
+  TypeError: Cannot read properties of undefined (reading 'findIndex')
+      at TestContext.<anonymous> (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:485:35)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:495:1
+✖ V88: changed graph liquidity changes supply, hold, and redemption checks without changing protected balances (0.24725ms)
+  TypeError: Cannot read properties of undefined (reading 'map')
+      at TestContext.<anonymous> (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:501:31)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:513:1
+✖ V88: owner redemption explicitly skips agent authority and supply floor but checks available liquidity (0.921042ms)
+  TypeError: Cannot read properties of undefined (reading 'map')
+      at TestContext.<anonymous> (file:///private/tmp/falcon-graph-verification-fj8ifkii/baseline/web/test/treasury-domain.test.mjs:516:51)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)

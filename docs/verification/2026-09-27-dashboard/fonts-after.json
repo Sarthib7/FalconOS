@@ -1,0 +1,241 @@
+{
+  "passed": 6,
+  "total": 6,
+  "checks": [
+    {
+      "name": "V109: ported fixtures equal the exact parsed OpenDesign payload",
+      "pass": true
+    },
+    {
+      "name": "V107/B82: react loads all four original font faces",
+      "pass": true,
+      "detail": {
+        "loads": [
+          "fulfilled",
+          "fulfilled",
+          "fulfilled",
+          "fulfilled"
+        ],
+        "checks": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "faces": [
+          {
+            "family": "Geist",
+            "weight": "400",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "500",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "600",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist Mono",
+            "weight": "400",
+            "status": "loaded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "V107/B82: react renders text with custom Geist and Geist Mono",
+      "pass": true,
+      "detail": [
+        {
+          "selector": "#page-title",
+          "expected": "Geist Mono",
+          "fonts": [
+            {
+              "familyName": "Geist Mono",
+              "postScriptName": "GeistMono-Regular",
+              "isCustomFont": true,
+              "glyphCount": 14
+            }
+          ]
+        },
+        {
+          "selector": "#page-description",
+          "expected": "Geist",
+          "fonts": [
+            {
+              "familyName": "Geist",
+              "postScriptName": "Geist-Regular",
+              "isCustomFont": true,
+              "glyphCount": 45
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "V107/B82: four local font resources return HTTP 200",
+      "pass": true,
+      "detail": [
+        {
+          "path": "/assets/geist-regular-BktvGMAi.ttf",
+          "status": 200,
+          "type": "Font"
+        },
+        {
+          "path": "/assets/geist-semibold-DsJNybWY.ttf",
+          "status": 200,
+          "type": "Font"
+        },
+        {
+          "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+          "status": 200,
+          "type": "Font"
+        },
+        {
+          "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+          "status": 200,
+          "type": "Font"
+        }
+      ]
+    },
+    {
+      "name": "V111: instrumented pages attempted no external HTTP requests",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "V107: browser has no uncaught runtime exceptions",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "exceptions": [],
+  "remoteRequests": [],
+  "localRequests": [
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    }
+  ],
+  "localResponses": [
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    }
+  ],
+  "downloads": [],
+  "artifactDir": "/private/tmp/falcon-dashboard-source-r9g2sbv8/browser-3r8AJJ",
+  "root": "/Volumes/Sarthi MAC/FalconOS/web/dist",
+  "sourceRoot": "/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61",
+  "mode": "react-fonts",
+  "limitations": "Isolated synthetic browser records. Source screenshots execute original scripts with outbound HTTP blocked. No live service, wallet, hosting or email delivery tested."
+}

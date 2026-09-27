@@ -1,0 +1,8 @@
+{
+  "directory": "/private/tmp/falcon-treasury-negative-r3ok_qn1",
+  "sourceMutation": "Removed only expectedRevision conflict guard in isolated copy",
+  "testUnchanged": true,
+  "exitCode": 1,
+  "command": "node --test --test-name-pattern=concurrent stores web/test/treasury-store.test.mjs",
+  "output": "\u2716 V82: concurrent stores serialize; the stale second writer cannot overwrite a committed action (6.520792ms)\n\u2139 tests 1\n\u2139 suites 0\n\u2139 pass 0\n\u2139 fail 1\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 69.964\n\n\u2716 failing tests:\n\ntest at web/test/treasury-store.test.mjs:58:1\n\u2716 V82: concurrent stores serialize; the stale second writer cannot overwrite a committed action (6.520792ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  + actual - expected\n  \n  + 'fulfilled'\n  - 'rejected'\n  \n      at TestContext.<anonymous> (file:///private/tmp/falcon-treasury-negative-r3ok_qn1/web/test/treasury-store.test.mjs:65:10)\n      at async Test.run (node:internal/test_runner/test:1389:7)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 'fulfilled',\n    expected: 'rejected',\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n"
+}

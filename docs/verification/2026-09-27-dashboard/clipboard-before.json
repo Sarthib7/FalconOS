@@ -1,0 +1,107 @@
+{
+  "passed": 1,
+  "total": 2,
+  "checks": [
+    {
+      "name": "V109: ported fixtures equal the exact parsed OpenDesign payload",
+      "pass": true
+    },
+    {
+      "name": "V111/B79: delayed clipboard resolve cannot change a newer export or its focus",
+      "pass": false
+    }
+  ],
+  "exceptions": [],
+  "remoteRequests": [],
+  "localRequests": [
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/index-COEbwYtx.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/index-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    }
+  ],
+  "localResponses": [
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/index-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/index-COEbwYtx.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    }
+  ],
+  "downloads": [],
+  "artifactDir": "/private/tmp/falcon-dashboard-source-r9g2sbv8/browser-RC0CHH",
+  "root": "/private/tmp/falcon-dashboard-source-r9g2sbv8/negative-b79-web/dist",
+  "sourceRoot": "/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61",
+  "mode": "react-clipboard",
+  "limitations": "Isolated synthetic browser records. Source screenshots execute original scripts with outbound HTTP blocked. No live service, wallet, hosting or email delivery tested."
+}

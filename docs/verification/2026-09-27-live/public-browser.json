@@ -1,0 +1,364 @@
+{
+  "provenance": "VERIFIED by graph_review; REPORTED to root until independently read",
+  "origin": "https://falconos.markets",
+  "release": "bfa82caaf5bdf2208ce057a7db6397302ebfaeae",
+  "passed": 23,
+  "total": 23,
+  "checks": [
+    {
+      "name": "public dashboard HTML is ready",
+      "pass": true
+    },
+    {
+      "name": "landing React root renders the explorer",
+      "pass": true
+    },
+    {
+      "name": "landing links to Open Control Centre",
+      "pass": true
+    },
+    {
+      "name": "landing: four expected font faces load",
+      "pass": true,
+      "detail": {
+        "loads": [
+          "fulfilled",
+          "fulfilled",
+          "fulfilled",
+          "fulfilled"
+        ],
+        "checks": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "faces": [
+          {
+            "family": "Geist",
+            "weight": "400",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "500",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "600",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist Mono",
+            "weight": "400",
+            "status": "loaded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "landing: visible text uses the custom fonts",
+      "pass": true,
+      "detail": [
+        {
+          "selector": "#scenario-title",
+          "family": "Geist Mono",
+          "fonts": [
+            {
+              "familyName": "Geist Mono",
+              "postScriptName": "GeistMono-Regular",
+              "isCustomFont": true,
+              "glyphCount": 22
+            }
+          ]
+        },
+        {
+          "selector": "#scenario-caption",
+          "family": "Geist",
+          "fonts": [
+            {
+              "familyName": "Geist",
+              "postScriptName": "Geist-Regular",
+              "isCustomFont": true,
+              "glyphCount": 33
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "landing fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "landing fits 320px",
+      "pass": true
+    },
+    {
+      "name": "landing scenario interaction updates the React view",
+      "pass": true
+    },
+    {
+      "name": "dashboard React root mounts the Control Centre",
+      "pass": true
+    },
+    {
+      "name": "dashboard: four expected font faces load",
+      "pass": true,
+      "detail": {
+        "loads": [
+          "fulfilled",
+          "fulfilled",
+          "fulfilled",
+          "fulfilled"
+        ],
+        "checks": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "faces": [
+          {
+            "family": "Geist",
+            "weight": "400",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "500",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "600",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist Mono",
+            "weight": "400",
+            "status": "loaded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "dashboard: visible text uses the custom fonts",
+      "pass": true,
+      "detail": [
+        {
+          "selector": "#page-title",
+          "family": "Geist Mono",
+          "fonts": [
+            {
+              "familyName": "Geist Mono",
+              "postScriptName": "GeistMono-Regular",
+              "isCustomFont": true,
+              "glyphCount": 14
+            }
+          ]
+        },
+        {
+          "selector": "#page-description",
+          "family": "Geist",
+          "fonts": [
+            {
+              "familyName": "Geist",
+              "postScriptName": "Geist-Regular",
+              "isCustomFont": true,
+              "glyphCount": 45
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dashboard overview renders and fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "dashboard decisions renders and fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "dashboard knowledge renders and fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "dashboard connections renders and fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "dashboard overview renders and fits 320px",
+      "pass": true
+    },
+    {
+      "name": "dashboard decisions renders and fits 320px",
+      "pass": true
+    },
+    {
+      "name": "dashboard knowledge renders and fits 320px",
+      "pass": true
+    },
+    {
+      "name": "dashboard connections renders and fits 320px",
+      "pass": true
+    },
+    {
+      "name": "preview browsing creates no local simulation record",
+      "pass": true
+    },
+    {
+      "name": "no signup, wallet, or backend API attempts",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "public pages have no uncaught runtime exceptions",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "published page scripts, styles and fonts return successful HTTP responses",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "responses": [
+    {
+      "path": "/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/main-DTNyFvQo.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/main-ByYKOjtC.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/main-DTNyFvQo.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Other"
+    }
+  ],
+  "blocked": [],
+  "exceptions": [],
+  "artifactDir": "/private/tmp/falcon-public-browser-cXoXTV",
+  "limitations": "Fresh browser profile. GET page and asset requests only. Cross-origin and API requests blocked. No signup submission, email delivery, wallet action, persistence write, login or deployment was tested. Reduced motion enabled for screenshots. Network observations cover instrumented pages, not Chrome background processes."
+}

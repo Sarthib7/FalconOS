@@ -1,0 +1,63 @@
+{
+  "observedAt": "2026-09-27T10:32:46.980Z",
+  "method": "GET",
+  "results": [
+    {
+      "url": "https://falconos.markets/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "etag": null,
+      "cfRay": "a419d8ab1b1e124d-TXL",
+      "sha256": "2d2e146f3c2d7dec8734c75133217525adce7941708fb442b4539b48f4f08f79",
+      "title": "FalconOS · Built for agents. Visible to you.",
+      "bytes": 495360,
+      "scriptSources": []
+    },
+    {
+      "url": "https://falconos.pages.dev/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "etag": null,
+      "cfRay": "a419d8ab1c346e5c-TXL",
+      "sha256": "2d2e146f3c2d7dec8734c75133217525adce7941708fb442b4539b48f4f08f79",
+      "title": "FalconOS · Built for agents. Visible to you.",
+      "bytes": 495360,
+      "scriptSources": []
+    },
+    {
+      "url": "https://e5157cfe.falconos.pages.dev/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "etag": null,
+      "cfRay": "a419d8ab6886e52e-TXL",
+      "sha256": "2d2e146f3c2d7dec8734c75133217525adce7941708fb442b4539b48f4f08f79",
+      "title": "FalconOS · Built for agents. Visible to you.",
+      "bytes": 495360,
+      "scriptSources": []
+    },
+    {
+      "url": "https://falconos.markets/app/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "etag": null,
+      "cfRay": "a419d8ab1fdeb44a-TXL",
+      "sha256": "67f8e3fb052bc9ca690bf87764844e47ad0ad470121240d8f6538028d226b9af",
+      "title": "FalconOS · Devnet Terminal",
+      "bytes": 12879,
+      "scriptSources": [
+        "/assets/app-CqHKw7WG.js"
+      ]
+    },
+    {
+      "url": "https://falconos.markets/api/waitlist",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "etag": null,
+      "cfRay": "a419d8ab1fede50e-TXL",
+      "sha256": "2d2e146f3c2d7dec8734c75133217525adce7941708fb442b4539b48f4f08f79",
+      "title": "FalconOS · Built for agents. Visible to you.",
+      "bytes": 495360,
+      "scriptSources": []
+    }
+  ]
+}

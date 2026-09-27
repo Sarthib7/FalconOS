@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "entryStatus": 200,
+  "entryContainsReactMount": true,
+  "port": 4185,
+  "scope": "HTTP development HTML and transformed React entry. Browser interactions verified separately.",
+  "correction": "The first smoke check assumed an absolute script URL; the document uses ./main.jsx. This check resolves it against the page URL."
+}

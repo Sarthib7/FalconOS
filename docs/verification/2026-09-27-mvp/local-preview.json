@@ -1,0 +1,29 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "contentType": "text/html"
+  },
+  {
+    "path": "/mesh/",
+    "status": 200,
+    "contentType": "text/html"
+  },
+  {
+    "path": "/api/waitlist",
+    "status": 405,
+    "contentType": "application/json; charset=utf-8"
+  },
+  {
+    "path": "/readyz",
+    "status": 200,
+    "body": {
+      "status": "ready"
+    }
+  },
+  {
+    "path": "/v1/graph",
+    "status": 200,
+    "sources": 0
+  }
+]

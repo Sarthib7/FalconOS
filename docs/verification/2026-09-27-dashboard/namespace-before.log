@@ -1,0 +1,169 @@
+✖ V108: dashboard namespace isolates storage and locks while the treasury default remains unchanged (34.317417ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 95.532375
+
+✖ failing tests:
+
+test at web/test/dashboard.test.mjs:91:1
+✖ V108: dashboard namespace isolates storage and locks while the treasury default remains unchanged (34.317417ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   run: {
+  +     createdAt: '2026-09-27T12:00:00.000Z',
+  +     events: [],
+  +     id: '00000000-0000-4000-8000-000000000001',
+  +     legacyEventCount: 0,
+  +     mode: 'simulation',
+  +     policyVersion: 'treasury-rules/1',
+  +     records: [],
+  +     schemaVersion: 2,
+  +     setup: {
+  +       investmentCapUsdc: '500',
+  +       maxObservationAgeSeconds: 60,
+  +       minLiquidityUsdc: '1000',
+  +       reserveUsdc: '200',
+  +       totalUsdc: '1000'
+  +     }
+  +   },
+  +   view: {
+  +     entries: [],
+  +     graph: {
+  +       at: '2026-09-27T12:00:00.000Z',
+  +       edges: [
+  +         {
+  +           relation: 'authorizes',
+  +           source: 'mandate',
+  +           target: 'account'
+  +         },
+  +         {
+  +           relation: 'excludes',
+  +           source: 'mandate',
+  +           target: 'reserve'
+  +         },
+  +         {
+  +           relation: 'excludes',
+  +           source: 'mandate',
+  +           target: 'undelegated'
+  +         },
+  +         {
+  +           relation: 'owns',
+  +           source: 'account',
+  +           target: 'position'
+  +         },
+  +         {
+  +           relation: 'depends_on',
+  +           source: 'position',
+  +           target: 'observation'
+  +         }
+  +       ],
+  +       id: '00000000-0000-4000-8000-000000000001:0:2026-09-27T12:00:00.000Z',
+  +       mode: 'simulation',
+  +       nodes: [
+  +         {
+  +           data: {
+  +             investmentCapUnits: '500000000',
+  +             maxObservationAgeSeconds: 60,
+  +             minLiquidityUnits: '1000000000',
+  +             revoked: false
+  +           },
+  +           detail: 'Fixed cap and liquidity rules.',
+  +           id: 'mandate',
+  +           kind: 'mandate',
+  +           label: 'Owner mandate'
+  +         },
+  +         {
+  +           data: {
+  +             reserveUnits: '200000000'
+  +           },
+  +           detail: 'Outside agent authority.',
+  +           id: 'reserve',
+  +           kind: 'protected-cash',
+  +           label: 'Spending reserve'
+  +         },
+  +         {
+  +           data: {
+  +             undelegatedUnits: '300000000'
+  +           },
+  +           detail: 'Outside agent authority.',
+  +           id: 'undelegated',
+  +           kind: 'owner-cash',
+  +           label: 'Undelegated cash'
+  +         },
+  +         {
+  +           data: {
+  +             idleUnits: '500000000',
+  +             runId: '00000000-0000-4000-8000-000000000001',
+  +             totalUnits: '1000000000'
+  +           },
+  +           detail: 'Delegated idle USDC. Simulation only.',
+  +           id: 'account',
+  +           kind: 'investment-account',
+  +           label: 'Investment account'
+  +         },
+  +         {
+  +           data: {
+  +             positionUnits: '0'
+  +           },
+  +           detail: 'Owner-controlled simulated position.',
+  +           id: 'position',
+  +           kind: 'lending-position',
+  +           label: 'Lending position'
+  +         },
+  +         {
+  +           data: {
+  +             observation: null
+  +           },
+  +           detail: 'No observation recorded.',
+  +           id: 'observation',
+  +           kind: 'observation',
+  +           label: 'Synthetic liquidity'
+  +         }
+  +       ],
+  +       revision: 0
+  +     },
+  +     legacyEventCount: 0,
+  +     policyVersion: 'treasury-rules/1',
+  +     state: {
+  +       at: '2026-09-27T12:00:00.000Z',
+  +       balances: {
+  +         idleUnits: '500000000',
+  +         positionUnits: '0',
+  +         reserveUnits: '200000000',
+  +         totalUnits: '1000000000',
+  +         undelegatedUnits: '300000000'
+  +       },
+  +       createdAt: '2026-09-27T12:00:00.000Z',
+  +       lastDecision: null,
+  +       mandate: {
+  +         investmentCapUnits: '500000000',
+  +         maxObservationAgeSeconds: 60,
+  +         minLiquidityUnits: '1000000000'
+  +       },
+  +       mode: 'simulation',
+  +       observation: null,
+  +       revision: 0,
+  +       revoked: false,
+  +       runId: '00000000-0000-4000-8000-000000000001'
+  +     }
+  +   }
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///Volumes/Sarthi%20MAC/FalconOS/web/test/dashboard.test.mjs:98:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { run: { schemaVersion: 2, mode: 'simulation', id: '00000000-0000-4000-8000-000000000001', createdAt: '2026-09-27T12:00:00.000Z', setup: [Object], events: [], policyVersion: 'treasury-rules/1', legacyEventCount: 0, records: [] }, view: { state: [Object], graph: [Object], entries: [], policyVersion: 'treasury-rules/1', legacyEventCount: 0 } },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

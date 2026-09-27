@@ -1,0 +1,64 @@
+{
+  "provenance": "VERIFIED: measured in this session",
+  "limitation": "Checks byte identity and built URL resolution; browser font rendering is checked separately.",
+  "originalFontHashes": [
+    "ccce59465ae5c61930ada5453834f60500fbd95084d85db63e0e65fad0125455",
+    "a8eefb873ba9c9020665f8a98302697ce1f3b79ab2deef6ee508c0ca6a82e876",
+    "7171f481b121803d007f5c6c76cd9988c0d41cce4202db9a18dff9945505d36d",
+    "7022da390e9b401ea35b722f8ed2376948e70add10954bc798839b4bfe17ef3f"
+  ],
+  "builds": {
+    "b78": {
+      "root": "/private/tmp/falcon-dashboard-source-r9g2sbv8/negative-b78-web/dist",
+      "fonts": [
+        {
+          "url": "/assets/geist-regular-BktvGMAi.ttf",
+          "bytes": 72916,
+          "sha256": "ccce59465ae5c61930ada5453834f60500fbd95084d85db63e0e65fad0125455"
+        },
+        {
+          "url": "/assets/geist-medium-BBUaz6Yt.ttf",
+          "bytes": 72996,
+          "sha256": "a8eefb873ba9c9020665f8a98302697ce1f3b79ab2deef6ee508c0ca6a82e876"
+        },
+        {
+          "url": "/assets/geist-semibold-DsJNybWY.ttf",
+          "bytes": 73048,
+          "sha256": "7171f481b121803d007f5c6c76cd9988c0d41cce4202db9a18dff9945505d36d"
+        },
+        {
+          "url": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+          "bytes": 71160,
+          "sha256": "7022da390e9b401ea35b722f8ed2376948e70add10954bc798839b4bfe17ef3f"
+        }
+      ],
+      "placeholderCount": 0
+    },
+    "b79": {
+      "root": "/private/tmp/falcon-dashboard-source-r9g2sbv8/negative-b79-web/dist",
+      "fonts": [
+        {
+          "url": "/assets/geist-regular-BktvGMAi.ttf",
+          "bytes": 72916,
+          "sha256": "ccce59465ae5c61930ada5453834f60500fbd95084d85db63e0e65fad0125455"
+        },
+        {
+          "url": "/assets/geist-medium-BBUaz6Yt.ttf",
+          "bytes": 72996,
+          "sha256": "a8eefb873ba9c9020665f8a98302697ce1f3b79ab2deef6ee508c0ca6a82e876"
+        },
+        {
+          "url": "/assets/geist-semibold-DsJNybWY.ttf",
+          "bytes": 73048,
+          "sha256": "7171f481b121803d007f5c6c76cd9988c0d41cce4202db9a18dff9945505d36d"
+        },
+        {
+          "url": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+          "bytes": 71160,
+          "sha256": "7022da390e9b401ea35b722f8ed2376948e70add10954bc798839b4bfe17ef3f"
+        }
+      ],
+      "placeholderCount": 0
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "passed": 5,
+  "total": 6,
+  "checks": [
+    {
+      "name": "V104: React scenarios exactly preserve the active OpenDesign source fixtures",
+      "pass": true
+    },
+    {
+      "name": "V104: served landing is the compiled React entry",
+      "pass": true
+    },
+    {
+      "name": "V104: static source comparison records the known script parse error",
+      "pass": true
+    },
+    {
+      "name": "V104: desktop React landing renders the source heading and local fonts",
+      "pass": true
+    },
+    {
+      "name": "V104: supply changes exact balances, action, movement and reason",
+      "pass": true,
+      "detail": {
+        "title": "Put the budget to work",
+        "decision": "SUPPLY",
+        "moved": "500 USDC",
+        "reason": "Fresh synthetic liquidity meets the floor. Supply delegated idle USDC within the cap.",
+        "balances": [
+          "200 USDC",
+          "200 USDC",
+          "300 USDC",
+          "300 USDC",
+          "500 USDC",
+          "0 USDC",
+          "0 USDC",
+          "500 USDC"
+        ],
+        "playing": "false"
+      }
+    },
+    {
+      "name": "V104/B73: a delayed close event cannot dismiss the current JSON view",
+      "pass": false
+    }
+  ],
+  "exceptions": [],
+  "remoteRequests": [],
+  "apiRequests": [],
+  "providerCalls": [],
+  "downloads": [],
+  "artifactDir": "/private/tmp/falcon-landing-browser-U681l8",
+  "root": "/private/tmp/falcon-landing-b73-baseline-Ls5anL",
+  "source": {
+    "path": "/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61/falconos-landing.html",
+    "sha256": "8d8ee4ed84b803295616c5146be4fe96c745491577af1285998ecf506e326752",
+    "comparison": "Static screenshots with source scripts disabled. Source has a known duplicate const presentation parse error; no source interaction parity is claimed."
+  },
+  "limitations": "Fresh disposable SQLite and injected provider responses. No production bindings, real email delivery, or inbox receipt tested."
+}

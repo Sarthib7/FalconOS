@@ -1,0 +1,94 @@
+{
+  "owner": "capture_abea53491a7844c78bf5a2236d1ee306",
+  "rows": [
+    {
+      "connectorId": "kamino-program-docs",
+      "status": "ok",
+      "reason": null,
+      "source": {
+        "revisionId": "89a96413-f54b-406d-8a33-b22c81d9140b",
+        "sourceKey": "live:kamino-program-docs",
+        "sourceUrl": "https://raw.githubusercontent.com/Kamino-Finance/klend/master/README.md",
+        "observedAt": "2026-09-27T09:38:25.873Z",
+        "capturedAt": "2026-09-27T09:38:25.874Z",
+        "sha256": "71b00524353e9288d058869ff6bd2cf92d3046c2604e810d3545d996369bb9ff"
+      },
+      "chain": null,
+      "rawResponses": [
+        {
+          "httpStatus": 200,
+          "bytes": 391,
+          "sha256": "149201ebf3c5bf207df667d8c4eb5b5deb96a2ab0c795777b9ec83c0af2ac6c3"
+        }
+      ]
+    },
+    {
+      "connectorId": "solana-devnet-klend",
+      "status": "ok",
+      "reason": null,
+      "source": {
+        "revisionId": "ca287d72-2601-4305-8708-a6a44d2b413b",
+        "sourceKey": "live:solana-devnet-klend",
+        "sourceUrl": "https://api.devnet.solana.com",
+        "observedAt": "2026-09-27T09:38:26.018Z",
+        "capturedAt": "2026-09-27T09:38:26.019Z",
+        "sha256": "f1a63e64857ea72322e3f7dc02a5831a0eaaa78b1a037de923cada24f33969cb"
+      },
+      "chain": {
+        "network": "devnet",
+        "genesisHash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+        "commitment": "confirmed",
+        "slot": "504737500"
+      },
+      "rawResponses": [
+        {
+          "httpStatus": 200,
+          "bytes": 81,
+          "sha256": "9d0f36530a5526131672857c8ff1d2b6dbcbab3e18f347161fc36b2c3a0825c3"
+        },
+        {
+          "httpStatus": 200,
+          "bytes": 300,
+          "sha256": "3e5ea2405c05ba2797e22e3bee7ca2f85e8c9906a722069df4c7e3f04264b0c0"
+        }
+      ]
+    }
+  ],
+  "analysis": {
+    "at": "2026-09-27T09:38:26.023Z",
+    "mode": "live",
+    "status": "OBSERVED",
+    "summary": "The official document names this Devnet program. RPC reports its account executable at slot 504737500. Lending usability and wallet ownership are not assessed.",
+    "coverage": {
+      "status": "complete",
+      "maxHops": 3,
+      "edgeLimit": 128,
+      "nodeLimit": 64,
+      "visitedEdgeIds": [
+        "edge:live:account-observation",
+        "edge:live:document-observation",
+        "edge:live:documents",
+        "edge:live:program-claim"
+      ],
+      "visitedNodeIds": [
+        "account:devnet:KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+        "document:live:kamino-program-docs",
+        "observation:live:kamino-program-docs",
+        "observation:live:solana-devnet-klend",
+        "protocol:live:kamino"
+      ]
+    },
+    "graphRevision": "52ad71789bab2ff16e820f6e6dd0f736a0c07f52ec5a5a1e9d048cdeaf9e0361",
+    "observationId": "observation:live:solana-devnet-klend",
+    "policyVersion": "mesh-public-evidence/1",
+    "schemaVersion": 2,
+    "positionResults": [],
+    "sourceRevisionIds": [
+      "89a96413-f54b-406d-8a33-b22c81d9140b",
+      "ca287d72-2601-4305-8708-a6a44d2b413b"
+    ],
+    "totalAffectedUnits": null,
+    "availableLiquidityUnits": null
+  },
+  "recordId": "15dd6add-093c-4344-971e-612f3a8806f0"
+}

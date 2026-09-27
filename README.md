@@ -1,5 +1,19 @@
 # FalconOS
 
+## Local mesh and React landing, 2026-09-27
+
+[VERIFIED, current local result] The React treasury landing, retained knowledge mesh, live connectors and browser Devnet lending terminal are built. Final checks returned `97/97` mesh tests, `150/150` web tests, `79/79` mesh browser checks and `53/53` landing browser checks. See [verification and limits](docs/verification/2026-09-27-mvp.md).
+
+[INFERRED, start command] Run `npm --prefix web run dev:local` for the landing and local email capture. Open `http://127.0.0.1:4183/`. The `/mesh/` route also needs PostgreSQL and the [mesh launcher](mesh/README.md). Actual inbox delivery needs sender credentials. A confirmed user-wallet lending round trip remains unverified.
+
+## Treasury MVP work, 2026-09-26
+
+[VERIFIED, user direction] The user approved the staged treasury pitch and selected the local simulation loop first. Start with the [current documentation index](docs/README.md), [implementation plan](plans/treasury-mvp.md), or [saved interactive pitch](docs/pitches/falcon-stages.html).
+
+[INFERRED, scope] The `/treasury/` slice has synthetic balances and observations. Funded lending and restricted automatic execution require later proofs. The earlier advisory and Devnet modules retain their boundaries.
+
+## Earlier modules and evidence
+
 [VERIFIED, local implementation] FalconOS collects public Solana and Base quotes and writes linked Obsidian notes. The first slice compares USDC/EURC in both directions. See [`src/cli.ts`](src/cli.ts) and [`stablecoins/sources.ts`](stablecoins/sources.ts).
 
 [VERIFIED, user-confirmed product direction, 2026-09-18] FalconOS is the umbrella product. Falcon Investment Council is the current module, in the agent-first market intelligence and risk advisory category. [CONTEXT.md](CONTEXT.md) defines the active scope. Start with the [plan index](plans/README.md) for phases, tasks, checkpoints, and passing criteria.

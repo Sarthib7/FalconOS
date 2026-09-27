@@ -1,0 +1,59 @@
+[
+  {
+    "mutation": "setup",
+    "exitCode": 1,
+    "browserReport": {
+      "passed": 2,
+      "total": 3,
+      "checks": [
+        {
+          "name": "V84: fresh browser shows labeled demo defaults",
+          "pass": true
+        },
+        {
+          "name": "V85: rejected setup preserves editable input without saving a run",
+          "pass": true
+        },
+        {
+          "name": "V85: setup snapshots enabled form values before disabling controls",
+          "pass": false,
+          "detail": "Total USDC must be an unsigned USDC decimal string with at most six fractional digits."
+        }
+      ],
+      "exceptions": [],
+      "remoteRequests": [],
+      "artifactDir": "/private/tmp/falcon-treasury-browser-E5Qlq1",
+      "root": "/private/tmp/falcon-treasury-setup-negative-final-jaq7f13d"
+    }
+  },
+  {
+    "mutation": "status",
+    "exitCode": 1,
+    "browserReport": {
+      "passed": 3,
+      "total": 4,
+      "checks": [
+        {
+          "name": "V84: fresh browser shows labeled demo defaults",
+          "pass": true
+        },
+        {
+          "name": "V85: rejected setup preserves editable input without saving a run",
+          "pass": true
+        },
+        {
+          "name": "V85: setup snapshots enabled form values before disabling controls",
+          "pass": true
+        },
+        {
+          "name": "V84 V85: corrected setup clears obsolete error status",
+          "pass": false
+        }
+      ],
+      "exceptions": [],
+      "remoteRequests": [],
+      "artifactDir": "/private/tmp/falcon-treasury-browser-H47AEx",
+      "root": "/private/tmp/falcon-treasury-status-negative-final-kqhmkrhy"
+    }
+  }
+]

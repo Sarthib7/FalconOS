@@ -1,0 +1,25 @@
+✖ V102: one signed transaction cannot become two lending actions for the same owner (41.3155ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 196.013875
+
+✖ failing tests:
+
+test at mesh/test/lending-store.test.mjs:252:1
+✖ V102: one signed transaction cannot become two lending actions for the same owner (41.3155ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Volumes/Sarthi%20MAC/FalconOS/mesh/test/lending-store.test.mjs:257:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
