@@ -1,0 +1,103 @@
+[
+  {
+    "results": [
+      {
+        "email": "cloudflare-smoke-20260927@falconos.invalid",
+        "source": "release-verification",
+        "ip_hash_valid": 1,
+        "created_at": "2026-09-27 12:41:59",
+        "updated_at": "2026-09-27 12:41:59"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.3402
+      },
+      "duration": 0.3402,
+      "changes": 0,
+      "last_row_id": 2,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 1,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "row_count": 1
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.4653
+      },
+      "duration": 0.4653,
+      "changes": 0,
+      "last_row_id": 2,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 1,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "window_start": 497364,
+        "attempts": 2
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.2978
+      },
+      "duration": 0.2978,
+      "changes": 0,
+      "last_row_id": 2,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 2,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 1.7142
+      },
+      "duration": 1.7142,
+      "changes": 0,
+      "last_row_id": 2,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 6,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

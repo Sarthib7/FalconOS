@@ -1,0 +1,365 @@
+{
+  "label": "candidate",
+  "buildRoot": "/Volumes/Sarthi MAC/FalconOS/web/dist",
+  "browserVersion": "Brave Browser 154.1.96.59",
+  "passed": 22,
+  "total": 22,
+  "checks": [
+    {
+      "name": "provided build contains compiled React",
+      "passed": true
+    },
+    {
+      "name": "in-flight repeated clicks and submit events send one request",
+      "passed": true,
+      "detail": [
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "Alpha@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "beta@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "gamma@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "retry@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 503
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "retry@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "unconfirmed@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "unconfirmed@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "reduced@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        }
+      ]
+    },
+    {
+      "name": "success is absent before the server receipt",
+      "passed": true
+    },
+    {
+      "name": "registered receipt replaces the form controls with focused success",
+      "passed": true
+    },
+    {
+      "name": "completion states registration without an email delivery claim",
+      "passed": true
+    },
+    {
+      "name": "normal motion enables both green check animations",
+      "passed": true,
+      "detail": [
+        {
+          "name": "waitlist-confirm",
+          "duration": "0.32s",
+          "color": "rgb(156, 218, 161)"
+        },
+        {
+          "name": "waitlist-check",
+          "duration": "0.36s",
+          "color": "rgb(156, 218, 161)"
+        }
+      ]
+    },
+    {
+      "name": "success remains after animation completes",
+      "passed": true
+    },
+    {
+      "name": "success fits 1440px",
+      "passed": true
+    },
+    {
+      "name": "success fits 320px",
+      "passed": true
+    },
+    {
+      "name": "Use another email clears and focuses input",
+      "passed": true
+    },
+    {
+      "name": "confirmed email case and whitespace variants skip the API",
+      "passed": true
+    },
+    {
+      "name": "a different email can register",
+      "passed": true
+    },
+    {
+      "name": "earlier email remains suppressed after another email succeeds",
+      "passed": true
+    },
+    {
+      "name": "already_registered receipt shows the same success panel",
+      "passed": true
+    },
+    {
+      "name": "already_registered receipt also suppresses repeat requests",
+      "passed": true
+    },
+    {
+      "name": "failure retains the input and permits retry without success",
+      "passed": true
+    },
+    {
+      "name": "the same failed email can retry and complete",
+      "passed": true
+    },
+    {
+      "name": "an unconfirmed server response cannot create success",
+      "passed": true
+    },
+    {
+      "name": "unconfirmed receipt does not cache the email",
+      "passed": true
+    },
+    {
+      "name": "reduced motion keeps a visible completed check without animation",
+      "passed": true,
+      "detail": [
+        {
+          "name": "none",
+          "transition": "none",
+          "opacity": "1",
+          "offset": "0px"
+        },
+        {
+          "name": "none",
+          "transition": "none",
+          "opacity": "1",
+          "offset": "0px"
+        }
+      ]
+    },
+    {
+      "name": "all API traffic stayed in the controlled fixture server",
+      "passed": true,
+      "detail": [
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "Alpha@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "beta@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "gamma@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "retry@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 503
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "retry@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "unconfirmed@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "unconfirmed@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "reduced@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        }
+      ]
+    },
+    {
+      "name": "no remote requests or uncaught page errors",
+      "passed": true,
+      "detail": {
+        "blocked": [],
+        "exceptions": []
+      }
+    }
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/waitlist",
+      "body": {
+        "email": "Alpha@example.invalid",
+        "source": "landing"
+      },
+      "fixtureStatus": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/waitlist",
+      "body": {
+        "email": "beta@example.invalid",
+        "source": "landing"
+      },
+      "fixtureStatus": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/waitlist",
+      "body": {
+        "email": "gamma@example.invalid",
+        "source": "landing"
+      },
+      "fixtureStatus": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/waitlist",
+      "body": {
+        "email": "retry@example.invalid",
+        "source": "landing"
+      },
+      "fixtureStatus": 503
+    },
+    {
+      "method": "POST",
+      "path": "/api/waitlist",
+      "body": {
+        "email": "retry@example.invalid",
+        "source": "landing"
+      },
+      "fixtureStatus": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/waitlist",
+      "body": {
+        "email": "unconfirmed@example.invalid",
+        "source": "landing"
+      },
+      "fixtureStatus": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/waitlist",
+      "body": {
+        "email": "unconfirmed@example.invalid",
+        "source": "landing"
+      },
+      "fixtureStatus": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/waitlist",
+      "body": {
+        "email": "reduced@example.invalid",
+        "source": "landing"
+      },
+      "fixtureStatus": 201
+    }
+  ],
+  "blocked": [],
+  "exceptions": [],
+  "servedFileHashes": {
+    "/index.html": "2150e3dc09341d288fe20810e378bb9ccb7c50269eb270654c1563c553429074",
+    "/assets/rolldown-runtime-B0Z9INg1.js": "5e9b0d884d2ebb14e241ab38b43e41efb61bce2e74d71507b0b95b264fba4047",
+    "/assets/main-eBI_p2Z0.js": "85d3b06f194fef7f65728f19590803f70631d5a86a2a5473ac00c4c2e5fa729c",
+    "/assets/main-CTJXJzjm.css": "6992ffd40df97337298c4c97b86496f1aa4bb355fa3b250ed4fe0510cecd7b5e",
+    "/assets/modulepreload-polyfill-P2Xu9kJm.js": "418c206484b89b68ef5f067277831e583fc9193a62aadf4de269acaaeb12a85f",
+    "/assets/FONT-LICENSE-B0vi4pmd.js": "3af2c805dae66359307f89bec6c6eaf0b4426dde314d0e2a492525121ce63ebc",
+    "/assets/geist-regular-BktvGMAi.ttf": "ccce59465ae5c61930ada5453834f60500fbd95084d85db63e0e65fad0125455",
+    "/assets/geist-mono-regular-BV1xlXkC.ttf": "7022da390e9b401ea35b722f8ed2376948e70add10954bc798839b4bfe17ef3f",
+    "/assets/geist-medium-BBUaz6Yt.ttf": "a8eefb873ba9c9020665f8a98302697ce1f3b79ab2deef6ee508c0ca6a82e876",
+    "/assets/falcon-tVU9rPew.svg": "a489865a4df9e457b2cb624c0cc6c6b6923d5b877ae80fbef081afea170b3ef8"
+  },
+  "directory": "/private/tmp/falcon-signup-candidate-3LcHuy",
+  "limitations": "Fresh Brave profile and local static server. All API responses are controlled fixtures. No production API, database, wallet, or email provider is used. Session suppression is tested within page instances, not across reloads."
+}

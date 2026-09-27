@@ -1,0 +1,21 @@
+{
+  "release": "9af809b95bb7cfca3a84959e468d1d7863bec39c",
+  "deployment": "950fa2d3-80c2-407d-ba6c-0705b3f0913f",
+  "origin": "https://falconos.markets",
+  "assetCommand": "node /private/tmp/falcon-signup-ui-public-gandfp76/verify-public-assets.mjs https://falconos.markets/ 9af809b95bb7cfca3a84959e468d1d7863bec39c /private/tmp/falcon-signup-ui-public-gandfp76/public-assets.json",
+  "assetExitCode": 0,
+  "assetReport": "/private/tmp/falcon-signup-ui-public-gandfp76/public-assets.json",
+  "assetMatches": 39,
+  "assetCount": 39,
+  "braveCommand": "node /private/tmp/falcon-signup-ui-public-gandfp76/brave-landing-smoke.mjs https://falconos.markets/ 9af809b95bb7cfca3a84959e468d1d7863bec39c",
+  "braveExitCode": 0,
+  "braveReport": "/private/tmp/falcon-live-email-brave-rYPVti/report.json",
+  "bravePassed": 10,
+  "braveTotal": 10,
+  "apiAttempts": 0,
+  "blockedRequests": [],
+  "exceptions": 0,
+  "consoleErrors": 0,
+  "browserVersion": "Brave Browser 154.1.96.59",
+  "limits": "Fresh Brave profile. Only same-origin GET page/asset requests allowed. API requests and every submission are blocked. No email address entered or submitted. Browser background traffic is outside this page instrumentation."
+}

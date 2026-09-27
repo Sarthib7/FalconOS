@@ -1,0 +1,63 @@
+{
+  "label": "baseline",
+  "buildRoot": "/private/tmp/falcon-email-release-l1mn8621/artifact",
+  "browserVersion": "Brave Browser 154.1.96.59",
+  "passed": 3,
+  "total": 4,
+  "checks": [
+    {
+      "name": "provided build contains compiled React",
+      "passed": true
+    },
+    {
+      "name": "in-flight repeated clicks and submit events send one request",
+      "passed": true,
+      "detail": [
+        {
+          "method": "POST",
+          "path": "/api/waitlist",
+          "body": {
+            "email": "Alpha@example.invalid",
+            "source": "landing"
+          },
+          "fixtureStatus": 201
+        }
+      ]
+    },
+    {
+      "name": "success is absent before the server receipt",
+      "passed": true
+    },
+    {
+      "name": "Page condition timed out: Boolean(document.getElementById(\"waitlist-success\"))",
+      "passed": false
+    }
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/waitlist",
+      "body": {
+        "email": "Alpha@example.invalid",
+        "source": "landing"
+      },
+      "fixtureStatus": 201
+    }
+  ],
+  "blocked": [],
+  "exceptions": [],
+  "servedFileHashes": {
+    "/index.html": "3b58ed50d7e558a5918d8ea3fd7532e7222c7932526c9d7b7c44e823e3f58825",
+    "/assets/main-ByYKOjtC.js": "408a0c2088a0f5f7df7cf92e37ee4ee0e3305daa083cb725d1e0d92581681012",
+    "/assets/rolldown-runtime-B0Z9INg1.js": "5e9b0d884d2ebb14e241ab38b43e41efb61bce2e74d71507b0b95b264fba4047",
+    "/assets/modulepreload-polyfill-P2Xu9kJm.js": "418c206484b89b68ef5f067277831e583fc9193a62aadf4de269acaaeb12a85f",
+    "/assets/main-DTNyFvQo.css": "2f5addd3e22eba65c3c263a6fbeef1d6c8dcf118068cfc2bd8eb75021df12129",
+    "/assets/FONT-LICENSE-B0vi4pmd.js": "3af2c805dae66359307f89bec6c6eaf0b4426dde314d0e2a492525121ce63ebc",
+    "/assets/geist-regular-BktvGMAi.ttf": "ccce59465ae5c61930ada5453834f60500fbd95084d85db63e0e65fad0125455",
+    "/assets/geist-mono-regular-BV1xlXkC.ttf": "7022da390e9b401ea35b722f8ed2376948e70add10954bc798839b4bfe17ef3f",
+    "/assets/geist-medium-BBUaz6Yt.ttf": "a8eefb873ba9c9020665f8a98302697ce1f3b79ab2deef6ee508c0ca6a82e876",
+    "/assets/falcon-tVU9rPew.svg": "a489865a4df9e457b2cb624c0cc6c6b6923d5b877ae80fbef081afea170b3ef8"
+  },
+  "directory": "/private/tmp/falcon-signup-baseline-JrFp2o",
+  "limitations": "Fresh Brave profile and local static server. All API responses are controlled fixtures. No production API, database, wallet, or email provider is used. Session suppression is tested within page instances, not across reloads."
+}

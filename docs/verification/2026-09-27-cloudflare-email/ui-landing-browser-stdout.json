@@ -1,0 +1,482 @@
+{
+  "passed": 53,
+  "total": 53,
+  "checks": [
+    {
+      "name": "V104: React scenarios exactly preserve the active OpenDesign source fixtures",
+      "pass": true
+    },
+    {
+      "name": "V104: served landing is the compiled React entry",
+      "pass": true
+    },
+    {
+      "name": "V104: static source comparison records the known script parse error",
+      "pass": true
+    },
+    {
+      "name": "V104: desktop React landing renders the source heading and local fonts",
+      "pass": true
+    },
+    {
+      "name": "V104: supply changes exact balances, action, movement and reason",
+      "pass": true,
+      "detail": {
+        "title": "Put the budget to work",
+        "decision": "SUPPLY",
+        "moved": "500 USDC",
+        "reason": "Fresh synthetic liquidity meets the floor. Supply delegated idle USDC within the cap.",
+        "balances": [
+          "200 USDC",
+          "200 USDC",
+          "300 USDC",
+          "300 USDC",
+          "500 USDC",
+          "0 USDC",
+          "0 USDC",
+          "500 USDC"
+        ],
+        "playing": "false"
+      }
+    },
+    {
+      "name": "V104/B73: a delayed close event cannot dismiss the current JSON view",
+      "pass": true
+    },
+    {
+      "name": "V104: supply JSON preserves the complete synthetic snapshot",
+      "pass": true
+    },
+    {
+      "name": "V104: hold changes exact balances, action, movement and reason",
+      "pass": true,
+      "detail": {
+        "title": "Keep the position",
+        "decision": "HOLD",
+        "moved": "0 USDC",
+        "reason": "The simulated position is already funded.",
+        "balances": [
+          "200 USDC",
+          "200 USDC",
+          "300 USDC",
+          "300 USDC",
+          "0 USDC",
+          "0 USDC",
+          "500 USDC",
+          "500 USDC"
+        ],
+        "playing": "false"
+      }
+    },
+    {
+      "name": "V104: hold JSON preserves the complete synthetic snapshot",
+      "pass": true
+    },
+    {
+      "name": "V104: redeem changes exact balances, action, movement and reason",
+      "pass": true,
+      "detail": {
+        "title": "Bring the budget back",
+        "decision": "REDEEM",
+        "moved": "500 USDC",
+        "reason": "Liquidity is below the mandate floor. Redeem the full simulated position.",
+        "balances": [
+          "200 USDC",
+          "200 USDC",
+          "300 USDC",
+          "300 USDC",
+          "0 USDC",
+          "500 USDC",
+          "500 USDC",
+          "0 USDC"
+        ],
+        "playing": "false"
+      }
+    },
+    {
+      "name": "V104: redeem JSON preserves the complete synthetic snapshot",
+      "pass": true
+    },
+    {
+      "name": "V104: blocked changes exact balances, action, movement and reason",
+      "pass": true,
+      "detail": {
+        "title": "An exit can be blocked",
+        "decision": "REDEEM",
+        "moved": "0 USDC",
+        "reason": "Synthetic liquidity cannot cover full redemption. The position is preserved.",
+        "balances": [
+          "200 USDC",
+          "200 USDC",
+          "300 USDC",
+          "300 USDC",
+          "0 USDC",
+          "0 USDC",
+          "500 USDC",
+          "500 USDC"
+        ],
+        "playing": "false"
+      }
+    },
+    {
+      "name": "V104: blocked JSON preserves the complete synthetic snapshot",
+      "pass": true
+    },
+    {
+      "name": "V104: stale changes exact balances, action, movement and reason",
+      "pass": true,
+      "detail": {
+        "title": "Old evidence stops movement",
+        "decision": "HOLD",
+        "moved": "0 USDC",
+        "reason": "The synthetic observation is stale.",
+        "balances": [
+          "200 USDC",
+          "200 USDC",
+          "300 USDC",
+          "300 USDC",
+          "0 USDC",
+          "0 USDC",
+          "500 USDC",
+          "500 USDC"
+        ],
+        "playing": "false"
+      }
+    },
+    {
+      "name": "V104: stale JSON preserves the complete synthetic snapshot",
+      "pass": true
+    },
+    {
+      "name": "V104: graph node mandate opens its source-backed inspector",
+      "pass": true
+    },
+    {
+      "name": "V104: graph node reserve opens its source-backed inspector",
+      "pass": true
+    },
+    {
+      "name": "V104: graph node undelegated opens its source-backed inspector",
+      "pass": true
+    },
+    {
+      "name": "V104: graph node account opens its source-backed inspector",
+      "pass": true
+    },
+    {
+      "name": "V104: graph node position opens its source-backed inspector",
+      "pass": true
+    },
+    {
+      "name": "V104: graph node observation opens its source-backed inspector",
+      "pass": true
+    },
+    {
+      "name": "V104: graph node decision opens its source-backed inspector",
+      "pass": true
+    },
+    {
+      "name": "V104: graph node outcome opens its source-backed inspector",
+      "pass": true
+    },
+    {
+      "name": "V104: rule relationships retains its result and exact graph evidence",
+      "pass": true,
+      "detail": {
+        "title": "Required relationships",
+        "copy": "All five required relationships are present.",
+        "evidence": [
+          "account",
+          "mandate",
+          "observation",
+          "position",
+          "reserve",
+          "undelegated"
+        ]
+      }
+    },
+    {
+      "name": "V104: rule authority retains its result and exact graph evidence",
+      "pass": true,
+      "detail": {
+        "title": "Agent authority",
+        "copy": "The owner mandate permits agent movement within its rules.",
+        "evidence": [
+          "mandate"
+        ]
+      }
+    },
+    {
+      "name": "V104: rule observation retains its result and exact graph evidence",
+      "pass": true,
+      "detail": {
+        "title": "Synthetic observation",
+        "copy": "The synthetic observation contains an available liquidity amount.",
+        "evidence": [
+          "observation"
+        ]
+      }
+    },
+    {
+      "name": "V104: rule freshness retains its result and exact graph evidence",
+      "pass": true,
+      "detail": {
+        "title": "Observation age",
+        "copy": "Observation age is 120 seconds. The maximum is 60 seconds.",
+        "evidence": [
+          "mandate",
+          "observation"
+        ]
+      }
+    },
+    {
+      "name": "V104: rule liquidity_floor retains its result and exact graph evidence",
+      "pass": true,
+      "detail": {
+        "title": "Supply liquidity floor",
+        "copy": "Not evaluated because an earlier check determined the action.",
+        "evidence": [
+          "mandate",
+          "observation"
+        ]
+      }
+    },
+    {
+      "name": "V104: rule position retains its result and exact graph evidence",
+      "pass": true,
+      "detail": {
+        "title": "Position route",
+        "copy": "Not evaluated because an earlier check determined the action.",
+        "evidence": [
+          "position"
+        ]
+      }
+    },
+    {
+      "name": "V104: rule redemption_liquidity retains its result and exact graph evidence",
+      "pass": true,
+      "detail": {
+        "title": "Full redemption liquidity",
+        "copy": "Not evaluated because an earlier check determined the action.",
+        "evidence": [
+          "observation",
+          "position"
+        ]
+      }
+    },
+    {
+      "name": "V104: rule idle_balance retains its result and exact graph evidence",
+      "pass": true,
+      "detail": {
+        "title": "Delegated idle balance",
+        "copy": "Not evaluated because an earlier check determined the action.",
+        "evidence": [
+          "account"
+        ]
+      }
+    },
+    {
+      "name": "V104: rule investment_cap retains its result and exact graph evidence",
+      "pass": true,
+      "detail": {
+        "title": "Investment cap",
+        "copy": "Not evaluated because an earlier check determined the action.",
+        "evidence": [
+          "account",
+          "mandate",
+          "position"
+        ]
+      }
+    },
+    {
+      "name": "V104: JSON copy writes exact bytes or selects the full fallback text",
+      "pass": true,
+      "detail": {
+        "status": "Copied.",
+        "start": 6859,
+        "end": 6859
+      }
+    },
+    {
+      "name": "V104: closing JSON restores focus to its trigger",
+      "pass": true
+    },
+    {
+      "name": "V104: JSON export downloads the complete selected trace",
+      "pass": true
+    },
+    {
+      "name": "V104: visible tour advances to the next scenario",
+      "pass": true
+    },
+    {
+      "name": "V104: manual graph inspection stops the tour without later advancement",
+      "pass": true
+    },
+    {
+      "name": "V104: tour pause button clears playing state",
+      "pass": true
+    },
+    {
+      "name": "V104: reduced motion pauses canvas and disables automatic tour",
+      "pass": true,
+      "detail": {
+        "renderer": "webgl",
+        "drawCount": 421
+      }
+    },
+    {
+      "name": "V104: mobile landing fits a 320px viewport",
+      "pass": true
+    },
+    {
+      "name": "V104: mobile menu opens with accessible expanded state",
+      "pass": true
+    },
+    {
+      "name": "V104: mobile navigation closes and focuses its destination",
+      "pass": true
+    },
+    {
+      "name": "V104: Escape closes mobile navigation and restores toggle focus",
+      "pass": true
+    },
+    {
+      "name": "V105: invalid email remains visible without an API request",
+      "pass": true
+    },
+    {
+      "name": "V105/V106: unconfigured delivery reports only durable registration",
+      "pass": true,
+      "detail": {
+        "text": "Your address is registered.",
+        "error": false,
+        "value": "browser.capture@example.com"
+      }
+    },
+    {
+      "name": "V105: repeat signup reports the retained registration without another request",
+      "pass": true
+    },
+    {
+      "name": "V105: rate limit stays visible and preserves email for retry",
+      "pass": true,
+      "detail": {
+        "text": "rate_limited",
+        "error": true,
+        "value": "rate-retained@example.com"
+      }
+    },
+    {
+      "name": "V106: provider acceptance claim follows retained outbox evidence",
+      "pass": true,
+      "detail": {
+        "text": "Your address is registered. Confirmation email accepted for delivery.",
+        "error": false,
+        "value": "accepted@example.com"
+      }
+    },
+    {
+      "name": "V106: repeated signup cannot duplicate an accepted provider attempt",
+      "pass": true
+    },
+    {
+      "name": "V106: provider failure preserves registration without a delivery claim",
+      "pass": true,
+      "detail": {
+        "text": "Your address is registered. Confirmation email is not confirmed.",
+        "error": false,
+        "value": "failed@example.com"
+      }
+    },
+    {
+      "name": "V105: backend storage failure remains visible and preserves retry input",
+      "pass": true,
+      "detail": {
+        "text": "waitlist_unavailable",
+        "error": true,
+        "value": "retry-retained@example.com"
+      }
+    },
+    {
+      "name": "V104/V106: browser makes no external HTTP requests",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "V104: React browser has no uncaught runtime exceptions",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "exceptions": [],
+  "remoteRequests": [],
+  "apiRequests": [
+    {
+      "method": "POST",
+      "mode": "capture"
+    },
+    {
+      "method": "POST",
+      "mode": "capture"
+    },
+    {
+      "method": "POST",
+      "mode": "capture"
+    },
+    {
+      "method": "POST",
+      "mode": "capture"
+    },
+    {
+      "method": "POST",
+      "mode": "capture"
+    },
+    {
+      "method": "POST",
+      "mode": "capture"
+    },
+    {
+      "method": "POST",
+      "mode": "accepted"
+    },
+    {
+      "method": "POST",
+      "mode": "failed"
+    },
+    {
+      "method": "POST",
+      "mode": "unavailable"
+    }
+  ],
+  "providerCalls": [
+    {
+      "mode": "accepted",
+      "idempotencyKey": "waitlist/62aa6556-02b6-4f04-90ee-5a8bc1316e15"
+    },
+    {
+      "mode": "failed",
+      "idempotencyKey": "waitlist/3a9fbb68-ba69-42cf-a6eb-c004b1493c86"
+    }
+  ],
+  "downloads": [
+    {
+      "frameId": "23822D3252750B8140190A8072C7660E",
+      "guid": "820da8c5-6139-4b15-9cea-bcd3e2e24e5a",
+      "url": "blob:http://127.0.0.1:52970/01306422-5fb5-40f8-887c-72ebdae76259",
+      "suggestedFilename": "falcon-stale-synthetic-trace.json",
+      "state": "completed",
+      "totalBytes": 6859,
+      "receivedBytes": 6859,
+      "filePath": "/private/tmp/falcon-landing-browser-hcu9Ad/falcon-stale-synthetic-trace.json"
+    }
+  ],
+  "artifactDir": "/private/tmp/falcon-landing-browser-hcu9Ad",
+  "root": "/Volumes/Sarthi MAC/FalconOS/web/dist",
+  "source": {
+    "path": "/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61/falconos-landing.html",
+    "sha256": "8d8ee4ed84b803295616c5146be4fe96c745491577af1285998ecf506e326752",
+    "comparison": "Static screenshots with source scripts disabled. Source has a known duplicate const presentation parse error; no source interaction parity is claimed."
+  },
+  "limitations": "Fresh disposable SQLite and injected provider responses. No production bindings, real email delivery, or inbox receipt tested."
+}

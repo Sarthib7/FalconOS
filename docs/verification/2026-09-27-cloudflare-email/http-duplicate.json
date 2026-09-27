@@ -1,0 +1,20 @@
+{
+  "phase": "duplicate",
+  "url": "https://falconos.markets/api/waitlist",
+  "request": {
+    "email": "cloudflare-smoke-20260927@falconos.invalid",
+    "source": "release-verification"
+  },
+  "status": 200,
+  "body": {
+    "status": "already_registered",
+    "emailStatus": "not_configured"
+  },
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "CF-Ray": "a41a96f0aeede507-TXL"
+  },
+  "matches_expected": true,
+  "observed_at": "2026-09-27T12:42:40.270072+00:00"
+}

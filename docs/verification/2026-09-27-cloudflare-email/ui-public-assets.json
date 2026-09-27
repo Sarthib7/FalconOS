@@ -1,0 +1,477 @@
+{
+  "origin": "https://falconos.markets",
+  "reportedRelease": "9af809b95bb7cfca3a84959e468d1d7863bec39c",
+  "matched": 39,
+  "total": 39,
+  "files": [
+    {
+      "path": "app/index.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/app/",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/app/index.html",
+          "to": "/app/"
+        }
+      ],
+      "sha256": "0b7bc13e67ae4b3369ae58c04fbe7343fc950452aa543cd2ba2aa961cd47f5c7",
+      "expected": "0b7bc13e67ae4b3369ae58c04fbe7343fc950452aa543cd2ba2aa961cd47f5c7",
+      "matches": true,
+      "bytes": 13050
+    },
+    {
+      "path": "assets/app-CdLt-zkH.css",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/app-CdLt-zkH.css",
+      "redirects": [],
+      "sha256": "dc629bea2a6690df84ca883cd8d0f7f166206338f5c08232dd97fee989ce1536",
+      "expected": "dc629bea2a6690df84ca883cd8d0f7f166206338f5c08232dd97fee989ce1536",
+      "matches": true,
+      "bytes": 8864
+    },
+    {
+      "path": "assets/app-R9Lv_OKJ.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/app-R9Lv_OKJ.js",
+      "redirects": [],
+      "sha256": "d28fb81073305d7e52dfb9419f4874bb8e6fbc6c6cdadc27847cf5b23408509d",
+      "expected": "d28fb81073305d7e52dfb9419f4874bb8e6fbc6c6cdadc27847cf5b23408509d",
+      "matches": true,
+      "bytes": 33922
+    },
+    {
+      "path": "assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/dashboard-CNgJYtwZ.js",
+      "redirects": [],
+      "sha256": "0e8b42bd3bc1886d6b70b92184aba9ded6e7ab4b0b9bf80b21f026e315304475",
+      "expected": "0e8b42bd3bc1886d6b70b92184aba9ded6e7ab4b0b9bf80b21f026e315304475",
+      "matches": true,
+      "bytes": 227541
+    },
+    {
+      "path": "assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/dashboard-DkTy1_Xl.css",
+      "redirects": [],
+      "sha256": "94bb94f1b045d814f4243a8dde2c9cf2081c89d1f000f9ec8ad4ed3464c6f464",
+      "expected": "94bb94f1b045d814f4243a8dde2c9cf2081c89d1f000f9ec8ad4ed3464c6f464",
+      "matches": true,
+      "bytes": 29294
+    },
+    {
+      "path": "assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/falcon-tVU9rPew.svg",
+      "redirects": [],
+      "sha256": "a489865a4df9e457b2cb624c0cc6c6b6923d5b877ae80fbef081afea170b3ef8",
+      "expected": "a489865a4df9e457b2cb624c0cc6c6b6923d5b877ae80fbef081afea170b3ef8",
+      "matches": true,
+      "bytes": 155
+    },
+    {
+      "path": "assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/FONT-LICENSE-B0vi4pmd.js",
+      "redirects": [],
+      "sha256": "3af2c805dae66359307f89bec6c6eaf0b4426dde314d0e2a492525121ce63ebc",
+      "expected": "3af2c805dae66359307f89bec6c6eaf0b4426dde314d0e2a492525121ce63ebc",
+      "matches": true,
+      "bytes": 218887
+    },
+    {
+      "path": "assets/FONT-LICENSE-DHFm1KP1.txt",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/FONT-LICENSE-DHFm1KP1.txt",
+      "redirects": [],
+      "sha256": "6a873c900f584109b13ae0aaf81d6e3cf0a68751a216b03f7b6c68d547057bb4",
+      "expected": "6a873c900f584109b13ae0aaf81d6e3cf0a68751a216b03f7b6c68d547057bb4",
+      "matches": true,
+      "bytes": 4388
+    },
+    {
+      "path": "assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/geist-medium-BBUaz6Yt.ttf",
+      "redirects": [],
+      "sha256": "a8eefb873ba9c9020665f8a98302697ce1f3b79ab2deef6ee508c0ca6a82e876",
+      "expected": "a8eefb873ba9c9020665f8a98302697ce1f3b79ab2deef6ee508c0ca6a82e876",
+      "matches": true,
+      "bytes": 72996
+    },
+    {
+      "path": "assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "redirects": [],
+      "sha256": "7022da390e9b401ea35b722f8ed2376948e70add10954bc798839b4bfe17ef3f",
+      "expected": "7022da390e9b401ea35b722f8ed2376948e70add10954bc798839b4bfe17ef3f",
+      "matches": true,
+      "bytes": 71160
+    },
+    {
+      "path": "assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/geist-regular-BktvGMAi.ttf",
+      "redirects": [],
+      "sha256": "ccce59465ae5c61930ada5453834f60500fbd95084d85db63e0e65fad0125455",
+      "expected": "ccce59465ae5c61930ada5453834f60500fbd95084d85db63e0e65fad0125455",
+      "matches": true,
+      "bytes": 72916
+    },
+    {
+      "path": "assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/geist-semibold-DsJNybWY.ttf",
+      "redirects": [],
+      "sha256": "7171f481b121803d007f5c6c76cd9988c0d41cce4202db9a18dff9945505d36d",
+      "expected": "7171f481b121803d007f5c6c76cd9988c0d41cce4202db9a18dff9945505d36d",
+      "matches": true,
+      "bytes": 73048
+    },
+    {
+      "path": "assets/main-CTJXJzjm.css",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/main-CTJXJzjm.css",
+      "redirects": [],
+      "sha256": "6992ffd40df97337298c4c97b86496f1aa4bb355fa3b250ed4fe0510cecd7b5e",
+      "expected": "6992ffd40df97337298c4c97b86496f1aa4bb355fa3b250ed4fe0510cecd7b5e",
+      "matches": true,
+      "bytes": 37775
+    },
+    {
+      "path": "assets/main-eBI_p2Z0.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/main-eBI_p2Z0.js",
+      "redirects": [],
+      "sha256": "85d3b06f194fef7f65728f19590803f70631d5a86a2a5473ac00c4c2e5fa729c",
+      "expected": "85d3b06f194fef7f65728f19590803f70631d5a86a2a5473ac00c4c2e5fa729c",
+      "matches": true,
+      "bytes": 74776
+    },
+    {
+      "path": "assets/mesh-CeVDsQlk.css",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/mesh-CeVDsQlk.css",
+      "redirects": [],
+      "sha256": "7602a3f7dac56342750be0981c9013d8e7a8ae4401abd6fcc56ed600342c6c3d",
+      "expected": "7602a3f7dac56342750be0981c9013d8e7a8ae4401abd6fcc56ed600342c6c3d",
+      "matches": true,
+      "bytes": 17277
+    },
+    {
+      "path": "assets/mesh-DrQ9Nrdm.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/mesh-DrQ9Nrdm.js",
+      "redirects": [],
+      "sha256": "9b3a41e015ab735215db9f3e4fd566e207b82d16ea4f694ac72a1485fd66e41b",
+      "expected": "9b3a41e015ab735215db9f3e4fd566e207b82d16ea4f694ac72a1485fd66e41b",
+      "matches": true,
+      "bytes": 264016
+    },
+    {
+      "path": "assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "redirects": [],
+      "sha256": "418c206484b89b68ef5f067277831e583fc9193a62aadf4de269acaaeb12a85f",
+      "expected": "418c206484b89b68ef5f067277831e583fc9193a62aadf4de269acaaeb12a85f",
+      "matches": true,
+      "bytes": 670
+    },
+    {
+      "path": "assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/rolldown-runtime-B0Z9INg1.js",
+      "redirects": [],
+      "sha256": "5e9b0d884d2ebb14e241ab38b43e41efb61bce2e74d71507b0b95b264fba4047",
+      "expected": "5e9b0d884d2ebb14e241ab38b43e41efb61bce2e74d71507b0b95b264fba4047",
+      "matches": true,
+      "bytes": 901
+    },
+    {
+      "path": "assets/store-o_Evag90.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/store-o_Evag90.js",
+      "redirects": [],
+      "sha256": "9372ba9e695a89f53082034b8bd46459321df389f7b5762299b381de441fc15d",
+      "expected": "9372ba9e695a89f53082034b8bd46459321df389f7b5762299b381de441fc15d",
+      "matches": true,
+      "bytes": 20910
+    },
+    {
+      "path": "assets/terminal-gz-_lJD7.css",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/terminal-gz-_lJD7.css",
+      "redirects": [],
+      "sha256": "9e28cbb17074240d8254e43c201826efad108ab039d32939d1a87e345eafb7a6",
+      "expected": "9e28cbb17074240d8254e43c201826efad108ab039d32939d1a87e345eafb7a6",
+      "matches": true,
+      "bytes": 11360
+    },
+    {
+      "path": "assets/transaction-CIpP36Oy.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/transaction-CIpP36Oy.js",
+      "redirects": [],
+      "sha256": "eaec171db669fa3286724382a032cadcaafccaa067e35470a06dd3e46e17435d",
+      "expected": "eaec171db669fa3286724382a032cadcaafccaa067e35470a06dd3e46e17435d",
+      "matches": true,
+      "bytes": 5455
+    },
+    {
+      "path": "assets/treasury-Dhgfkcad.css",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/treasury-Dhgfkcad.css",
+      "redirects": [],
+      "sha256": "4988885fca9772ea8985a60fb5c0c162c6fd9e6e7fcecea883df288a8f47e12e",
+      "expected": "4988885fca9772ea8985a60fb5c0c162c6fd9e6e7fcecea883df288a8f47e12e",
+      "matches": true,
+      "bytes": 23633
+    },
+    {
+      "path": "assets/treasury-Z9fuRU4r.js",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/assets/treasury-Z9fuRU4r.js",
+      "redirects": [],
+      "sha256": "9b074073ac41661dff9ca12b9c8370b08d28d40ac093b65b242a63675459612a",
+      "expected": "9b074073ac41661dff9ca12b9c8370b08d28d40ac093b65b242a63675459612a",
+      "matches": true,
+      "bytes": 17996
+    },
+    {
+      "path": "dash-snapshot.json",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/dash-snapshot.json",
+      "redirects": [],
+      "sha256": "3f868c35b7b944cc78ca605aa391ae38a99e08a15d3f0c96eec295c965eb10a0",
+      "expected": "3f868c35b7b944cc78ca605aa391ae38a99e08a15d3f0c96eec295c965eb10a0",
+      "matches": true,
+      "bytes": 8096
+    },
+    {
+      "path": "dash/index.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/dash/",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/dash/index.html",
+          "to": "/dash/"
+        }
+      ],
+      "sha256": "eed9b3e2aab15fb11fd014b02daeb41552dd9b1a8cd60f52db527affd2e3aee7",
+      "expected": "eed9b3e2aab15fb11fd014b02daeb41552dd9b1a8cd60f52db527affd2e3aee7",
+      "matches": true,
+      "bytes": 3929
+    },
+    {
+      "path": "dashboard/index.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/dashboard/",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/dashboard/index.html",
+          "to": "/dashboard/"
+        }
+      ],
+      "sha256": "dec948ec45fcfd06a5f0005bcfb3fc03a4560b9d0c09d2b78714891e4ee28c0e",
+      "expected": "dec948ec45fcfd06a5f0005bcfb3fc03a4560b9d0c09d2b78714891e4ee28c0e",
+      "matches": true,
+      "bytes": 1076
+    },
+    {
+      "path": "design-reference/falconos-advisory-workspace.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/design-reference/falconos-advisory-workspace",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/design-reference/falconos-advisory-workspace.html",
+          "to": "/design-reference/falconos-advisory-workspace"
+        }
+      ],
+      "sha256": "6b36806ff022a6fac71dfdedf164d78f1b703a5f6ab98078c923b67dd0a98ebb",
+      "expected": "6b36806ff022a6fac71dfdedf164d78f1b703a5f6ab98078c923b67dd0a98ebb",
+      "matches": true,
+      "bytes": 498875
+    },
+    {
+      "path": "design-reference/falconos-capital.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/design-reference/falconos-capital",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/design-reference/falconos-capital.html",
+          "to": "/design-reference/falconos-capital"
+        }
+      ],
+      "sha256": "543040da6e5dcb1988879efaca60b6b1bc11342dc9ccd15588fb0d100b7b54bb",
+      "expected": "543040da6e5dcb1988879efaca60b6b1bc11342dc9ccd15588fb0d100b7b54bb",
+      "matches": true,
+      "bytes": 470594
+    },
+    {
+      "path": "design-reference/falconos-knowledge.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/design-reference/falconos-knowledge",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/design-reference/falconos-knowledge.html",
+          "to": "/design-reference/falconos-knowledge"
+        }
+      ],
+      "sha256": "e23afea76a5407a0395c2e6142ecfb0059c3085f426b2fd78610f18e8bd28a40",
+      "expected": "e23afea76a5407a0395c2e6142ecfb0059c3085f426b2fd78610f18e8bd28a40",
+      "matches": true,
+      "bytes": 470315
+    },
+    {
+      "path": "design-reference/falconos-landing.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/design-reference/falconos-landing",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/design-reference/falconos-landing.html",
+          "to": "/design-reference/falconos-landing"
+        }
+      ],
+      "sha256": "93d78fd7225bf622eeac8c9a975eb6c7fa814fb077d61b273a52252b6837b78e",
+      "expected": "93d78fd7225bf622eeac8c9a975eb6c7fa814fb077d61b273a52252b6837b78e",
+      "matches": true,
+      "bytes": 272
+    },
+    {
+      "path": "design-reference/falconos-workspace.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/design-reference/falconos-workspace",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/design-reference/falconos-workspace.html",
+          "to": "/design-reference/falconos-workspace"
+        }
+      ],
+      "sha256": "934a67b1ca633b525eab36ed088321e8f99874db153c34431f2f428f2ada2d73",
+      "expected": "934a67b1ca633b525eab36ed088321e8f99874db153c34431f2f428f2ada2d73",
+      "matches": true,
+      "bytes": 304
+    },
+    {
+      "path": "design-reference/README.md",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/design-reference/README.md",
+      "redirects": [],
+      "sha256": "4bb1ffd70bd31e285bae3667637824a73041c0bde435d22ec6e50d66cc692c65",
+      "expected": "4bb1ffd70bd31e285bae3667637824a73041c0bde435d22ec6e50d66cc692c65",
+      "matches": true,
+      "bytes": 825
+    },
+    {
+      "path": "design-reference/source-sha256.json",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/design-reference/source-sha256.json",
+      "redirects": [],
+      "sha256": "02fe1b4e5180637e903d2b45bdd471e929c5bb52333d4d1942c96b6489b97c3d",
+      "expected": "02fe1b4e5180637e903d2b45bdd471e929c5bb52333d4d1942c96b6489b97c3d",
+      "matches": true,
+      "bytes": 301
+    },
+    {
+      "path": "falcon-symbol.png",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/falcon-symbol.png",
+      "redirects": [],
+      "sha256": "53a0e6d00abb763cb6970552ab57d677c520327c25c4443eee600b9c5271c305",
+      "expected": "53a0e6d00abb763cb6970552ab57d677c520327c25c4443eee600b9c5271c305",
+      "matches": true,
+      "bytes": 41120
+    },
+    {
+      "path": "index.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/index.html",
+          "to": "/"
+        }
+      ],
+      "sha256": "2150e3dc09341d288fe20810e378bb9ccb7c50269eb270654c1563c553429074",
+      "expected": "2150e3dc09341d288fe20810e378bb9ccb7c50269eb270654c1563c553429074",
+      "matches": true,
+      "bytes": 1470
+    },
+    {
+      "path": "mesh/index.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/mesh/",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/mesh/index.html",
+          "to": "/mesh/"
+        }
+      ],
+      "sha256": "30200c36c49a5dff387df85b1c5740b864982d1b0b3ff87093b90e48f3438223",
+      "expected": "30200c36c49a5dff387df85b1c5740b864982d1b0b3ff87093b90e48f3438223",
+      "matches": true,
+      "bytes": 14749
+    },
+    {
+      "path": "product/index.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/product/",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/product/index.html",
+          "to": "/product/"
+        }
+      ],
+      "sha256": "6b2bb06c1ee471651dcbfd54e8eb783465605bbbd81d60f90c5d8c6325036864",
+      "expected": "6b2bb06c1ee471651dcbfd54e8eb783465605bbbd81d60f90c5d8c6325036864",
+      "matches": true,
+      "bytes": 4966
+    },
+    {
+      "path": "research/index.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/research/",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/research/index.html",
+          "to": "/research/"
+        }
+      ],
+      "sha256": "9e9c5c70ca6883b4d498f3cff2a3dc5e2b0cb7e205e3aea48d51423e6213723d",
+      "expected": "9e9c5c70ca6883b4d498f3cff2a3dc5e2b0cb7e205e3aea48d51423e6213723d",
+      "matches": true,
+      "bytes": 6837
+    },
+    {
+      "path": "treasury/index.html",
+      "status": 200,
+      "finalUrl": "https://falconos.markets/treasury/",
+      "redirects": [
+        {
+          "status": 308,
+          "from": "/treasury/index.html",
+          "to": "/treasury/"
+        }
+      ],
+      "sha256": "78499b5e98ad2cafb2c7fe8e1e637bbb12b70b98caa974c297421fd72906b20c",
+      "expected": "78499b5e98ad2cafb2c7fe8e1e637bbb12b70b98caa974c297421fd72906b20c",
+      "matches": true,
+      "bytes": 15674
+    }
+  ],
+  "limitations": "GET requests and static body hashes only. Commit attribution is supplied by the coordinator. This does not verify the deployed Function or submit signup."
+}
