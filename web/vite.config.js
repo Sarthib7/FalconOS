@@ -45,6 +45,7 @@ function localTerminalRoutes() {
 
 export default defineConfig({
   appType: 'mpa',
+  resolve: { dedupe: ['@solana/web3.js'] },
   server: { fs: { deny: ['.env', '.env.*', '*.{crt,pem,key,p12,pfx,cer,der}', '.npmrc', '.yarnrc.yml', '**/.git/**', '**/.local/**'] } },
   plugins: [localWaitlist(), localTerminalRoutes()],
   build: {
