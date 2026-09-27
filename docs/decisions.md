@@ -89,3 +89,16 @@
 [INFERRED, DEC-2026-09-27-01] Owner: architect. Decision: preserve the six-node input graph, add rule traces and saved versioned records, and build the inspector around that evidence. Alternatives: replace the evaluator, or add a backend before the browser flow is clear. Consequence: one browser-local synthetic path first; shared accounts and live evidence remain separate work. [Contract](decision-graph.md) defines compatibility and acceptance.
 
 [VERIFIED, user direction] The user approved the visual treasury pitch and selected a local loop before lending integration. The new decisions are [local simulation first](adrs/0001-local-treasury-loop.md), [graph and authority](adrs/0002-graph-and-authority.md), [browser-local history](adrs/0003-browser-local-history.md), and [future cloud deployment](adrs/0004-cloud-deployment.md). These records scope the new treasury module. Earlier decisions retain their dated scope.
+
+## Repository boundaries, 2026-09-27
+
+[VERIFIED, user choice] ID: `DEC-2026-09-27-REPO`. Owner: coordinator. The user selected option `1` after application and finance reviews. The alternatives were a shared-module extraction and a full workspace conversion.
+
+[VERIFIED, source evidence] `web/mesh/app.mjs:1` imports `mesh/fixtures.mjs`; `web/mesh/terminal.mjs:1` imports `mesh/kamino-wire.mjs`. Dashboard Node tests also import `mesh/domain.mjs`. Root `package.json:24` tests only the TypeScript components. At inspection, `git ls-tree -r --name-only origin/main mesh` returned those three mesh files; the complete API exists on the MVP branch. These distinct release inputs need explicit checks.
+
+[INFERRED, decision and consequence] Retain folders and dependency boundaries. Add a current architecture map, component verification commands, and separate website/API release checks. Use real build resolution and isolated native imports to check completeness. Keep existing root test behavior. Require visible PostgreSQL coverage instead of treating skipped integration checks as a full pass. Do not move modules, change financial rules, add dependencies, or apply migrations in this slice. The [verification contract](interfaces.md#repository-verification-contract-2026-09-27) fixes command behavior before implementation.
+
+### Least confident decisions
+
+1. [INFERRED] The explicit API source list will need updates when its module boundary changes. Native linkage should make omissions visible.
+2. [NOT DETERMINED] Source checks alone cannot establish a working Docker image or hosted service. Those proofs remain separate.

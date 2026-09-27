@@ -1,0 +1,26 @@
+[
+  {
+    "name": "initdb",
+    "exit_code": 0
+  },
+  {
+    "name": "start",
+    "exit_code": 0
+  },
+  {
+    "name": "init-schema",
+    "exit_code": 0
+  },
+  {
+    "name": "fixture-roles",
+    "exit_code": 0
+  },
+  {
+    "name": "app-permissions",
+    "exit_code": 0
+  },
+  {
+    "name": "database-settings",
+    "exit_code": 0
+  }
+]

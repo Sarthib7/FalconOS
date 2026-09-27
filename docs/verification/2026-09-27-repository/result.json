@@ -1,0 +1,69 @@
+{
+  "command": "npm run verify",
+  "exit_code": 0,
+  "scopes": {
+    "repository": {
+      "tests": 20,
+      "pass": 20,
+      "fail": 0,
+      "skipped": 0
+    },
+    "advisory": {
+      "tests": 113,
+      "pass": 113,
+      "fail": 0,
+      "skipped": 0
+    },
+    "web": {
+      "tests": 161,
+      "pass": 161,
+      "fail": 0,
+      "skipped": 0
+    },
+    "mesh": {
+      "tests": 101,
+      "pass": 101,
+      "fail": 0,
+      "skipped": 0
+    },
+    "engine": {
+      "passed_counts": [
+        34,
+        0,
+        4,
+        0
+      ],
+      "limit": "34 unit tests and 4 integration tests; other Rust targets collect 0."
+    }
+  },
+  "release_checks": [
+    {
+      "status": "PASS",
+      "check": "website-release-inputs",
+      "routes": 8,
+      "resolvedFiles": 112,
+      "sharedInputs": [
+        "mesh/fixtures.mjs",
+        "mesh/kamino-wire.mjs"
+      ],
+      "artifactWritten": false
+    },
+    {
+      "status": "PASS",
+      "check": "mesh-release-inputs",
+      "declaredFiles": 17,
+      "isolatedLinkage": true,
+      "databaseChecked": false,
+      "dockerImageChecked": false
+    }
+  ],
+  "source_sha256": {
+    "package.json": "fb44229475da336d5f97a3cafea21eb413162f9437f0642fc396c89e544cbf03",
+    "scripts/verify.mjs": "94feae468de41b846125e18ba9829310410dad7624edbfc8b9ede26b9af01169",
+    "scripts/test/verify.test.mjs": "84303ce5386a86cc3af82230ef4f15742870aa2bd45de6e47f889a292acb71d9",
+    "scripts/test/release-boundaries.test.mjs": "27c15360f5fac6f7ab4d5184e80ae3f890b087a807f86474d836d597fe9e2358",
+    "web/scripts/verify-release.mjs": "bd5275758d79ab798b24635900bfc7a6722fc6333c52631260b059264dd718e2",
+    "mesh/check-release.mjs": "47736d06f0c27e2ffb3329cafbdf59bfbdcdd82fc82cffa954bcadab570c89c5"
+  },
+  "limitations": "Local tests with controlled providers and disposable PostgreSQL; no browser, hosted, Docker, inbox, or wallet proof in this run."
+}

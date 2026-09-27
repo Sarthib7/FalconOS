@@ -1,0 +1,540 @@
+
+> falconos@0.1.0 verify
+> node scripts/verify.mjs
+
+
+Checking repository
+> node --test scripts/test/*.test.mjs
+✔ REPO-VERIFY-1: website-only checkout builds all production routes with its declared mesh inputs (3508.217334ms)
+✔ REPO-VERIFY-1: website rejects missing browser shared input (1490.22025ms)
+✔ REPO-VERIFY-1: Vite graph rejects forbidden repository source even when the module resolves (2356.538333ms)
+✔ REPO-VERIFY-1: website rejects missing Node-only dashboard test input (1616.157458ms)
+✔ REPO-VERIFY-1: mesh dependencies cannot mask a missing declared website dependency (1513.835375ms)
+✔ REPO-VERIFY-1: website rejects a missing production route (2355.676416ms)
+✔ REPO-VERIFY-1: website rejects a local terminal route added to production (2466.309666ms)
+✔ REPO-VERIFY-1: website rejects local routes copied through the public directory (3020.606959ms)
+✔ REPO-VERIFY-1: complete API checkout links in isolation without database configuration (351.051917ms)
+✔ REPO-VERIFY-1: API rejects an omitted transitive runtime file (74.743125ms)
+✔ REPO-VERIFY-1: API rejects an omitted lending migration (65.726166ms)
+✔ REPO-VERIFY-1: website-only mesh slice cannot pass the API release check (1767.264667ms)
+✔ REPO-VERIFY-1: isolated native linkage rejects a cross-component API import (172.249791ms)
+✔ REPO-VERIFY-1: isolated API linkage rejects an absolute import outside the release (166.055541ms)
+✔ REPO-VERIFY-1: missing test database blocks mesh without using DATABASE_URL (0.755666ms)
+✔ REPO-VERIFY-1: failed command stops its scope while other scopes continue (0.70275ms)
+✔ REPO-VERIFY-1: an unavailable child fails verification (0.27175ms)
+✔ REPO-VERIFY-1: successful local scopes accept Unix socket database URLs without logging them (0.245083ms)
+✔ REPO-VERIFY-1: unknown or multiple scopes are rejected before a command starts (0.251416ms)
+✔ REPO-VERIFY-1: CLI preserves blocked and invalid-scope exit codes (95.846334ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20995.975375
+
+Checking advisory
+> npm run typecheck
+
+> falconos@0.1.0 typecheck
+> tsc --noEmit
+
+> npm test
+
+> falconos@0.1.0 test
+> node --test test/*.test.ts stablecoins/test/*.test.ts perps/test/*.test.ts stocks/test/*.test.ts
+
+✔ registry is versioned, exact, and rejects duplicate venue definitions (2.126333ms)
+✔ canonical snapshot retains raw bytes, hashes, freezes content, and records provenance (22.620084ms)
+✔ secondary source replaces primary only for typed outage and equivalence (0.842125ms)
+✔ critical source disagreement, stale data, and coherence breach produce NO_DATA (2.616834ms)
+✔ missing policy or account keeps every numeric suggestion null (5.135125ms)
+✔ proposal preserves snapshot evidence and NO_DATA status without authority (2.944542ms)
+✔ V25: lead and risk council calls share exact request-scoped bundle identity (45.921875ms)
+✔ V28: council binding mismatches fail closed and single-callback transport is rejected (36.372417ms)
+✔ V25: lead or risk transport failure never falls back to one callback or execution (21.041083ms)
+✔ bundle hardening enforces cross-venue coherence, source identity, signed funding, and deep ingress (5.248084ms)
+✔ adversarial ingress binds raw bytes, sequence continuity, policy state, provenance, Copilot evidence, and audit records (57.287959ms)
+✔ proposal and response ingress reject malformed nullable fields and NO_DATA publication over ready-state contracts (192.456708ms)
+✔ F3: positive quote difference stays REVIEW with unknown net profit (34.273208ms)
+✔ F3: reject a non-positive cycle and preserve exact units above floating-point precision (0.235458ms)
+✔ F2/F3: unmatched intermediate inventory is not a candidate (0.126458ms)
+✔ F2: reject stale, future, and impossible observation times (0.204292ms)
+✔ F2: reject an expired RFQ and preserve source failure (0.113125ms)
+✔ F2: reject stale, invalid, and future provider timestamps without treating them as creation times (0.140917ms)
+✔ F2: provider timestamp cannot postdate receipt, while equal time is accepted (0.10075ms)
+✔ F2: bound input and reject malformed quote amounts (0.253666ms)
+✔ P1-T01/CHK-05: registry matches the historical public metadata fixture (2.546458ms)
+✔ F1/F3: keyless GETs compare exact intermediate quantities in both directions (51.869334ms)
+✔ F1: scan input bounds fail before network access (0.542417ms)
+✔ F2: malformed, mismatched and transaction-bearing quotes fail closed (0.319542ms)
+✔ F2: Base addresses allow case differences; missing cost remains unknown (0.21675ms)
+✔ F2/F5: HTTP 429 stays visible and prevents only its dependent quote (1.326084ms)
+✔ F2: server retry metadata is descriptive and parses Retry-After seconds (1.045709ms)
+✔ F2: non-rate-limit client responses are classified without retry metadata (0.551ms)
+✔ F2: failed second quote preserves the first quote and raw invalid response (0.5785ms)
+✔ F2: response limit counts bytes and records a bounded prefix (4.333917ms)
+✔ F2: invalid JSON retains the response text (0.407709ms)
+✔ F2: transport failure remains an observation with no HTTP status (0.703916ms)
+✔ F2: nested transport causes identify DNS, connection and TLS failures safely (1.140375ms)
+✔ F1: an injected fetcher cannot accept a redirected response (0.350709ms)
+✔ F2: an interrupted body preserves its received prefix and HTTP status (2.060125ms)
+✔ F5: cancellation before collection sends no request (0.258375ms)
+✔ F5: cancellation during a request propagates instead of becoming a provider error (0.2995ms)
+✔ F2/F5: actual request timeout expires and caller cancellation remains authoritative (32.971458ms)
+✔ F5: cancellation during Jupiter pacing prevents the next request (0.913167ms)
+✔ V57: complete synthetic basket is READY, frozen, and deterministically hashed (20.233375ms)
+✔ V57: a missing required field fails closed to NO_DATA (0.577709ms)
+✔ V57: a non-integer normalized value is rejected at ingress (1.299667ms)
+✔ V61: a future capture yields NO_DATA (0.446709ms)
+✔ V61: provider-event time after local-receipt time yields NO_DATA (1.119666ms)
+✔ V61: a capture-time spread beyond the coherence cap yields NO_DATA (0.882917ms)
+✔ V60: a typed primary outage fails over to an equivalence-validated secondary (0.573541ms)
+✔ V60: a secondary without equivalence validation cannot substitute a primary outage (0.636291ms)
+✔ V60: primary and secondary disagreement yields NO_DATA (0.444834ms)
+✔ V60: a source identity mismatch yields NO_DATA (0.384084ms)
+✔ V62: non-ok captures require typed failure metadata and carry no value (0.32825ms)
+✔ V63: a registry with an invalid max-weight cap is rejected (0.150292ms)
+✔ V63: a leg weight above the registry cap is rejected (0.96825ms)
+✔ V57: validate rejects a tampered snapshot and a non-frozen object (0.637334ms)
+✔ V56 V59: a passing council run publishes advice with source-bound citations (2.138459ms)
+✔ V58: a blocking risk review yields BLOCKED with no proposal or citations (1.008583ms)
+✔ V58: a NO_DATA risk review yields NO_DATA (0.745166ms)
+✔ V58: a forged critical PASS is rejected and yields NO_DATA (2.115208ms)
+✔ V56: a NO_DATA snapshot forces a NO_DATA proposal and advice (7.46375ms)
+✔ V58: a lead snapshot-hash binding mismatch yields NO_DATA (0.824458ms)
+✔ V56: basket leg weights must sum to 10000 bps (0.371959ms)
+✔ V58: a critical risk review cannot pass (0.076083ms)
+✔ V58: validateStocksAdviceResponse rejects a forged published advice (1.750792ms)
+✔ P1-T07: fixture bundle checks caller hash, route binding, and untrusted notes (19.956208ms)
+✔ P1-T07: altered bytes fail the expected evidence hash before parsing (4.716958ms)
+✔ P1-T07: legacy schema 1 and failure-bearing schema 2 scans validate (9.44ms)
+✔ P1-T07: candidate and path tampering cannot enter a bundle (16.756208ms)
+✔ P1-T07: one-leg unavailable evidence remains valid with one gas entry (13.059209ms)
+✔ P1-T07: unavailable observations cannot arrive after their Scan assessment (12.821792ms)
+✔ P1-T07: explicit past cutoffs reject a current note snapshot (14.960042ms)
+✔ P1-T07: timestamps require UTC ISO form and valid calendar dates (6.176959ms)
+✔ P1-T07: symlinked evidence is rejected at the bundle root (3.436416ms)
+✔ P1-T07: symlinked data-directory ancestors are rejected (5.100417ms)
+✔ P1-T07: response status cannot promote deterministic rejection (5.9105ms)
+✔ P1-T07: response validation rejects contract and authority violations (8.147541ms)
+✔ P1-T07: synthetic evidence requires host-confirmed fixture provenance (5.138958ms)
+✔ P1-T07: response size is bounded as a whole object (8.852584ms)
+✔ P1-T07: fixture expiry is capped by selected quote validity (6.753875ms)
+✔ P1-T07: host keeps Codex origin separate from synthetic evidence fixture status (5.755917ms)
+✔ F4/F6: one command produces inspectable evidence and an Obsidian run note (230.540625ms)
+✔ F1: reject unsupported commands and unsafe numeric arguments before network access (865.906625ms)
+✔ P1-T07: fixture thesis command saves one cited JSON record and linked note (116.767625ms)
+✔ P1-T07: normal Codex CLI stays disabled until process controls are verified (103.331084ms)
+✔ P1-T07: invalid caller hash saves no thesis record or note (102.899541ms)
+✔ CHK-07: bounded exit codes, consecutive incomplete scans, and reset are visible in process output (586.559292ms)
+✔ F2: live assessment starts after collection completes (107.126667ms)
+✔ CHK-08: cancellation during request or polling sleep preserves records and starts no next request (232.642875ms)
+✔ CHK-08: production SIGTERM during a real source request stops before export (110.250084ms)
+✔ CHK-08: production SIGINT during a real source request stops before export (117.175125ms)
+✔ CHK-08: production SIGINT during polling stops after one completed scan (2413.398417ms)
+✔ CHK-08: production SIGTERM during polling stops after one completed scan (2423.337667ms)
+✔ P1-T07: local fake Codex process receives bounded instructions and returns host metadata (245.313959ms)
+✔ P1-T07: nonzero and invalid Codex process output cannot produce an accepted thesis (756.787292ms)
+✔ P1-T07: timeout kills an owned descendant process group (2565.418125ms)
+✔ P1-T07: cancellation kills an owned descendant process group (826.647875ms)
+✔ P1-T07: completion-time validation rejects a response that expires during the process run (328.108875ms)
+✔ V1/V2: plugin framing accepts one object and rejects concatenated JSON (17.149041ms)
+✔ V1: plugin input has an independent bounded frame (20.782333ms)
+✔ V9/V10/V15: injected fixture transport returns synthetic advisory provenance (8.309667ms)
+✔ V13: missing production transport returns stable unavailable error (8.065709ms)
+✔ V13: transport failures expose only stable safe messages (9.811583ms)
+✔ V2/V11: malformed, unknown, and authority-bearing requests are rejected before transport (10.737834ms)
+✔ V3/V4: path, hash, cutoff, and route validation fail safely (12.327416ms)
+✔ V4: symlinked evidence cannot enter plugin bundle (11.586625ms)
+✔ V4/V7: FIFO evidence and notes fail promptly with stable errors (483.566209ms)
+✔ F4/F6: retain exact JSON evidence and export linked, clearly synthetic notes (164.347417ms)
+✔ F4: preserve human edits and reject duplicate evidence IDs (222.950916ms)
+✔ F4: reject symlink paths and evidence inside the editable vault (4.112ms)
+✔ F4: escape provider errors before writing Markdown (65.403792ms)
+✔ F4: an interrupted write cannot publish a partial evidence record (4.261542ms)
+✔ F4: abrupt export stop leaves final evidence readable and an orphan temp distinct (210.166042ms)
+✔ F4: completed evidence survives Markdown failure and restart preserves notes and records (68.359958ms)
+✔ P1-T07: publish a canonical thesis JSON record and linked fixture note (24.702791ms)
+✔ P1-T07: canonical thesis survives a blocked Markdown path (14.187042ms)
+ℹ tests 113
+ℹ suites 0
+ℹ pass 113
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7639.830917
+
+Checking web
+> npm --prefix web test
+
+> falconos-web@0.0.0 test
+> node --test test/*.test.mjs
+
+✔ V104: React landing stays separate while the dashboard opens its manual Devnet app (0.665125ms)
+✔ dashboard entry opens the wallet terminal (0.659ms)
+✔ production trade UI has a fixed Devnet path and manual wallet sign step (0.279042ms)
+✔ SIWS request binds domain, address, nonce, and expiry without a cluster chain ID (3.031958ms)
+✔ wallet signature parsing accepts wrapped and raw provider results (0.640167ms)
+✔ SIWS proof verifies the signature and rejects changed scope or message (7.83425ms)
+✔ Devnet account reads use only the fixed RPC and validate balance (23.126416ms)
+✔ Devnet SPL and Token-2022 balances are parsed and combined by mint (20.379ms)
+✔ Devnet recent signatures validate limits and keep failed status visible (0.724042ms)
+✔ Devnet token decimals use the live mint supply response (0.397792ms)
+✔ token display formatting keeps integer precision (30.289458ms)
+✔ invalid wallet addresses fail before RPC access (0.34075ms)
+✔ TestV76: production quote validates every pool and ordered mint hop in a two-leg route (30.573209ms)
+✔ TestV76: production quote validates mixed CLMM and AMM V4 state layouts (1.007666ms)
+✔ TestV76: production quote rejects broken mint continuity before pool lookup (0.447917ms)
+✔ TestV76: production quote rejects repeated pools and routes above four legs (0.66425ms)
+✔ TestV76: production quote accepts a verified single CPMM route (0.686875ms)
+✔ TestV76: production transaction builder revalidates a multi-hop quote and returns one unsigned transaction (2.547459ms)
+✔ blockhash, simulation, send, and confirmation stay on Devnet (0.931125ms)
+✔ portfolio watchlist persists by wallet and removes invalid or duplicate mints (2.480708ms)
+✔ order journal persists order states and signatures by wallet (1.624792ms)
+✔ order journal rejects non-Devnet, invalid mint, and malformed amounts (0.461833ms)
+✔ session proof can be stored and cleared without deleting account history (0.346875ms)
+✔ signed Devnet transaction keeps the simulated message and verifies every signer (12.742291ms)
+✔ transaction signer check rejects changed messages, missing signatures, and unrelated wallets (1.709ms)
+graph-before-trade advice-on-graph terminal font-family: ui-monospace node.kind node.detail value source reason Surfpool 18488 Devnet
+✔ copilot surface contains Surfpool and Devnet wallet controls (1.778167ms)
+✔ copilot page contains no private-key or seed handling strings (0.355709ms)
+✔ every inline script compiles (0.851625ms)
+✔ sign path deserializes before wallet handoff and copilot stays out of the production build (7.294333ms)
+✔ dashboard route links to the Devnet terminal and states its execution boundary (0.8995ms)
+✔ validOhlc rejects zero and negative price values (0.3085ms)
+✔ normalizeSnapshot emits normalized OHLC and derived metrics (2.69125ms)
+✔ normalizeSnapshot ignores forged metadata (0.311ms)
+✔ deriveMetrics rejects non-finite derived values (0.412625ms)
+✔ validPrice rejects stale and future provider timestamps (0.125125ms)
+✔ V107,V109: extracted data retains the active source payload and all five canonical treasury runs (19.249959ms)
+✔ V109: all eight retained source hashes and four graph projections match their exact source content (3.220542ms)
+✔ V109,V111: twelve knowledge analyses reproduce at saved cutoffs and exclude unrelated positions (5.816209ms)
+✔ V108: dashboard namespace isolates storage and locks while the treasury default remains unchanged (5.015584ms)
+✔ V108: corrupt dashboard bytes cannot be replaced by create, dispatch or export (9.781709ms)
+✔ V108: quota failure preserves committed dashboard state and cannot create an unsaved run (2.702416ms)
+✔ V108: two dashboard stores serialize writes, reject stale revisions and preserve exact retries (3.641959ms)
+✔ V108: unavailable dashboard storage or Web Locks cannot write another namespace (0.487041ms)
+✔ V110 B80: stopping a cycle queued behind another native Web Lock preserves saved bytes (13.987959ms)
+✔ V110 B80: cancellation before a granted callback enters prevents its write (0.997417ms)
+✔ V110 B80: abort after the synchronous commit enters preserves its recorded result (2.254ms)
+✔ only the selected Surfpool or Devnet RPC is an allowed send target (4.636333ms)
+✔ send rejects public mainnet before making an RPC request (0.74575ms)
+✔ send uses the selected Devnet RPC when Devnet is allowed (47.566458ms)
+✔ latest blockhash comes from the Surfpool RPC (0.7255ms)
+✔ Devnet blockhash and block height use only the Devnet RPC (0.78275ms)
+✔ Jupiter quote and unsigned build use the selected supported mint (1.637958ms)
+✔ V71 rejects an invalid wallet public key before the Jupiter build call (0.240709ms)
+✔ Devnet quote checks the live CPMM owner, pool mints, amount, and sole route (5.923958ms)
+✔ Devnet quote rejects a wrong pool owner or a quote route through another pool (2.016667ms)
+✔ Devnet quote rejects a pool whose on-chain mint pair does not match the request (0.734792ms)
+✔ Devnet build pins one CPMM quote and returns one unsigned transaction (1.537167ms)
+✔ Devnet build rejects missing input accounts and multiple transactions (2.234708ms)
+✔ token account lookup uses only the selected target RPC (0.372375ms)
+✔ simulation fails closed on an error or a missing err field (6.111333ms)
+✔ signature status reads only Surfpool and returns confirmed status (0.408375ms)
+✔ signature status requests abort at their timeout (5.878333ms)
+✔ confirmation wait distinguishes success, on-chain failure, and timeout (3.723125ms)
+✔ V105: signup sends the bounded landing request and accepts only explicit registration (2.044167ms)
+✔ V105: provider acceptance is distinct from sending or delivery (0.41325ms)
+✔ V105: signup rejects HTTP errors and unknown success bodies (1.868875ms)
+✔ V105: invalid email never reaches the API (0.335833ms)
+✔ V104: actual React rendering retains the treasury story and labels prototype limits (1.186375ms)
+✔ V104: rendered links preserve route boundaries and resolve local anchors (0.590208ms)
+✔ V104: all five retained scenarios still match the treasury rule policy (3.980541ms)
+✔ V104: rule inspection and exports bind the selected exact source record (0.5635ms)
+✔ V104: source palette, Alpine mark, Geist bytes and full license remain present (5.341292ms)
+✔ V104 V105: rendered controls retain keyboard labels and the real email form (0.5435ms)
+✔ V96/V105: main dev server denies private local state and default secret paths (112.266042ms)
+✔ V96/V105: mesh dev server denies private local state and default secret paths (26.6425ms)
+✔ V96/V105: treasury dev server denies private local state and default secret paths (25.919916ms)
+✔ V103: standard discovery supports different wallet brands without signMessage (7.119542ms)
+✔ V103: late registration has stable object IDs even when names match (0.978709ms)
+✔ V103: missing Devnet and required features remain visible with clear reasons (2.230417ms)
+✔ V103: the authorized account must support Devnet signing and match its public key (1.255833ms)
+✔ V103: an initially locked wallet may authorize an account on explicit connect (0.34ms)
+✔ V103: changed accounts invalidate pending signing even when the account changes back (0.427667ms)
+✔ V103: account changes without events are checked before and after wallet signing (0.531959ms)
+✔ V103: a copied public key detects mutation of the same authorized account object (0.469875ms)
+✔ V103: removed wallets and changed signing features invalidate pending requests (0.635875ms)
+✔ V103: disconnect clears local state before pending signing can return (0.441625ms)
+✔ V103: a superseded connection cannot replace the later selected wallet (0.340833ms)
+✔ V103: changed connect results and disconnect during connection fail closed (1.072458ms)
+✔ V103: signing isolates caller bytes and rejects empty or malformed wallet output (0.906583ms)
+✔ V103: a concurrent sign request is rejected and a rejected wallet request can be retried (0.462958ms)
+✔ V103: discovery excludes remote icon URLs and rejects broken change-event support (0.229208ms)
+✔ V58: product and research pages carry the deeper context (1.061625ms)
+✔ V77/V78: setup separates protected, undelegated, and delegated simulated cash (7.35475ms)
+✔ V78: decimal ingress and display preserve every micro-USDC without floating point (0.515125ms)
+✔ V78: u64 maximum survives a supply cycle and one excess unit is rejected (4.298667ms)
+✔ V78: money boundaries reject numbers, signs, exponent notation, whitespace, and excess precision (2.399042ms)
+✔ V78: setup rejects a reserve and investment cap that exceed total cash (0.372417ms)
+✔ V78/V80/V81: supply, funded hold, and liquid redemption conserve protected funds (5.411333ms)
+✔ V80: only delegated cash supplies, including a one-unit cap (1.44475ms)
+✔ V80: healthy liquidity at the exact floor permits supply; zero cap holds (2.535666ms)
+✔ V81: insufficient full-redemption liquidity preserves the entire position (6.930541ms)
+✔ V80/V81: low liquidity without a position blocks new supply (1.214541ms)
+✔ V81: missing, unavailable, future, and stale observations cause NO_DATA without movement (4.222042ms)
+✔ V80: permanent revocation blocks agent supply and agent redemption (5.94675ms)
+✔ V80/V81: explicit owner redemption bypasses revocation but does not restore agent authority (8.248417ms)
+✔ V81: owner redemption still requires fresh data and enough liquidity (4.6755ms)
+✔ V79: each missing required graph relationship blocks an otherwise ready supply (1.259375ms)
+✔ V79: decisions read typed graph evidence and mandate, not the displayed labels (0.637542ms)
+✔ V78/V79: forged graph cap and broken conservation are rejected (0.859375ms)
+✔ V79: malformed graph identity, nodes, edges, and authority fields are rejected (2.898541ms)
+✔ V79/V83: every entry preserves the pre-action graph and JSON replay reproduces the view (1.546709ms)
+✔ V83: identical duplicates return the input run without replaying a transfer (3.191375ms)
+✔ V83: idempotence cannot bypass validation of a corrupt existing run (1.519792ms)
+✔ V83: creation, event IDs, canonical dates, and event ordering are validated (2.563083ms)
+✔ V77/V83: exact schemas reject extra fields, authority changes, and malformed observations (1.295708ms)
+✔ V83: age limits and exported graph state reject malformed policy or chronology (1.033708ms)
+✔ V83: journal accepts 200 events, rejects the next, and never truncates (60.137083ms)
+✔ V77/V83: domain functions do not mutate frozen inputs or share appended event input (1.440291ms)
+✔ V87: new runs pin the rule policy and save the complete replay record for every event (1.787166ms)
+✔ V87: schema 1 reads without mutation and upgrades only on a successful new append (3.789458ms)
+✔ V87: unknown policy, incomplete records, and altered saved evidence or results reject replay and append (16.048125ms)
+✔ V87: saved record comparison accepts reordered keys and rejects non-data or missing fields (2.035708ms)
+✔ V88: supply checks name the exact evaluated rules and input evidence in order (0.379542ms)
+✔ V88: missing relationships, authority, and evidence failures skip later checks without approval (1.789167ms)
+✔ V88: changed graph liquidity changes supply, hold, and redemption checks without changing protected balances (5.065958ms)
+✔ V88: owner redemption explicitly skips agent authority and supply floor but checks available liquidity (3.806292ms)
+✔ V82 V83: a saved supply survives a new store instance and JSON export replays it (18.28625ms)
+✔ V82: a failed storage write preserves the prior position, revision, and raw history (3.065291ms)
+✔ V82: concurrent stores serialize; the stale second writer cannot overwrite a committed action (4.517209ms)
+✔ V82: corrupt stored data cannot be replaced by initialization or another event (0.959125ms)
+✔ V82: unavailable reads and unavailable Web Locks fail without writing (0.409709ms)
+✔ V82 V83: exact retries are idempotent even after the original revision; conflicting retries fail (3.892667ms)
+✔ V82: create never overwrites a valid run and an empty browser has no export (0.756125ms)
+✔ V82: oversized saved records and malformed revisions stop before writing (0.691917ms)
+✔ V87: stored policy and decision snapshots survive reload and export (2.618209ms)
+✔ V87: altered saved decisions and unsupported policies cannot be overwritten (5.241791ms)
+✔ V82 V87: failed legacy upgrade preserves bytes; successful upgrade retains commands (2.802875ms)
+✔ V83 V87: all 200 decision records fit the supported storage bound and replay (2066.697417ms)
+✔ V106: provider acceptance is retained and duplicate signup cannot send twice (78.888458ms)
+✔ V106: overlapping signup claims one delivery and reports the second as pending (29.015084ms)
+✔ V106: ambiguous delivery retries the same stored body and idempotency key (18.293292ms)
+✔ V106: unknown delivery after the idempotency window requires review and cannot resend (26.331208ms)
+✔ V106: partial, invalid and absent sender configuration capture without calling a provider (31.0795ms)
+✔ V106: strict sender dot-atom and length validation prevents invalid provider requests (46.904041ms)
+✔ V106: rejected, oversized and invalid provider receipts never claim acceptance (43.017208ms)
+✔ V106: atomic enqueue failure cannot return capture success or call a provider (1.511333ms)
+✔ V105,V106: full migration history preserves captured rows and older databases are not upgraded automatically (6.959792ms)
+✔ waitlist accepts and normalizes a valid email (14.315166ms)
+✔ waitlist rejects invalid email before database writes (0.962375ms)
+✔ waitlist rejects oversized chunked bodies before database writes (1.21675ms)
+✔ waitlist counts repeated submissions even for one email (4.871083ms)
+✔ waitlist limits concurrent new emails with one atomic counter (1.761084ms)
+✔ waitlist rate-limits when the atomic counter reaches the limit (0.565666ms)
+✔ waitlist fails closed when production bindings are missing (0.272958ms)
+✔ V105: storage exceptions and malformed write results return safe 503 JSON (2.846208ms)
+✔ V105: malformed UTF-8, unknown fields and invalid source cannot reach storage (1.245917ms)
+✔ V105: same-origin and exact JSON media type checks run before writes (0.4475ms)
+✔ V105: real local HTTP capture persists and survives a fresh database connection (58.278167ms)
+✔ V105,V106: repeated and concurrent signup identifies the original durable registration (37.444ms)
+✔ V105: local middleware bounds input and does not trust spoofed IP headers (41.98275ms)
+✔ V105: local middleware refuses unknown existing schemas without changing their rows (5.042584ms)
+ℹ tests 161
+ℹ suites 0
+ℹ pass 161
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2498.866
+> node web/scripts/verify-release.mjs
+{"status":"PASS","check":"website-release-inputs","routes":8,"resolvedFiles":112,"sharedInputs":["mesh/fixtures.mjs","mesh/kamino-wire.mjs"],"artifactWritten":false}
+
+Checking mesh
+> node mesh/check-release.mjs
+{"status":"PASS","check":"mesh-release-inputs","declaredFiles":17,"isolatedLinkage":true,"databaseChecked":false,"dockerImageChecked":false}
+> npm --prefix mesh test
+
+> falcon-knowledge-mesh@0.1.0 test
+> node --test test/*.test.mjs
+
+✔ V98: source labels reject text that cannot round-trip through Postgres JSONB (4.599041ms)
+✔ V98: source URLs reject decoded null and malformed Unicode before storage (0.17025ms)
+✔ V91: source validation preserves exact content semantics and permits cross-document references (1.833ms)
+✔ V91: source trust boundary rejects unsupported modes, fields, times, amounts, and malformed JSON (0.64925ms)
+✔ V91: source IDs and typed relations reject duplicates and local endpoint mismatches (0.418625ms)
+✔ V91,V93: projection sorts definitions and merges matching attestations without input mutation (0.9785ms)
+✔ V91: projection rejects source metadata/hash mismatches and repeated current source identities (0.374083ms)
+✔ V93: shared liquidity covers the exact combined exit and excludes unrelated positions (1.124375ms)
+✔ V93: insufficient shared liquidity blocks every connected position, not only the larger one (0.58875ms)
+✔ V93: changing a relationship changes the affected set before the amount is calculated (1.083292ms)
+✔ V93: integer arithmetic remains exact above Number.MAX_SAFE_INTEGER and when totals exceed u64 (0.584958ms)
+✔ V93: missing observation links, protocol links, position assets, and dangling endpoints yield NO_DATA (2.683958ms)
+✔ V93: isolated observations and reserves with no positions are incomplete, not an empty READY result (0.743916ms)
+✔ V93: stale, future, and unavailable liquidity never produces READY (1.082833ms)
+✔ V93: multiple observations and contradictory node definitions are explicit conflicts (0.841709ms)
+✔ V93: a mismatched asset or multiple reserve assignments cannot support an exit calculation (0.532042ms)
+✔ V93: required paths exceeding maxHops are truncated, including an already visited asset (1.634792ms)
+✔ V93: traversal node and edge limits cannot be mistaken for complete evidence (3.7055ms)
+✔ V93: a capped graph remains explicitly truncated even when the selected canvas looks usable (2.891917ms)
+✔ V93,V94: analysis validates provenance, stays deterministic, and does not alter historical inputs (0.947625ms)
+✔ V92: empty or malformed token configuration fails closed (1.085333ms)
+✔ V95: configured CORS origins are exact and HTTPS except loopback (0.736334ms)
+✔ V112: known-length overflow returns a complete error and drains the remaining upload (23.67175ms)
+✔ V112: chunked overflow returns a complete error and drains the remaining upload (15.640167ms)
+✔ V112: known-length unsupported content type returns a complete error and drains the remaining upload (3.455958ms)
+✔ V112: chunked unauthorized request returns a complete error and drains the remaining upload (4.909667ms)
+▶ I15/V91-V96: authenticated HTTP source -> graph -> saved analysis uses real Postgres
+  ✔ V92: every data route requires a valid credential (34.419208ms)
+  ✔ V95: foreign origins, malformed JSON, caller owner and oversized bodies fail (26.3185ms)
+  ✔ V91/V93: sources commit before graph and analysis become readable (33.406667ms)
+  ✔ V92: another owner cannot see graph, sources or saved records (13.012125ms)
+  ✔ V93/V94: new liquidity changes connected analysis and preserves original history (18.723958ms)
+✔ I15/V91-V96: authenticated HTTP source -> graph -> saved analysis uses real Postgres (151.50425ms)
+✔ V97,V99: preparation retains coherent chain evidence and builds the exact obligation-free ABI (51.990208ms)
+✔ V97: redeem uses receipt units and exact redemption account order (8.667375ms)
+✔ V97: invalid amount and supply cap fail before any RPC (1.751541ms)
+✔ V99: wrong genesis cannot progress to account reads (2.297125ms)
+✔ V97,V99: account identity, version, ownership, clock and stale oracle failures block preparation (32.123959ms)
+✔ V97: supply rejects required permission; direct redemption remains available with cToken usage disabled (10.513083ms)
+✔ V97: redemption cannot use queued liquidity or bypass a withdrawal cap (4.311917ms)
+✔ V97: simulation failure, missing accounts, changed owner and inconsistent deltas cannot prepare an intent (26.934667ms)
+✔ V99: oversized and malformed RPC responses fail with safe transport errors (4.722167ms)
+✔ V97: signed registration proves the sole wallet signature and rejects altered messages (29.176875ms)
+✔ V97: receipt verifies transaction-local deltas, including new ATA and rounded supply debit (35.842833ms)
+✔ V97: redemption receipt burns exact requested receipt units and records actual USDC (23.870416ms)
+✔ V97,V99: wrong chain, message, mint, owner, account, missing or duplicate balances never confirm (65.40425ms)
+✔ V97: unavailable and failed transactions remain distinct from confirmed effects (10.580417ms)
+✔ V102: missing receipt after blockhash expiry is unverified rather than pending forever (8.651292ms)
+✔ V101: prepared intent retains the exact request and original analysis across a fresh connection (109.439209ms)
+✔ V101: preparation retry returns its original result without fresh evidence or another adapter call (28.720917ms)
+✔ V101: stale or changed live evidence blocks preparation before the adapter runs (32.0085ms)
+✔ V101: source head change during preparation rejects persistence under the owner lock (19.679167ms)
+✔ V101: evidence that expires while the adapter runs cannot be committed (16.89025ms)
+✔ V101: concurrent identical preparation requests retain one winning intent (26.968041ms)
+✔ V101: invalid requests, nonlive analyses and malformed or oversized prepared evidence leave no intent (41.832709ms)
+✔ V92, V101, V102: owner scope protects analyses, intents, submissions and receipt reads (22.575417ms)
+✔ V102: signed registration retains exact signed bytes for an explicit retry after reload (15.688125ms)
+✔ V101,V102: source updates after preparation block the first signed registration (15.998416ms)
+✔ V101,V102: analysis that expires before first registration blocks a fresh intent (12.921583ms)
+✔ V102: first submission rejects expired or changed transactions and preserves empty event history (9.957708ms)
+✔ V102: concurrent registration creates exactly one submission and rejects changed registration (9.886791ms)
+✔ V102: receipt requires registration and its retry returns the original result without another RPC read (10.43125ms)
+✔ V102: receipt events remain immutable and CONFIRMED takes precedence over later pending reads (7.818125ms)
+✔ V102: concurrent receipt retries append one event and request IDs cannot cross intents (9.249833ms)
+✔ V102: one signed transaction cannot become two lending actions for the same owner (8.453334ms)
+✔ V102: foreign signature, invalid status and oversize receipt results are not persisted (19.431875ms)
+✔ V92, V102: history shows newest20 summaries without discarding older intents (31.627583ms)
+✔ V95, V102: storage and unknown adapter errors do not expose SQL or connection details (5.477875ms)
+✔ V99/V100: live captures retain provenance, partition graphs and survive retries in Postgres (139.268917ms)
+✔ V99: registry exposes only fixed public connector metadata and rejects arbitrary fetch targets (2.95575ms)
+✔ V99: document capture retains exact raw bytes, hash, transport and receipt time (28.607333ms)
+✔ V99: Devnet capture binds both RPC exchanges to full genesis, account identity and slot (2.857958ms)
+✔ V99: transport accepts URL normalization but rejects a different response target (1.964166ms)
+✔ V99: an empty complete HTTP response retains its status and zero-byte body (0.533334ms)
+✔ V99: wrong cluster and shortened chain reference cannot trigger an account request (4.810833ms)
+✔ V99: source validation rejects forged raw hash, request, identity, version, and projection (3.868875ms)
+✔ V99: missing, nonexecutable and malformed accounts become retained failed captures (9.260708ms)
+✔ V99: interrupted and oversize bodies are never retained as complete evidence (1.457667ms)
+✔ V99: stalled fetch has a bounded deadline even when injected transport ignores abort (1.295542ms)
+✔ V99: failed refresh invalidates the current graph while historical graph remains usable at its cutoff (15.51125ms)
+✔ V100: linked document and onchain account evidence produces OBSERVED with paths and no money approval (2.404667ms)
+✔ V100: document alone, account alone, missing links, and reached hop bound cannot produce OBSERVED (3.200292ms)
+✔ V100: stale and future evidence cannot produce OBSERVED (2.144792ms)
+✔ V100: a document deployment conflict cannot be rescued by a valid account capture (2.958791ms)
+✔ V99, V100: mixed modes, altered retained revisions, duplicate heads and forged graph provenance are rejected (1.772ms)
+✔ V99: source receipt times must remain monotonic and bounded by capturedAt (0.504ms)
+✔ V91: retains exact UTF-8 source text, hash, metadata, and source across a fresh connection (46.752791ms)
+✔ V91: stale revision retry returns original metadata without restoring its head (16.756083ms)
+✔ V91: later batch conflict rolls back earlier revision and head changes (13.441625ms)
+✔ V91: concurrent head updates admit one winner and retain no rejected revision (11.442792ms)
+✔ V91: concurrent identical source retries share one immutable revision (5.654208ms)
+✔ V92: composite owner keys isolate identical revision IDs and every saved read (24.17125ms)
+✔ V94: analysis retries and history keep the original graph after source changes and process reconnection (30.666667ms)
+✔ V94: concurrent identical analysis requests return the same committed record (30.197333ms)
+✔ V94: concurrent changed analysis arguments cannot reuse a request ID (15.038667ms)
+✔ V94: analysis saves one source snapshot while a source batch waits to commit (12.572ms)
+✔ V91, V95: source cap rejects overflow and rolls back a preceding update (58.572584ms)
+✔ V92, V94: history returns only the newest 20 records for its owner (49.527834ms)
+✔ V95: invalid batch and query fields fail before source writes (1.708333ms)
+✔ V95: database failures expose a stable message without connection or SQL details (0.490583ms)
+✔ V95: readiness verifies schema version and rejects absent columns without DDL (11.435792ms)
+✔ V95: schema setup refuses to connect without its explicit operator guard (89.358666ms)
+ℹ tests 101
+ℹ suites 0
+ℹ pass 101
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 640.330042
+
+Checking engine
+> cargo test --offline --locked --manifest-path engine/Cargo.toml
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.54s
+     Running unittests src/lib.rs (engine/target/debug/deps/falcon_engine-042827fc1c7adea3)
+
+running 34 tests
+test dexscreener::tests::decimal_math_is_integer_based ... ok
+test dexscreener::tests::exact_liquidity_comparison_keeps_fractional_and_large_values ... ok
+test dexscreener::tests::usdc_quote_beats_a_deeper_non_usd_pool ... ok
+test domain::tests::coherence_cap_and_timestamp_validity_fail_closed ... ok
+test council::tests::dislocation_is_veto_only ... ok
+test council::tests::v73_dislocation_gap_overflow_returns_no_data_and_renders ... ok
+test council::tests::v72_prestocks_symbol_must_match_the_configured_underlying ... ok
+test domain::tests::iso_parser_accepts_utc_and_rejects_garbage ... ok
+test council::ingress_tests::day_old_captures_cannot_publish ... ok
+test council::tests::published_verdict_requires_reference_bytes_bound_to_the_snapshot ... ok
+test domain::tests::stable_keys_and_hash_are_order_independent ... ok
+test domain::tests::snapshot_fails_closed_when_a_capture_is_missing ... ok
+test council::ingress_tests::forged_ready_status_is_rejected_at_ingress ... ok
+test perps::tests::unresolved_registry_is_no_data ... ok
+test prestocks::tests::v66_exact_math_vectors ... ok
+test council::tests::published_blocked_nodata_transitions ... ok
+test graph::tests::configured_pyth_references_attribute_to_pyth ... ok
+test prestocks::tests::parses_only_valid_numeric_rows ... ok
+test graph::tests::graph_has_expected_density_and_closed_edges ... ok
+test graph::tests::issuer_mark_references_never_claim_pyth ... ok
+test graph::tests::every_node_detail_is_a_value_source_or_reason ... ok
+test prestocks::tests::v72_conflicting_duplicate_mint_rows_are_omitted ... ok
+test prestocks::tests::v66_state_fail_closed_vectors ... ok
+test prestocks::tests::v72_mint_row_symbol_must_match_configured_underlying ... ok
+test prestocks::tests::v73_multiplier_gap_overflow_fails_closed ... ok
+test prestocks::tests::v73_price_sanity_gap_overflow_returns_failed_capture ... ok
+test prestocks::tests::v74_supply_decimals_outside_u32_are_rejected ... ok
+test pyth::tests::exact_fixed_point_conversion ... ok
+test serve::tests::configured_pyth_failure_removes_the_issuer_mark_and_good_feed_replaces_it ... ok
+test serve::tests::stocklana_roster_is_prestocks_only ... ok
+test serve::tests::unconfigured_pyth_keeps_the_issuer_mark ... ok
+test serve::tests::missing_price_does_not_publish_a_number ... ok
+test serve::tests::published_advice_returns_citations_and_execution_ready_false ... ok
+test serve::tests::configured_pyth_failure_enters_hashed_snapshot_and_returns_no_data ... ok
+
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/main.rs (engine/target/debug/deps/falcon_engine-ea7b1ce65750956c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/parity.rs (engine/target/debug/deps/parity-bc537a66c7f9227e)
+
+running 4 tests
+test perps_missing_registry_is_no_data ... ok
+test v66_inline_json_vectors_match_typescript ... ok
+test snapshot_ready_only_when_every_capture_has_value ... ok
+test council_status_transitions_remain_fail_closed ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests falcon_engine
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+Verification summary
+repository: PASS
+advisory: PASS
+web: PASS
+mesh: PASS
+engine: PASS
+Browser checks, hosted access, live providers, migrations, and real wallet transactions were not verified.

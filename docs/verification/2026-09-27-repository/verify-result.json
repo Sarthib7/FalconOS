@@ -1,0 +1,7 @@
+{
+  "command": "npm run verify",
+  "exit_code": 0,
+  "duration_seconds": 36.27,
+  "database": "disposable local Unix socket; effective falcon_mesh_app role",
+  "log": "/private/tmp/falcon-repo-verify-9n6ECd/verify.log"
+}

@@ -1,8 +1,12 @@
 # FalconOS
 
+## Repository work: 2026-09-27
+
+[VERIFIED, user choice] The user selected option `1`: retain folders, document current architecture and authority, expose component verification, and check website/API release inputs. The [current map](docs/README.md) is the navigation entry point. [Status](status.md) records active tasks and measured results. Dated sections below preserve prior product decisions and evidence; their old current-state labels do not supersede newer records for the same component.
+
 ## Active dashboard port: 2026-09-27
 
-[VERIFIED, latest user direction and release] The user requested the new website live. Commit `bfa82ca` is published on `https://falconos.markets/`; the dashboard is `/dashboard/`. All 39 public asset hashes match the reviewed build. Signup binding repair and hosted mesh deployment remain separate. See [release evidence](docs/verification/2026-09-27-live.md).
+[VERIFIED, retained release evidence] The user requested the new website live. Initial React release `bfa82ca` was followed by signup backend `61fa1a9` and completion UI `9af809b` at `https://falconos.markets/`. The dashboard remains `/dashboard/`. The latest retained proof matches all 39 public asset hashes. This corrects the earlier pending-signup-repair statement. Hosted mesh connectivity and inbox delivery remain unverified. See [the signup release evidence](docs/verification/2026-09-27-cloudflare-email.md).
 
 [VERIFIED, user direction] The user requested the dashboard designs from the same OpenDesign project as runnable React. Its current index opens Control Centre. The additive `/dashboard/` route preserves Overview, Decisions, Knowledge and Connections. See [the port contract](docs/control-centre.md). Existing mesh and wallet services retain their current boundaries.
 
