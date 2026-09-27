@@ -131,17 +131,35 @@ function Waitlist() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState(false);
+  const [confirmedEmail, setConfirmedEmail] = useState('');
+  const confirmed = useRef(new Map());
+  const input = useRef(null);
+  const success = useRef(null);
   const request = useRef(null);
   useEffect(() => () => { request.current?.abort(); request.current = null; }, []);
+  useLayoutEffect(() => {
+    if (confirmedEmail) success.current?.focus({ preventScroll: true });
+    else if (confirmed.current.size) input.current?.focus({ preventScroll: true });
+  }, [confirmedEmail]);
   async function submit(event) {
     event.preventDefault();
-    if (request.current) return;
+    if (request.current || confirmedEmail) return;
+    const normalized = email.trim().toLowerCase();
+    const previous = confirmed.current.get(normalized);
+    if (previous) {
+      setError(false); setMessage(registrationMessage({ ...previous, status: 'already_registered' }));
+      setConfirmedEmail(normalized);
+      return;
+    }
     const controller = new AbortController(); request.current = controller;
     const timer = setTimeout(() => controller.abort(), 15000);
     setBusy(true); setError(false); setMessage('Saving your address…');
     try {
       const result = await registerEmail(email, { signal: controller.signal });
-      if (request.current === controller) setMessage(registrationMessage(result));
+      if (request.current === controller) {
+        confirmed.current.set(normalized, result);
+        setMessage(registrationMessage(result)); setConfirmedEmail(normalized);
+      }
     } catch (failure) {
       if (request.current === controller) { setError(true); setMessage(controller.signal.aborted ? 'Signup timed out. Your email is still here. Try again.' : failure.message); }
     } finally {
@@ -150,7 +168,11 @@ function Waitlist() {
     }
   }
   return <section className="container section waitlist" id="waitlist" aria-labelledby="waitlist-title" data-od-id="waitlist"><div className="section-heading"><div><span className="section-index">03 / PRODUCT UPDATES</span><h2 id="waitlist-title" tabIndex="-1">Follow the build.<br /><em>Join the early list.</em></h2></div><p>Get updates as we test the graph, Devnet lending, and the next product steps.</p></div>
-    <form id="waitlist-form" className="waitlist-form" onSubmit={submit}><div className="waitlist-field"><label htmlFor="waitlist-email">Email address</label><input id="waitlist-email" name="email" type="email" autoComplete="email" maxLength={254} required value={email} disabled={busy} onChange={event => { setEmail(event.target.value); setMessage(''); setError(false); }} placeholder="Your email address" /></div><button id="waitlist-submit" className="button primary" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Join the list'}<Arrow /></button><p id="waitlist-status" className={`waitlist-status${error ? ' is-error' : ''}`} role={error ? 'alert' : 'status'} aria-live="polite">{message || 'Email signup only. No wallet connection is needed.'}</p></form>
+    <form id="waitlist-form" className={`waitlist-form${confirmedEmail ? ' is-complete' : ''}`} onSubmit={submit}>
+      {confirmedEmail ? <><div id="waitlist-success" className="waitlist-success" ref={success} tabIndex="-1" aria-describedby="waitlist-status"><svg className="waitlist-check" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="22" /><path d="m14 24 7 7 13-14" /></svg><div><strong>You're on the list.</strong><span>{confirmedEmail}</span></div></div><button id="waitlist-another" className="button" type="button" onClick={() => { setConfirmedEmail(''); setEmail(''); setMessage(''); setError(false); }}>Use another email</button></>
+        : <><div className="waitlist-field"><label htmlFor="waitlist-email">Email address</label><input id="waitlist-email" ref={input} name="email" type="email" autoComplete="email" maxLength={254} required value={email} disabled={busy} aria-describedby="waitlist-status" onChange={event => { setEmail(event.target.value); setMessage(''); setError(false); }} placeholder="Your email address" /></div><button id="waitlist-submit" className="button primary" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Join the list'}<Arrow /></button></>}
+      <p id="waitlist-status" className={`waitlist-status${error ? ' is-error' : ''}`} role={error ? 'alert' : 'status'} aria-live="polite" aria-atomic="true">{message || 'Email signup only. No wallet connection is needed.'}</p>
+    </form>
   </section>;
 }
 

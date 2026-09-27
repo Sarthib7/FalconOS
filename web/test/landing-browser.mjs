@@ -113,10 +113,12 @@ async function inputEmail(p, email) {
   await p.evaluate(`(() => { const input = document.getElementById('waitlist-email'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(email)}); input.dispatchEvent(new Event('input',{bubbles:true})); })()`);
 }
 async function signup(p, email) {
+  if (await p.evaluate('Boolean(document.getElementById("waitlist-another"))')) await p.click('#waitlist-another');
+  await p.wait('Boolean(document.getElementById("waitlist-email"))');
   await inputEmail(p, email);
   await p.click('#waitlist-submit');
-  await p.wait('!document.getElementById("waitlist-submit").disabled && document.getElementById("waitlist-status").textContent !== "Email signup only. No wallet connection is needed."');
-  return p.evaluate('({text:document.getElementById("waitlist-status").textContent,error:document.getElementById("waitlist-status").getAttribute("role")==="alert",value:document.getElementById("waitlist-email").value})');
+  await p.wait('Boolean(document.getElementById("waitlist-success")) || (document.getElementById("waitlist-submit")?.disabled === false && document.getElementById("waitlist-status").getAttribute("role") === "alert")');
+  return p.evaluate('({text:document.getElementById("waitlist-status").textContent,error:document.getElementById("waitlist-status").getAttribute("role")==="alert",value:document.getElementById("waitlist-email")?.value ?? document.querySelector("#waitlist-success span").textContent})');
 }
 async function closeServer() {
   if (!server?.listening) return;
@@ -261,11 +263,12 @@ try {
   const registered = await signup(p, 'Browser.Capture@Example.com');
   const row = readRows('capture', 'SELECT email, source, ip_hash FROM waitlist_entries')[0];
   check('V105/V106: unconfigured delivery reports only durable registration', registered.text === 'Your address is registered.' && !registered.error && row.email === 'browser.capture@example.com' && row.source === 'landing' && /^[a-f0-9]{64}$/.test(row.ip_hash) && readRows('capture', 'SELECT id FROM waitlist_email_outbox').length === 0 && providerCalls.length === 0, registered);
+  const beforeDuplicate = apiRequests.length;
   const duplicate = await signup(p, 'browser.capture@example.com');
-  check('V105: repeat signup reports the retained registration without duplicate rows', duplicate.text === 'Your address is already registered.' && readRows('capture', 'SELECT email FROM waitlist_entries').length === 1);
-  for (let n = 0; n < 3; n++) await signup(p, `rate-${n}@example.com`);
+  check('V105: repeat signup reports the retained registration without another request', duplicate.text === 'Your address is already registered.' && apiRequests.length === beforeDuplicate && readRows('capture', 'SELECT email FROM waitlist_entries').length === 1);
+  for (let n = 0; n < 4; n++) await signup(p, `rate-${n}@example.com`);
   const limited = await signup(p, 'rate-retained@example.com');
-  check('V105: rate limit stays visible and preserves email for retry', limited.error && limited.value === 'rate-retained@example.com' && /too_many_requests|rate/i.test(limited.text) && readRows('capture', 'SELECT email FROM waitlist_entries').length === 4, limited);
+  check('V105: rate limit stays visible and preserves email for retry', limited.error && limited.value === 'rate-retained@example.com' && /too_many_requests|rate/i.test(limited.text) && readRows('capture', 'SELECT email FROM waitlist_entries').length === 5, limited);
   activeEmailMode = 'accepted';
   const accepted = await signup(p, 'accepted@example.com');
   const acceptedJob = readRows('accepted', 'SELECT status, provider_email_id FROM waitlist_email_outbox')[0];
@@ -274,7 +277,7 @@ try {
   check('V106: repeated signup cannot duplicate an accepted provider attempt', providerCalls.filter(item => item.mode === 'accepted').length === 1);
   activeEmailMode = 'failed';
   const failed = await signup(p, 'failed@example.com');
-  check('V106: provider failure preserves registration without a delivery claim', failed.text === 'Your address is registered. Confirmation email is not confirmed. You can try again.' && failed.value === 'failed@example.com' && readRows('failed', 'SELECT email FROM waitlist_entries').length === 1 && readRows('failed', 'SELECT provider_email_id FROM waitlist_email_outbox')[0].provider_email_id === null, failed);
+  check('V106: provider failure preserves registration without a delivery claim', failed.text === 'Your address is registered. Confirmation email is not confirmed.' && failed.value === 'failed@example.com' && readRows('failed', 'SELECT email FROM waitlist_entries').length === 1 && readRows('failed', 'SELECT provider_email_id FROM waitlist_email_outbox')[0].provider_email_id === null, failed);
   activeEmailMode = 'unavailable';
   const unavailable = await signup(p, 'retry-retained@example.com');
   check('V105: backend storage failure remains visible and preserves retry input', unavailable.error && unavailable.text === 'waitlist_unavailable' && unavailable.value === 'retry-retained@example.com' && readRows('unavailable', 'SELECT email FROM waitlist_entries').length === 0, unavailable);

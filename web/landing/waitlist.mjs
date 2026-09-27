@@ -24,6 +24,6 @@ export async function registerEmail(value, { fetchImpl = globalThis.fetch, signa
 export function registrationMessage(result) {
   const registered = result.status === 'already_registered' ? 'Your address is already registered.' : 'Your address is registered.';
   if (result.emailStatus === 'accepted') return `${registered} Confirmation email accepted for delivery.`;
-  if (['pending', 'unknown', 'failed'].includes(result.emailStatus)) return `${registered} Confirmation email is not confirmed. You can try again.`;
+  if (['pending', 'unknown', 'failed'].includes(result.emailStatus)) return `${registered} Confirmation email is not confirmed.`;
   return registered;
 }
