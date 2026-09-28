@@ -216,7 +216,24 @@ test('a Wallet-Standard-only sign-in stays honest about trade readiness and neve
   dom.window.solana = null;
   dom.window.phantom = null;
 
-  await app.signIn();
+  // Deterministic, distinguishable Devnet reads: proves the balance/history render pulled real
+  // data through refreshAccount(), not leftover state from an earlier test's zeroed mock.
+  const readLamports = 1234567890;
+  const readSignature = 'WSReadRegressionSignature1111111111111111111111111111111111111111111111';
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, options) => {
+    const { method } = JSON.parse(options.body);
+    const result = method === 'getBalance' ? { value: readLamports }
+      : method === 'getSignaturesForAddress'
+        ? [{ signature: readSignature, slot: 999999, blockTime: 1700000000, confirmationStatus: 'confirmed', err: null }]
+        : { value: [] };
+    return { ok: true, json: async () => ({ jsonrpc: '2.0', id: 1, result }) };
+  };
+  try {
+    await app.signIn();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 
   const proof = readSession();
   assert.equal(proof.address, address);
@@ -226,6 +243,15 @@ test('a Wallet-Standard-only sign-in stays honest about trade readiness and neve
   assert.notEqual(dom.elements.get('wallet-connection-state').textContent, 'Proof verified · wallet connected');
   assert.match(dom.elements.get('wallet-connection-state').textContent, /wallet extension/);
   assert.notEqual(dom.elements.get('connect-wallet').textContent, 'Refresh account');
+
+  // Reads need only the proof address: a signed-in Wallet-Standard-only wallet must still load
+  // real Devnet balance and transaction history, never a "reconnect" dead end for reads.
+  assert.equal(dom.elements.get('sol-balance').textContent, '1.234567 SOL');
+  assert.equal(dom.elements.get('balance-source').textContent, 'Devnet RPC · confirmed');
+  assert.equal(dom.elements.get('portfolio-rows').children[0].children[0].textContent, 'No SPL Token or Token-2022 balances found on Devnet.');
+  assert.equal(dom.elements.get('chain-tx-count').textContent, '1');
+  assert.equal(dom.elements.get('activity-rows').children.length, 1);
+  assert.match(dom.elements.get('activity-rows').children[0].children[3].children[0].href, new RegExp(readSignature));
 
   // Get Quote must fail up front with the specific capability reason, not a late sign-send throw,
   // and not the generic "reconnect" wording (which falsely implies retrying would help).

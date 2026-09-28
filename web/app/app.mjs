@@ -141,10 +141,6 @@ function renderPortfolio() {
   byId('token-count').textContent = String(portfolioData.tokens.length);
   byId('chain-tx-count').textContent = String(portfolioData.signatures.length);
   const rows = byId('portfolio-rows');
-  if (connectedAddress !== activeAddress()) {
-    emptyRow(rows, 4, 'Reconnect the verified wallet to load live Devnet balances.');
-    return;
-  }
   if (!portfolioData.tokens.length) {
     emptyRow(rows, 4, 'No SPL Token or Token-2022 balances found on Devnet.');
     return;
@@ -219,7 +215,7 @@ function renderHistory() {
   });
   entries.sort((left, right) => right.epoch - left.epoch);
   if (!entries.length) {
-    emptyRow(rows, 4, connectedAddress === activeAddress() ? 'No saved orders or recent Devnet transactions.' : 'Reconnect wallet to load Devnet transactions.');
+    emptyRow(rows, 4, 'No saved orders or recent Devnet transactions.');
     return;
   }
   rows.replaceChildren();
@@ -396,12 +392,12 @@ export async function signIn() {
 
   if (sessionProof !== proof) return; // Signed out or re-signed-in while the bridge attempt was pending.
   renderSession();
-  if (connectedAddress === address) {
-    setAppStatus('Wallet proof verified. Dashboard opened. Refreshing Devnet account data.', 'success');
-    await refreshAccount();
-  } else {
-    setAppStatus(`Wallet proof verified. Dashboard opened. ${NO_TRADE_PROVIDER_REASON}`, 'success');
-  }
+  setAppStatus(connectedAddress === address
+    ? 'Wallet proof verified. Dashboard opened. Refreshing Devnet account data.'
+    : 'Wallet proof verified. Dashboard opened. Loading Devnet account data.', 'success');
+  await refreshAccount();
+  if (sessionProof !== proof) return; // Signed out or re-signed-in while Devnet reads were loading.
+  if (connectedAddress !== address) setAppStatus(`Devnet account data loaded. ${NO_TRADE_PROVIDER_REASON}`, 'success');
 }
 
 function bindWalletEvents(provider) {
@@ -472,7 +468,6 @@ export function signOut() {
 
 async function refreshAccount() {
   requireSession();
-  if (connectedAddress !== activeAddress()) throw new Error('Reconnect the signed-in wallet to read Devnet account data.');
   setAppStatus('Reading wallet balances and recent signatures from Solana Devnet…');
   const reads = await Promise.allSettled([
     getDevnetBalance(activeAddress()),
