@@ -85,6 +85,61 @@ for (const input of [
   });
 }
 
+test('R1: the per-owner rate limit trips independently of other owners and clears on window reset', async t => {
+  let currentTime = 1_000_000;
+  const clock = () => currentTime;
+  const store = { ready: async () => {} };
+  const server = createApi({ store, tokenHashes: hashes, rateWindowMs: 1000, rateMaxPerOwner: 2, rateMaxGlobal: 100, clock });
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const get = async (path, credential) => {
+    const response = await fetch(base + path, { headers: { ...(credential ? { Authorization: `Bearer ${credential}` } : {}) } });
+    return { status: response.status, retryAfter: response.headers.get('retry-after'), data: await response.json() };
+  };
+
+  assert.equal((await get('/v1/connectors', token)).status, 200);
+  assert.equal((await get('/v1/connectors', token)).status, 200);
+  const blocked = await get('/v1/connectors', token);
+  assert.equal(blocked.status, 429);
+  assert.equal(blocked.data.error.code, 'RATE_LIMITED');
+  assert.equal(blocked.retryAfter, '1');
+
+  const other = await get('/v1/connectors', otherToken);
+  assert.equal(other.status, 200, 'a different owner is unaffected by the first owner exhausting its per-owner cap');
+
+  assert.equal((await get('/healthz')).status, 200, 'health checks stay exempt while an owner is capped');
+  assert.equal((await get('/readyz')).status, 200, 'readiness checks stay exempt while an owner is capped');
+
+  currentTime += 1000;
+  const afterReset = await get('/v1/connectors', token);
+  assert.equal(afterReset.status, 200, 'a window rollover clears the per-owner cap');
+});
+
+test('R2: the global rate limit trips across owners even when no owner reaches its own cap', async t => {
+  let currentTime = 2_000_000;
+  const clock = () => currentTime;
+  const store = { ready: async () => {} };
+  const server = createApi({ store, tokenHashes: hashes, rateWindowMs: 1000, rateMaxPerOwner: 100, rateMaxGlobal: 3, clock });
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const get = async (path, credential) => {
+    const response = await fetch(base + path, { headers: { ...(credential ? { Authorization: `Bearer ${credential}` } : {}) } });
+    return { status: response.status, data: await response.json() };
+  };
+
+  assert.equal((await get('/v1/connectors', token)).status, 200);
+  assert.equal((await get('/v1/connectors', otherToken)).status, 200);
+  assert.equal((await get('/v1/connectors', token)).status, 200);
+  const blocked = await get('/v1/connectors', otherToken);
+  assert.equal(blocked.status, 429, 'the shared global cap trips even though this owner is far under its own per-owner cap');
+  assert.equal(blocked.data.error.code, 'RATE_LIMITED');
+
+  assert.equal((await get('/healthz')).status, 200, 'health checks stay exempt while the global cap is exhausted');
+  assert.equal((await get('/readyz')).status, 200, 'readiness checks stay exempt while the global cap is exhausted');
+});
+
 test('I15/V91-V96: authenticated HTTP source -> graph -> saved analysis uses real Postgres', { skip: !url && 'Set FALCON_MESH_TEST_DATABASE_URL to the disposable database.' }, async t => {
   const pool = new Pool({ connectionString: url, max: 3, connectionTimeoutMillis: 3000 });
   const store = createStore(pool);
