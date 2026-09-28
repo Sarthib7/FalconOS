@@ -268,6 +268,29 @@ test('a Wallet-Standard-only sign-in stays honest about trade readiness and neve
   assert.match(dom.elements.get('app-status').textContent, /wallet extension/);
 });
 
+test('a Wallet-Standard-only sign-in preserves the read-failure status instead of masking it with success', async () => {
+  dom.localStorage.clear();
+  dom.window.solana = null;
+  dom.window.phantom = null;
+
+  // All three Devnet reads must fail deterministically.
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('Devnet RPC unavailable in this test.'); };
+  try {
+    await app.signIn();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  const proof = readSession();
+  assert.equal(proof.address, address);
+
+  // A read failure must not be clobbered by the trade-capability status set afterward.
+  assert.equal(dom.elements.get('app-status').dataset.kind, 'error');
+  assert.match(dom.elements.get('app-status').textContent, /could not load/);
+  assert.doesNotMatch(dom.elements.get('app-status').textContent, /account data loaded/);
+});
+
 test('a legacy-bound sign-in still clears the wallet-capability gate and reaches the trade flow', async () => {
   dom.localStorage.clear();
   const legacyA = makeLegacy(address);
