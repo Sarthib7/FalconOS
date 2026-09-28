@@ -137,7 +137,7 @@ function renderSession() {
 
 function renderPortfolio() {
   byId('sol-balance').textContent = portfolioData.balance === null ? '—' : formatSol(portfolioData.balance);
-  byId('balance-source').textContent = portfolioData.balance === null ? 'Devnet RPC · connect wallet to load' : 'Devnet RPC · confirmed';
+  byId('balance-source').textContent = portfolioData.balance === null ? 'Devnet RPC · not loaded' : 'Devnet RPC · confirmed';
   byId('token-count').textContent = String(portfolioData.tokens.length);
   byId('chain-tx-count').textContent = String(portfolioData.signatures.length);
   const rows = byId('portfolio-rows');
@@ -397,7 +397,7 @@ export async function signIn() {
     : 'Wallet proof verified. Dashboard opened. Loading Devnet account data.', 'success');
   await refreshAccount();
   if (sessionProof !== proof) return; // Signed out or re-signed-in while Devnet reads were loading.
-  if (connectedAddress !== address) setAppStatus(`Devnet account data loaded. ${NO_TRADE_PROVIDER_REASON}`, 'success');
+  if (connectedAddress !== address && byId('app-status').dataset.kind !== 'error') setAppStatus(`Devnet account data loaded. ${NO_TRADE_PROVIDER_REASON}`, 'success');
 }
 
 function bindWalletEvents(provider) {
