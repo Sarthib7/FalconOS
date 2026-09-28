@@ -8,6 +8,8 @@
 
 [VERIFIED, retained release evidence] The user requested the new website live. Initial React release `bfa82ca` was followed by signup backend `61fa1a9` and completion UI `9af809b` at `https://falconos.markets/`. The dashboard remains `/dashboard/`. The latest retained proof matches all 39 public asset hashes. This corrects the earlier pending-signup-repair statement. Hosted mesh connectivity and inbox delivery remain unverified. See [the signup release evidence](docs/verification/2026-09-27-cloudflare-email.md).
 
+[VERIFIED, hosted mesh deploy, 2026-09-28] Hosted mesh connectivity is now verified: the mesh API is deployed on Railway (project `falcon-mesh`, personal Hobby workspace) at `https://falcon-mesh-production.up.railway.app`, connecting to Supabase project `mcmxfwkhdzzsfpvldgdw` over Railway's outbound IPv6 egress with `sslmode=verify-full` against the bundled Supabase Root 2021 CA. `GET .../readyz` returned `200 {"status":"ready"}`; `/healthz` returned `200 {"status":"alive"}`. Inbox delivery verification is unrelated to this deploy and remains as previously recorded. The mesh store-persistence unit tests that require a live database remain DB-gated and unrun locally.
+
 [VERIFIED, user direction] The user requested the dashboard designs from the same OpenDesign project as runnable React. Its current index opens Control Centre. The additive `/dashboard/` route preserves Overview, Decisions, Knowledge and Connections. See [the port contract](docs/control-centre.md). Existing mesh and wallet services retain their current boundaries.
 
 ## Active knowledge mesh MVP: 2026-09-27
