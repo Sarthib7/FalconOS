@@ -4,7 +4,7 @@ import { MeshError } from './domain.mjs';
 import { CONNECTORS } from './live.mjs';
 
 const BODY_LIMIT = 1024 * 1024;
-const STATUSES = { INVALID_INPUT: 400, UNAUTHORIZED: 401, ORIGIN_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, TOO_LARGE: 413, STORAGE_UNAVAILABLE: 503, INTERNAL_ERROR: 500 };
+const STATUSES = { INVALID_INPUT: 400, UNAUTHORIZED: 401, ORIGIN_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, TOO_LARGE: 413, RATE_LIMITED: 429, STORAGE_UNAVAILABLE: 503, INTERNAL_ERROR: 500 };
 
 export function parseTokenHashes(raw) {
   let value;
@@ -64,8 +64,26 @@ async function body(request) {
   } catch { throw new MeshError('INVALID_INPUT', 'Request body must contain valid UTF-8 JSON.'); }
 }
 
-export function createApi({ store, lending = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString() }) {
+export function createApi({
+  store, lending = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(),
+  rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600, clock = () => Date.now(),
+}) {
   if (!(tokenHashes instanceof Map) || !tokenHashes.size) throw new Error('Mesh authentication is required.');
+  let windowStart = clock();
+  let globalCount = 0;
+  const ownerCounts = new Map();
+  const rateLimit = owner => {
+    const time = clock();
+    if (time - windowStart >= rateWindowMs) { windowStart = time; globalCount = 0; ownerCounts.clear(); }
+    globalCount += 1;
+    const ownerCount = (ownerCounts.get(owner) || 0) + 1;
+    ownerCounts.set(owner, ownerCount);
+    if (globalCount > rateMaxGlobal || ownerCount > rateMaxPerOwner) {
+      const error = new MeshError('RATE_LIMITED', 'Rate limit exceeded. Retry shortly.');
+      error.retryAfter = Math.max(1, Math.ceil((windowStart + rateWindowMs - time) / 1000));
+      throw error;
+    }
+  };
   const server = createServer({ maxHeaderSize: 8192, requestTimeout: 15000, headersTimeout: 10000 }, async (request, response) => {
     const send = (status, payload) => {
       response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
@@ -98,6 +116,7 @@ export function createApi({ store, lending = null, tokenHashes, allowedOrigins =
       const token = /^Bearer ([A-Za-z0-9._~-]{32,256})$/.exec(request.headers.authorization || '')?.[1];
       const owner = token && tokenHashes.get(createHash('sha256').update(token).digest('hex'));
       if (!owner) throw new MeshError('UNAUTHORIZED', 'A valid mesh access token is required.');
+      rateLimit(owner);
       if (url.pathname.startsWith('/v1/lending/')) {
         if (!lending) throw new MeshError('STORAGE_UNAVAILABLE', 'The lending service is not configured.');
         if (url.pathname === '/v1/lending/intents') {
@@ -149,6 +168,7 @@ export function createApi({ store, lending = null, tokenHashes, allowedOrigins =
       const known = error instanceof MeshError && Object.hasOwn(STATUSES, error.code);
       const code = known ? error.code : 'STORAGE_UNAVAILABLE';
       if (request.method === 'POST') request.resume();
+      if (known && code === 'RATE_LIMITED' && Number.isInteger(error.retryAfter)) response.setHeader('Retry-After', String(error.retryAfter));
       send(STATUSES[code], { error: { code, message: known ? error.message : 'Mesh storage could not complete the request.' } });
     }
   });
