@@ -109,6 +109,26 @@
 .app-trade-result[data-kind="error"] { color: #f0b4ad; }
 .app-trade-result[data-kind="success"] { color: var(--green); }
 .app-activity-link { color: var(--app-accent); }
+.app-wallet-picker { width: min(calc(100% - 28px), 520px); max-height: calc(100vh - 28px); margin: auto; padding: 0; border: 1px solid var(--border); border-radius: 0; background: #0b120e; color: var(--fg); box-shadow: 0 18px 50px rgba(0, 0, 0, .5); }
+.app-wallet-picker::backdrop { background: rgba(4, 8, 6, .78); }
+.app-wallet-picker-panel { display: grid; gap: 12px; min-width: 0; padding: clamp(18px, 4vw, 28px); }
+.app-wallet-picker-panel h2 { margin: 0; color: var(--fg); font: 400 clamp(24px, 5vw, 34px)/1.05 Georgia, serif; letter-spacing: -.03em; }
+.app-wallet-picker-copy { margin: -2px 0 3px; color: var(--muted); font: 10px/1.55 ui-monospace, monospace; }
+.app-wallet-options { display: grid; gap: 7px; max-height: min(46vh, 360px); min-width: 0; overflow-y: auto; padding: 2px; }
+.app-wallet-option { width: 100%; min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 0; background: #101a14; color: var(--fg); cursor: pointer; font: 600 9px/1.3 ui-monospace, monospace; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
+.app-wallet-option:hover { border-color: var(--app-accent); color: var(--app-accent); }
+.app-wallet-option:disabled { border-color: #24342b; background: #0d1511; color: #6f8277; cursor: not-allowed; opacity: .72; }
+.app-wallet-option-unavailable .app-wallet-option-reason { min-width: 0; overflow-wrap: anywhere; color: #7d8d84; font: 400 8px/1.4 ui-monospace, monospace; letter-spacing: 0; text-align: right; text-transform: none; }
+.app-wallet-picker-cancel:focus-visible { outline: 2px solid var(--app-accent); outline-offset: 2px; }
+.app-wallet-option-icon { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid #31513f; background: #0c1310; color: var(--app-accent); font: 12px Georgia, serif; }
+.app-wallet-option-icon img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.app-wallet-option-name { min-width: 0; overflow-wrap: anywhere; }
+.app-wallet-option-arrow { color: #6f8277; font-size: 13px; }
+.app-wallet-picker-cancel { justify-self: start; }
+@media (prefers-reduced-motion: reduce) {
+  .app-wallet-picker,
+  .app-wallet-option { scroll-behavior: auto; transition: none; animation: none; }
+}
 
 @media (max-width: 960px) {
   .app-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }

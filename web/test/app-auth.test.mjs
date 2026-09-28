@@ -90,3 +90,31 @@ test('SIWS proof verifies the signature and rejects changed scope or message', a
   const legacyProof = { ...legacyRequest, signature: bytesToBase64(legacySignature) };
   assert.equal(await verifySignInProof(legacyProof, 'https://falconos.markets', now + 1000, webcrypto), true);
 });
+
+test('verifyEd25519 falls back when subtle lacks Ed25519', async () => {
+  const pair = await webcrypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const publicKey = new Uint8Array(await webcrypto.subtle.exportKey('raw', pair.publicKey));
+  const address = encodeBase58(publicKey);
+  const message = new TextEncoder().encode('fallback sign-in message');
+  const signature = new Uint8Array(await webcrypto.subtle.sign('Ed25519', pair.privateKey, message));
+
+  // Pre-Chrome-137 stub: real randomness, but Ed25519 importKey/verify are unsupported.
+  const oldBrowser = {
+    getRandomValues: (array) => webcrypto.getRandomValues(array),
+    subtle: {
+      importKey: async () => { throw new DOMException('Ed25519 unsupported', 'NotSupportedError'); },
+      verify: async () => { throw new DOMException('Ed25519 unsupported', 'NotSupportedError'); },
+    },
+  };
+  // Fallback loader stands in for @noble/ed25519 verifyAsync(signature, message, publicKey).
+  const loadFallback = async () => ({
+    verifyAsync: async (sig, msg, pk) => {
+      const key = await webcrypto.subtle.importKey('raw', pk, { name: 'Ed25519' }, false, ['verify']);
+      return webcrypto.subtle.verify({ name: 'Ed25519' }, key, sig, msg);
+    },
+  });
+
+  assert.equal(await verifyEd25519(address, message, signature, oldBrowser, loadFallback), true);
+  const tampered = new TextEncoder().encode('fallback sign-in message!');
+  assert.equal(await verifyEd25519(address, tampered, signature, oldBrowser, loadFallback), false);
+});
