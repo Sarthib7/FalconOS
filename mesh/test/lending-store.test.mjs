@@ -6,6 +6,7 @@ import { createStore } from '../store.mjs';
 import { MeshError } from '../domain.mjs';
 import { captureSource } from '../live.mjs';
 import { createLendingStore } from '../lending-store.mjs';
+import { ADAPTER_VERSION } from '../kamino-wire.mjs';
 
 const connectionString = process.env.FALCON_MESH_TEST_DATABASE_URL;
 if (!connectionString) throw new Error('FALCON_MESH_TEST_DATABASE_URL must name a disposable Postgres database with the full mesh migration history.');
@@ -27,7 +28,8 @@ async function publicFetch(_url, init) {
   } });
 }
 function intent(request) {
-  return { schemaVersion: 1, network: 'devnet', genesisHash: GENESIS, walletControl: 'unverified', ...request,
+  return { schemaVersion: 1, network: 'devnet', genesisHash: GENESIS, walletControl: 'unverified',
+    policyVersion: 'mesh-public-evidence/1', adapterVersion: ADAPTER_VERSION, ...request,
     transactionBase64: Buffer.from('fixture unsigned message').toString('base64'), messageSha256: 'a'.repeat(64),
     snapshot: { capturedAt: AT, graph: { nodes: [], edges: [] } }, estimatedAmounts: { liquidityBaseUnits: '1', receiptBaseUnits: '1' } };
 }

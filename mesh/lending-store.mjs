@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { PublicKey } from '@solana/web3.js';
 import { MeshError } from './domain.mjs';
 import { analyzeLiveGraph } from './live.mjs';
+import { verifyLendingVersions } from './kamino.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const SIGNATURE = /^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
@@ -207,6 +208,7 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
       if (repeated) return reuseEvent(repeated, id, 'SUBMITTED', transactionSha256);
       const existing = await findSubmission(pool, owner, id);
       if (existing) return reuseEvent(existing, id, 'SUBMITTED', transactionSha256);
+      verifyLendingVersions(row.intent);
       requireUnexpired(row, stamp());
       const signature = await verifySignedLending(row.intent, input.transactionBase64);
       if (typeof signature !== 'string' || !SIGNATURE.test(signature)) fail('INVALID_INPUT', 'Verified transaction signature is invalid.');
@@ -232,6 +234,7 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
       if (!row) fail('NOT_FOUND', 'Lending intent not found.');
       const repeated = await findEvent(pool, owner, requestId);
       if (repeated) return reuseEvent(repeated, id, 'RECEIPT');
+      verifyLendingVersions(row.intent);
       const submitted = await findSubmission(pool, owner, id);
       if (!submitted) fail('CONFLICT', 'Register the signed transaction before checking its receipt.');
       const data = await readLendingReceipt(row.intent, submitted.data.signature);
