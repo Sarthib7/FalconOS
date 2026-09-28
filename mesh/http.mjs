@@ -4,6 +4,7 @@ import { MeshError } from './domain.mjs';
 import { CONNECTORS } from './live.mjs';
 
 const BODY_LIMIT = 1024 * 1024;
+const EVIDENCE_EXCHANGES = 2;
 const STATUSES = { INVALID_INPUT: 400, UNAUTHORIZED: 401, ORIGIN_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, TOO_LARGE: 413, STORAGE_UNAVAILABLE: 503, INTERNAL_ERROR: 500 };
 
 export function parseTokenHashes(raw) {
@@ -149,7 +150,9 @@ export function createApi({ store, lending = null, tokenHashes, allowedOrigins =
       const known = error instanceof MeshError && Object.hasOwn(STATUSES, error.code);
       const code = known ? error.code : 'STORAGE_UNAVAILABLE';
       if (request.method === 'POST') request.resume();
-      send(STATUSES[code], { error: { code, message: known ? error.message : 'Mesh storage could not complete the request.' } });
+      // Prepare failures attach already-JSON-safe external RPC exchanges (kamino.mjs). Surface the last few, bounded; never for the unknown-error fallback.
+      const evidence = known && Array.isArray(error.evidence?.exchanges) ? { exchanges: error.evidence.exchanges.slice(-EVIDENCE_EXCHANGES) } : null;
+      send(STATUSES[code], { error: { code, message: known ? error.message : 'Mesh storage could not complete the request.', ...(evidence && { evidence }) } });
     }
   });
   server.maxRequestsPerSocket = 100;

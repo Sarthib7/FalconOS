@@ -1,8 +1,10 @@
 import { createHash, createPublicKey, verify } from 'node:crypto';
 import { PublicKey } from '@solana/web3.js';
-import { LENDING_CONFIG as C, deriveAccounts, buildLendingTransaction, validateLendingTransaction, deserializeLendingTransaction, lendingAmount } from './kamino-wire.mjs';
+import { LENDING_CONFIG as C, ADAPTER_VERSION, deriveAccounts, buildLendingTransaction, validateLendingTransaction, deserializeLendingTransaction, lendingAmount } from './kamino-wire.mjs';
 import { MeshError } from './domain.mjs';
 
+// The live analysis this intent is bound to is required to carry exactly this policy version (lending-store requireAnalysis).
+const POLICY_VERSION = 'mesh-public-evidence/1';
 const SCALE = 1n << 60n;
 const BODY_LIMIT = 128 * 1024;
 const TIMEOUT_MS = 8000;
@@ -219,6 +221,7 @@ async function prepare(input, { fetchImpl, now, exchanges }) {
   const { blockhash, lastValidBlockHeight } = latest.value;
   const prepared = {
     schemaVersion: 1, network: 'devnet', genesisHash: C.genesisHash, walletControl: 'unverified',
+    policyVersion: POLICY_VERSION, adapterVersion: ADAPTER_VERSION,
     wallet, action, inputBaseUnits, accounts, createDestinationAta: decoded.createDestinationAta,
     snapshot: { capturedAt, slot, exchanges, decoded, graph: snapshotGraph(accounts, decoded, slot) }, blockhash, lastValidBlockHeight,
   };
@@ -295,6 +298,13 @@ function signedLending(intent, transactionBase64) {
 export function verifySignedLending(intent, transactionBase64) {
   try { return signedLending(intent, transactionBase64); }
   catch { throw new MeshError('INVALID_INPUT', 'Signed lending transaction does not match the prepared wallet intent.'); }
+}
+
+// Catches adapter/ABI or policy drift after preparation: the stored intent's stamped versions must still equal the server constants.
+export function verifyLendingVersions(intent) {
+  if (intent?.policyVersion !== POLICY_VERSION || intent?.adapterVersion !== ADAPTER_VERSION) {
+    throw new MeshError('CONFLICT', 'Prepared lending intent was built against a different policy or adapter version. Prepare it again.');
+  }
 }
 
 function receiptBalance(list, transaction, account, mint, owner, allowMissing = false) {

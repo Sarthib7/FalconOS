@@ -92,7 +92,7 @@ createStore({ storage, locks }) // injected objects; browser defaults allowed
 // exportRun() -> string; validated stored Run as formatted JSON
 ```
 
-[INFERRED, storage contract] Use key `falcon.treasury.simulation.v1` and Web Lock `falcon.treasury.simulation.v1`. Limit stored text to 262,144 characters. Under the exclusive lock, reload and replay before each mutation. `expectedRevision` must equal the stored event count. An identical retry can return the saved result with an older revision. Persist a new command with one `localStorage.setItem` before returning success. Missing lock support, corrupt data, unavailable storage, conflicts, or quota errors must remain visible and preserve the prior record. Never silently reset, truncate, or fall back to memory. No delete/reset API exists.
+[INFERRED, storage contract] Use key `falcon.treasury.simulation.v1` and Web Lock `falcon.treasury.simulation.v1`. Limit stored text to 2,097,152 UTF-16 code units (`string.length`). Under the exclusive lock, reload and replay before each mutation. `expectedRevision` must equal the stored event count. An identical retry can return the saved result with an older revision. Persist a new command with one `localStorage.setItem` before returning success. Missing lock support, corrupt data, unavailable storage, conflicts, or quota errors must remain visible and preserve the prior record. Never silently reset, truncate, or fall back to memory. No delete/reset API exists.
 
 ## UI and verification
 

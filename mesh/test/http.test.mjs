@@ -6,6 +6,7 @@ import { Pool } from 'pg';
 import { createApi, parseOrigins, parseTokenHashes } from '../http.mjs';
 import { createStore } from '../store.mjs';
 import { makeDemoDocuments } from '../fixtures.mjs';
+import { MeshError } from '../domain.mjs';
 
 const at = '2026-09-27T12:00:00.000Z';
 const token = 'test-only-falcon-mesh-alpha-token-00000000';
@@ -84,6 +85,58 @@ for (const input of [
     assert.equal(writes, 0, 'rejected input must never reach storage');
   });
 }
+
+const EVIDENCE_EXCHANGES = 2;
+
+test('B1: lending prepare failure surfaces bounded, sanitized RPC evidence; other errors omit it', async t => {
+  const exchange = i => ({
+    url: 'https://api.devnet.solana.com', startedAt: at, completedAt: at,
+    request: { method: 'POST', rpcMethod: `method-${i}`, bodyBase64: 'e30=' },
+    response: { httpStatus: 200, contentType: 'application/json', bodyBase64: 'e30=', byteLength: 2, sha256: 'ab' },
+  });
+  const exchanges = [exchange(1), exchange(2), exchange(3), exchange(4)];
+  const lending = {
+    async prepare(owner, input) {
+      if (input.action === 'evidence') {
+        const error = new MeshError('INVALID_INPUT', 'Lending input or account data is invalid.');
+        error.evidence = { exchanges };
+        throw error;
+      }
+      if (input.action === 'conflict') throw new MeshError('CONFLICT', 'A saved live OBSERVED analysis is required.');
+      throw new Error('secret internal detail with SQL SELECT * FROM ...');
+    },
+  };
+  const server = createApi({ store: {}, lending, tokenHashes: hashes });
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const prepare = async action => {
+    const response = await fetch(`${base}/v1/lending/intents`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestId: randomUUID(), analysisId: randomUUID(), wallet: 'w', action, inputBaseUnits: '1' }),
+    });
+    return { status: response.status, data: await response.json() };
+  };
+
+  const surfaced = await prepare('evidence');
+  assert.equal(surfaced.status, 400);
+  assert.equal(surfaced.data.error.code, 'INVALID_INPUT');
+  assert.ok(Array.isArray(surfaced.data.error.evidence.exchanges), 'evidence exchanges must be surfaced');
+  assert.ok(surfaced.data.error.evidence.exchanges.length <= EVIDENCE_EXCHANGES, 'surfaced evidence must be bounded');
+  assert.deepEqual(surfaced.data.error.evidence.exchanges, exchanges.slice(-EVIDENCE_EXCHANGES), 'only the last, unmodified exchange records pass through');
+  assert.deepEqual(Object.keys(surfaced.data.error).sort(), ['code', 'evidence', 'message'], 'no extra error fields leak');
+
+  const conflict = await prepare('conflict');
+  assert.equal(conflict.status, 409);
+  assert.equal(conflict.data.error.code, 'CONFLICT');
+  assert.ok(!('evidence' in conflict.data.error), 'a known error without captured evidence stays evidence-free');
+
+  const fallback = await prepare('other');
+  assert.equal(fallback.status, 503);
+  assert.equal(fallback.data.error.code, 'STORAGE_UNAVAILABLE');
+  assert.equal(fallback.data.error.message, 'Mesh storage could not complete the request.');
+  assert.ok(!('evidence' in fallback.data.error), 'the unknown-error fallback must not surface evidence');
+});
 
 test('I15/V91-V96: authenticated HTTP source -> graph -> saved analysis uses real Postgres', { skip: !url && 'Set FALCON_MESH_TEST_DATABASE_URL to the disposable database.' }, async t => {
   const pool = new Pool({ connectionString: url, max: 3, connectionTimeoutMillis: 3000 });
