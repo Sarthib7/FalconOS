@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import DATA from './data.json';
 import { buildGraph, decide, formatUsdc, replayRun } from '../treasury/domain.mjs';
 import { createStore, STORE_KEY } from './store.mjs';
+import { selectionAfterDispatch } from './selection.mjs';
 import Overview from './Overview.jsx';
 import Decisions from './Decisions.jsx';
 import Knowledge from './Knowledge.jsx';
@@ -130,7 +131,7 @@ export default function App() {
       const event = { id: crypto.randomUUID(), at: timeAt(current.view.state), type, ...payload };
       const next = await store.dispatch(event, current.view.state.revision, { signal });
       if (!mounted.current) return false;
-      acceptSaved(next); setClock(Date.now()); setSelectedEvent(event.id); setSelectedCheck(null); setSelectedNode('observation'); setChartEvent(null); setHistoryPage(Math.floor((next.view.entries.length - 1) / 40));
+      acceptSaved(next); setClock(Date.now()); setSelectedEvent(selectionAfterDispatch({ eventId: event.id, decision: next.view.entries.at(-1)?.decision, selectedEvent })); setSelectedCheck(null); setSelectedNode('observation'); setChartEvent(null); setHistoryPage(Math.floor((next.view.entries.length - 1) / 40));
       if (next.view.state.revoked || next.run.events.length >= 200) stopLoop();
       notify(next.view.entries.at(-1).outcome.message);
       return true;

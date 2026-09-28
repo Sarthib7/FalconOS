@@ -13,6 +13,7 @@
     "build:treasury": "vite build --config vite.treasury.config.js",
     "build:mesh": "vite build --config vite.mesh.config.js",
     "test": "node --test test/*.test.mjs",
+    "test:browser": "node test/treasury-browser.mjs && node test/dashboard-browser.mjs",
     "test:dashboard": "node --test test/dashboard.test.mjs",
     "test:dashboard:browser": "node test/dashboard-browser.mjs",
     "preview": "vite preview"

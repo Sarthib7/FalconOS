@@ -7,10 +7,19 @@ import { STORE_KEY, createStore } from '../dashboard/store.mjs';
 import { createStore as createTreasuryStore } from '../treasury/store.mjs';
 import { replayRun } from '../treasury/domain.mjs';
 import { projectGraph, analyzeGraph } from '../../mesh/domain.mjs';
+import { selectionAfterDispatch } from '../dashboard/selection.mjs';
 
 const text = readFileSync(new URL('../dashboard/data.json', import.meta.url), 'utf8');
 const data = JSON.parse(text);
 const sha256 = value => createHash('sha256').update(value).digest('hex');
+
+test('V88,V89: decision inspection stays selected across observations', () => {
+  const latestDecision = 'decision-1';
+  assert.equal(selectionAfterDispatch({ eventId: 'observe-1', decision: null, selectedEvent: latestDecision }), latestDecision);
+  assert.equal(selectionAfterDispatch({ eventId: 'observe-2', decision: null, selectedEvent: null }), null);
+  assert.equal(selectionAfterDispatch({ eventId: 'decision-2', decision: {}, selectedEvent: latestDecision }), 'decision-2');
+  assert.equal(selectionAfterDispatch({ eventId: 'observe-3', decision: null, selectedEvent: 'historical-1' }), 'historical-1');
+});
 const TREASURY_KEY = 'falcon.treasury.simulation.v1';
 const LEGACY_KEY = 'falconos-workspace-v1';
 const id = number => `00000000-0000-4000-8000-${String(number).padStart(12, '0')}`;
