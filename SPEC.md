@@ -273,6 +273,15 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - [INFERRED, surface] Shared engine `mesh/treasury-domain.mjs` (moved from `web/treasury/domain.mjs`; web imports it back). Store `mesh/treasury-store.mjs`; routes in `mesh/http.mjs`; wiring in `mesh/server.mjs`.
 - [INFERRED, verification] `npm --prefix mesh test`; disposable Postgres integration; authenticated HTTP checks; `/readyz` green across additive migration.
 
+### I18. Advisory capital plan & Devnet-analog execution
+
+- [INFERRED, 2026-09-29] Owner/provider: `web/app/`; consumer: signed-in user + connected Devnet wallet. Extends §I13/V76.
+- Input: engine §I11 `GET /advice` PUBLISHED basket (legs: asset_id, underlying, target_weight_bps) + a user capital amount in Devnet USDC.
+- Plan (advisory): per-leg `allocationUsdc = floor(capital × target_weight_bps / 10000)` integer USDC base units; user-EDITABLE (adjust or remove legs; Σ allocations ≤ capital; explicit residual). `mode: 'devnet-analog'`; each council symbol maps to a configured Devnet-tradable analog mint, labelled a Devnet stand-in, not the real mainnet asset. Plan carries no executionReady/authority.
+- Execution: each plan leg executes as a §V76 Raydium Devnet swap (USDC → analog mint) through the wallet-owned terminal; the human signs every leg; per-leg V76 route/pool validation; outcomes persist in the `web/app/` order journal (§I13 state).
+- ⊥ mainnet, custody, pooled funds, autonomous/batch signing, real pre-IPO asset claim, or executionReady true.
+- [INFERRED, verification] `npm --prefix web test` sizing/edit unit tests; automated Devnet e2e with a funded keypair (confirmed signature + reconciled token deltas + persisted journal); one manual real-wallet sign-off session.
+
 ## §V INVARIANTS
 
 V1: ∀ plugin process → read exactly one bounded (≤8 MiB) JSON object from stdin, emit exactly one bounded (≤64 KiB) JSON response line to stdout, diagnostics ⊥ stdout
@@ -459,6 +468,9 @@ V113: [INFERRED] ∀ Control Centre live read (§I16) → bearer token in tab me
 V114: [INFERRED] ∀ /v1/treasury/* → owner from token hash (§I15); run & event owner-scoped; event `requestId` idempotent per owner; conflicting `requestId` reuse rejected; server clock monotonic UTC; ≤200 events per run; unknown run/owner → NOT_FOUND; concurrent distinct events on one run serialize via a per-run row lock (`SELECT ... FOR UPDATE`) or optimistic revision check so no lost update or false success occurs.
 V115: [INFERRED] ∀ POST /v1/treasury/runs/:id/preview → `decide(buildGraph(state))` only; ⊥ persistence, ⊥ event append, ⊥ side-effect; equal input → equal decision.
 V116: [INFERRED] ∀ treasury_runs migration → additive DDL only; schema-version marker unchanged; existing columns/tables neither dropped nor renamed; `/readyz` (`store.ready()`) stays 200 across the deploy so the Railway healthcheck never restarts the live service.
+V117: [INFERRED] ∀ advisory capital plan (§I18) → per-leg `allocationUsdc = floor(capital × target_weight_bps / 10000)` integer USDC base units; editable (adjust/remove) with Σ allocations ≤ capital and explicit residual; `mode: 'devnet-analog'`; every leg labelled a Devnet stand-in for the real mainnet asset; plan carries no executionReady or execution authority.
+V118: [INFERRED] ∀ plan leg execution (§I18) → reuses §V76 Devnet route/pool validation for one USDC→analog swap; human signs each leg; ⊥ autonomous or batch signing; one confirmed on-chain signature per executed leg reconciled to transaction-local token deltas; persisted in the `web/app/` order journal; failure leaves the prior journal intact.
+V119: [INFERRED] ∀ engine §I11 `GET /advice` PUBLISHED → includes basket legs (asset_id, underlying, target_weight_bps summing to 10000); `execution_ready` false; BLOCKED/NO_DATA responses carry empty legs.
 
 ## §T TASKS
 
@@ -518,6 +530,12 @@ T50|.|add §I17 treasury runs API: additive `treasury_runs` migration, shared `m
 T51|.|wire dashboard Decisions view to server-persisted treasury runs (§I17)|I16,I17,V114
 T52|.|wire dashboard Overview view to server treasury run projection (§I17)|I16,I17,V114
 T53|.|deploy live Control Centre build (`VITE_MESH_API_URL`) and verify end-to-end vs falcon-mesh production|I16,I17,V113,V114
+T54|.|extend engine GET /advice PUBLISHED to include basket legs (asset_id, underlying, target_weight_bps); execution_ready false; empty legs on BLOCKED/NO_DATA|I11,I18,V119
+T55|.|add advisory capital-plan sizing module (capital × weight-bps -> per-leg USDC, editable, residual, devnet-analog mapping)|I18,V117
+T56|.|wire web/app/ Strategy panel to engine /advice; render decision + editable sized plan|I13,I18,V117
+T57|.|execute one plan leg on Devnet from web/app/ via V76 swap (human-signed, persisted)|I13,I18,V76,V118
+T58|.|automated Devnet e2e: funded keypair drives data->decision->plan->execute->confirm; assert signature + deltas + persisted|I18,V118
+T59|.|manual real-wallet sign-off session; capture confirmed signatures + screenshots|I18,V118
 
 ## §B BUGS
 
