@@ -16,6 +16,7 @@
     "test:browser": "node test/treasury-browser.mjs && node test/dashboard-browser.mjs",
     "test:dashboard": "node --test test/dashboard.test.mjs",
     "test:dashboard:browser": "node test/dashboard-browser.mjs",
+    "test:devnet-e2e": "node test/devnet-e2e.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
