@@ -27,6 +27,14 @@ function safeMintList(value) {
   return [...new Set(value.filter((mint) => validAddress(mint)))].slice(0, MAX_WATCHLIST);
 }
 
+// Optional advisory-plan tag on executed legs: { assetId, underlying }. Malformed tags are dropped, not fatal.
+function safeLegTag(value) {
+  if (!value || typeof value !== 'object') return null;
+  const { assetId, underlying } = value;
+  if (typeof assetId !== 'string' || !assetId || assetId.length > 64 || typeof underlying !== 'string' || !underlying || underlying.length > 32) return null;
+  return { assetId, underlying };
+}
+
 function safeOrder(value, wallet) {
   if (!value || typeof value !== 'object' || value.wallet !== wallet || value.network !== 'devnet') return null;
   if (typeof value.id !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(value.id)) return null;
@@ -47,6 +55,7 @@ function safeOrder(value, wallet) {
   if (!signature) return null;
   const priceImpact = value.priceImpact === null || typeof value.priceImpact === 'string' && value.priceImpact.length <= 32;
   if (!priceImpact) return null;
+  const leg = safeLegTag(value.leg);
   return {
     id: value.id,
     wallet,
@@ -65,6 +74,7 @@ function safeOrder(value, wallet) {
     status: value.status,
     signature: value.signature,
     createdAt: value.createdAt,
+    ...(leg && { leg }),
     updatedAt: typeof value.updatedAt === 'string' && Number.isFinite(Date.parse(value.updatedAt)) ? value.updatedAt : value.createdAt,
   };
 }
