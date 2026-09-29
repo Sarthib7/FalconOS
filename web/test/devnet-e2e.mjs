@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { createPrivateKey, createPublicKey, sign as edSign, verify as edVerify } from 'node:crypto';
+import { createPrivateKey, sign as edSign } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
-import { Keypair, PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
+import { Keypair } from '@solana/web3.js';
 
 // Automated Devnet round-trip for /app/: SIWS sign-in -> capital -> council decision -> editable plan -> ONE leg executed
 // as a real Devnet swap -> confirmation. Run separately from unit tests (`npm run test:devnet-e2e`); not a *.test.mjs.
@@ -15,23 +15,32 @@ import { Keypair, PublicKey, TransactionInstruction, TransactionMessage, Version
 //   FALCON_DEVNET_KEYPAIR=<path to JSON secret-key array | base58 secret>   mode=full  (funded: dUSDC + SOL fees)
 //   (unset)                                                                 mode=dry   (ephemeral unfunded key)
 //
-// Exit codes: 0 full run passed (S2 proven) | 3 dry run reached broadcast (PIPELINE OK, NOT a pass for S2) | 1 failure.
+// Exit codes: 0 full run passed (S2 proven) | 3 dry run STOPPED BEFORE BUILD (never a pass) | 1 failure.
+//
+// What each mode proves. NOTHING is stubbed or faked in either mode; the harness never builds or sends a transaction itself.
+//   dry  : real SIWS sign-in, real /advice decision (mock council), real editable plan, Execute click, the app's REAL Raydium
+//          Devnet quote and V76 pool validation (Devnet RPC), then the REAL build path stops at the input-account lookup with
+//          "no Devnet input token account" because the ephemeral key owns no dUSDC account. Proves sign-in + decision + plan +
+//          quote + V76 validation ONLY. It does NOT prove swap construction, signing, broadcast or confirmation (S2 NOT proven).
+//   full : additionally the real build (Raydium /transaction/swap-base-in) -> real simulate -> sign -> real sendTransaction ->
+//          getSignatureStatuses confirmed -> token balance deltas -> order persists across reload. Only full mode with a funded
+//          keypair proves build/sign/broadcast/confirm and the swap-construction logic.
 //
 // Test wallet: the harness registers a Wallet Standard wallet (solana:signMessage, drives SIWS) and a window.solana provider
 // (signTransaction/signAllTransactions). Both delegate signing to THIS process over a CDP binding, so the secret key never
 // enters the page and is never written anywhere. The harness only automates the human-signing surface; it changes no app code.
-const EXIT_DRY_OK = 3;
+const EXIT_STOPPED_BEFORE_BUILD = 3;
 const DEVNET_RPC = 'https://api.devnet.solana.com/'; // trailing slash: Chrome's canonical request URL
 const RAYDIUM_BUILD = 'https://transaction-v1-devnet.raydium.io/transaction/swap-base-in';
 const RAYDIUM_QUOTE = 'https://transaction-v1-devnet.raydium.io/compute/swap-base-in';
 const DUSDC = 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT';
 const DUSDT = '9jWfcfEZToquBQmkoEViNSCt72veXwcvRGFQERXRjEk1';
-const TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-const ATA_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 const CAPITAL = '0.2'; // dUSDC UI units -> OPENAI 0.12 / SPACEX 0.08
 const LEG_BASE_UNITS = 120000n; // first leg: 60% of 0.2 dUSDC
-const FUNDS_ERROR = /AccountNotFound|no record of a prior credit|insufficient|debit an account/i;
 const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+// Outbound allow-list (besides the harness's own local static + mock-council servers). Full mode additionally needs esm.sh:
+// the app imports its signer library (@solana/web3.js, version-pinned) from there at build/sign time. Dry mode never reaches that import.
+const allowedRemoteHosts = new Set(['api.devnet.solana.com', 'transaction-v1-devnet.raydium.io', 'api-v3-devnet.raydium.io']);
 
 const webRoot = fileURLToPath(new URL('..', import.meta.url));
 const root = resolve(webRoot, 'dist');
@@ -61,9 +70,8 @@ async function loadKeypair() {
 const { mode, keypair } = await loadKeypair();
 const address = keypair.publicKey.toBase58();
 const privateKey = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(keypair.secretKey.subarray(0, 32))]), format: 'der', type: 'pkcs8' });
-const publicKeyObject = createPublicKey({ key: Buffer.concat([Buffer.from('302a300506032b6570032100', 'hex'), Buffer.from(keypair.publicKey.toBytes())]), format: 'der', type: 'spki' });
-const ata = (owner, mint) => PublicKey.findProgramAddressSync([owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), new PublicKey(mint).toBuffer()], ATA_PROGRAM)[0];
 log(`mode=${mode} wallet=${address}`);
+if (mode === 'full') allowedRemoteHosts.add('esm.sh');
 
 if (!existsSync(resolve(root, 'app/index.html'))) {
   log('web/dist missing; running build:site');
@@ -133,8 +141,7 @@ const pending = new Map();
 const exceptions = [];
 const trace = []; // ordered pipeline evidence: { step, ... }
 const signCalls = { message: 0, transaction: 0 };
-const sentTransactions = [];
-const realSimulations = [];
+const remoteRequests = []; // any request outside the allow-list (local harness servers + Devnet RPC + Raydium Devnet hosts)
 chrome.stderr.on('data', (data) => { stderr += data.toString(); });
 chrome.on('exit', (code, signal) => {
   const error = new Error(`Chrome exited ${code}/${signal}: ${stderr.slice(-500)}`);
@@ -151,59 +158,6 @@ function call(method, params = {}, session) {
 }
 const send = (method, params = {}) => call(method, params, sessionId);
 
-function fulfill(requestId, payload) {
-  return send('Fetch.fulfillRequest', {
-    requestId, responseCode: 200,
-    responseHeaders: [{ name: 'content-type', value: 'application/json' }, { name: 'access-control-allow-origin', value: '*' }],
-    body: Buffer.from(JSON.stringify(payload)).toString('base64'),
-  });
-}
-
-// Dry mode only. An unfunded key owns no dUSDC account, and both the app (input-account lookup) and Raydium (owner check on
-// inputAccount) refuse before anything is signed. These three stubs stand in for the funded account state so the REAL
-// quote, pool validation, wallet signing, signature verification and Devnet broadcast can still be exercised.
-async function stubDryRequest({ requestId, request }) {
-  if (request.method !== 'POST' || !request.postData) return false;
-  if (request.url === DEVNET_RPC) {
-    const body = JSON.parse(request.postData);
-    if (body.method === 'getTokenAccountsByOwner' && body.params?.[0] === address && body.params?.[1]?.mint === DUSDC) {
-      const pubkey = ata(keypair.publicKey, DUSDC).toBase58();
-      trace.push({ step: 'stub-input-account', pubkey });
-      await fulfill(requestId, { jsonrpc: '2.0', id: body.id, result: { context: { slot: 1 }, value: [{ pubkey, account: { data: ['', 'base64'], executable: false, lamports: 2039280, owner: TOKEN_PROGRAM.toBase58(), rentEpoch: 0, space: 165 } }] } });
-      return true;
-    }
-    if (body.method === 'simulateTransaction') {
-      // Record the REAL verdict (expected: rejected for missing funds), then let the pipeline proceed to signing.
-      try { realSimulations.push((await rpc('simulateTransaction', [body.params[0], body.params[1]])).value.err); } catch (error) { realSimulations.push(`rpc: ${error.message}`); }
-      await fulfill(requestId, { jsonrpc: '2.0', id: body.id, result: { context: { slot: 1 }, value: { err: null, logs: [], unitsConsumed: 0 } } });
-      return true;
-    }
-    return false;
-  }
-  if (request.url === RAYDIUM_BUILD) {
-    const body = JSON.parse(request.postData);
-    assert.equal(body.wallet, address, 'app built the swap for a different wallet');
-    const source = new PublicKey(body.inputAccount);
-    const destination = ata(keypair.publicKey, DUSDT);
-    const data = Buffer.alloc(9);
-    data.writeUInt8(3, 0);
-    data.writeBigUInt64LE(BigInt(body.swapResponse.data.inputAmount), 1);
-    const message = new TransactionMessage({
-      payerKey: keypair.publicKey, recentBlockhash: '11111111111111111111111111111111',
-      instructions: [new TransactionInstruction({ programId: TOKEN_PROGRAM, keys: [{ pubkey: source, isSigner: false, isWritable: true }, { pubkey: destination, isSigner: false, isWritable: true }, { pubkey: keypair.publicKey, isSigner: true, isWritable: false }], data })],
-    }).compileToV0Message();
-    trace.push({ step: 'stub-build' });
-    await fulfill(requestId, { id: 'e2e-dry', success: true, version: 'V0', data: [{ transaction: Buffer.from(new VersionedTransaction(message).serialize()).toString('base64') }] });
-    return true;
-  }
-  return false;
-}
-
-async function onPaused(params) {
-  try { if (mode === 'dry' && await stubDryRequest(params)) return; } catch (error) { log(`stub error: ${error.message}`); }
-  await send('Fetch.continueRequest', { requestId: params.requestId }).catch(() => {});
-}
-
 async function onBinding({ payload }) {
   const { id, kind, data } = JSON.parse(payload);
   signCalls[kind] += 1;
@@ -212,13 +166,21 @@ async function onBinding({ payload }) {
   await send('Runtime.evaluate', { expression: `window.__falconSigned(${id}, ${JSON.stringify(signature)})` });
 }
 
+function onResponse({ response }) {
+  if (response.url.startsWith(RAYDIUM_QUOTE) && response.status === 200) trace.push({ step: 'raydium-quote-response-200' });
+}
+
 function onRequest({ request }) {
   const { url } = request;
+  let parsed;
+  try { parsed = new URL(url); } catch { return; }
+  if (['http:', 'https:', 'ws:', 'wss:'].includes(parsed.protocol) && parsed.origin !== origin && parsed.origin !== councilBase && !allowedRemoteHosts.has(parsed.hostname)) remoteRequests.push(`${request.method} ${parsed.origin}${parsed.pathname}`);
   if (url === DEVNET_RPC && request.postData) {
     let body;
     try { body = JSON.parse(request.postData); } catch { return; }
-    if (['simulateTransaction', 'getBlockHeight', 'getSignatureStatuses'].includes(body.method)) trace.push({ step: `rpc-${body.method}` });
-    if (body.method === 'sendTransaction') { trace.push({ step: 'rpc-sendTransaction' }); sentTransactions.push(body.params[0]); }
+    if (['simulateTransaction', 'getBlockHeight', 'getSignatureStatuses', 'getMultipleAccounts'].includes(body.method)) trace.push({ step: `rpc-${body.method}` });
+    if (body.method === 'getTokenAccountsByOwner' && body.params?.[1]?.mint === DUSDC) trace.push({ step: 'rpc-getTokenAccountsByOwner-dUSDC' });
+    if (body.method === 'sendTransaction') trace.push({ step: 'rpc-sendTransaction' });
   } else if (url.startsWith(RAYDIUM_QUOTE) && request.method === 'GET') trace.push({ step: 'raydium-quote' });
   else if (url === RAYDIUM_BUILD && request.method === 'POST') trace.push({ step: 'raydium-build-request' });
 }
@@ -240,7 +202,7 @@ chrome.stdio[4].on('data', (data) => {
     }
     if (message.method === 'Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails);
     if (message.method === 'Runtime.bindingCalled' && message.params.name === 'falconSign') onBinding(message.params).catch((error) => log(`sign error: ${error.message}`));
-    if (message.method === 'Fetch.requestPaused') onPaused(message.params);
+    if (message.method === 'Network.responseReceived') onResponse(message.params);
     if (message.method === 'Network.requestWillBeSent') onRequest(message.params);
   }
 });
@@ -323,7 +285,6 @@ try {
   await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable');
   await send('Runtime.addBinding', { name: 'falconSign' });
   await send('Page.addScriptToEvaluateOnNewDocument', { source: injected });
-  if (mode === 'dry') await send('Fetch.enable', { patterns: [{ urlPattern: `${DEVNET_RPC}*` }, { urlPattern: 'https://transaction-v1-devnet.raydium.io/transaction/*' }] });
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1600, deviceScaleFactor: 1, mobile: false });
 
   let dusdcBefore = null;
@@ -366,14 +327,23 @@ try {
   const seen = (step) => trace.some((entry) => entry.step === step);
 
   if (mode === 'dry') {
-    const missing = ['raydium-quote', 'raydium-build-request', 'stub-input-account', 'stub-build', 'rpc-simulateTransaction', 'sign-transaction', 'rpc-getBlockHeight'].filter((step) => !seen(step));
-    if (missing.length || !seen('rpc-sendTransaction')) throw new Error(`pipeline stopped BEFORE broadcast (missing: ${[...missing, ...(seen('rpc-sendTransaction') ? [] : ['rpc-sendTransaction'])].join(', ')}). App said: ${message}`);
-    const signed = VersionedTransaction.deserialize(Buffer.from(sentTransactions.at(-1), 'base64'));
-    check('broadcast: sent transaction is paid and signed by the test wallet', signed.message.staticAccountKeys[0].equals(keypair.publicKey)
-      && edVerify(null, Buffer.from(signed.message.serialize()), publicKeyObject, Buffer.from(signed.signatures[0])));
-    check('broadcast: Devnet rejected the send for missing funds (not a wiring error)', FUNDS_ERROR.test(message), message);
-    check('journal: nothing persisted for a failed send', await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(ordersKey)}) || '[]').length === 0`));
-    result = { funds: message, realSimulation: realSimulations.at(-1) };
+    // No funds -> the REAL build path must stop at the input-account lookup, before anything is built, signed or sent.
+    // Nothing in this harness fabricates a transaction, so there is nothing that could be broadcast.
+    const at = (step, from = 0) => trace.findIndex((entry, index) => index >= from && entry.step === step);
+    const quote = at('raydium-quote');
+    if (quote < 0) throw new Error(`failed BEFORE the real Raydium quote (wiring bug). App said: ${message}`);
+    const quoteOk = at('raydium-quote-response-200', quote);
+    if (quoteOk < 0) throw new Error(`real Raydium quote did not return HTTP 200. App said: ${message}`);
+    const quotePools = at('rpc-getMultipleAccounts', quoteOk);
+    if (quotePools < 0) throw new Error(`failed BEFORE V76 pool validation of the quote (wiring bug). App said: ${message}`);
+    const buildPools = at('rpc-getMultipleAccounts', quotePools + 1);
+    const inputLookup = at('rpc-getTokenAccountsByOwner-dUSDC', buildPools + 1);
+    if (buildPools < 0 || inputLookup < 0) throw new Error(`build did not reach the input-account lookup after re-validating pools (trace: ${trace.map((entry) => entry.step).join(' > ')}). App said: ${message}`);
+    check('real quote (Raydium Devnet compute/swap-base-in) returned 200 and V76 pool validation ran against Devnet RPC (quote + build re-validation)', true);
+    check('build stopped at the real input-account lookup with the no-funds error', message === 'Connected wallet has no Devnet input token account for this mint', message);
+    const forbidden = ['raydium-build-request', 'rpc-simulateTransaction', 'sign-transaction', 'rpc-getBlockHeight', 'rpc-sendTransaction', 'rpc-getSignatureStatuses'].filter((step) => seen(step));
+    check('nothing built, simulated, signed, sent or confirmed', forbidden.length === 0 && signCalls.transaction === 0, forbidden.join(', '));
+    check('journal: no order persisted', await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(ordersKey)}) || '[]').length === 0`));
   } else {
     check('leg confirmed in the app', /leg confirmed on Devnet/.test(message), message);
     const signature = message.match(/: ([1-9A-HJ-NP-Za-km-z]{80,90})(?: |$)/)?.[1];
@@ -402,6 +372,7 @@ try {
     check('journal reload: session and order survive a page reload', await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(ordersKey)})).some((o) => o.signature === ${JSON.stringify(signature)} && o.status === 'confirmed') && document.getElementById('saved-order-count').textContent === '1' && [...document.querySelectorAll('#activity-rows a')].some((a) => a.href.includes(${JSON.stringify(signature)}))`));
     result = { signature, dusdcDelta: dusdcAfter - dusdcBefore, dusdtDelta: dusdtAfter - dusdtBefore };
   }
+  check(`network: only allow-listed hosts contacted (${[...allowedRemoteHosts].join(', ')} + local harness servers)`, remoteRequests.length === 0, remoteRequests.join(', '));
 } catch (error) {
   failed = error;
   const shot = await screenshot('failure');
@@ -424,10 +395,8 @@ try {
 if (failed) process.exit(1);
 log(`pipeline: ${trace.map((entry) => entry.step).join(' > ')}`);
 if (mode === 'dry') {
-  log(`real Devnet simulation of the unfunded swap (informational): ${JSON.stringify(result.realSimulation)}`);
-  log(`Devnet broadcast rejection: ${result.funds}`);
-  console.log('PIPELINE OK - funded Devnet keypair required to confirm (set FALCON_DEVNET_KEYPAIR). S2 is NOT proven by this run.');
-  process.exit(EXIT_DRY_OK);
+  console.log('STOPPED BEFORE BUILD - real quote + V76 pool validation passed; funded Devnet keypair required to build/sign/broadcast/confirm (set FALCON_DEVNET_KEYPAIR). S2 NOT proven.');
+  process.exit(EXIT_STOPPED_BEFORE_BUILD);
 }
 console.log(`PASS - confirmed ${result.signature} (dUSDC ${result.dusdcDelta}, dUSDT +${result.dusdtDelta}); order journal persisted across reload.`);
 process.exit(0);
