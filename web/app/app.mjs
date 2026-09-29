@@ -879,7 +879,7 @@ function bindUI() {
   byId('get-quote').addEventListener('click', getQuoteAction);
   byId('sign-send').addEventListener('click', () => simulateSignSend().catch((error) => setTradeResult(error?.message || 'Devnet order failed.', 'error')));
   byId('strategy-load').addEventListener('click', loadStrategy);
-  byId('strategy-capital').addEventListener('input', renderStrategy);
+  byId('strategy-capital').addEventListener('change', renderStrategy);
   byId('strategy-plan').addEventListener('change', editStrategyLeg);
   byId('strategy-plan').addEventListener('click', removeStrategyLeg);
   ['order-side', 'order-amount', 'asset-mint', 'quote-mint'].forEach((id) => {
