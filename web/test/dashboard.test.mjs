@@ -8,7 +8,7 @@ import { createStore as createTreasuryStore } from '../treasury/store.mjs';
 import { replayRun } from '../treasury/domain.mjs';
 import { projectGraph, analyzeGraph } from '../../mesh/domain.mjs';
 import { selectionAfterDispatch } from '../dashboard/selection.mjs';
-import { API_BASE, TOKEN_PATTERN, meshRequest } from '../dashboard/api.mjs';
+import { API_BASE, TOKEN_PATTERN, connectorObservation, meshReady, meshRequest } from '../dashboard/api.mjs';
 
 const text = readFileSync(new URL('../dashboard/data.json', import.meta.url), 'utf8');
 const data = JSON.parse(text);
@@ -299,4 +299,36 @@ test('dashboard mesh client: error envelopes, missing envelopes, unreadable bodi
 test('dashboard mesh client: the token pattern matches the service charset and length bounds', () => {
   for (const good of ['a'.repeat(32), 'A1._~-'.repeat(6), 'z'.repeat(256)]) assert.ok(TOKEN_PATTERN.test(good), good);
   for (const bad of ['a'.repeat(31), 'a'.repeat(257), `${'a'.repeat(31)} `, `${'a'.repeat(31)}/`, `${'a'.repeat(31)}\n`, '']) assert.ok(!TOKEN_PATTERN.test(bad), JSON.stringify(bad));
+});
+
+test('dashboard mesh client: meshReady is unauthenticated and true only for HTTP 200 {status:ready}; it never throws', async t => {
+  let next;
+  const stub = stubFetch(t, () => next());
+  next = () => json(200, { status: 'ready' });
+  assert.deepEqual(await meshReady(), { ok: true, status: 'ready' });
+  const [{ url, init }] = stub.calls;
+  assert.equal(url, `${API_BASE}/readyz`); assert.equal(init.method, 'GET'); assert.equal(init.credentials, 'omit');
+  assert.deepEqual(init.headers, { accept: 'application/json' });
+  next = () => json(503, { error: { code: 'STORAGE_UNAVAILABLE', message: 'down' } });
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unavailable' });
+  next = () => json(200, { status: 'starting' });
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unavailable' });
+  next = () => json(503, { status: 'ready' });
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unavailable' });
+  next = () => new Response('<html>', { status: 502 });
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unavailable' });
+  next = () => { throw new TypeError('Failed to fetch'); };
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unreachable' });
+});
+
+test('dashboard mesh client: connector status comes from the connector-specific live observation node', () => {
+  const observation = (id, status, reasonCode = null) => ({ id: `observation:live:${id}`, kind: 'observation', properties: { status, reasonCode } });
+  const graph = { nodes: [observation('kamino-program-docs', 'ok'), observation('solana-devnet-klend', 'unavailable', 'ACCOUNT_MISSING'), { id: 'observation:live:other', kind: 'document', properties: { status: 'ok' } }] };
+  assert.deepEqual(connectorObservation(graph, 'kamino-program-docs'), { label: 'OBSERVED', kind: 'ok', reasonCode: null });
+  assert.deepEqual(connectorObservation(graph, 'solana-devnet-klend'), { label: 'UNAVAILABLE', kind: 'warn', reasonCode: 'ACCOUNT_MISSING' });
+  assert.equal(connectorObservation(graph, 'other').label, 'NO_DATA');
+  assert.equal(connectorObservation({ nodes: [] }, 'kamino-program-docs').label, 'NO_DATA');
+  assert.equal(connectorObservation({ nodes: [observation('x', 'invalid', 'WRONG_CLUSTER')] }, 'x').label, 'INVALID');
+  assert.equal(connectorObservation({ nodes: [observation('x', 'too_large', 'TOO_LARGE')] }, 'x').label, 'TOO_LARGE');
+  assert.equal(connectorObservation({ nodes: [observation('x', 'weird')] }, 'x').label, 'NO_DATA');
 });
