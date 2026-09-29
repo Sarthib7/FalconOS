@@ -5,6 +5,14 @@ import { buildLegTicket, executeLeg } from '../app/leg-execution.mjs';
 import { readOrders, saveOrder } from '../app/state.mjs';
 import { ANALOG_MINTS, DEVNET_BASE_MINT, parseAdvice, toView } from '../app/strategy.mjs';
 import { encodeSignatureBase58 } from '../app/transaction.mjs';
+import { readFile } from 'node:fs/promises';
+const appSource = await readFile(new URL('../app/app.mjs', import.meta.url), 'utf8');
+
+test('executeStrategyLeg routes leg status to the defined setStrategyMessage, not an undefined setter', () => {
+  assert.match(appSource, /function setStrategyMessage\(/);
+  assert.match(appSource, /hooks:\s*\{\s*status:\s*\(message\)\s*=>\s*setStrategyMessage\(message\)\s*\}/);
+  assert.doesNotMatch(appSource, /setLegMessage/);
+});
 
 const POOL_A = '2gCLw8XLxwYSEHHkT9QWBbJRkojwFp6T13D2Wrbzjf3p';
 const POOL_B = '8US31YXHc33Lb3hRZkD8AX9mxmSd3egXmFHgQhcSU7mD';

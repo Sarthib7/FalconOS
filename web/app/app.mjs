@@ -811,6 +811,7 @@ async function executeStrategyLeg(event) {
   let wallet;
   try { wallet = signingWallet('Devnet leg'); } catch (error) { setStrategyMessage(error.message, 'error'); return; }
   const { provider, signer } = wallet;
+  const planAtStart = strategyPlan;
   tradeInFlight = true;
   executingLeg = leg.assetId;
   renderStrategyPlan(byId('strategy-plan'));
@@ -821,11 +822,11 @@ async function executeStrategyLeg(event) {
       leg,
       signer,
       provider,
-      guard: (message) => { if (providerAddress(provider) !== signer || activeAddress() !== signer) throw new Error(message); },
-      hooks: { status: setLegMessage },
+      guard: (message) => { if (providerAddress(provider) !== signer || activeAddress() !== signer || strategyPlan !== planAtStart) throw new Error(message); },
+      hooks: { status: (message) => setStrategyMessage(message) },
     });
     if (result.status === 'confirmed') {
-      executedLegs.set(leg.assetId, result.signature);
+      if (strategyPlan === planAtStart) executedLegs.set(leg.assetId, result.signature);
       setStrategyMessage(`${leg.underlying} leg confirmed on Devnet (${result.confirmationStatus}): ${result.signature}${result.journalError ? ` · journal write failed: ${result.journalError}` : ''}`, 'success');
       renderHistory();
       refreshAccount().catch(() => {});
