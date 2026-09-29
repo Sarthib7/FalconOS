@@ -93,6 +93,7 @@
 .app-state-list > div { display: grid; gap: 5px; }
 .app-state-list strong { font-weight: 500; }
 .state-off { color: var(--amber); }
+.state-on { color: var(--green); }
 .app-text-link { color: var(--app-accent); font: 9px ui-monospace, monospace; text-decoration: none; }
 .app-text-link:hover { text-decoration: underline; }
 .app-order-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

@@ -132,15 +132,34 @@
               <div class="app-watchlist" id="watchlist" aria-live="polite"></div>
             </section>
 
-            <section class="app-panel" id="strategy" aria-labelledby="strategy-title">
-              <div class="app-panel-head"><div><p class="eyebrow">02 / Research</p><h2 id="strategy-title">Strategy status</h2></div><span class="app-tag app-tag-warn">ADVISORY ONLY</span></div>
-              <div class="app-state-list">
-                <div><span>Production council feed</span><strong class="state-off">NOT CONNECTED</strong></div>
-                <div><span>Stock entry / exit rules</span><strong class="state-off">NOT IMPLEMENTED</strong></div>
-                <div><span>Historical backtests</span><strong class="state-off">UNAVAILABLE</strong></div>
-                <div><span>Automatic order execution</span><strong class="state-off">DISABLED</strong></div>
+            <section class="app-panel app-panel-wide" id="strategy" aria-labelledby="strategy-title">
+              <div class="app-panel-head"><div><p class="eyebrow">02 / Council</p><h2 id="strategy-title">Strategy decision</h2></div><span class="app-tag app-tag-warn">ADVISORY ONLY</span></div>
+              <p class="app-panel-copy">Read-only council advice sized into an editable Devnet-analog plan. Nothing here signs, sends, or authorizes an order.</p>
+              <div class="app-order-grid">
+                <div class="app-field"><label for="strategy-capital">Capital (USDC)</label><input id="strategy-capital" inputmode="decimal" autocomplete="off" placeholder="0.00"></div>
+                <div class="app-field"><label for="strategy-load">Council</label><button class="app-primary-button" id="strategy-load" type="button">Load council decision</button></div>
               </div>
-              <p class="app-panel-copy">The current council and stock strategy templates run only in the local research view. They do not authorize this Devnet ticket.</p>
+              <div class="app-state-list">
+                <div><span>Council decision</span><strong id="strategy-status" class="state-off">NOT LOADED</strong></div>
+                <div><span>Reasons</span><strong id="strategy-reasons">—</strong></div>
+              </div>
+              <div class="app-table-wrap">
+                <table class="app-table">
+                  <thead><tr><th>Underlying</th><th>Target weight</th></tr></thead>
+                  <tbody id="strategy-legs"><tr><td colspan="2" class="app-empty">Load the council decision to see basket legs.</td></tr></tbody>
+                </table>
+              </div>
+              <div class="app-table-wrap">
+                <table class="app-table">
+                  <thead><tr><th>Leg</th><th>Allocation (USDC)</th><th>Devnet analog</th><th></th></tr></thead>
+                  <tbody id="strategy-plan"><tr><td colspan="4" class="app-empty">Enter capital and load a PUBLISHED decision to build a plan.</td></tr></tbody>
+                </table>
+              </div>
+              <div class="app-state-list">
+                <div><span>Unallocated residual (USDC)</span><strong id="strategy-residual">—</strong></div>
+              </div>
+              <div class="app-button-row"><button class="app-primary-button" id="strategy-execute" type="button" disabled>Execute plan (coming soon)</button></div>
+              <p class="app-trade-result" id="strategy-message" role="status" aria-live="polite">Council decision not loaded.</p>
               <a class="app-text-link" href="/research/">Review research and test status ↗</a>
             </section>
 
