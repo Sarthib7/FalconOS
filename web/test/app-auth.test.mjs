@@ -7,6 +7,7 @@ import { bytesToBase64, createSignInMessage, createSignInRequest, decodeSolanaAd
 const html = await readFile(new URL('../app/index.html', import.meta.url), 'utf8');
 const appSource = await readFile(new URL('../app/app.mjs', import.meta.url), 'utf8');
 const dataSource = await readFile(new URL('../app/data.mjs', import.meta.url), 'utf8');
+const legSource = await readFile(new URL('../app/leg-execution.mjs', import.meta.url), 'utf8');
 const tradeSource = await readFile(new URL('../app/devnet-execution.mjs', import.meta.url), 'utf8');
 const dashHtml = await readFile(new URL('../dash/index.html', import.meta.url), 'utf8');
 
@@ -37,8 +38,10 @@ test('dashboard entry opens the wallet terminal', () => {
 test('production trade UI has a fixed Devnet path and manual wallet sign step', () => {
   assert.match(appSource, /getDevnetQuote\(/);
   assert.match(dataSource, /https:\/\/api\.devnet\.solana\.com/);
-  assert.match(appSource, /signTransaction\(transaction\)/);
-  assert.match(appSource, /simulateDevnet\(/);
+  assert.match(appSource, /signAndSubmit\(/);
+  assert.match(legSource, /signTransaction\(transaction\)/);
+  assert.match(legSource, /simulateDevnet\(/);
+  assert.doesNotMatch(legSource, /127\.0\.0\.1:18488|jup\.ag|api\.mainnet-beta\.solana\.com/i);
   assert.doesNotMatch(appSource, /127\.0\.0\.1:18488|jup\.ag|api\.mainnet-beta\.solana\.com/i);
   assert.doesNotMatch(tradeSource, /127\.0\.0\.1:18488|jup\.ag|api\.mainnet-beta\.solana\.com/i);
 });

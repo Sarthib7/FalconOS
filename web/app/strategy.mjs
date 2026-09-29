@@ -8,9 +8,12 @@ const FETCH_TIMEOUT_MS = 8000;
 const STATUSES = new Set(['PUBLISHED', 'BLOCKED', 'NO_DATA']);
 const U64_MAX = 18446744073709551615n;
 
-// Devnet stand-in mints keyed by asset_id or underlying. Intentionally empty: real analog
-// mints arrive with the execution slice. Unconfigured legs stay executable:false in plan.mjs.
-export const ANALOG_MINTS = Object.freeze({});
+// Devnet swap config (SPEC I18): plan capital is denominated in dUSDC; every council leg is proxied by dwSOL,
+// the Raydium Devnet analog with a live multi-hop dUSDC route. Keyed by underlying so any asset_id resolves.
+// Legs without a mapped mint stay executable:false in plan.mjs.
+export const DEVNET_BASE_MINT = 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT';
+const DEVNET_WSOL_MINT = 'So11111111111111111111111111111111111111112';
+export const ANALOG_MINTS = Object.freeze({ OPENAI: DEVNET_WSOL_MINT, SPACEX: DEVNET_WSOL_MINT });
 
 // Override order: window.FALCON_COUNCIL_BASE, then <body data-council-base>, then the default.
 export function resolveCouncilBase({ global = globalThis, dataset = global.document?.body?.dataset } = {}) {

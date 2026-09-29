@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { ANALOG_MINTS, DEFAULT_COUNCIL_BASE, baseUnitsToUsdc, fetchAdvice, parseAdvice, removeLeg, resolveCouncilBase, setLegAllocation, toView, usdcToBaseUnits } from '../app/strategy.mjs';
+import { ANALOG_MINTS, DEFAULT_COUNCIL_BASE, DEVNET_BASE_MINT, baseUnitsToUsdc, fetchAdvice, parseAdvice, removeLeg, resolveCouncilBase, setLegAllocation, toView, usdcToBaseUnits } from '../app/strategy.mjs';
 
 const PUBLISHED = {
   status: 'PUBLISHED',
@@ -50,8 +50,7 @@ test('unconfigured analog mint keeps executable:false with the devnet-analog lab
   assert.equal(msft.analogMint, null);
   assert.match(msft.label, /Devnet analog/);
   const dflt = toView({ advice: parseAdvice(PUBLISHED), capitalBaseUnits: '1000000' });
-  assert.deepEqual(ANALOG_MINTS, {});
-  assert.ok(dflt.plan.legs.every((leg) => leg.executable === false && leg.analogMint === null));
+  assert.ok(dflt.plan.legs.every((leg) => leg.executable === false && leg.analogMint === null), 'AAPL/MSFT are not in the default analog config');
 });
 
 test('BLOCKED and NO_DATA carry reasons and never build a plan', () => {
@@ -131,10 +130,22 @@ test('leg edits go through plan.mjs: residual is live, invalid input keeps the p
   assert.match(removeLeg(plan, 'nope').error, /no leg matches/);
 });
 
-test('strategy panel is advisory-only: no execution or wallet code, disabled placeholder', () => {
+test('strategy module stays advisory: no wallet or send code, panel markup present', () => {
   const source = readFileSync(new URL('../app/strategy.mjs', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /signTransaction|sendTransaction|method: 'POST'|execution_ready: true/);
   const html = readFileSync(new URL('../app/index.html', import.meta.url), 'utf8');
   for (const id of ['strategy-capital', 'strategy-load', 'strategy-status', 'strategy-legs', 'strategy-plan', 'strategy-residual']) assert.match(html, new RegExp(`id="${id}"`));
-  assert.match(html, /id="strategy-execute"[^>]*disabled/);
+  assert.doesNotMatch(html, /id="strategy-execute"/, 'no batch execute-all control');
+});
+
+test('default analog config maps council underlyings to dwSOL against a dUSDC base, making legs executable', () => {
+  assert.equal(DEVNET_BASE_MINT, 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT');
+  assert.deepEqual({ ...ANALOG_MINTS }, { OPENAI: 'So11111111111111111111111111111111111111112', SPACEX: 'So11111111111111111111111111111111111111112' });
+  const advice = parseAdvice({ ...PUBLISHED, legs: [
+    { asset_id: 'openai-1', underlying: 'OPENAI', target_weight_bps: 6000 },
+    { asset_id: 'spacex-1', underlying: 'SPACEX', target_weight_bps: 4000 },
+  ] });
+  const { plan } = toView({ advice, capitalBaseUnits: '10000000' });
+  assert.deepEqual(plan.legs.map((leg) => [leg.executable, leg.analogMint]), [[true, ANALOG_MINTS.OPENAI], [true, ANALOG_MINTS.SPACEX]]);
+  assert.ok(!('executionReady' in plan), 'advisory boundary: plan never carries execution readiness');
 });
