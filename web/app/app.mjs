@@ -1,13 +1,16 @@
 import { DEVNET_RPC, formatTokenAmount, getDevnetBalance, getDevnetSignatures, getDevnetTokenAccounts, getDevnetTokenDecimals } from './data.mjs';
-import { bytesToBase64, createSignInRequest, decodeSolanaAddress, signatureBytes, verifySignInProof } from './auth.mjs';
+import { bytesToBase64, createSignInRequest, decodeSolanaAddress, verifySignInProof } from './auth.mjs';
+import { createSignInWalletSession } from './wallet-signin.mjs';
 import { buildDevnetUnsignedSwap, getDevnetBlockHeight, getDevnetBlockhash, getDevnetQuote, sendDevnet, simulateDevnet, waitForDevnetConfirmation } from './devnet-execution.mjs';
 import { clearSession, readOrders, readPortfolio, readSession, saveOrder, updateOrder, writePortfolio, writeSession } from './state.mjs';
 import { encodeSignatureBase58, verifySignedTransaction } from './transaction.mjs';
 
 const byId = (id) => document.getElementById(id);
+const signInWalletSession = createSignInWalletSession();
 const SIGNER_LIBRARY = 'https://esm.sh/@solana/web3.js@1.95.8';
 const APP_ORDER_HISTORY = 50;
 const TOKEN_DECIMAL_LIMIT = 18;
+const NO_TRADE_PROVIDER_REASON = 'This wallet supports sign-in but does not expose a browser Solana wallet extension for Devnet trading. Connect a wallet extension (e.g. Phantom, Solflare) to trade.';
 let sessionProof = null;
 let walletProvider = null;
 let connectedAddress = null;
@@ -97,21 +100,31 @@ function injectedWallet() {
 }
 
 function activeAddress() { return sessionProof?.address || null; }
+function tradeGapReason(suffix) {
+  if (connectedAddress === activeAddress()) return null;
+  return injectedWallet() ? `Reconnect the signed-in wallet ${suffix}.` : NO_TRADE_PROVIDER_REASON;
+}
 
 function renderSession() {
   const authenticated = Boolean(sessionProof);
+  const tradeReady = connectedAddress === activeAddress();
+  const hasInjectedWallet = Boolean(injectedWallet());
   byId('login-view').hidden = authenticated;
   byId('workspace-view').hidden = !authenticated;
   byId('sign-out').hidden = !authenticated;
   byId('session-chip').textContent = authenticated ? 'LOCAL SESSION · DEVNET' : 'WALLET · SIGN IN';
   byId('connect-wallet').textContent = !authenticated
     ? 'Sign in with wallet'
-    : connectedAddress === activeAddress() ? 'Refresh account' : 'Reconnect wallet';
+    : tradeReady ? 'Refresh account'
+    : hasInjectedWallet ? 'Reconnect wallet'
+    : 'Wallet extension required';
   if (authenticated) {
     byId('wallet-address').textContent = activeAddress();
-    byId('wallet-connection-state').textContent = connectedAddress === activeAddress()
+    byId('wallet-connection-state').textContent = tradeReady
       ? 'Proof verified · wallet connected'
-      : 'Proof verified · reconnect wallet for live balances';
+      : hasInjectedWallet
+        ? 'Proof verified · reconnect wallet for live balances'
+        : 'Proof verified · sign-in only, no browser wallet extension for Devnet trading';
     renderPortfolio();
     renderWatchlist();
     renderHistory();
@@ -124,14 +137,10 @@ function renderSession() {
 
 function renderPortfolio() {
   byId('sol-balance').textContent = portfolioData.balance === null ? '—' : formatSol(portfolioData.balance);
-  byId('balance-source').textContent = portfolioData.balance === null ? 'Devnet RPC · connect wallet to load' : 'Devnet RPC · confirmed';
+  byId('balance-source').textContent = portfolioData.balance === null ? 'Devnet RPC · not loaded' : 'Devnet RPC · confirmed';
   byId('token-count').textContent = String(portfolioData.tokens.length);
   byId('chain-tx-count').textContent = String(portfolioData.signatures.length);
   const rows = byId('portfolio-rows');
-  if (connectedAddress !== activeAddress()) {
-    emptyRow(rows, 4, 'Reconnect the verified wallet to load live Devnet balances.');
-    return;
-  }
   if (!portfolioData.tokens.length) {
     emptyRow(rows, 4, 'No SPL Token or Token-2022 balances found on Devnet.');
     return;
@@ -206,7 +215,7 @@ function renderHistory() {
   });
   entries.sort((left, right) => right.epoch - left.epoch);
   if (!entries.length) {
-    emptyRow(rows, 4, connectedAddress === activeAddress() ? 'No saved orders or recent Devnet transactions.' : 'Reconnect wallet to load Devnet transactions.');
+    emptyRow(rows, 4, 'No saved orders or recent Devnet transactions.');
     return;
   }
   rows.replaceChildren();
@@ -244,7 +253,7 @@ function scheduleSessionExpiry(proof) {
 
 async function connectVerifiedWallet() {
   const provider = injectedWallet();
-  if (!provider || typeof provider.connect !== 'function') throw new Error('No compatible Solana wallet was found. Install a wallet with connect and message-signing support.');
+  if (!provider || typeof provider.connect !== 'function') throw new Error(NO_TRADE_PROVIDER_REASON);
   const result = await provider.connect();
   const address = providerAddress({ publicKey: result?.publicKey || provider.publicKey });
   if (!address) throw new Error('Wallet returned an invalid public key.');
@@ -254,27 +263,141 @@ async function connectVerifiedWallet() {
   return address;
 }
 
-async function signIn() {
-  const address = await connectVerifiedWallet();
-  const provider = walletProvider;
-  if (typeof provider.signMessage !== 'function') throw new Error('This wallet cannot sign a sign-in message. No transaction was created.');
+function chooseWallet(wallets, unavailable = []) {
+  return new Promise((resolve) => {
+    const dialog = byId('wallet-picker');
+    const options = byId('wallet-picker-options');
+    const cancel = byId('wallet-picker-cancel');
+    if (!dialog || !options || typeof dialog.showModal !== 'function') { resolve(null); return; }
+    let settled = false;
+    const cleanup = () => {
+      dialog.removeEventListener?.('close', onClose);
+      cancel?.removeEventListener?.('click', onCancel);
+    };
+    const onClose = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(null);
+    };
+    const finish = (id) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      dialog.close();
+      resolve(id);
+    };
+    const onCancel = () => finish(null);
+    const renderOption = (wallet, selectable) => {
+      const button = document.createElement('button');
+      button.className = selectable ? 'app-wallet-option' : 'app-wallet-option app-wallet-option-unavailable';
+      button.type = 'button';
+      button.setAttribute('aria-label', selectable ? 'Choose ' + wallet.name : wallet.name + ': ' + wallet.reason);
+      if (!selectable) {
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+      }
+      const icon = document.createElement('span');
+      icon.className = 'app-wallet-option-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      if (wallet.icon) {
+        const image = document.createElement('img');
+        image.src = wallet.icon;
+        image.alt = '';
+        icon.appendChild(image);
+      } else icon.textContent = 'W';
+      const name = document.createElement('span');
+      name.className = 'app-wallet-option-name';
+      name.textContent = wallet.name;
+      const detail = document.createElement('span');
+      detail.className = selectable ? 'app-wallet-option-arrow' : 'app-wallet-option-reason';
+      detail.textContent = selectable ? '→' : wallet.reason;
+      button.append(icon, name, detail);
+      if (selectable) button.addEventListener('click', () => finish(wallet.id));
+      options.appendChild(button);
+    };
+    options.replaceChildren();
+    wallets.forEach((wallet) => renderOption(wallet, true));
+    unavailable.forEach((wallet) => renderOption(wallet, false));
+    dialog.addEventListener('close', onClose, { once: true });
+    cancel?.addEventListener('click', onCancel, { once: true });
+    try {
+      dialog.showModal();
+      options.children[0]?.focus();
+    } catch { onClose(); }
+  });
+}
+
+export async function signIn() {
+  const listed = signInWalletSession.list();
+  const usable = listed.filter((wallet) => wallet.available);
+  const unavailable = listed.filter((wallet) => !wallet.available);
+  let walletId;
+  if (!usable.length) {
+    if (!listed.length) setAppStatus('No compatible wallet is available. On mobile, open this page inside your wallet\'s in-app browser (Phantom or Solflare); on desktop, install a wallet extension.');
+    else {
+      const reasons = [...new Set(unavailable.map((wallet) => wallet.reason).filter(Boolean))];
+      setAppStatus(reasons.length === 1 ? reasons[0] : 'No usable wallet is available: ' + reasons.join(' · '));
+    }
+    return;
+  }
+  if (usable.length === 1) walletId = usable[0].id;
+  else {
+    walletId = await chooseWallet(usable, unavailable);
+    if (!walletId) {
+      setAppStatus('Sign-in cancelled.');
+      return;
+    }
+  }
+  const selected = await signInWalletSession.connect(walletId);
+  const address = selected?.address;
+  if (!address) throw new Error('Wallet returned an invalid public key.');
   const request = createSignInRequest({ address, origin: window.location.origin });
   setAppStatus('Wallet connected. Confirm the sign-in message in your wallet.');
-  const result = await provider.signMessage(new TextEncoder().encode(request.message), 'utf8');
+  const signature = await signInWalletSession.signMessage(new TextEncoder().encode(request.message));
   setAppStatus('Wallet returned a signature. Checking wallet ownership and site origin.');
-  const signature = signatureBytes(result);
-  if (!signature || signature.length !== 64) throw new Error('Wallet returned an invalid sign-in signature.');
-  const signedAddress = providerAddress({ publicKey: result?.publicKey || provider.publicKey });
-  if (signedAddress !== address) throw new Error('Wallet account changed during sign-in.');
+  if (!(signature instanceof Uint8Array) || signature.length !== 64) throw new Error('Wallet returned an invalid sign-in signature.');
   const proof = { ...request, signature: bytesToBase64(signature) };
   if (!await verifySignInProof(proof, window.location.origin)) throw new Error('Wallet signature did not verify for this origin.');
   writeSession(proof);
   sessionProof = proof;
+  walletProvider = null;
+  connectedAddress = null;
   scheduleSessionExpiry(proof);
   renderSession();
   byId('overview').scrollIntoView({ block: 'start' });
-  setAppStatus('Wallet proof verified. Dashboard opened. Refreshing Devnet account data.', 'success');
+  setAppStatus('Wallet proof verified. Dashboard opened. Looking for a Devnet trading provider…', 'success');
+
+  // Best-effort trade bridge: connectedAddress only becomes trade-ready when a legacy-injected
+  // provider actually binds to this exact address. A Wallet-Standard-only wallet has no injected
+  // provider, so it correctly stays sign-in-only instead of reporting a live trading connection.
+  try {
+    const provider = injectedWallet();
+    if (provider) {
+      let legacyAddress = null;
+      if (typeof provider.connect === 'function') {
+        const result = await provider.connect();
+        legacyAddress = providerAddress({ publicKey: result?.publicKey || provider.publicKey });
+      } else {
+        legacyAddress = providerAddress(provider);
+      }
+      // Race guard: a sign-out or a new sign-in during the pending prompt must win.
+      if (sessionProof === proof && legacyAddress && legacyAddress === address) {
+        walletProvider = provider;
+        connectedAddress = address;
+        bindWalletEvents(provider);
+      }
+    }
+  } catch { /* best-effort trade bridge; never touches the completed sign-in */ }
+
+  if (sessionProof !== proof) return; // Signed out or re-signed-in while the bridge attempt was pending.
+  renderSession();
+  setAppStatus(connectedAddress === address
+    ? 'Wallet proof verified. Dashboard opened. Refreshing Devnet account data.'
+    : 'Wallet proof verified. Dashboard opened. Loading Devnet account data.', 'success');
   await refreshAccount();
+  if (sessionProof !== proof) return; // Signed out or re-signed-in while Devnet reads were loading.
+  if (connectedAddress !== address && byId('app-status').dataset.kind !== 'error') setAppStatus(`Devnet account data loaded. ${NO_TRADE_PROVIDER_REASON}`, 'success');
 }
 
 function bindWalletEvents(provider) {
@@ -330,7 +453,7 @@ async function connectAction() {
   }
 }
 
-function signOut() {
+export function signOut() {
   try { clearSession(); } catch {}
   const provider = walletProvider;
   sessionProof = null;
@@ -345,7 +468,6 @@ function signOut() {
 
 async function refreshAccount() {
   requireSession();
-  if (connectedAddress !== activeAddress()) throw new Error('Reconnect the signed-in wallet to read Devnet account data.');
   setAppStatus('Reading wallet balances and recent signatures from Solana Devnet…');
   const reads = await Promise.allSettled([
     getDevnetBalance(activeAddress()),
@@ -413,7 +535,8 @@ function invalidateQuote() {
 
 async function requestQuote() {
   requireSession();
-  if (connectedAddress !== activeAddress()) throw new Error('Reconnect the signed-in wallet before quoting a trade.');
+  const gapReason = tradeGapReason('before quoting a trade');
+  if (gapReason) throw new Error(gapReason);
   const side = byId('order-side').value;
   const assetMint = byId('asset-mint').value.trim();
   const quoteMint = byId('quote-mint').value.trim();
@@ -505,7 +628,7 @@ async function simulateSignSend() {
   const provider = walletProvider;
   const signer = activeAddress();
   if (!provider || connectedAddress !== signer || providerAddress(provider) !== signer) {
-    throw new Error('Reconnect the signed-in wallet before signing this Devnet order.');
+    throw new Error(tradeGapReason('before signing this Devnet order') || 'Reconnect the signed-in wallet before signing this Devnet order.');
   }
   if (typeof provider.signTransaction !== 'function') throw new Error('This wallet cannot sign transactions. No transaction was sent.');
   const trade = activeQuote;

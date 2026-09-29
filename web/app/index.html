@@ -81,6 +81,16 @@
           </aside>
         </section>
 
+        <dialog class="app-wallet-picker" id="wallet-picker" aria-labelledby="wallet-picker-title">
+          <form class="app-wallet-picker-panel" method="dialog">
+            <p class="eyebrow">FALCONOS / WALLET ACCESS</p>
+            <h2 id="wallet-picker-title">Choose a wallet</h2>
+            <p class="app-wallet-picker-copy">Select the Devnet wallet you want to use for this browser session.</p>
+            <div class="app-wallet-options" id="wallet-picker-options" role="list" aria-label="Usable wallets"></div>
+            <button class="app-secondary-button app-wallet-picker-cancel" id="wallet-picker-cancel" type="button">Cancel</button>
+          </form>
+        </dialog>
+
         <section class="app-workspace" id="workspace-view" hidden>
           <section class="app-heading" id="overview" aria-labelledby="overview-title">
             <div>

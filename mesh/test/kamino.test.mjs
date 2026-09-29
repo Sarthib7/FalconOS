@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { LENDING_CONFIG as C, deriveAccounts, buildLendingTransaction, validateLendingTransaction, deserializeLendingTransaction } from '../kamino-wire.mjs';
-import { prepareLending, verifySignedLending, readLendingReceipt } from '../kamino.mjs';
+import { LENDING_CONFIG as C, ADAPTER_VERSION, deriveAccounts, buildLendingTransaction, validateLendingTransaction, deserializeLendingTransaction } from '../kamino-wire.mjs';
+import { prepareLending, verifySignedLending, verifyLendingVersions, readLendingReceipt } from '../kamino.mjs';
 
 // These deterministic keys are test-only. No RPC call or real wallet is used.
 const signer = Keypair.fromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1));
@@ -298,4 +298,14 @@ test('V102: missing receipt after blockhash expiry is unverified rather than pen
   assert.equal(pending.status, 'PENDING');
   const malformed = await readLendingReceipt(intent, signature, { fetchImpl: receiptRpc(null, C.genesisHash, 'invalid'), now });
   assert.equal(malformed.status, 'UNVERIFIED');
+});
+
+test('A1: preparation stamps policy and adapter versions and drift is rejected as a conflict', async () => {
+  const { intent } = await prepared();
+  assert.equal(intent.policyVersion, 'mesh-public-evidence/1');
+  assert.equal(intent.adapterVersion, ADAPTER_VERSION);
+  assert.equal(verifyLendingVersions(intent), undefined);
+  assert.throws(() => verifyLendingVersions({ ...intent, adapterVersion: 'kamino-devnet-adapter/0' }), { code: 'CONFLICT' });
+  assert.throws(() => verifyLendingVersions({ ...intent, policyVersion: 'mesh-public-evidence/0' }), { code: 'CONFLICT' });
+  assert.throws(() => verifyLendingVersions({ ...intent, adapterVersion: undefined }), { code: 'CONFLICT' });
 });

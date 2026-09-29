@@ -3,6 +3,7 @@ export const DEVNET_CHAIN_ID = 'solana:devnet';
 export const SIGN_IN_STATEMENT = 'Sign in to FalconOS. This signature does not approve a transaction or spend fees.';
 export const SESSION_TTL_MS = 30 * 60 * 1000;
 const DEVNET_SIGN_IN_CHAIN_IDS = new Set([DEVNET_CHAIN_ID, 'devnet']);
+const ED25519_FALLBACK = 'https://esm.sh/@noble/ed25519@2.3.0'; // version-pinned esm.sh import, same convention as the web3.js import in app.mjs
 
 export function decodeSolanaAddress(value) {
   if (typeof value !== 'string' || value.length < 32 || value.length > 44) throw new Error('wallet address is invalid');
@@ -109,14 +110,19 @@ function base64ToBytes(value) {
   } catch { return null; }
 }
 
-export async function verifyEd25519(address, message, signature, cryptoProvider = globalThis.crypto) {
+export async function verifyEd25519(address, message, signature, cryptoProvider = globalThis.crypto, loadFallback = () => import(ED25519_FALLBACK)) {
   if (!cryptoProvider?.subtle || !(message instanceof Uint8Array) || !(signature instanceof Uint8Array) || signature.length !== 64) return false;
   let publicKey;
   try { publicKey = decodeSolanaAddress(address); } catch { return false; }
   try {
     const key = await cryptoProvider.subtle.importKey('raw', publicKey, { name: 'Ed25519' }, false, ['verify']);
     return await cryptoProvider.subtle.verify({ name: 'Ed25519' }, key, signature, message);
-  } catch { return false; }
+  } catch {
+    try {
+      const ed = await loadFallback();
+      return await ed.verifyAsync(signature, message, publicKey) === true;
+    } catch { return false; }
+  }
 }
 
 export async function verifySignInProof(proof, expectedOrigin, now = Date.now(), cryptoProvider = globalThis.crypto) {

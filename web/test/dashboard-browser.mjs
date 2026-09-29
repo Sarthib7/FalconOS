@@ -10,7 +10,8 @@ import { appendEvent, createRun, formatUsdc, replayRun } from '../treasury/domai
 // Every browser profile, storage record and source action is disposable.
 // The dashboard is synthetic. No service token, wallet or external HTTP is used.
 const root = resolve(process.env.FALCON_DASHBOARD_WEB_ROOT || fileURLToPath(new URL('../dist/', import.meta.url)));
-const sourceRoot = process.env.FALCON_DASHBOARD_SOURCE || '/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61';
+const sourceRoot = process.env.FALCON_DASHBOARD_SOURCE;
+if (!sourceRoot) throw new Error('Set FALCON_DASHBOARD_SOURCE to the OpenDesign project data root before running the dashboard browser harness.');
 const evidenceRoot = process.env.FALCON_DASHBOARD_EVIDENCE || '/private/tmp/falcon-dashboard-source-r9g2sbv8';
 await mkdir(evidenceRoot, { recursive: true });
 const artifactDir = await mkdtemp(`${evidenceRoot}/browser-`);

@@ -364,13 +364,13 @@ export function replayRun(run) {
   const state = initialState(run);
   const entries = [];
   const ids = new Set();
-  for (const event of run.events) {
-    validateEvent(event);
-    const identity = event.id.toLowerCase();
+  for (const rawEvent of run.events) {
+    validateEvent(rawEvent);
+    const identity = rawEvent.id.toLowerCase();
     if (ids.has(identity)) throw new Error('Journal contains a duplicate event ID.');
     ids.add(identity);
-    if (timestamp(event.at, 'Event time') < timestamp(state.at, 'Prior event time')) throw new Error('Event time precedes creation or the prior event.');
-    entries.push(applyEvent(state, event));
+    if (timestamp(rawEvent.at, 'Event time') < timestamp(state.at, 'Prior event time')) throw new Error('Event time precedes creation or the prior event.');
+    entries.push(applyEvent(state, rawEvent));
   }
   if (saved) {
     if (run.records.length !== entries.length) throw new Error('Saved records must contain one entry per event.');
@@ -402,7 +402,7 @@ export function createRun(input) {
 }
 
 function eventContent(event) {
-  return JSON.stringify([event.id, event.at, event.type, event.type === 'observe'
+  return JSON.stringify([event.id.toLowerCase(), event.at, event.type, event.type === 'observe'
     ? [event.observation.source, event.observation.status, event.observation.observedAt, event.observation.availableLiquidityUsdc] : null]);
 }
 

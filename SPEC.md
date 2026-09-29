@@ -241,6 +241,7 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 ### I14. Treasury simulation
 
 - [INFERRED, 2026-09-27 amendment] [Decision graph contract](docs/decision-graph.md) governs schema 2 records, rule checks, legacy compatibility, and UI evidence links. Schema 1 remains readable. Pin `treasury-rules/1`; no live provider or execution integration.
+- [INFERRED, 2026-09-29 amendment] Treasury runs MAY persist server-side per owner via §I17. Server owns clock, event id, and per-owner `requestId` idempotency. Balances & mandate stay operator-supplied synthetic USDC; `mode: simulation` retained; ⊥ wallet, provider, model, chain call, custody, or real-capital claim. `decide`/`replayRun` remain the single canonical engine, server-authoritative for a persisted run.
 
 - [INFERRED, contract] [Treasury contract](docs/treasury-contract.md) fixes version 1 Run, Event, View, Graph, Decision, Entry, and store exports. Coordinator owns interface changes.
 - [INFERRED, surface] `web/treasury/` static Vite entry. Pure `domain.mjs`, guarded browser-local `store.mjs`, UI `app.mjs`. `createRun`, `appendEvent`, `replayRun`, `buildGraph`, `decide`, `formatUsdc` exported by domain.
@@ -257,7 +258,20 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 ### I16. React Control Centre
 
 - [INFERRED, contract] [Control Centre](docs/control-centre.md) defines `/dashboard/`, four hash views, retained samples, isolated browser persistence, canonical treasury rules and explicit links to live tools. Original OpenDesign files and existing application routes remain available.
+- [INFERRED, 2026-09-29 amendment] Knowledge & Connections views read live mesh evidence over §I15 (graph, analyses, sources, connectors, `/readyz`). Bearer token in tab memory only, ⊥ persisted; no authenticated request before connect; disconnect clears token. Retained samples remain fallback/demo. Empty owner → empty state, not error. Treasury persistence unchanged (§I14).
 - [INFERRED, verification] Focused fixture/storage tests, complete web suite, Vite site build, source/React browser comparison, saved workflow and failure checks. No hosted schema, wallet transaction or deployment in this design port.
+
+### I17. Treasury runs API
+
+- [INFERRED, 2026-09-29] Owner-scoped treasury runs on the §I15 mesh service. Same auth: `Authorization: Bearer <token>`, SHA-256 → owner. Additive Postgres table `falcon_mesh.treasury_runs`; schema-version marker unchanged.
+- `POST /v1/treasury/runs` body `{requestId, setup}` → `{run, view}`. Create one run from operator setup (mandate, initial balances).
+- `GET /v1/treasury/runs` → `{records, limit: 20}`. Owner runs, newest first, no full journal.
+- `GET /v1/treasury/runs/:uuid` → `{run, view}`. Full journal + server replay projection.
+- `POST /v1/treasury/runs/:uuid/events` body `{requestId, type ∈ {observe,cycle,revoke,owner_redeem}, ...payload}` → `{run, view, entry}`. Server appends via `appendEvent` with server clock + generated event id; `requestId` idempotent per owner.
+- `POST /v1/treasury/runs/:uuid/preview` body `{observation}` → `{graph, decision}`. `decide(buildGraph(state))` only; ⊥ persistence/side-effect.
+- Errors reuse §I15 envelope `{error:{code,message}}`. `mode: simulation`; operator-supplied balances; ⊥ chain/wallet.
+- [INFERRED, surface] Shared engine `mesh/treasury-domain.mjs` (moved from `web/treasury/domain.mjs`; web imports it back). Store `mesh/treasury-store.mjs`; routes in `mesh/http.mjs`; wiring in `mesh/server.mjs`.
+- [INFERRED, verification] `npm --prefix mesh test`; disposable Postgres integration; authenticated HTTP checks; `/readyz` green across additive migration.
 
 ## §V INVARIANTS
 
@@ -405,12 +419,12 @@ V74: ∀ Solana `getTokenSupply.decimals` → validate its integer range before 
 V75: ∀ Devnet copilot swap → configured pool exists on Devnet and is Raydium CPMM; Raydium quote route has exactly one leg through that pool; quote input/output mints, direction, and amount match the request; transaction build returns exactly one unsigned transaction from that quote; mismatch, missing route, or multiple transactions → stop before wallet signing
 
 V76: ∀ production `/app/` Devnet swap → route has 1-4 legs; every ordered Raydium leg matches adjacent mints and its live pool account owner, state layout, and mint pair; route starts/ends at requested mints, contains no repeated pool, and quote amount matches request; build exactly one unsigned transaction from that quote; any mismatch → stop before wallet signing
-V77: [INFERRED] ∀ treasury record/view/outcome → explicit `mode: simulation`; synthetic observations; zero simulated interest/fees; no wallet/provider/model/chain call or real capital claim. Existing V11,V51,V64,V65 advisory boundaries remain unchanged outside I14.
+V77: [INFERRED; 2026-09-29 amended] ∀ treasury record/view/outcome → explicit `mode: simulation`; synthetic/operator-supplied observations & balances; zero simulated interest/fees; no wallet/provider/model/chain call, custody, or real-capital claim. Server-persisted runs (§I17) allowed: server owns clock/event-id/`requestId` idempotency; `decide`/`replayRun` stay canonical. Existing V11,V51,V64,V65 advisory boundaries unchanged outside I14.
 V78: [INFERRED] ∀ treasury money → exact decimal ingress ≤6 fractional digits, integer units ≤u64; `reserve + investmentCap ≤ total`; conservation holds across every event; agent cannot debit reserve or undelegated cash.
 V79: [INFERRED] ∀ treasury agent decision → `decide(graph)` reads only validated typed graph nodes and required edges; missing dependency → blocked action; pre-action graph, decision, and outcome reproducible from journal.
 V80: [INFERRED] ∀ treasury supply → fresh available evidence, permitted mandate, liquid venue, positive delegated idle, position after action ≤cap; revoked mandate blocks every agent movement; owner redemption is explicit separate command.
 V81: [INFERRED] ∀ missing/unavailable/future/stale observation → `NO_DATA`; insufficient full-redemption liquidity → `BLOCKED`, prior position preserved; successful redemption credits delegated idle only.
-V82: [INFERRED] ∀ treasury mutation → exclusive Web Lock, fresh validated replay, expected revision match, one successful storage write before success; corrupt/unavailable/full storage or unsupported locks → visible error, no false success or replacement.
+V82: [INFERRED; 2026-09-29 scoped] ∀ browser treasury mutation → exclusive Web Lock, fresh validated replay, expected revision match, one successful storage write before success; corrupt/unavailable/full storage or unsupported locks → visible error, no false success or replacement. Server-persisted mutations (§I17) governed by §V114 idempotency plus a per-run atomic write (row lock or optimistic revision) so concurrent distinct events cannot lose updates.
 V83: [INFERRED] ∀ treasury event → exact schema, UUID, monotonic UTC time, at most 200 retained events; duplicate identical ID is idempotent; conflicting ID reuse rejected; reload reproduces state/decisions; no silent journal truncation.
 V84: [INFERRED] ∀ treasury UI → clear simulation labels, visible evidence age/errors/outcomes, keyboard controls and responsive layout; agent loop starts only on user action, stops on error/revocation/page close, stays stopped after reload; export contains validated replayable history.
 V85: [INFERRED] ∀ treasury setup submission → capture form values before disabling inputs; a valid visible mandate creates the same persisted mandate; rejected submission preserves the form for correction.
@@ -441,6 +455,10 @@ V109: [INFERRED] ∀ dashboard decision → canonical treasury rules and exact i
 V110: [INFERRED] ∀ current dashboard preview → evidence age refreshes decision validity; historical selection stays pinned to its original graph and cutoff; bounded loop stops on hidden page, unmount, storage change, error, revocation or ten saved cycles; Stop stays available during a pending cycle and cancels its queued storage lock; a synchronous commit already entered remains recorded.
 V111: [INFERRED] ∀ dashboard export or connection claim → describes actual record fields and connection state; sample analysis cannot claim service capture or execution authority; source content treated as data; dialogs close and restore focus without stale event races; delayed clipboard results apply only to their original open export.
 V112: [INFERRED] ∀ rejected mesh POST while client remains connected → complete typed HTTP error; drain unread input without retaining it; oversized fixed-length or chunked body never reaches storage; existing request timeout remains bounded.
+V113: [INFERRED] ∀ Control Centre live read (§I16) → bearer token in tab memory only, ⊥ persisted (⊥ localStorage/sessionStorage/URL); no authenticated /v1/* request before successful connect; disconnect clears token & halts authed requests; absent token → connect prompt; empty owner graph → empty state ≠ error; API failure → typed error surfaced, prior view unchanged.
+V114: [INFERRED] ∀ /v1/treasury/* → owner from token hash (§I15); run & event owner-scoped; event `requestId` idempotent per owner; conflicting `requestId` reuse rejected; server clock monotonic UTC; ≤200 events per run; unknown run/owner → NOT_FOUND; concurrent distinct events on one run serialize via a per-run row lock (`SELECT ... FOR UPDATE`) or optimistic revision check so no lost update or false success occurs.
+V115: [INFERRED] ∀ POST /v1/treasury/runs/:id/preview → `decide(buildGraph(state))` only; ⊥ persistence, ⊥ event append, ⊥ side-effect; equal input → equal decision.
+V116: [INFERRED] ∀ treasury_runs migration → additive DDL only; schema-version marker unchanged; existing columns/tables neither dropped nor renamed; `/readyz` (`store.ready()`) stays 200 across the deploy so the Railway healthcheck never restarts the live service.
 
 ## §T TASKS
 
@@ -494,6 +512,12 @@ T45|~|connect landing signup to durable local/Pages storage and configurable ide
 T46|x|port active OpenDesign Control Centre to React; preserve four views and isolated saved simulation; verify source parity, current/history semantics, storage failures and browser flows|I16,V107,V108,V109,V110,V111
 
 T47|x|publish new landing and Control Centre on the existing Pages site from a clean scoped checkout; preserve hosted signup and verify public routes and assets|I16,V104,V107,V111
+T48|~|wire dashboard Knowledge view to live §I15 mesh graph/analyses/sources behind in-memory token gate|I16,V113
+T49|~|wire dashboard Connections view to live connectors, `/readyz` health and live capture status|I16,V113
+T50|.|add §I17 treasury runs API: additive `treasury_runs` migration, shared `mesh/treasury-domain.mjs`, `treasury-store.mjs`, runs/events/preview routes|I14,I17,V77,V114,V115,V116
+T51|.|wire dashboard Decisions view to server-persisted treasury runs (§I17)|I16,I17,V114
+T52|.|wire dashboard Overview view to server treasury run projection (§I17)|I16,I17,V114
+T53|.|deploy live Control Centre build (`VITE_MESH_API_URL`) and verify end-to-end vs falcon-mesh production|I16,I17,V113,V114
 
 ## §B BUGS
 
