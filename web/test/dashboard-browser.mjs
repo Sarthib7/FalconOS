@@ -36,6 +36,8 @@ const prettyUnits = value => {
 };
 const apiOrigin = 'http://127.0.0.1:8791';
 const MESH_TOKEN = 'dashboard-test-token-0123456789abcdef', BAD_TOKEN = 'x'.repeat(40);
+const CONNECTORS = [{ id: 'kamino-program-docs', label: 'Official Kamino program deployments', sourceUrl: 'https://raw.githubusercontent.com/Kamino-Finance/klend/master/README.md', network: null }, { id: 'solana-devnet-klend', label: 'Solana Devnet Kamino program account', sourceUrl: 'https://api.devnet.solana.com', network: 'devnet' }];
+let readyMode = 'ready', connectorsFail = false, connectorObservations = false;
 const ANALYSIS_IDS = ['3f1c2a9e-0b7d-4c55-9a51-6d0e8f2b7a01', '8a4d6e21-5c93-4f0a-b1e7-2c9d3a6f5b02'];
 const LIVE_CONTENT = '# klend readme fixture\n';
 const LIVE_SOURCE = { revisionId: 'c0ffee00-1111-4222-8333-444455556666', sourceKey: 'kamino/readme', sourceUrl: 'https://github.com/Kamino-Finance/klend/blob/master/README.md', observedAt: '2026-09-28T09:00:00.000Z', capturedAt: '2026-09-28T09:00:05.000Z', sha256: hash(LIVE_CONTENT) };
@@ -55,10 +57,12 @@ function meshFixture() {
 }
 const meshError = (status, code, message) => [status, { error: { code, message } }];
 function meshRoute(path, authorized) {
+  if (path === '/readyz') return readyMode === 'ready' ? [200, { status: 'ready' }] : meshError(503, 'STORAGE_UNAVAILABLE', 'The evidence store is unavailable.');
   if (!authorized) return meshError(401, 'UNAUTHORIZED', 'Missing or invalid bearer token.');
   const fixture = meshFixture(), empty = meshMode === 'empty';
   if (path === '/v1/graph') return [200, { graph: empty ? emptyGraph('synthetic') : fixture.synthetic }];
-  if (path === '/v1/graph/live') return meshMode === 'error' ? meshError(500, 'STORE_UNAVAILABLE', 'The evidence store is unavailable.') : [200, { graph: empty ? emptyGraph('live') : fixture.liveGraph }];
+  if (path === '/v1/connectors') return connectorsFail ? meshError(500, 'STORE_UNAVAILABLE', 'The connector registry is unavailable.') : [200, { connectors: CONNECTORS }];
+  if (path === '/v1/graph/live') return meshMode === 'error' ? meshError(500, 'STORE_UNAVAILABLE', 'The evidence store is unavailable.') : [200, { graph: empty ? emptyGraph('live') : connectorObservations ? { ...fixture.liveGraph, nodes: [...fixture.liveGraph.nodes, nodeIn('observation:live:kamino-program-docs', 'observation', 'Official document capture', { observationType: 'document', status: 'ok', reasonCode: null, claimsProgram: true }), nodeIn('observation:live:solana-devnet-klend', 'observation', 'Devnet program account capture', { observationType: 'program_account', status: 'unavailable', reasonCode: 'ACCOUNT_MISSING' })] } : fixture.liveGraph }];
   if (path === '/v1/analyses') return [200, { records: empty ? [] : fixture.records.map(({ id, createdAt, analysis }) => ({ id, createdAt, analysis })), limit: 20 }];
   const analysis = path.match(/^\/v1\/analyses\/([a-f0-9-]{36})$/i);
   if (analysis) {
@@ -73,6 +77,7 @@ async function fulfillMesh(message) {
   const { request, requestId } = message.params;
   const url = new URL(request.url), headers = [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: origin }, { name: 'Access-Control-Allow-Headers', value: 'authorization, accept, content-type' }, { name: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' }];
   if (request.method === 'OPTIONS') return call('Fetch.fulfillRequest', { requestId, responseCode: 204, responseHeaders: headers }, message.sessionId);
+  if (url.pathname === '/readyz' && readyMode === 'unreachable') { meshRequests.push({ method: request.method, path: url.pathname, hasQuery: Boolean(url.search), authorization: undefined, status: 0 }); return call('Fetch.failRequest', { requestId, errorReason: 'ConnectionRefused' }, message.sessionId); }
   const authorization = Object.entries(request.headers).find(([name]) => name.toLowerCase() === 'authorization')?.[1];
   const [status, body] = request.method === 'GET' ? meshRoute(url.pathname, authorization === `Bearer ${MESH_TOKEN}`) : meshError(405, 'METHOD_NOT_ALLOWED', 'Read-only fixture.');
   meshRequests.push({ method: request.method, path: url.pathname, hasQuery: Boolean(url.search), authorization, status });
@@ -448,15 +453,17 @@ async function runReact() {
   check('V108: saved operations preserve existing treasury and advisory bytes', await p.evaluate(`Object.entries(${JSON.stringify(SENTINELS)}).every(([key,value])=>localStorage.getItem(key)===value)`));
 
   await liveKnowledgeCases();
+  await liveConnectionsCases();
   await route(p, 'connections');
-  check('V111: connections show the mesh disconnected until a token is entered and link to the separate live mesh', await p.evaluate('document.getElementById("view").textContent.includes("DISCONNECTED") && document.getElementById("view").textContent.includes("NOT CAPTURED") && [...document.querySelectorAll("a[href]")].some(link=>new URL(link.href).pathname==="/mesh/")'));
+  check('V111: connections show the mesh disconnected until a token is entered and link to the separate live mesh', await p.evaluate('document.getElementById("view").textContent.includes("DISCONNECTED") && document.getElementById("view").textContent.includes("CONNECT TO VIEW") && !document.getElementById("view").textContent.includes("NOT CAPTURED") && [...document.querySelectorAll("a[href]")].some(link=>new URL(link.href).pathname==="/mesh/")'));
   await clockRegression();
   await storageCases();
   await queuedLoopStop();
   await boundedLoop();
   await legacyReferences();
   check('V111: dashboard made no same-origin backend, wallet, or provider requests', localRequests.every(request => request.method === 'GET' && !request.path.startsWith('/v1/') && !request.path.startsWith('/api/')));
-  check('V111: every mesh request was a read-only GET with the bearer token and no query string', meshRequests.length > 0 && meshRequests.every(request => request.method === 'GET' && !request.hasQuery && (request.authorization === `Bearer ${MESH_TOKEN}` || request.authorization === `Bearer ${BAD_TOKEN}`)));
+  check('V111: every authenticated mesh request was a read-only GET with the bearer token and no query string', meshRequests.some(request => request.path !== '/readyz') && meshRequests.filter(request => request.path !== '/readyz').every(request => request.method === 'GET' && !request.hasQuery && (request.authorization === `Bearer ${MESH_TOKEN}` || request.authorization === `Bearer ${BAD_TOKEN}`)));
+  check('CONN: /readyz was the only unauthenticated mesh request and carried no credentials or query', meshRequests.filter(request => request.authorization === undefined).every(request => request.path === '/readyz' && request.method === 'GET' && !request.hasQuery));
   await writeFile(`${artifactDir}/ui-copy.txt`, await p.evaluate('document.body.innerText'));
 }
 
@@ -559,6 +566,41 @@ async function liveKnowledgeCases() {
   await errorPage.close();
   meshMode = 'populated';
 }
+
+async function liveConnectionsCases() {
+  meshMode = 'populated'; readyMode = 'ready'; connectorsFail = false; connectorObservations = true; meshRequests.length = 0;
+  const p = await page({ isolated: true }); activePage = p;
+  const badges = selector => texts(p, selector), settled = () => p.wait('!document.getElementById("connectors-loading")');
+  const revisit = async () => { await route(p, 'overview'); await route(p, 'connections'); };
+  const health = () => p.wait('document.getElementById("mesh-health") && document.getElementById("mesh-health").textContent.trim() !== "CHECKING"').then(() => p.evaluate('document.getElementById("mesh-health").textContent.trim()'));
+  await route(p, 'connections');
+  check('CONN1: /readyz health shows READY without a token and is the only request made', await health() === 'READY' && seen('GET', '/readyz') && meshRequests.every(request => request.path === '/readyz' && request.authorization === undefined && request.status === 200));
+  const gated = await badges('.connection-row > .badge');
+  check('CONN2: without a token the connectors read CONNECT TO VIEW, keep the boundary copy and fetch no authenticated endpoint', JSON.stringify(gated.slice(1)) === JSON.stringify(['DISCONNECTED', 'CONNECT TO VIEW', 'CONNECT TO VIEW', 'NOT CONNECTED']) && await p.evaluate('document.getElementById("view").textContent.includes("A registered source connector for the official program deployment README.") && !document.querySelector("[data-connector]") && !document.getElementById("connectors-loading")') && !meshRequests.some(request => request.path.startsWith('/v1/')));
+  await route(p, 'knowledge'); await connectMesh(p); await route(p, 'connections'); await settled();
+  check('CONN3: connected, the registry rows render from the real /v1/connectors response with source and network', JSON.stringify(await texts(p, '[data-connector] h3')) === JSON.stringify(CONNECTORS.map(connector => connector.label)) && JSON.stringify(await p.evaluate('[...document.querySelectorAll("[data-connector]")].map(row => row.dataset.connector)')) === JSON.stringify(CONNECTORS.map(connector => connector.id)) && await p.evaluate(`[...document.querySelectorAll('[data-connector] a.btn')].map(link => link.getAttribute('href')).join() === ${JSON.stringify(CONNECTORS.map(connector => connector.sourceUrl).join())} && document.querySelector('[data-connector="solana-devnet-klend"]').textContent.includes('devnet') && document.querySelector('[data-connector="kamino-program-docs"]').textContent.includes('None (document source)')`) && seen('GET', '/v1/connectors') && meshRequests.filter(request => request.path.startsWith('/v1/')).every(request => request.authorization === `Bearer ${MESH_TOKEN}` && request.status === 200));
+  check('CONN4: each connector badge is derived from its live observation node, not a hardcoded status', JSON.stringify(await badges('[data-connector] > .badge')) === JSON.stringify(['OBSERVED', 'UNAVAILABLE']) && await p.evaluate('document.querySelector("[data-connector=\\"solana-devnet-klend\\"]").textContent.includes("ACCOUNT_MISSING") && !document.getElementById("view").textContent.includes("NOT CAPTURED")') && seen('GET', '/v1/graph/live'));
+  check('CONN5: the wallet row keeps its boundary badge and follows the connector rows as 05, with no fake live status', await p.evaluate('(() => { const rows = [...document.querySelectorAll(".connection-row")]; const last = rows.at(-1); return last.querySelector(".badge").textContent === "NOT CONNECTED" && last.querySelector(".connection-symbol").textContent === "05" && rows[0].querySelector(".connection-symbol").textContent === "01" && !rows[0].querySelector(".badge").textContent.includes("OBSERVED"); })()'));
+  connectorObservations = false; await revisit(); await settled();
+  check('CONN6: a connector with no live observation node reads NO DATA', JSON.stringify(await badges('[data-connector] > .badge')) === JSON.stringify(['NO DATA', 'NO DATA']));
+  readyMode = 'unavailable'; await revisit(); await settled();
+  check('CONN7: a 503 from /readyz reads UNAVAILABLE while connected data still renders', await health() === 'UNAVAILABLE' && await p.evaluate('document.querySelectorAll("[data-connector]").length') === 2 && await p.evaluate('document.querySelector("#mesh-health .badge").classList.contains("warn")'));
+  readyMode = 'unreachable'; await revisit(); await settled();
+  check('CONN8: a refused /readyz connection reads UNREACHABLE', await health() === 'UNREACHABLE');
+  readyMode = 'ready'; connectorsFail = true; await revisit(); await settled();
+  check('CONN9: a failed /v1/connectors surfaces the API error, renders no connector rows and shows no fake status', await p.evaluate('document.getElementById("connectors-error").textContent.includes("STORE_UNAVAILABLE: The connector registry is unavailable.") && document.getElementById("connectors-error").getAttribute("role") === "alert" && !document.querySelector("[data-connector]") && !document.getElementById("view").textContent.includes("NOT CAPTURED")') && await health() === 'READY');
+  connectorsFail = false; meshMode = 'error'; await revisit(); await settled();
+  check('CONN10: a failed /v1/graph/live keeps the registry but marks every status UNKNOWN and surfaces the error', JSON.stringify(await badges('[data-connector] > .badge')) === JSON.stringify(['UNKNOWN', 'UNKNOWN']) && await p.evaluate('document.getElementById("graph-error").textContent.includes("STORE_UNAVAILABLE: The evidence store is unavailable.")'));
+  meshMode = 'populated'; connectorObservations = true;
+  await route(p, 'knowledge'); await p.click('[data-action="disconnect"]'); await p.wait('Boolean(document.getElementById("knowledge-connect"))');
+  const before = meshRequests.filter(request => request.path.startsWith('/v1/')).length;
+  await route(p, 'connections'); await health();
+  check('CONN11: after Disconnect the connectors return to CONNECT TO VIEW and no authenticated request is made', JSON.stringify((await badges('.connection-row > .badge')).slice(1)) === JSON.stringify(['DISCONNECTED', 'CONNECT TO VIEW', 'CONNECT TO VIEW', 'NOT CONNECTED']) && !(await p.evaluate('Boolean(document.querySelector("[data-connector]"))')) && meshRequests.filter(request => request.path.startsWith('/v1/')).length === before);
+  await screenshot(p, 'connections-live');
+  await p.close();
+  connectorObservations = false; readyMode = 'ready';
+}
+
 async function staleClipboard(p) {
   for (const outcome of ['resolve', 'reject']) {
     await route(p, 'decisions');
