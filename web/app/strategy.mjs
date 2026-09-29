@@ -8,12 +8,11 @@ const FETCH_TIMEOUT_MS = 8000;
 const STATUSES = new Set(['PUBLISHED', 'BLOCKED', 'NO_DATA']);
 const U64_MAX = 18446744073709551615n;
 
-// Devnet swap config (SPEC I18): plan capital is denominated in dUSDC; every council leg is proxied by dUSDT,
-// the Raydium Devnet analog reachable via a live 2-hop dUSDC route through CPMM pools that pass V76 validation
-// (owners DRaycpLY..., verified 2026-09-29; sane monotonic quotes ~1% impact, unlike the dwSOL route which
-// returned erratic >90% impact quotes). Keyed by underlying so any asset_id resolves.
-// Legs without a mapped mint stay executable:false in plan.mjs.
-export const DEVNET_BASE_MINT = 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT';
+// Devnet swap config (SPEC I18): plan capital is denominated in Circle Devnet USDC (4zMMC), each council leg proxied by
+// dUSDT via a live 2-hop Raydium Devnet route through CPMM/AMM pools that pass V76 validation (owners DRaycpLY.../DRaya7K...,
+// verified 2026-09-29; USDC->dUSDT ~0.45% impact at 0.01 USDC). Base is real Circle Devnet USDC so the executing wallet
+// spends actual test USDC. Keyed by underlying so any asset_id resolves; legs without a mapped mint stay executable:false.
+export const DEVNET_BASE_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
 const DEVNET_ANALOG_MINT = '9jWfcfEZToquBQmkoEViNSCt72veXwcvRGFQERXRjEk1';
 export const ANALOG_MINTS = Object.freeze({ OPENAI: DEVNET_ANALOG_MINT, SPACEX: DEVNET_ANALOG_MINT });
 

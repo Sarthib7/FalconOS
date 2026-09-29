@@ -33,10 +33,10 @@ const EXIT_STOPPED_BEFORE_BUILD = 3;
 const DEVNET_RPC = 'https://api.devnet.solana.com/'; // trailing slash: Chrome's canonical request URL
 const RAYDIUM_BUILD = 'https://transaction-v1-devnet.raydium.io/transaction/swap-base-in';
 const RAYDIUM_QUOTE = 'https://transaction-v1-devnet.raydium.io/compute/swap-base-in';
-const DUSDC = 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT';
+const DUSDC = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'; // base = Circle Devnet USDC (held by id.json); app spends this
 const DUSDT = '9jWfcfEZToquBQmkoEViNSCt72veXwcvRGFQERXRjEk1';
-const CAPITAL = '0.2'; // dUSDC UI units -> OPENAI 0.12 / SPACEX 0.08
-const LEG_BASE_UNITS = 120000n; // first leg: 60% of 0.2 dUSDC
+const CAPITAL = '0.01'; // USDC UI units -> OPENAI 0.006 / SPACEX 0.004
+const LEG_BASE_UNITS = 6000n; // first leg: 60% of 0.01 USDC (6dp)
 const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 // Outbound allow-list (besides the harness's own local static + mock-council servers). Full mode additionally needs esm.sh:
 // the app imports its signer library (@solana/web3.js, version-pinned) from there at build/sign time. Dry mode never reaches that import.
@@ -311,11 +311,11 @@ try {
   await wait('document.getElementById("strategy-status").textContent === "PUBLISHED" && document.querySelectorAll("#strategy-plan input[data-leg]").length === 2');
   check('decision: PUBLISHED with OPENAI 60% / SPACEX 40%', await evaluate(`[...document.querySelectorAll('#strategy-legs tr')].map((r) => r.textContent).join('|') === 'OPENAI60.00%|SPACEX40.00%'`));
   const allocations = () => evaluate(`[...document.querySelectorAll('#strategy-plan input[data-leg]')].map((i) => i.dataset.leg + '=' + i.value).join(',')`);
-  check('plan: capital 0.2 dUSDC sized to 0.12 / 0.08, no residual', await allocations() === 'OPENAI=0.12,SPACEX=0.08' && await text('strategy-residual') === '0');
-  await setValue('#strategy-plan input[data-leg="SPACEX"]', '0.07');
-  check('plan: allocations are editable (residual follows the edit)', await text('strategy-residual') === '0.01', await text('strategy-message'));
-  await setValue('#strategy-plan input[data-leg="SPACEX"]', '0.08');
-  check('plan: edit reverted to the sized plan', await allocations() === 'OPENAI=0.12,SPACEX=0.08' && await text('strategy-residual') === '0');
+  check('plan: capital 0.01 USDC sized to 0.006 / 0.004, no residual', await allocations() === 'OPENAI=0.006,SPACEX=0.004' && await text('strategy-residual') === '0');
+  await setValue('#strategy-plan input[data-leg="SPACEX"]', '0.003');
+  check('plan: allocations are editable (residual follows the edit)', await text('strategy-residual') === '0.001', await text('strategy-message'));
+  await setValue('#strategy-plan input[data-leg="SPACEX"]', '0.004');
+  check('plan: edit reverted to the sized plan', await allocations() === 'OPENAI=0.006,SPACEX=0.004' && await text('strategy-residual') === '0');
   check('plan: both legs executable', await evaluate(`[...document.querySelectorAll('#strategy-plan button[data-action="execute"]')].every((b) => !b.disabled)`));
 
   // 3. Execute ONE leg (OPENAI). The wallet signs through the test provider; nothing else is clicked.
