@@ -41,7 +41,6 @@ const LIVE_CONTENT = '# klend readme fixture\n';
 const LIVE_SOURCE = { revisionId: 'c0ffee00-1111-4222-8333-444455556666', sourceKey: 'kamino/readme', sourceUrl: 'https://github.com/Kamino-Finance/klend/blob/master/README.md', observedAt: '2026-09-28T09:00:00.000Z', capturedAt: '2026-09-28T09:00:05.000Z', sha256: hash(LIVE_CONTENT) };
 const meshRequests = [];
 let meshMode = 'populated';
-const metadata = ({ content, ...rest }) => rest;
 const nodeIn = (id, kind, label, properties = {}) => ({ id, kind, label, properties, sourceRevisionIds: [LIVE_SOURCE.revisionId] });
 const edgeIn = (id, source, target, relation) => ({ id, source, target, relation, sourceRevisionIds: [LIVE_SOURCE.revisionId] });
 const emptyGraph = mode => ({ schemaVersion: 1, mode, revision: hash(`empty-${mode}`), asOf: '2026-09-28T09:00:00.000Z', nodes: [], edges: [], sources: [], issues: [], coverage: { status: 'complete', nodeLimit: 256, edgeLimit: 512, sourceLimit: 32 } });

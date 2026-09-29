@@ -67,7 +67,7 @@ export default function Knowledge({ api, connection, reduced, navigate, onExport
   useEffect(() => {
     if (!connected) return;
     let live = true;
-    setCurrent({ ...idle, status: 'loading' }); setAnalysisId(null); setRecord(idle); setSelected(null); setSourceId(null); setExportError('');
+    setCurrent({ ...idle, status: 'loading' }); setAnalysisId(null); setRecord(idle); recordSeq.current += 1; setSelected(null); setSourceId(null); setExportError('');
     api(mode === 'live' ? '/v1/graph/live' : '/v1/graph').then(payload => { if (live) setCurrent({ status: 'ready', value: payload.graph, error: '' }); }, failure => { if (live) setCurrent({ ...idle, status: 'error', error: failure.message }); });
     return () => { live = false; };
   }, [connected, mode, refresh]);
