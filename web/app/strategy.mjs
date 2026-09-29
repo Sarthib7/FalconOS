@@ -8,12 +8,14 @@ const FETCH_TIMEOUT_MS = 8000;
 const STATUSES = new Set(['PUBLISHED', 'BLOCKED', 'NO_DATA']);
 const U64_MAX = 18446744073709551615n;
 
-// Devnet swap config (SPEC I18): plan capital is denominated in dUSDC; every council leg is proxied by dwSOL,
-// the Raydium Devnet analog with a live multi-hop dUSDC route. Keyed by underlying so any asset_id resolves.
+// Devnet swap config (SPEC I18): plan capital is denominated in dUSDC; every council leg is proxied by dUSDT,
+// the Raydium Devnet analog reachable via a live 2-hop dUSDC route through CPMM pools that pass V76 validation
+// (owners DRaycpLY..., verified 2026-09-29; sane monotonic quotes ~1% impact, unlike the dwSOL route which
+// returned erratic >90% impact quotes). Keyed by underlying so any asset_id resolves.
 // Legs without a mapped mint stay executable:false in plan.mjs.
 export const DEVNET_BASE_MINT = 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT';
-const DEVNET_WSOL_MINT = 'So11111111111111111111111111111111111111112';
-export const ANALOG_MINTS = Object.freeze({ OPENAI: DEVNET_WSOL_MINT, SPACEX: DEVNET_WSOL_MINT });
+const DEVNET_ANALOG_MINT = '9jWfcfEZToquBQmkoEViNSCt72veXwcvRGFQERXRjEk1';
+export const ANALOG_MINTS = Object.freeze({ OPENAI: DEVNET_ANALOG_MINT, SPACEX: DEVNET_ANALOG_MINT });
 
 // Override order: window.FALCON_COUNCIL_BASE, then <body data-council-base>, then the default.
 export function resolveCouncilBase({ global = globalThis, dataset = global.document?.body?.dataset } = {}) {

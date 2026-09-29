@@ -138,9 +138,9 @@ test('strategy module stays advisory: no wallet or send code, panel markup prese
   assert.doesNotMatch(html, /id="strategy-execute"/, 'no batch execute-all control');
 });
 
-test('default analog config maps council underlyings to dwSOL against a dUSDC base, making legs executable', () => {
+test('default analog config maps council underlyings to the dUSDT Devnet analog against a dUSDC base, making legs executable', () => {
   assert.equal(DEVNET_BASE_MINT, 'USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT');
-  assert.deepEqual({ ...ANALOG_MINTS }, { OPENAI: 'So11111111111111111111111111111111111111112', SPACEX: 'So11111111111111111111111111111111111111112' });
+  assert.deepEqual({ ...ANALOG_MINTS }, { OPENAI: '9jWfcfEZToquBQmkoEViNSCt72veXwcvRGFQERXRjEk1', SPACEX: '9jWfcfEZToquBQmkoEViNSCt72veXwcvRGFQERXRjEk1' });
   const advice = parseAdvice({ ...PUBLISHED, legs: [
     { asset_id: 'openai-1', underlying: 'OPENAI', target_weight_bps: 6000 },
     { asset_id: 'spacex-1', underlying: 'SPACEX', target_weight_bps: 4000 },
