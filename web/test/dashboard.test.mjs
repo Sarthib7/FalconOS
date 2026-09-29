@@ -8,6 +8,7 @@ import { createStore as createTreasuryStore } from '../treasury/store.mjs';
 import { replayRun } from '../treasury/domain.mjs';
 import { projectGraph, analyzeGraph } from '../../mesh/domain.mjs';
 import { selectionAfterDispatch } from '../dashboard/selection.mjs';
+import { API_BASE, TOKEN_PATTERN, meshRequest } from '../dashboard/api.mjs';
 
 const text = readFileSync(new URL('../dashboard/data.json', import.meta.url), 'utf8');
 const data = JSON.parse(text);
@@ -248,4 +249,54 @@ test('V110 B80: abort after the synchronous commit enters preserves its recorded
   assert.equal(saved.view.state.balances.positionUnits, '500000000');
   assert.deepEqual(store.load(), saved);
   assert.equal(env.storage.writes.length, 3);
+});
+
+const TOKEN = 'a'.repeat(32);
+function stubFetch(t, respond) {
+  const calls = [], timeouts = [], original = globalThis.fetch, timeout = AbortSignal.timeout;
+  globalThis.fetch = async (url, init) => { calls.push({ url, init }); return respond(url, init); };
+  AbortSignal.timeout = milliseconds => { timeouts.push(milliseconds); return timeout.call(AbortSignal, milliseconds); };
+  t.after(() => { globalThis.fetch = original; AbortSignal.timeout = timeout; });
+  return { calls, timeouts };
+}
+const json = (status, payload) => new Response(JSON.stringify(payload), { status, headers: { 'content-type': 'application/json' } });
+
+test('dashboard mesh client: GET sends only the bearer token and never credentials, cookies or a body', async t => {
+  const stub = stubFetch(t, () => json(200, { graph: { nodes: [] } }));
+  assert.deepEqual(await meshRequest(TOKEN, '/v1/graph'), { graph: { nodes: [] } });
+  const [{ url, init }] = stub.calls;
+  assert.equal(url, `${API_BASE}/v1/graph`);
+  assert.equal(init.method, 'GET'); assert.equal(init.credentials, 'omit'); assert.equal(init.redirect, 'error');
+  assert.deepEqual(init.headers, { accept: 'application/json', authorization: `Bearer ${TOKEN}` });
+  assert.equal(init.body, undefined); assert.deepEqual(stub.timeouts, [15000]);
+  assert.ok(!url.includes('?') && !url.includes(TOKEN));
+});
+
+test('dashboard mesh client: POST adds a JSON body and the long timeout only for capture and lending paths', async t => {
+  const stub = stubFetch(t, () => json(200, { ok: true }));
+  await meshRequest(TOKEN, '/v1/captures', { a: 1 });
+  await meshRequest(TOKEN, '/v1/lending/quote', {});
+  await meshRequest(TOKEN, '/v1/analyses', {});
+  assert.equal(stub.calls[0].init.method, 'POST');
+  assert.equal(stub.calls[0].init.headers['content-type'], 'application/json');
+  assert.equal(stub.calls[0].init.body, '{"a":1}');
+  assert.deepEqual(stub.timeouts, [45000, 45000, 15000]);
+});
+
+test('dashboard mesh client: error envelopes, missing envelopes, unreadable bodies and network failures each surface a distinct message', async t => {
+  let next;
+  stubFetch(t, () => next());
+  next = () => json(401, { error: { code: 'UNAUTHORIZED', message: 'Missing or invalid token.' } });
+  await assert.rejects(meshRequest(TOKEN, '/v1/graph'), { message: 'UNAUTHORIZED: Missing or invalid token.' });
+  next = () => json(500, {});
+  await assert.rejects(meshRequest(TOKEN, '/v1/graph'), { message: 'HTTP 500: The request failed.' });
+  next = () => new Response('<html>', { status: 502 });
+  await assert.rejects(meshRequest(TOKEN, '/v1/graph'), /unreadable response \(HTTP 502\)/);
+  next = () => { throw new TypeError('Failed to fetch'); };
+  await assert.rejects(meshRequest(TOKEN, '/v1/graph'), /did not respond/);
+});
+
+test('dashboard mesh client: the token pattern matches the service charset and length bounds', () => {
+  for (const good of ['a'.repeat(32), 'A1._~-'.repeat(6), 'z'.repeat(256)]) assert.ok(TOKEN_PATTERN.test(good), good);
+  for (const bad of ['a'.repeat(31), 'a'.repeat(257), `${'a'.repeat(31)} `, `${'a'.repeat(31)}/`, `${'a'.repeat(31)}\n`, '']) assert.ok(!TOKEN_PATTERN.test(bad), JSON.stringify(bad));
 });
