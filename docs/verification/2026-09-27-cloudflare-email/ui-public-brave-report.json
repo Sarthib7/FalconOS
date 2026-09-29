@@ -1,0 +1,125 @@
+{
+  "origin": "https://falconos.markets",
+  "reportedRelease": "9af809b95bb7cfca3a84959e468d1d7863bec39c",
+  "browserExecutable": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+  "browserVersion": "Brave Browser 154.1.96.59",
+  "passed": 10,
+  "total": 10,
+  "checks": [
+    {
+      "name": "React landing mounts",
+      "passed": true
+    },
+    {
+      "name": "email form has the reviewed accessible input",
+      "passed": true,
+      "detail": {
+        "emailType": "email",
+        "required": true,
+        "maxLength": 254,
+        "value": "",
+        "label": "Email address",
+        "buttonType": "submit",
+        "buttonEnabled": true,
+        "buttonText": "Join the list",
+        "statusRole": "status",
+        "statusLive": "polite",
+        "statusText": "Email signup only. No wallet connection is needed."
+      }
+    },
+    {
+      "name": "email input is empty and Join the list is enabled",
+      "passed": true
+    },
+    {
+      "name": "signup status region states the initial signup message",
+      "passed": true
+    },
+    {
+      "name": "landing form fits 1440px",
+      "passed": true
+    },
+    {
+      "name": "landing form fits 320px",
+      "passed": true
+    },
+    {
+      "name": "no signup or backend API requests were attempted",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "no uncaught page errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "no browser console errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "page assets loaded successfully",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "responses": [
+    {
+      "path": "/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/main-eBI_p2Z0.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/main-CTJXJzjm.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    }
+  ],
+  "blocked": [],
+  "apiAttempts": [],
+  "exceptions": [],
+  "consoleErrors": [],
+  "directory": "/private/tmp/falcon-live-email-brave-rYPVti",
+  "limitations": "Fresh Brave profile. Only same-origin GET page/asset requests allowed. API requests and every submission are blocked. No email address entered or submitted. Browser background traffic is outside this page instrumentation."
+}

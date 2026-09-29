@@ -24,6 +24,9 @@ export const LENDING_CONFIG = Object.freeze({
   decimals: 6, maxSupplyBaseUnits: '1000000',
 });
 
+// Bumped whenever the wire ABI, account layout, or instruction encoding in this file changes.
+export const ADAPTER_VERSION = 'kamino-devnet-adapter/1';
+
 const C = LENDING_CONFIG;
 const U64_MAX = 18446744073709551615n;
 const key = value => {

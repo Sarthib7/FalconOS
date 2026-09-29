@@ -1,0 +1,323 @@
+{
+  "passed": 58,
+  "total": 59,
+  "checks": [
+    {
+      "name": "V92: the real API rejects an unauthenticated graph request",
+      "pass": true
+    },
+    {
+      "name": "V96: a fresh viewer waits for Connect and uses a password input",
+      "pass": true
+    },
+    {
+      "name": "V96: explicit connection loads the authenticated workspace",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V91/V96: a unique owner starts with an empty graph and history",
+      "pass": true
+    },
+    {
+      "name": "V96: connecting clears the token input and uses no browser storage",
+      "pass": true
+    },
+    {
+      "name": "V91/V96: liquid scenario saves new current source revisions",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93/V96: analysis returns READY through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93: two shared positions form the 500 USDC exit and exclude the unrelated position",
+      "pass": true
+    },
+    {
+      "name": "V93/V96: selecting a result highlights exactly its returned path and labels it",
+      "pass": true
+    },
+    {
+      "name": "V96: keyboard selection opens the matching entity and its relationships",
+      "pass": true
+    },
+    {
+      "name": "V91/V96: source inspector opens exact retained content and historical freshness",
+      "pass": true
+    },
+    {
+      "name": "V91/V96: illiquid scenario saves new current source revisions",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V96: new source revisions clear the previous displayed analysis",
+      "pass": true
+    },
+    {
+      "name": "V93/V96: analysis returns BLOCKED through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93: 400 USDC blocks the full 500 USDC combined exit",
+      "pass": true
+    },
+    {
+      "name": "V94/V96: prior history keeps its original graph, source content, cutoff and result",
+      "pass": true
+    },
+    {
+      "name": "V91/V96: stale scenario saves new current source revisions",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93/V96: analysis returns NO_DATA through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93: stale observation remains NO_DATA with an explicit reason",
+      "pass": true
+    },
+    {
+      "name": "V96: stale source stays visible in the evidence inspector",
+      "pass": true
+    },
+    {
+      "name": "V91/V96: missing scenario saves new current source revisions",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93/V96: analysis returns NO_DATA through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93: missing observation relationship reports incomplete coverage",
+      "pass": true
+    },
+    {
+      "name": "V91/V96: liquid scenario saves new current source revisions",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93/V96: analysis returns NO_DATA through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93: one-hop traversal cannot claim a complete answer",
+      "pass": true
+    },
+    {
+      "name": "V93/V96: analysis returns READY through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V96: reload removes the token and requires explicit reconnection",
+      "pass": true
+    },
+    {
+      "name": "V96: explicit connection loads the authenticated workspace",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V94/V96: reconnection restores persistent history without browser storage",
+      "pass": true
+    },
+    {
+      "name": "V96: 320px view has no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "V100: switching to live excludes all synthetic positions",
+      "pass": true
+    },
+    {
+      "name": "V99: kamino-program-docs capture retains ok through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V99: solana-devnet-klend capture retains ok through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93/V96: analysis returns OBSERVED through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V100: connected public analysis has no money result or synthetic node",
+      "pass": true
+    },
+    {
+      "name": "V100: viewer highlights exactly the returned live traversal",
+      "pass": true,
+      "detail": {
+        "nodes": [
+          "account:devnet:KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+          "document:live:kamino-program-docs",
+          "observation:live:kamino-program-docs",
+          "observation:live:solana-devnet-klend",
+          "protocol:live:kamino"
+        ],
+        "edges": [
+          "edge:live:account-observation",
+          "edge:live:document-observation",
+          "edge:live:documents",
+          "edge:live:program-claim"
+        ]
+      }
+    },
+    {
+      "name": "V99: inspector shows exact retained RPC responses and hashes",
+      "pass": true
+    },
+    {
+      "name": "V99: kamino-program-docs capture retains unavailable through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93/V96: analysis returns NO_DATA through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V99/V100: failed refresh replaces current success and blocks analysis",
+      "pass": true
+    },
+    {
+      "name": "V94/V100: successful live history preserves its original bytes after failed refresh",
+      "pass": true
+    },
+    {
+      "name": "V99: kamino-program-docs capture retains ok through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V93/V96: analysis returns OBSERVED through the API",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V101: test wallet is discovered by the actual Wallet Standard registry",
+      "pass": true
+    },
+    {
+      "name": "V101: actual adapter prepares an unsigned lending intent through the API fixture",
+      "pass": true,
+      "detail": "Simulation passed. Review the action, amounts and accounts before signing."
+    },
+    {
+      "name": "V101: terminal retains exact analysis, reserve and unsigned message for review",
+      "pass": true
+    },
+    {
+      "name": "V102: real browser signature is durable before the intercepted broadcast",
+      "pass": true,
+      "detail": "Devnet accepted the transaction. Check its receipt to verify the lending outcome."
+    },
+    {
+      "name": "V102: actual receipt decoder reconciles signed fixture transaction and exact transfers",
+      "pass": true
+    },
+    {
+      "name": "V96: explicit connection loads the authenticated workspace",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V102: reload restores immutable intent, signature and confirmed receipt from PostgreSQL",
+      "pass": true
+    },
+    {
+      "name": "V101: actual adapter prepares an unsigned lending intent through the API fixture",
+      "pass": true,
+      "detail": "Simulation passed. Review the action, amounts and accounts before signing."
+    },
+    {
+      "name": "V102: wallet change during signing prevents registration and broadcast",
+      "pass": true,
+      "detail": "The wallet account or signing capability changed. Connect again before signing."
+    },
+    {
+      "name": "V101: actual adapter prepares an unsigned lending intent through the API fixture",
+      "pass": true,
+      "detail": "Simulation passed. Review the action, amounts and accounts before signing."
+    },
+    {
+      "name": "V102: uncertain send retains the registered signature and blocks another signature",
+      "pass": true
+    },
+    {
+      "name": "V96/V102: live graph and prepared terminal fit a 320px viewport",
+      "pass": true
+    },
+    {
+      "name": "V92/V96: lending history response reaches the real API before the workspace switch",
+      "pass": true
+    },
+    {
+      "name": "V96: explicit connection loads the authenticated workspace",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "V92/V96 B68: delayed lending history response cannot populate the next owner's workspace",
+      "pass": false,
+      "detail": {
+        "message": "Loaded the latest 20 lending intents.",
+        "history": 3,
+        "intentHidden": true
+      }
+    }
+  ],
+  "exceptions": [],
+  "remoteRequests": [],
+  "apiRequestCount": 109,
+  "fixtureRpcMethods": [
+    "getGenesisHash",
+    "getBlockHeight",
+    "getBlockHeight",
+    "sendTransaction",
+    "getGenesisHash",
+    "getBlockHeight",
+    "getGenesisHash",
+    "getBlockHeight",
+    "getBlockHeight",
+    "sendTransaction"
+  ],
+  "broadcasts": [
+    {
+      "intentId": "55d5d123-caf8-444a-9049-180b460ce1f0",
+      "signature": "47g1E9nW3U4MdnkM95HQ4YLtsVscxfq7tYFFULroz4RzJH8WewhYFTFa2nyHqw3wCoRspEDRAiDUAQZDXjnzMqum",
+      "registeredEventId": "092959a8-b084-4872-be8d-4b0df4b90409",
+      "uncertain": false
+    },
+    {
+      "intentId": "b2081135-240f-427f-a903-52f9b981a008",
+      "signature": "3EHBL9UaXC9FqCDSdkngQvkFfaF5Gz2QAsshqPYX9nzCwti9ePXdoQoJjS61j8oa3SDoH9bRiGX3LMi5PeuCtdP",
+      "registeredEventId": "3a756470-8fc6-424d-87c2-776cd46214e2",
+      "uncertain": true
+    }
+  ],
+  "artifactDir": "/private/tmp/falcon-mesh-browser-nalY4A",
+  "root": "/Volumes/Sarthi MAC/FalconOS/web/dist-mesh",
+  "owner": "browser_54de9f83c2f7436e8088abffb3def2b3",
+  "database": "Explicit FALCON_MESH_TEST_DATABASE_URL; existing schema; unique test owner retained for inspection.",
+  "limitation": "Controlled connector, balance, simulation, and receipt fixtures. Ephemeral wallet signs locally. No external RPC or real Devnet transaction occurred."
+}

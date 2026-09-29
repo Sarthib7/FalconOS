@@ -78,3 +78,13 @@ test('session proof can be stored and cleared without deleting account history',
   assert.equal(readOrders(WALLET, storage).length, 1);
   assert.deepEqual(readPortfolio(WALLET, storage).watchlist, [MINT_A]);
 });
+
+test('order journal keeps a valid plan-leg tag through updates and drops a malformed one', () => {
+  const storage = new MemoryStorage();
+  saveOrder(WALLET, order({ leg: { assetId: 'openai-1', underlying: 'OPENAI' } }), storage);
+  updateOrder(WALLET, order().id, { status: 'confirmed' }, storage);
+  assert.deepEqual(readOrders(WALLET, storage)[0].leg, { assetId: 'openai-1', underlying: 'OPENAI' });
+  saveOrder(WALLET, order({ id: 'f6d2ae5a-70e6-4d95-a624-8fd8abcf60c1', leg: { assetId: 7 } }), storage);
+  const untagged = readOrders(WALLET, storage).find((item) => item.id.endsWith('c1'));
+  assert.ok(untagged && !('leg' in untagged));
+});

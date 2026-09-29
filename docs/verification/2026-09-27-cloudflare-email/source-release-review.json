@@ -1,0 +1,54 @@
+{
+  "provenance": "VERIFIED by this review process. No remote access or hosted write occurred.",
+  "baseCommit": "bfa82caaf5bdf2208ce057a7db6397302ebfaeae",
+  "sliceCommit": "b1a86787605b6d97bb3a9cafd706060fd641535e",
+  "patchPath": "/private/tmp/falcon-waitlist-release-8gta8vhv/waitlist-slice.patch",
+  "patchSha256": "b28327fb5115be1b3b7f303d15782111beec39ea01822421e854089763095f15",
+  "changedFiles": [
+    "web/.gitignore",
+    "web/functions/_waitlist-email.js",
+    "web/functions/api/waitlist.js",
+    "web/local-web.mjs",
+    "web/migrations/0002_waitlist_email_outbox.sql",
+    "web/test/waitlist-email.test.mjs",
+    "web/test/waitlist.test.mjs",
+    "web/waitlist-local.mjs"
+  ],
+  "allEightFilesMatchCurrentSource": true,
+  "focusedTests": {
+    "command": "node --test web/test/waitlist.test.mjs web/test/waitlist-email.test.mjs web/test/landing-waitlist.test.mjs",
+    "exitCode": 0,
+    "tests": 27,
+    "pass": 27,
+    "fail": 0,
+    "skipped": 0,
+    "log": "/private/tmp/falcon-waitlist-release-8gta8vhv/focused-tests-loopback.log",
+    "scope": "Local SQLite, loopback HTTP, fixture provider replies; does not prove hosted D1 or inbox delivery."
+  },
+  "initialTestAttempt": {
+    "log": "/private/tmp/falcon-waitlist-release-8gta8vhv/focused-tests.log",
+    "exitCode": 1,
+    "cause": "Sandbox rejected local HTTP listen with EPERM. Unchanged tests passed after allowing loopback servers."
+  },
+  "staticBuilds": {
+    "command": "npm --prefix web run build:site",
+    "baselineExitCode": 0,
+    "candidateExitCode": 0,
+    "baselineFiles": 39,
+    "candidateFiles": 39,
+    "allHashesEqual": true,
+    "matchesPublishedManifest": true,
+    "publishedManifest": "/Volumes/Sarthi MAC/FalconOS/docs/verification/2026-09-27-live/expected-build-sha256.json",
+    "comparison": "/private/tmp/falcon-waitlist-release-8gta8vhv/static-build-comparison.json"
+  },
+  "configuration": {
+    "viteConfigChanged": false,
+    "packageJsonChanged": false,
+    "packageLockChanged": false,
+    "privatePathGuardsChanged": false,
+    "privatePathGuardEvidence": "web/vite.config.js already denies .env, .env.*, certificate/key extensions, .git, and **/.local/**. Inspected source; no Vite HTTP deny probe run.",
+    "localAdapterActivation": "Main Vite config does not import waitlist-local.mjs. local-web.mjs is not a build entry. Build remains vite build; no automatic migration application."
+  },
+  "dependencies": "Reused installed web and mesh node_modules through symlinks. No install performed.",
+  "hostedPlanBoundary": "Persist this focused source slice on main; apply only reviewed0001 to new D1; preserve production config and39 static files. Optional0002 source is included but must not be applied or provider-enabled in this capture-only release."
+}

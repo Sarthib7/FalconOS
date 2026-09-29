@@ -1,0 +1,706 @@
+{
+  "checks": [
+    {
+      "name": "isolated PostgreSQL17 Unix socket only",
+      "passed": true,
+      "evidence": {
+        "version": "PostgreSQL 17.7 (Homebrew) on aarch64-apple-darwin25.1.0, compiled by Apple clang version 17.0.0 (clang-1700.4.4.1), 64-bit",
+        "current_database": "postgres",
+        "current_user": "falcon_proof_admin",
+        "listen_addresses": "",
+        "unix_socket_directories": "/private/tmp/falcon-supabase-proof-uutgos18/socket"
+      }
+    },
+    {
+      "name": "unmodified init-db applies the complete local history",
+      "passed": true,
+      "evidence": "Falcon mesh schema version 2 created from the complete local history."
+    },
+    {
+      "name": "full-history schema inventory",
+      "passed": true,
+      "evidence": {
+        "tables": 5,
+        "columns": 33,
+        "constraints": 26,
+        "indexes": 13,
+        "schemaVersion": 2
+      }
+    },
+    {
+      "name": "0002 preserves every seeded v1 table row and unrelated sentinel",
+      "passed": true,
+      "evidence": {
+        "before": {
+          "source_revisions": {
+            "rows": 2,
+            "sha256": "3915901564d08cbfe8dde8e478342b3d1f5983cac71a509a95a9471fac66311e"
+          },
+          "source_heads": {
+            "rows": 2,
+            "sha256": "a56944af99b12907487d7d7dae6f7d167562c7b493e144fbe33c3874d6b2bf5b"
+          },
+          "analyses": {
+            "rows": 1,
+            "sha256": "b61cccddb9bb11e52b3ed9ad9f6b3d05694e4016af4c706ffdc22de7635787dd"
+          }
+        },
+        "after": {
+          "source_revisions": {
+            "rows": 2,
+            "sha256": "3915901564d08cbfe8dde8e478342b3d1f5983cac71a509a95a9471fac66311e"
+          },
+          "source_heads": {
+            "rows": 2,
+            "sha256": "a56944af99b12907487d7d7dae6f7d167562c7b493e144fbe33c3874d6b2bf5b"
+          },
+          "analyses": {
+            "rows": 1,
+            "sha256": "b61cccddb9bb11e52b3ed9ad9f6b3d05694e4016af4c706ffdc22de7635787dd"
+          }
+        },
+        "unrelatedSentinel": [
+          {
+            "id": 1,
+            "value": "existing upgrade sentinel"
+          }
+        ]
+      }
+    },
+    {
+      "name": "upgraded catalog equals fresh full-history catalog",
+      "passed": true,
+      "evidence": {
+        "sha256": "65acc29d8f21b3fd0024a70d2f543dee100d6dd4aae4663465b240c99d7c231c"
+      }
+    },
+    {
+      "name": "permissions preserve catalog, unrelated row and global default ACLs",
+      "passed": true,
+      "evidence": {
+        "sentinel": [
+          {
+            "id": 1,
+            "value": "keep this existing row"
+          }
+        ],
+        "defaultACLs": [
+          {
+            "owner": "falcon_proof_admin",
+            "defaclnamespace": 0,
+            "defaclobjtype": "r",
+            "defaclacl": "{=arwdDxtm/falcon_proof_admin,falcon_proof_admin=arwdDxtm/falcon_proof_admin,anon=arwdDxtm/falcon_proof_admin,authenticated=arwdDxtm/falcon_proof_admin,service_role=arwdDxtm/falcon_proof_admin}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "app role is NOLOGIN with no elevated attributes or memberships",
+      "passed": true,
+      "evidence": {
+        "rolname": "falcon_mesh_app",
+        "rolcanlogin": false,
+        "rolsuper": false,
+        "rolcreatedb": false,
+        "rolcreaterole": false,
+        "rolreplication": false,
+        "rolbypassrls": false,
+        "rolinherit": false
+      }
+    },
+    {
+      "name": "candidate rejects an existing app role",
+      "passed": true,
+      "evidence": {
+        "sql": "CREATE ROLE falcon_mesh_app NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE\n  NOREPLICATION NOBYPASSRLS NOINHERIT;\n\nREVOKE ALL ON SCHEMA falcon_mesh FROM PUBLIC, anon, authenticated, service_role;\nREVOKE ALL ON ALL TABLES IN SCHEMA falcon_mesh FROM PUBLIC, anon, authenticated, service_role;\n\nGRANT CONNECT ON DATABASE postgres TO falcon_mesh_app;\nGRANT USAGE ON SCHEMA falcon_mesh TO falcon_mesh_app;\nGRANT SELECT, INSERT ON\n  falcon_mesh.source_revisions,\n  falcon_mesh.source_heads,\n  falcon_mesh.analyses,\n  falcon_mesh.lending_intents,\n  falcon_mesh.lending_events\nTO falcon_mesh_app;\nGRANT UPDATE (revision_id) ON falcon_mesh.source_heads TO falcon_mesh_app;\n",
+        "code": "42710",
+        "message": "role \"falcon_mesh_app\" already exists"
+      }
+    },
+    {
+      "name": "runtime SET ROLE identity and readiness",
+      "passed": true,
+      "evidence": {
+        "current_user": "falcon_mesh_app",
+        "session_user": "falcon_proof_admin"
+      }
+    },
+    {
+      "name": "app role source -> graph -> analysis -> head update -> retained history",
+      "passed": true,
+      "evidence": {
+        "first": "READY",
+        "updated": "BLOCKED",
+        "retainedHistory": 2,
+        "otherOwnerResult": null
+      }
+    },
+    {
+      "name": "app DELETE denied: source_revisions",
+      "passed": true,
+      "evidence": {
+        "sql": "DELETE FROM falcon_mesh.source_revisions",
+        "code": "42501",
+        "message": "permission denied for table source_revisions"
+      }
+    },
+    {
+      "name": "app TRUNCATE denied: source_revisions",
+      "passed": true,
+      "evidence": {
+        "sql": "TRUNCATE falcon_mesh.source_revisions CASCADE",
+        "code": "42501",
+        "message": "permission denied for table source_revisions"
+      }
+    },
+    {
+      "name": "app DELETE denied: source_heads",
+      "passed": true,
+      "evidence": {
+        "sql": "DELETE FROM falcon_mesh.source_heads",
+        "code": "42501",
+        "message": "permission denied for table source_heads"
+      }
+    },
+    {
+      "name": "app TRUNCATE denied: source_heads",
+      "passed": true,
+      "evidence": {
+        "sql": "TRUNCATE falcon_mesh.source_heads CASCADE",
+        "code": "42501",
+        "message": "permission denied for table source_heads"
+      }
+    },
+    {
+      "name": "app DELETE denied: analyses",
+      "passed": true,
+      "evidence": {
+        "sql": "DELETE FROM falcon_mesh.analyses",
+        "code": "42501",
+        "message": "permission denied for table analyses"
+      }
+    },
+    {
+      "name": "app TRUNCATE denied: analyses",
+      "passed": true,
+      "evidence": {
+        "sql": "TRUNCATE falcon_mesh.analyses CASCADE",
+        "code": "42501",
+        "message": "permission denied for table analyses"
+      }
+    },
+    {
+      "name": "app DELETE denied: lending_intents",
+      "passed": true,
+      "evidence": {
+        "sql": "DELETE FROM falcon_mesh.lending_intents",
+        "code": "42501",
+        "message": "permission denied for table lending_intents"
+      }
+    },
+    {
+      "name": "app TRUNCATE denied: lending_intents",
+      "passed": true,
+      "evidence": {
+        "sql": "TRUNCATE falcon_mesh.lending_intents CASCADE",
+        "code": "42501",
+        "message": "permission denied for table lending_intents"
+      }
+    },
+    {
+      "name": "app DELETE denied: lending_events",
+      "passed": true,
+      "evidence": {
+        "sql": "DELETE FROM falcon_mesh.lending_events",
+        "code": "42501",
+        "message": "permission denied for table lending_events"
+      }
+    },
+    {
+      "name": "app TRUNCATE denied: lending_events",
+      "passed": true,
+      "evidence": {
+        "sql": "TRUNCATE falcon_mesh.lending_events CASCADE",
+        "code": "42501",
+        "message": "permission denied for table lending_events"
+      }
+    },
+    {
+      "name": "app immutable-source UPDATE denied",
+      "passed": true,
+      "evidence": {
+        "sql": "UPDATE falcon_mesh.source_revisions SET content = 'changed'",
+        "code": "42501",
+        "message": "permission denied for table source_revisions"
+      }
+    },
+    {
+      "name": "app head owner UPDATE denied",
+      "passed": true,
+      "evidence": {
+        "sql": "UPDATE falcon_mesh.source_heads SET owner_id = 'changed'",
+        "code": "42501",
+        "message": "permission denied for table source_heads"
+      }
+    },
+    {
+      "name": "app schema CREATE TABLE denied",
+      "passed": true,
+      "evidence": {
+        "sql": "CREATE TABLE falcon_mesh.bad (id int)",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "app CREATE SCHEMA denied",
+      "passed": true,
+      "evidence": {
+        "sql": "CREATE SCHEMA app_bad",
+        "code": "42501",
+        "message": "permission denied for database postgres"
+      }
+    },
+    {
+      "name": "app protected other-schema read denied",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM unrelated.sentinel",
+        "code": "42501",
+        "message": "permission denied for schema unrelated"
+      }
+    },
+    {
+      "name": "NOINHERIT does not remove PUBLIC rights outside falcon_mesh",
+      "passed": true,
+      "evidence": {
+        "publicReadable": [
+          {
+            "id": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "anon read denied: source_revisions",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.source_revisions",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "anon read denied: source_heads",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.source_heads",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "anon read denied: analyses",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.analyses",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "anon read denied: lending_intents",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.lending_intents",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "anon read denied: lending_events",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.lending_events",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "authenticated read denied: source_revisions",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.source_revisions",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "authenticated read denied: source_heads",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.source_heads",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "authenticated read denied: analyses",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.analyses",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "authenticated read denied: lending_intents",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.lending_intents",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "authenticated read denied: lending_events",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.lending_events",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "service_role read denied: source_revisions",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.source_revisions",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "service_role read denied: source_heads",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.source_heads",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "service_role read denied: analyses",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.analyses",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "service_role read denied: lending_intents",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.lending_intents",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    },
+    {
+      "name": "service_role read denied: lending_events",
+      "passed": true,
+      "evidence": {
+        "sql": "SELECT * FROM falcon_mesh.lending_events",
+        "code": "42501",
+        "message": "permission denied for schema falcon_mesh"
+      }
+    }
+  ],
+  "commands": [
+    {
+      "executable": "/opt/homebrew/opt/postgresql@17/bin/initdb",
+      "args": [
+        "-D",
+        "/private/tmp/falcon-supabase-proof-uutgos18/data",
+        "-U",
+        "falcon_proof_admin",
+        "--auth=trust",
+        "--encoding=UTF8",
+        "--locale=C"
+      ],
+      "name": "initdb",
+      "status": 0
+    },
+    {
+      "executable": "/opt/homebrew/opt/postgresql@17/bin/pg_ctl",
+      "args": [
+        "-D",
+        "/private/tmp/falcon-supabase-proof-uutgos18/data",
+        "-l",
+        "/private/tmp/falcon-supabase-proof-uutgos18/postgres.log",
+        "-w",
+        "start"
+      ],
+      "name": "pg_ctl start",
+      "status": 0
+    },
+    {
+      "executable": "/Users/sarthiborkar/.nvm/versions/node/v24.19.0/bin/node",
+      "args": [
+        "/Volumes/Sarthi MAC/FalconOS/mesh/init-db.mjs"
+      ],
+      "name": "unmodified init-db",
+      "status": 0
+    }
+  ],
+  "blindSpots": [
+    "Local PostgreSQL 17 is not the hosted PostgreSQL 17.6 service. No hosted connection, TLS, pooler, or password was tested.",
+    "Runtime uses SET ROLE from a local admin connection. This proves effective SQL privileges, not independent login or protection from a compromised admin connection.",
+    "Other-schema denial covers unrelated.sentinel. Public rights can still apply to other objects; public.public_readable remains readable."
+  ],
+  "files": [
+    {
+      "path": "mesh/schema.sql",
+      "sha256": "ea5c5ff852396a6afadaa13d0ab9e8d686d86234e2df0efa4044535b0cd1dc2d"
+    },
+    {
+      "path": "mesh/migrations/0002_lending.sql",
+      "sha256": "94b7b14821ca6271ab3a84b9ca7bc372808aae3bc949983297842e1a0cdbf9d8"
+    },
+    {
+      "path": "mesh/deploy/supabase-permissions.sql",
+      "sha256": "ac1f0cd8a6ee599602af42e2ad042288053b627ac0fcbd469fef89a3835b08f6"
+    }
+  ],
+  "beforeApiGrants": [
+    {
+      "role": "anon",
+      "schema_usage": true,
+      "select_sources": true
+    },
+    {
+      "role": "authenticated",
+      "schema_usage": true,
+      "select_sources": true
+    },
+    {
+      "role": "service_role",
+      "schema_usage": true,
+      "select_sources": true
+    }
+  ],
+  "effectivePrivileges": [
+    {
+      "role": "anon",
+      "table_name": "analyses",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "anon",
+      "table_name": "lending_events",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "anon",
+      "table_name": "lending_intents",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "anon",
+      "table_name": "source_heads",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "anon",
+      "table_name": "source_revisions",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "authenticated",
+      "table_name": "analyses",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "authenticated",
+      "table_name": "lending_events",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "authenticated",
+      "table_name": "lending_intents",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "authenticated",
+      "table_name": "source_heads",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "authenticated",
+      "table_name": "source_revisions",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "falcon_mesh_app",
+      "table_name": "analyses",
+      "schema_usage": true,
+      "can_select": true,
+      "can_insert": true,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "falcon_mesh_app",
+      "table_name": "lending_events",
+      "schema_usage": true,
+      "can_select": true,
+      "can_insert": true,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "falcon_mesh_app",
+      "table_name": "lending_intents",
+      "schema_usage": true,
+      "can_select": true,
+      "can_insert": true,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "falcon_mesh_app",
+      "table_name": "source_heads",
+      "schema_usage": true,
+      "can_select": true,
+      "can_insert": true,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "falcon_mesh_app",
+      "table_name": "source_revisions",
+      "schema_usage": true,
+      "can_select": true,
+      "can_insert": true,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "service_role",
+      "table_name": "analyses",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "service_role",
+      "table_name": "lending_events",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "service_role",
+      "table_name": "lending_intents",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "service_role",
+      "table_name": "source_heads",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    },
+    {
+      "role": "service_role",
+      "table_name": "source_revisions",
+      "schema_usage": false,
+      "can_select": false,
+      "can_insert": false,
+      "can_update_table": false,
+      "can_delete": false,
+      "can_truncate": false
+    }
+  ],
+  "connection": {
+    "adminURL": "postgresql://falcon_proof_admin@localhost:55483/postgres?host=%2Fprivate%2Ftmp%2Ffalcon-supabase-proof-uutgos18%2Fsocket",
+    "appRoleURL": "postgresql://falcon_proof_admin@localhost:55483/postgres?host=%2Fprivate%2Ftmp%2Ffalcon-supabase-proof-uutgos18%2Fsocket&options=-c+role%3Dfalcon_mesh_app",
+    "socket": "/private/tmp/falcon-supabase-proof-uutgos18/socket",
+    "port": 55483,
+    "data": "/private/tmp/falcon-supabase-proof-uutgos18/data",
+    "bin": "/opt/homebrew/opt/postgresql@17/bin",
+    "database": "postgres",
+    "roleCanLogin": false
+  },
+  "status": "passed"
+}

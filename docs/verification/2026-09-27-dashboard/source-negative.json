@@ -1,0 +1,84 @@
+{
+  "passed": 2,
+  "total": 7,
+  "checks": [
+    {
+      "name": "V109/B75: source inspector preserves exact retained bytes",
+      "pass": false,
+      "detail": {
+        "retainedSha256": "036ca59713933a7fd1e5de25f1004442baa99678c6020503d999c711ee37fe16",
+        "displayedSha256": "a1055eaf5937efa878612ad9b41d0ba4c7294087c71863d5cfe70833054d0d72"
+      }
+    },
+    {
+      "name": "V111/B77: knowledge export describes graph, analysis and sources without commands",
+      "pass": false,
+      "detail": {
+        "description": "This record contains the commands, input graphs, checks, and outcomes. You can also select and copy the text.",
+        "keys": [
+          "mode",
+          "sample",
+          "graph",
+          "analysis",
+          "sources"
+        ]
+      }
+    },
+    {
+      "name": "V110/B76: current decision expires with its evidence without another click",
+      "pass": false,
+      "detail": {
+        "observed": "READY",
+        "age": "65s / 60s limit"
+      }
+    },
+    {
+      "name": "V110/B80: Stop stays available while a loop cycle waits for the storage lock",
+      "pass": false
+    },
+    {
+      "name": "V110/B80: stopping a queued loop prevents its cycle from being saved after lock release",
+      "pass": false
+    },
+    {
+      "name": "V111: browser made no external HTTP requests",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "V107: browser has no uncaught runtime exceptions",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "exceptions": [],
+  "remoteRequests": [],
+  "localRequests": [
+    {
+      "method": "GET",
+      "path": "/__source__/falconos-workspace.html"
+    },
+    {
+      "method": "GET",
+      "path": "/favicon.ico"
+    },
+    {
+      "method": "GET",
+      "path": "/favicon.ico"
+    },
+    {
+      "method": "GET",
+      "path": "/__source__/falconos-workspace.html"
+    },
+    {
+      "method": "GET",
+      "path": "/__source__/falconos-workspace.html"
+    }
+  ],
+  "downloads": [],
+  "artifactDir": "/private/tmp/falcon-dashboard-source-r9g2sbv8/browser-NIfdZO",
+  "root": "/Volumes/Sarthi MAC/FalconOS/web/dist",
+  "sourceRoot": "/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61",
+  "mode": "original-source-negative-control",
+  "limitations": "Isolated synthetic browser records. Source screenshots execute original scripts with outbound HTTP blocked. No live service, wallet, hosting or email delivery tested."
+}

@@ -1,0 +1,12 @@
+[
+  "node",
+  "/private/tmp/falcon-wrangler-tools-FYq5lp/node_modules/wrangler/bin/wrangler.js",
+  "pages",
+  "functions",
+  "build",
+  "/private/tmp/falcon-email-release-l1mn8621/functions",
+  "--outdir",
+  "/private/tmp/falcon-email-release-l1mn8621/worker",
+  "--output-routes-path",
+  "/private/tmp/falcon-email-release-l1mn8621/artifact/_routes.json"
+]

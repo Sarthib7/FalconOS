@@ -3,9 +3,15 @@
 ## §G GOAL
 Build inbound read-only FalconOS plugin CLI + truthful local council website → external Client Agent gets validated advice while retaining decision/execution authority.
 
+[VERIFIED, user direction, 2026-09-26] Add accepted Stage 01 treasury MVP through local simulation first. [INFERRED, active slice] Owner mandate → decision graph → checked simulated settlement → browser-local replay. Existing modules retain their current boundaries.
+
+[VERIFIED, user direction, 2026-09-27] Finish graph product, hosting design, and review flow before Devnet execution. [INFERRED, active slice] Versioned synthetic decision records and evidence inspection. Define the later real-fund test after Devnet.
+
 ## §C CONSTRAINTS
+- [VERIFIED, user direction, 2026-09-27] Build connected MVP locally before hosting: connectors -> knowledge mesh -> terminal analysis -> Devnet execution and recorded outcome. Personal Railway workspace selected for later hosting. [INFERRED, first foundation] I15 durable mesh; synthetic fixtures prove storage and traversal before live connectors. Existing I14 remains separate.
+- [INFERRED, 2026-09-26 addition] `web/treasury/` isolated simulation under I14; no wallet, signing, chain/model/provider requests, real funds, yield claims, or hidden background operation. Public static hosting is a later release action; each browser retains separate history.
 - FalconOS role: investment firm intake, research, deterministic policy, advisory result. External agents remain callers.
-- First slice read-only. ⊥ wallet, signer, transaction, capital reservation, pooled custody, execution.
+- The plugin and Rust engine remain read-only. `web/copilot/` has a separate local, dev-only execution demo; the connected wallet signs, and the page sends only to the configured Surfpool fork or Solana Devnet.
 - External agent has no model authority. ⊥ caller-selected model, executable, adapter, reasoning setting, tool, policy override.
 - `src/codex.ts` remains internal FalconOS→Codex research adapter. ⊥ plugin surface.
 - Existing evidence/hash/cutoff validation stays authoritative: `buildAgentRequest`, `validateScan`, `validateAgentThesis`.
@@ -19,9 +25,10 @@ Build inbound read-only FalconOS plugin CLI + truthful local council website →
 - First evidence bundle: exactly one scan, at most 8 note paths, max 32 KiB/note, max 8 MiB serialized internal request, max 64 KiB advisory response.
 - Amount: decimal USDC string, `0.01` through `500`, ≤6 fractional digits; canonical integer units via existing `inputAmount`.
 - Supported route: `solana-base` or `base-solana`; current evidence remains USDC/EURC over Solana/Base.
-- T1-T8 plugin slice frozen. Website work remains isolated under `web/`; production deploy limited to static Cloudflare Pages artifact; ⊥ wallet, signer, transaction, production waitlist, analytics, or plugin contract expansion.
+- T1-T8 plugin slice frozen. Website work remains isolated under `web/` and deploys as a static Cloudflare Pages artifact. Production `/app/` is a browser-only, wallet-owned Solana Devnet terminal; Vite excludes local `web/copilot/`. ⊥ server-side keys, mainnet trading, wallet data collection, or plugin contract expansion.
 - Pooled ETF product (FalconOS pools capital + issues ETF via Raydium/Meteora) ⊥ current scope; prerequisite: reverse advisory-only boundary (V11), add custody/execution/issuance, integrate AMM, complete securities/fund-law review before code.
-- `dash/` isolated Node/TS terminal dashboard (own deps; ⊥ root plugin zero-dep graph): performs read-only live GET/RPC fetches from configured providers, builds a `live`-provenance basket snapshot, runs the stocks council, renders advisory to terminal; ⊥ execution, custody, wallet, signer, order submission, persistent external writes; secrets via env only, never committed.
+- `engine/` Rust crate is the stocks live dashboard (⊥ root plugin zero-dep graph): read-only live GET/RPC from configured providers, basket snapshot, stocks council, terminal render, and local `127.0.0.1` `/advice` plus `/graph`. ⊥ execution, custody, wallet, signer, order submission. `graph --out` writes one operator-named local JSON file. Secrets via env only, never committed. Deleted `dash/` Node package ⊥ current surface.
+- `web/copilot/` is a local DEV-only client action demo. Surfpool uses Jupiter V1 mainnet routes and the user-hosted local RPC at `http://127.0.0.1:18488`. Devnet uses Raydium's Devnet quote/build API and accepts only a single route through the configured CPMM pool. Each route refreshes its selected cluster's blockhash, simulates, and sends only to that cluster after an explicit wallet click. This does not change the engine, plugin, or production boundary.
 
 ## §I INTERFACES
 
@@ -206,23 +213,74 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - ⊥ wallet, signer, transaction, pooled custody, capital, allocation, execution, ETF issuance; exact-key validation rejects them.
 ### I11. Falcon Investment stocks live dashboard
 
-- `dash/` isolated Node/TS package (own deps; ⊥ root plugin zero-dependency graph); command `node dash/cli.ts` renders a terminal advisory dashboard.
-- Read-only live adapters fetch per-asset `price`/`liquidity` evidence + optional info headlines via HTTP GET or public Solana RPC; each adapter yields a stocks `FieldCapture` with `provenance: live`, real `sourceId`/adapter/semantic version, provider-event + local-receipt time, and typed failure on error.
-- Host builds a `live` canonical basket snapshot from adapter captures, runs the stocks council (Lead + veto-only Risk), and renders basket/weights/risk/citations to the terminal; advisory-only, `executionReady: false`.
-- Provider/network/parse failure → typed capture failure → snapshot `NO_DATA`; the dashboard surfaces the failure and never fabricates evidence.
-- ⊥ order submission, custody, signing, capital movement; read-only display of live evidence + advisory. Secrets via env only.
+- `engine/` Rust crate. Root plugin stays zero-dependency and performs no live call. `dash/` Node package is deleted.
+- Commands: `npm run dash -- preipo` prints one terminal advisory. `npm run serve` binds `127.0.0.1:8787` and serves GET `/advice` and GET `/graph`. `falcon-engine graph --out PATH` writes one local graph JSON file.
+- Read-only adapters: DexScreener HTTP GET, PreStocks HTTP GET, public Solana RPC `getTokenSupply` plus the mint account. Optional Pyth Hermes only when `PYTH_<UNDERLYING>_TOKENIZED_FEED_ID` or `PYTH_<UNDERLYING>_UNDERLYING_FEED_ID` is set. Unconfigured Pyth is not an error. A configured feed that fails → `NO_DATA`.
+- Pool price: deepest USDC-quoted Solana pair for the mint when one has parseable liquidity (V67). Else the deepest pair. Then V66 scaled-UI normalize and issuer corroboration. The raw capture records pair and quote-token identity. Every asset also has a hash-bound issuer/Pyth `reference` capture. The engine snapshot is its own `FieldCapture` (`source_id`, `source_version`, `observed_at`, `raw_excerpt`, `value`). It does not emit the TypeScript `stocks/stocks.ts` snapshot.
+- Council on that snapshot: missing, invalid, or issuer disagreement → `NO_DATA` and no proposal. Ready prices with liquidity below the floor, or a token-vs-underlying gap above configured `max_dislocation_bps` (500), → `BLOCKED` and no proposal. Otherwise `PUBLISHED`, `executionReady: false`.
+- `GET /advice` returns `execution_ready: false` and source citations for published advice; `BLOCKED`/`NO_DATA` return no citations.
+- ⊥ headline fetch, order submission, custody, signing, capital movement. Secrets via env only.
+
+### I12. Local execution copilot
+
+- Owner/provider: `web/copilot/`; consumer: the local user and connected browser wallet.
+- Scope: DEV-only local demo, excluded from the production Vite build. Surfpool uses Jupiter V1 mainnet quote/build and only `http://127.0.0.1:18488` for blockhash, simulation, send, and status. Devnet uses Raydium's Devnet quote/build API, validates one route through a configured Devnet CPMM pool, and only `https://api.devnet.solana.com` for token account lookup, blockhash, simulation, send, and status.
+- Devnet quote input/output mints and amount must match the request. Its sole route must name the configured CPMM pool with matching mint direction. Raydium builds one unsigned transaction from that quote.
+- Before signing, the page replaces the transaction blockhash with a current blockhash from the selected cluster and simulates those exact serialized message bytes with signature checks disabled. Missing or malformed simulation data, or `err !== null`, stops before the wallet opens.
+- The wallet signs only after the explicit **Sign & send** click. Before send, the page checks that the wallet preserved the simulated message and signed the connected account. Only the signed bytes go to the selected cluster. Confirmation status comes from the same cluster.
+- ⊥ public mainnet RPC, mixing route data or transactions across clusters, engine signing, automatic signing, server-side key, or transaction submission from the engine.
+
+### I13. Production Devnet terminal
+
+- Owner/provider: `web/app/`; consumer: signed-in user and connected Solana wallet.
+- Scope: static production client. Wallet sign-in proves account ownership with a chain-neutral message; Devnet transactions remain separate explicit wallet approvals. Portfolio and transaction reads use only `https://api.devnet.solana.com`. Account labels, watchlist, and order journal stay in browser storage.
+- Trade ticket: BUY or SELL Devnet token using Raydium Devnet quote/build APIs. Accept 1-4 route legs. Each leg must match its ordered input/output mints and a live, allowlisted Raydium Devnet pool state. The complete route must connect requested input to requested output without gaps or repeated pools. Build one unsigned transaction from the validated quote.
+- Before signing, refresh blockhash from Devnet and simulate the exact transaction message. Require a present `err: null`. The connected wallet signs only after explicit user action. Verify signed message bytes and connected signer before sending; confirmation reads use Devnet.
+- ⊥ production mainnet trades, user-key custody, automatic signing, server-side transaction submission, or treating advisory strategies as trade authorization.
 
 ### I14. Treasury simulation
 
-- [VERIFIED, source: `web/treasury/domain.mjs`, `store.mjs`] Browser-local synthetic USDC uses canonical replay, exact integer balances and fixed owner authority. Versioned records retain decision input and outcomes. Legacy records remain readable. Mutations use revision checks and Web Locks.
+- [INFERRED, 2026-09-27 amendment] [Decision graph contract](docs/decision-graph.md) governs schema 2 records, rule checks, legacy compatibility, and UI evidence links. Schema 1 remains readable. Pin `treasury-rules/1`; no live provider or execution integration.
+- [INFERRED, 2026-09-29 amendment] Treasury runs MAY persist server-side per owner via §I17. Server owns clock, event id, and per-owner `requestId` idempotency. Balances & mandate stay operator-supplied synthetic USDC; `mode: simulation` retained; ⊥ wallet, provider, model, chain call, custody, or real-capital claim. `decide`/`replayRun` remain the single canonical engine, server-authoritative for a persisted run.
 
-### I15. Knowledge viewer
+- [INFERRED, contract] [Treasury contract](docs/treasury-contract.md) fixes version 1 Run, Event, View, Graph, Decision, Entry, and store exports. Coordinator owns interface changes.
+- [INFERRED, surface] `web/treasury/` static Vite entry. Pure `domain.mjs`, guarded browser-local `store.mjs`, UI `app.mjs`. `createRun`, `appendEvent`, `replayRun`, `buildGraph`, `decide`, `formatUsdc` exported by domain.
+- [INFERRED, data] Six-decimal USDC inputs persist in the command journal; replay returns integer-unit strings; BigInt arithmetic. Initial balances split reserve, undelegated cash, delegated idle, and position. Zero simulated fees/interest.
+- [INFERRED, authority] Owner creates fixed mandate and investment budget. Agent cycle may supply, hold, or redeem only delegated balances. Owner may permanently revoke or request explicit redemption. Real account authority is outside this simulation.
+- [INFERRED, persistence] One versioned `localStorage` record under Web Lock `falcon.treasury.simulation.v1`. Reload, validate, replay, revision-check, apply, persist, then render success. No silent reset or truncation.
+- [INFERRED, verification] `node --test web/test/treasury-*.test.mjs`; `npm --prefix web test`; Vite build; browser setup → supply → blocked exit → owner redemption → reload/export. Negative checks must demonstrate graph/authority guards reject unsafe actions.
 
-- [VERIFIED, release scope] `web/mesh/` is a browser client. This website checkout includes pure graph fixtures, analysis and transaction validation helpers. The service, Postgres database and worker are outside this release. The viewer requires a separately configured API.
+### I15. Persistent knowledge mesh
+
+- [INFERRED, contract] [Knowledge mesh](docs/knowledge-mesh.md) owns source revision, graph, analysis, HTTP and store schemas. Isolated `mesh/` Node service plus Postgres; new viewer under `web/mesh/`. Current foundation is synthetic and deterministic. Live connector and terminal integration follow before MVP completion.
+- [INFERRED, verification] `npm --prefix mesh test`; real disposable Postgres integration tests; authenticated HTTP checks; standalone viewer build and browser checks. No hosted schema change or deployment in this local build.
 
 ### I16. React Control Centre
 
-- [VERIFIED, source: `web/dashboard/`] Overview, Decisions, Knowledge and Connections preserve the active OpenDesign interface. The dashboard uses retained synthetic samples and its own browser storage key. [Website release](docs/website-release.md) records the checked artifact and service boundary.
+- [INFERRED, contract] [Control Centre](docs/control-centre.md) defines `/dashboard/`, four hash views, retained samples, isolated browser persistence, canonical treasury rules and explicit links to live tools. Original OpenDesign files and existing application routes remain available.
+- [INFERRED, 2026-09-29 amendment] Knowledge & Connections views read live mesh evidence over §I15 (graph, analyses, sources, connectors, `/readyz`). Bearer token in tab memory only, ⊥ persisted; no authenticated request before connect; disconnect clears token. Retained samples remain fallback/demo. Empty owner → empty state, not error. Treasury persistence unchanged (§I14).
+- [INFERRED, verification] Focused fixture/storage tests, complete web suite, Vite site build, source/React browser comparison, saved workflow and failure checks. No hosted schema, wallet transaction or deployment in this design port.
+
+### I17. Treasury runs API
+
+- [INFERRED, 2026-09-29] Owner-scoped treasury runs on the §I15 mesh service. Same auth: `Authorization: Bearer <token>`, SHA-256 → owner. Additive Postgres table `falcon_mesh.treasury_runs`; schema-version marker unchanged.
+- `POST /v1/treasury/runs` body `{requestId, setup}` → `{run, view}`. Create one run from operator setup (mandate, initial balances).
+- `GET /v1/treasury/runs` → `{records, limit: 20}`. Owner runs, newest first, no full journal.
+- `GET /v1/treasury/runs/:uuid` → `{run, view}`. Full journal + server replay projection.
+- `POST /v1/treasury/runs/:uuid/events` body `{requestId, type ∈ {observe,cycle,revoke,owner_redeem}, ...payload}` → `{run, view, entry}`. Server appends via `appendEvent` with server clock + generated event id; `requestId` idempotent per owner.
+- `POST /v1/treasury/runs/:uuid/preview` body `{observation}` → `{graph, decision}`. `decide(buildGraph(state))` only; ⊥ persistence/side-effect.
+- Errors reuse §I15 envelope `{error:{code,message}}`. `mode: simulation`; operator-supplied balances; ⊥ chain/wallet.
+- [INFERRED, surface] Shared engine `mesh/treasury-domain.mjs` (moved from `web/treasury/domain.mjs`; web imports it back). Store `mesh/treasury-store.mjs`; routes in `mesh/http.mjs`; wiring in `mesh/server.mjs`.
+- [INFERRED, verification] `npm --prefix mesh test`; disposable Postgres integration; authenticated HTTP checks; `/readyz` green across additive migration.
+
+### I18. Advisory capital plan & Devnet-analog execution
+
+- [INFERRED, 2026-09-29] Owner/provider: `web/app/`; consumer: signed-in user + connected Devnet wallet. Extends §I13/V76.
+- Input: engine §I11 `GET /advice` PUBLISHED basket (legs: asset_id, underlying, target_weight_bps) + a user capital amount in Devnet USDC.
+- Plan (advisory): per-leg `allocationUsdc = floor(capital × target_weight_bps / 10000)` integer USDC base units; user-EDITABLE (adjust or remove legs; Σ allocations ≤ capital; explicit residual). `mode: 'devnet-analog'`; each council symbol maps to a configured Devnet-tradable analog mint, labelled a Devnet stand-in, not the real mainnet asset. Plan carries no executionReady/authority.
+- Execution: each plan leg executes as a §V76 Raydium Devnet swap (USDC → analog mint) through the wallet-owned terminal; the human signs every leg; per-leg V76 route/pool validation; outcomes persist in the `web/app/` order journal (§I13 state).
+- ⊥ mainnet, custody, pooled funds, autonomous/batch signing, real pre-IPO asset claim, or executionReady true.
+- [INFERRED, verification] `npm --prefix web test` sizing/edit unit tests; automated Devnet e2e with a funded keypair (confirmed signature + reconciled token deltas + persisted journal); one manual real-wallet sign-off session.
 
 ## §V INVARIANTS
 
@@ -331,7 +389,7 @@ V55: ∀ local website visual system → approved dark Liquid Metal treatment + 
 
 V56: ∀ stocks basket proposal → specialist=`stocks`, authority=`non-binding-advisory`, executionReady=`false`; leg targetWeightBps integer ≥ 1, sum = 10000; missing/invalid leg evidence → basket `NO_DATA`; wallet/custody/pool/allocation/execution field ∉ schema
 
-V57: ∀ stocks canonical basket snapshot → per-asset evidence bytes/hash frozen; Lead & Risk consume identical bytes/hash; provenance ∈ {`synthetic`,`historical`,`live`}; `live` only via a `dash/` read-only adapter carrying real source identity + dual-time; root plugin emits no live call; missing/invalid/stale/incoherent → `NO_DATA`
+V57: ∀ `stocks/stocks.ts` canonical basket snapshot → per-asset evidence bytes/hash frozen; Lead & Risk consume identical bytes/hash; provenance ∈ {`synthetic`,`historical`,`live`}; `live` only from a read-only host outside the root plugin; current live host is `engine/`, which keeps its own snapshot (`observed_at` only, no TS provenance enum) and does not emit the TS snapshot; root plugin emits no live call; missing/invalid/stale/incoherent → `NO_DATA`
 
 V58: ∀ stocks advice run → exactly one Lead call + one independent Risk Review; Risk authority=`veto-only`; `BLOCK`/critical/failure → published `BLOCKED`/`NO_DATA` + proposal `null`; Client Agent owns decision/execution
 
@@ -345,20 +403,37 @@ V62: ∀ stocks non-ok capture → carries typed failure metadata (`retryable`, 
 
 V63: ∀ stocks registry → exact-key validated identity + scales + limits + fees + capabilities + corporate-action reference + provenance; per-leg `targetWeightBps` ≤ registry per-asset max-weight cap; invalid/missing critical metadata → `NO_DATA`
 
-V64: ∀ dash live fetch → read-only HTTP GET or public RPC read; ⊥ write/execution/custody/signing/order; secrets from env only, never committed; provider/network/parse failure → typed capture failure → snapshot `NO_DATA`
+V64: ∀ engine live fetch → read-only HTTP GET or public RPC read; ⊥ write/execution/custody/signing/order; secrets from env only, never committed; provider/network/parse failure → typed capture failure → snapshot `NO_DATA`
 
-V65: ∀ dash rendered output → advisory-only, `executionReady: false`; shows council basket/risk/citations + `live` provenance; ⊥ trade/order action or capital instruction
+V65: ∀ engine rendered output → advisory-only, `executionReady: false`; shows basket evidence, risk verdict, and citations when published; a non-published verdict shows the failure reason and no citations; ⊥ trade/order action or capital instruction
 
-V66: ∀ dash PreStocks/token-2022 scaled-UI mint price evidence → derive live multiplier from extension time-gate (`newMultiplier` when `now ≥ newMultiplierEffectiveTimestamp`, else current `multiplier`); cross-check extension vs `getTokenSupply` uiAmount/raw within 5bps; divide raw pool price by multiplier; corroborate normalized price vs issuer `tokenPrice` within 500bps; zero/malformed/missing multiplier, extension/supply disagreement, or issuer disagreement → typed price capture failure → `NO_DATA`
+V66: ∀ engine PreStocks/token-2022 scaled-UI mint price evidence in `engine/src/prestocks.rs` → derive live multiplier from extension time-gate (`newMultiplier` when `now ≥ newMultiplierEffectiveTimestamp`, else current `multiplier`); cross-check extension vs `getTokenSupply` uiAmount/raw within 5bps; divide raw pool price by multiplier; corroborate normalized price vs issuer `tokenPrice` within 500bps; zero/malformed/missing multiplier, extension/supply disagreement, or issuer disagreement → typed price capture failure → `NO_DATA`
 
-[INFERRED, contracts] The following invariants cover browser behavior and planned service boundaries. This website release does not claim that a hosted mesh service is implemented.
+V67: ∀ engine DexScreener mint price → if ∃ Solana pair with base = mint, quote = USDC mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`, and parseable liquidity → select the deepest such pair; else select the deepest pair; ⊥ select a deeper non-USDC pair while a liquid USDC pair exists; the selected pair still passes V66 before a price value is admitted
 
-V77: [INFERRED] ∀ treasury record/view/outcome → explicit `mode: simulation`; synthetic observations; zero simulated interest/fees; no wallet/provider/model/chain call or real capital claim. Existing V11,V51,V64,V65 advisory boundaries remain unchanged outside I14.
+V68: ∀ engine pool ranking → compare parseable decimal liquidity exactly without truncation or fixed-width overflow; selected pair evidence records pair address and quote token address/symbol
+
+V69: ∀ engine per-asset reference → `reference` `FieldCapture` is part of the canonical snapshot and hash; capture source, observed time, raw feed ID/spot/publish time, and value bind to the council reference; missing, malformed, zero, mismatched, or configured-but-failed reference → snapshot `NO_DATA`
+
+V70: ∀ engine `/advice` → `execution_ready: false`; `citations` bind each published `price`, `liquidity`, and `reference` capture to source ID/version, observed time, value, and raw-excerpt hash; unpublished verdict → empty citations
+
+V71: ∀ local copilot transaction → target exactly selected Surfpool `http://127.0.0.1:18488` or Solana Devnet `https://api.devnet.solana.com`; Surfpool uses Jupiter mainnet route/build, Devnet uses Raydium Devnet quote/build API; Devnet quote and route must match configured pool, mints, and amount; RPC/status use selected target; refresh blockhash, simulate same message, require present `err: null` before wallet signing; after explicit signing, message bytes and connected signer must match before send; copilot absent from production build
+
+V72: ∀ PreStocks API rows for a configured mint → duplicate rows agree on symbol, mark, and token price; the accepted symbol equals the configured underlying; conflict or mismatch → failed reference capture and snapshot `NO_DATA`
+
+V73: ∀ engine fixed-point gap calculation → multiply by 10,000 with checked arithmetic; overflow → typed failure or `NO_DATA`, never panic or wrap
+
+V74: ∀ Solana `getTokenSupply.decimals` → validate its integer range before narrowing; an out-of-range value → failed capture and snapshot `NO_DATA`
+
+V75: ∀ Devnet copilot swap → configured pool exists on Devnet and is Raydium CPMM; Raydium quote route has exactly one leg through that pool; quote input/output mints, direction, and amount match the request; transaction build returns exactly one unsigned transaction from that quote; mismatch, missing route, or multiple transactions → stop before wallet signing
+
+V76: ∀ production `/app/` Devnet swap → route has 1-4 legs; every ordered Raydium leg matches adjacent mints and its live pool account owner, state layout, and mint pair; route starts/ends at requested mints, contains no repeated pool, and quote amount matches request; build exactly one unsigned transaction from that quote; any mismatch → stop before wallet signing
+V77: [INFERRED; 2026-09-29 amended] ∀ treasury record/view/outcome → explicit `mode: simulation`; synthetic/operator-supplied observations & balances; zero simulated interest/fees; no wallet/provider/model/chain call, custody, or real-capital claim. Server-persisted runs (§I17) allowed: server owns clock/event-id/`requestId` idempotency; `decide`/`replayRun` stay canonical. Existing V11,V51,V64,V65 advisory boundaries unchanged outside I14.
 V78: [INFERRED] ∀ treasury money → exact decimal ingress ≤6 fractional digits, integer units ≤u64; `reserve + investmentCap ≤ total`; conservation holds across every event; agent cannot debit reserve or undelegated cash.
 V79: [INFERRED] ∀ treasury agent decision → `decide(graph)` reads only validated typed graph nodes and required edges; missing dependency → blocked action; pre-action graph, decision, and outcome reproducible from journal.
 V80: [INFERRED] ∀ treasury supply → fresh available evidence, permitted mandate, liquid venue, positive delegated idle, position after action ≤cap; revoked mandate blocks every agent movement; owner redemption is explicit separate command.
 V81: [INFERRED] ∀ missing/unavailable/future/stale observation → `NO_DATA`; insufficient full-redemption liquidity → `BLOCKED`, prior position preserved; successful redemption credits delegated idle only.
-V82: [INFERRED] ∀ treasury mutation → exclusive Web Lock, fresh validated replay, expected revision match, one successful storage write before success; corrupt/unavailable/full storage or unsupported locks → visible error, no false success or replacement.
+V82: [INFERRED; 2026-09-29 scoped] ∀ browser treasury mutation → exclusive Web Lock, fresh validated replay, expected revision match, one successful storage write before success; corrupt/unavailable/full storage or unsupported locks → visible error, no false success or replacement. Server-persisted mutations (§I17) governed by §V114 idempotency plus a per-run atomic write (row lock or optimistic revision) so concurrent distinct events cannot lose updates.
 V83: [INFERRED] ∀ treasury event → exact schema, UUID, monotonic UTC time, at most 200 retained events; duplicate identical ID is idempotent; conflicting ID reuse rejected; reload reproduces state/decisions; no silent journal truncation.
 V84: [INFERRED] ∀ treasury UI → clear simulation labels, visible evidence age/errors/outcomes, keyboard controls and responsive layout; agent loop starts only on user action, stops on error/revocation/page close, stays stopped after reload; export contains validated replayable history.
 V85: [INFERRED] ∀ treasury setup submission → capture form values before disabling inputs; a valid visible mandate creates the same persisted mandate; rejected submission preserves the form for correction.
@@ -388,6 +463,14 @@ V108: [INFERRED] ∀ dashboard persistence → fixed preview namespace for both 
 V109: [INFERRED] ∀ dashboard decision → canonical treasury rules and exact integer balances; retained source samples and knowledge analyses match canonical replay/projection at saved cutoff; source display preserves exact retained text.
 V110: [INFERRED] ∀ current dashboard preview → evidence age refreshes decision validity; historical selection stays pinned to its original graph and cutoff; bounded loop stops on hidden page, unmount, storage change, error, revocation or ten saved cycles; Stop stays available during a pending cycle and cancels its queued storage lock; a synchronous commit already entered remains recorded.
 V111: [INFERRED] ∀ dashboard export or connection claim → describes actual record fields and connection state; sample analysis cannot claim service capture or execution authority; source content treated as data; dialogs close and restore focus without stale event races; delayed clipboard results apply only to their original open export.
+V112: [INFERRED] ∀ rejected mesh POST while client remains connected → complete typed HTTP error; drain unread input without retaining it; oversized fixed-length or chunked body never reaches storage; existing request timeout remains bounded.
+V113: [INFERRED] ∀ Control Centre live read (§I16) → bearer token in tab memory only, ⊥ persisted (⊥ localStorage/sessionStorage/URL); no authenticated /v1/* request before successful connect; disconnect clears token & halts authed requests; absent token → connect prompt; empty owner graph → empty state ≠ error; API failure → typed error surfaced, prior view unchanged.
+V114: [INFERRED] ∀ /v1/treasury/* → owner from token hash (§I15); run & event owner-scoped; event `requestId` idempotent per owner; conflicting `requestId` reuse rejected; server clock monotonic UTC; ≤200 events per run; unknown run/owner → NOT_FOUND; concurrent distinct events on one run serialize via a per-run row lock (`SELECT ... FOR UPDATE`) or optimistic revision check so no lost update or false success occurs.
+V115: [INFERRED] ∀ POST /v1/treasury/runs/:id/preview → `decide(buildGraph(state))` only; ⊥ persistence, ⊥ event append, ⊥ side-effect; equal input → equal decision.
+V116: [INFERRED] ∀ treasury_runs migration → additive DDL only; schema-version marker unchanged; existing columns/tables neither dropped nor renamed; `/readyz` (`store.ready()`) stays 200 across the deploy so the Railway healthcheck never restarts the live service.
+V117: [INFERRED] ∀ advisory capital plan (§I18) → per-leg `allocationUsdc = floor(capital × target_weight_bps / 10000)` integer USDC base units; editable (adjust/remove) with Σ allocations ≤ capital and explicit residual; `mode: 'devnet-analog'`; every leg labelled a Devnet stand-in for the real mainnet asset; plan carries no executionReady or execution authority.
+V118: [INFERRED] ∀ plan leg execution (§I18) → reuses §V76 Devnet route/pool validation for one USDC→analog swap; human signs each leg; ⊥ autonomous or batch signing; one confirmed on-chain signature per executed leg reconciled to transaction-local token deltas; persisted in the `web/app/` order journal; failure leaves the prior journal intact.
+V119: [INFERRED] ∀ engine §I11 `GET /advice` PUBLISHED → includes basket legs (asset_id, underlying, target_weight_bps summing to 10000); `execution_ready` false; BLOCKED/NO_DATA responses carry empty legs.
 
 ## §T TASKS
 
@@ -419,8 +502,41 @@ T23|x|add `stocks/stocks.ts` synthetic canonical basket snapshot for Solana toke
 T24|x|add typed Stocks Specialist BasketProposal (integer bps weights, per-leg evidence) + independent veto-only RiskReview + publication gate + host transport boundary + exact `stocks.advice` validators|V56,V58,V59,I10
 T25|x|add deterministic synthetic stocks contract tests: `NO_DATA` on missing/invalid evidence, valid basket advisory path, weight-sum + veto/status-matrix rejections|V56,V57,V58,V59,I10
 T26|x|extend stocks snapshot to perps/stablecoins parity: rich registry, per-field source precedence + safe failover, provider-event vs local-receipt time, typed failure metadata; add deterministic parity tests|V60,V61,V62,V63,I10
-T27|~|scaffold isolated `dash/` Node/TS terminal dashboard: read-only live adapter(s) → `live` basket snapshot → stocks council → terminal render; typed failure → `NO_DATA`; verify against synthetic + one real keyless provider|V57,V64,V65,I11
-T28|x|add PreStocks scaled-UI multiplier normalization + issuer corroboration in `dash/prestocks.ts`; fail-closed multiplier parse tests|V66,I11
+T27|x|`engine/` Rust live dashboard replaces deleted `dash/`: read-only DexScreener + PreStocks + Solana RPC → basket snapshot → council → terminal `preipo`; `serve` on `127.0.0.1:8787` GET `/advice` and `/graph`; typed failure → `NO_DATA`|V57,V64,V65,V66,I11
+T28|x|PreStocks scaled-UI multiplier normalization + issuer corroboration in `engine/src/prestocks.rs`; fail-closed multiplier parse tests|V66,I11
+T29|x|DexScreener price selects the deepest USDC-quoted pool when one exists, else the deepest pool|V67,I11
+T30|~|make engine pool ranking exact; bind underlying references into snapshot hash; return complete advice citations|V68,V69,V70,I11
+T31|~|finish Surfpool flow on user-hosted RPC and add Devnet Raydium CPMM flow; bind quote, pool, simulation, send, and confirmation to selected cluster|V71,V75,I12
+T32|.|add Meteora DBC stock-token path after Devnet swap flow passes live user test|V75,I12
+T33|~|finish production `/app/` wallet-owned Devnet terminal with multi-hop Raydium quote validation and manual transaction approval|V76,I13
+T34|x|save accepted pitch; index treasury product/architecture, ADRs, contract, cloud path, implementation plan, and current-state correction|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
+T35|x|build local treasury vertical slice: owner setup → graph-first simulated supply/hold/redeem → persisted replay → interactive UI|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
+T36|x|verify treasury invariants, failure preservation, negative controls, full web suite, static build, and browser workflow|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
+T37|.|prove one exact Kamino USDC supply/redemption path on selected test environment; verify reserve settings, receipt ownership, rounding, and confirmed balances|I14,V78,V81
+T38|.|prepare shareable HTTPS simulation release; verify browser storage isolation, mobile flow, and deployment target before user-authorized publication|I14,V77,V82,V84
+T39|.|specify and prove restricted agent authority, durable server reconciliation, and funded launch prerequisites before automatic real execution|I14,V78,V80,V81
+T40|~|publish treasury documentation and four independently verified feature slices as small draft PRs, based on fresh remote main and excluding unrelated worktree changes|I14,V77,V82,V84,V85,V86
+T41|x|finish browser graph prototype: pinned policy, saved records, evidence-linked checks, readable inspector, custom synthetic evidence, legacy replay, Pages candidate|I14,V77,V78,V81,V82,V87,V88,V89,V90
+T42|x|build persistent mesh vertical slice: retained sources, typed multi-hop analysis, Postgres history, authenticated API, viewer and local verification|I15,V91,V92,V93,V94,V95,V96,V97
+T43|~|connect approved live sources and terminal to mesh; prove one owner-approved Devnet lending path and persist confirmed outcomes before hosting|I15,V91,V92,V93,V94,V95,V96,V97,V99,V100
+T44|x|port active OpenDesign treasury landing to runnable React, preserve design and interactions, verify desktop/mobile/reduced-motion flows|V104
+T45|~|connect landing signup to durable local/Pages storage and configurable idempotent confirmation email; verify registration and distinguish provider acceptance from inbox delivery|V105,V106
+T46|x|port active OpenDesign Control Centre to React; preserve four views and isolated saved simulation; verify source parity, current/history semantics, storage failures and browser flows|I16,V107,V108,V109,V110,V111
+
+T47|x|publish new landing and Control Centre on the existing Pages site from a clean scoped checkout; preserve hosted signup and verify public routes and assets|I16,V104,V107,V111
+T48|x|wire dashboard Knowledge view to live §I15 mesh graph/analyses/sources behind in-memory token gate|I16,V113
+T49|x|wire dashboard Connections view to live connectors, `/readyz` health and live capture status|I16,V113
+T50|.|add §I17 treasury runs API: additive `treasury_runs` migration, shared `mesh/treasury-domain.mjs`, `treasury-store.mjs`, runs/events/preview routes|I14,I17,V77,V114,V115,V116
+T51|.|wire dashboard Decisions view to server-persisted treasury runs (§I17)|I16,I17,V114
+T52|.|wire dashboard Overview view to server treasury run projection (§I17)|I16,I17,V114
+T53|.|deploy live Control Centre build (`VITE_MESH_API_URL`) and verify end-to-end vs falcon-mesh production|I16,I17,V113,V114
+T54|x|extend engine GET /advice PUBLISHED to include basket legs (asset_id, underlying, target_weight_bps); execution_ready false; empty legs on BLOCKED/NO_DATA|I11,I18,V119
+T55|x|add advisory capital-plan sizing module (capital × weight-bps -> per-leg USDC, editable, residual, devnet-analog mapping)|I18,V117
+T56|x|wire web/app/ Strategy panel to engine /advice; render decision + editable sized plan|I13,I18,V117
+T57|x|execute one plan leg on Devnet from web/app/ via V76 swap (human-signed, persisted)|I13,I18,V76,V118
+T58|x|automated Devnet e2e: funded keypair drives data->decision->plan->execute->confirm; assert signature + deltas + persisted|I18,V118
+T59|.|manual real-wallet sign-off session; capture confirmed signatures + screenshots|I18,V118
+
 ## §B BUGS
 
 id|date|cause|fix
@@ -467,3 +583,43 @@ B40|2026-09-16|transform cell threw after deriving checks; artifact variable rol
 B41|2026-09-16|browser smoke clicked evidence link after keyboard test hid its Research tab panel|one-time browser smoke correction
 B42|2026-09-16|meta+og description present-tense live-use claim violated V48; landing test stripped <meta> so it went uncaught|V48
 B43|2026-09-16|dash PreStocks scaled-UI fix cited V66 before spec backprop; `parseScaledUiAccountState` accepted multiplier `0` & silently dropped invalid pending multiplier|V66
+B44|2026-09-22|deepest SPACEX pool quoted SPCXx; DexScreener `priceUsd` was not a USDC print; after scaled-UI /5, pool vs issuer gap was 963bps > 500 → basket `NO_DATA`|V67
+B45|2026-09-23|[VERIFIED, source read: `engine/src/dexscreener.rs` used `decimal_units(next, 0)`]|liquidity fractions were truncated and values beyond `u128` ranked as zero|V68
+B46|2026-09-23|[VERIFIED, source read: `engine/src/serve.rs` applied `pyth_failure` after `build_snapshot`]|configured Pyth failure changed the verdict after snapshot hashing, so failure evidence was unbound|V69
+B47|2026-09-23|[VERIFIED, source read: `engine/src/graph.rs` labeled DexScreener `usdc pool`]|fallback pool source detail claimed a USDC quote without evidence|V68
+B48|2026-09-23|[VERIFIED, source read: `engine/src/serve.rs` `AdviceResponse` omitted `execution_ready` and `citations`]|HTTP advice did not meet the rendered advisory contract|V70
+B49|2026-09-23|[VERIFIED, source read: `web/copilot/execution.mjs` allowlisted `devnet` and `web/copilot/index.html` accepted absent simulation `err`]|send target and simulation failure checks did not enforce the selected Surfpool-only boundary|V71
+B50|2026-09-23|[VERIFIED, source read: `engine/src/prestocks.rs:129` `entries.insert(...)`; `engine/src/council.rs:257` `reference.feed_id.starts_with("prestocks:")`]|conflicting mint rows overwrote each other, and PreStocks feed symbols were not matched to the configured underlying|V72
+B51|2026-09-23|[VERIFIED, source read: `engine/src/prestocks.rs:243,547`; `engine/src/council.rs:224,346`] each path multiplied a fixed-point gap by 10,000 without checked multiplication|V73
+B52|2026-09-23|[VERIFIED, source read: `engine/src/prestocks.rs:335`] `as_u64()? as u32` silently truncated out-of-range token decimal counts|V74
+B53|2026-09-23|[VERIFIED, focused test output: expected `wallet-key`, received a valid PreStocks public key] Jupiter build test fixture used a non-Base58 wallet string|fixture now uses a valid public key; wallet validation remains enforced
+B54|2026-09-24|[VERIFIED, first focused run: `3 !== 4` in multi-hop builder test `web/test/app-execution.test.mjs`] test expected fourth RPC call; builder makes one pool batch + two token-account reads|expected call count corrected to three
+B55|2026-09-26|[VERIFIED, isolated browser regression: `Total USDC must be an unsigned USDC decimal string with at most six fractional digits.`] setup disabled fields before constructing FormData, so visible values were absent|V85; snapshot before disabling; `web/test/treasury-browser.mjs`
+B56|2026-09-26|[VERIFIED, first browser run: accessible relationship check failed; `web/treasury/style.css` used `.graph-relations{display:none}`] desktop relationship text was absent from the accessibility tree|V86; visually hide text without removing it from accessibility; `web/test/treasury-browser.mjs`
+B57|2026-09-26|[VERIFIED, browser harness: keyboard check failed with only `key` and `code`; passed after Enter virtual key code 13 was added] incomplete CDP event did not trigger native button activation|one-time test driver correction; V84
+B58|2026-09-26|[VERIFIED, browser screenshot: `Agent stopped after an error.` remained after corrected setup] successful setup did not replace the prior loop status|V84,V85; set neutral stopped status after creation
+B59|2026-09-27|[VERIFIED, source inspection: treasury export handler used one snapshot message while store.exportRun preserves schema 1] legacy export promised fields absent from the downloaded record|V90; inspect exported schema before confirming; treasury browser regression
+B60|2026-09-27|[VERIFIED, negative browser attempt: `TypeError: Cannot read properties of null (reading 'hidden')`] reload wait assumed the new document already contained its elements|browser driver waits for element existence before checking visibility; rerun negative control
+B61|2026-09-27|[REPORTED, storage review; VERIFIED, source inspection] decoded NUL and lone surrogates passed source label/URL validation but cannot round-trip through Postgres text/JSONB|V98; reject at source boundary; mesh domain regression
+B62|2026-09-27|[VERIFIED, integrated tests: `Source contains a duplicate graph ID.`] fixture reserve and position both used `edge:unrelated-asset`|V91; include position identity in fixture asset-edge IDs
+B63|2026-09-27|[VERIFIED, browser harness: `passed: 18, total: 19`; domain.mjs] stale-evidence check required the word `stale`, while the policy says `older than 300 seconds`|V93,V96; check the documented freshness reason and retained source age
+B64|2026-09-27|[REPORTED, email review; VERIFIED, source inspection] waitlist database errors escape the handler and its TextDecoder accepts malformed UTF-8|V105; fail with bounded safe JSON and reject malformed request text before persistence
+B65|2026-09-27|[REPORTED, landing review] active OpenDesign script contains `const presentation=const presentation={`|V104; preserve intended interactions in the React port and keep the source artifact unchanged
+B66|2026-09-27|[VERIFIED, source review] separate prepared intents can have identical transaction messages and signatures; registration previously checked only each intent|V102; reject signature reuse across an owner's intents under the same transaction lock
+B67|2026-09-27|[VERIFIED, web suite: `tests 145, pass 144, fail 1`] access test still required the old static market-snapshot landing after the user requested its React replacement|V104; test the new entry and retain the dashboard's manual Devnet boundary
+B68|2026-09-27|[REPORTED, review: `web/mesh/app.mjs` API helper] delayed API responses can restore the prior workspace after a credential change|V96; bind every API result to its credential generation
+B69|2026-09-27|[REPORTED, review: `web/mesh/terminal.mjs`, `mesh/lending-store.mjs`] registration retains no signed bytes and disables signing, so interrupted broadcasts cannot resume after reload; absent expired transactions stay pending|V102; retain signed bytes for explicit identical retries and report expired absent receipts as unverified
+B70|2026-09-27|[REPORTED, review: `mesh/lending-store.mjs` submission path] first registration checks signature and preparation age without rechecking changed source heads|V101; recheck the retained live analysis under the owner lock and display its ID
+B71|2026-09-27|[REPORTED, review: `web/functions/_waitlist-email.js`] sender validation accepts consecutive local-part dots and local parts longer than 64 bytes|V106; validate sender local-part shape and size before enqueue
+B72|2026-09-27|[REPORTED, SQLite review: upsert returns `changes=1` for an existing email] handler treats an updated registration as a new registration|V105; use the insert result for duplicate status and retain the atomic outbox batch
+B73|2026-09-27|[REPORTED, browser evidence: old native `close` event at 560ms follows reopening at 555.8ms] queued dialog close event clears the newly opened React dialog|V104; React state owns close, while native cancel handles Escape
+B74|2026-09-27|[VERIFIED, disposable Vite tests: `tests 3`, `pass 0`, `fail 3`] local runtime stores private state beneath a development server root without a deny rule|V96,V105; deny `.local` paths in every Vite development configuration and verify HTTP rejection with dummy files
+B75|2026-09-27|[VERIFIED, OpenDesign `falconos-workspace.html:698`] raw-source inspector parses and pretty-prints retained content while claiming exact text|V109; render retained source string verbatim in React
+B76|2026-09-27|[VERIFIED, OpenDesign `falconos-workspace.html:765`] timer refreshes evidence age badges without refreshing the current decision|V110; refresh current decision with time and preserve saved historical cutoff
+B77|2026-09-27|[VERIFIED, OpenDesign `falconos-workspace.html:97,755`] shared export description claims command history for knowledge exports containing graph, analysis and sources|V111; describe the selected export schema
+B78|2026-09-27|[REPORTED, dashboard review: initial-chart expression throws `Run has missing or unknown fields.` for an accepted schema-1 run] chart adds schema-2 fields to legacy state before replay|V109; construct the initial chart state with fields allowed by that run's schema and cover legacy rendering/export
+B79|2026-09-27|[REPORTED, dashboard review: delayed clipboard completion updates whichever export is open] copy result is not bound to the dialog that requested it|V111; bind clipboard success and fallback focus to export generation
+B80|2026-09-27|[VERIFIED, source inspection: `App.jsx` cancels timers only; `Decisions.jsx` disables Stop during busy state] a cycle waiting for a storage lock cannot be stopped before it writes|V110; keep Stop enabled and abort a loop's queued lock request
+B81|2026-09-27|[VERIFIED, web suite `tests 158`, `pass 157`, `fail 1`; isolated polling test also returned `pending` after 304ms] a success fixture required two polls within 100ms of wall time|one-time test correction: use a controlled clock for the polling outcome assertions; production deadlines stay unchanged
+B82|2026-09-27|[REPORTED, UI build review: CSS retained `[EMBEDDED_ASSET]` from a sanitized reading copy] source font hashes were correct but CSS did not reference those assets|V107; bind four font faces to the retained TTF files and assert their loaded browser status
+B83|2026-09-27|[VERIFIED, pre-commit mesh suite: `tests 97`, `pass 95`, `fail 2`, oversized HTTP upload returned `ECONNRESET`; REPORTED, focused probe: 4 resets in 20 uploads] forced connection close races a client still uploading rejected input|V112; drain unread input and preserve the typed error response

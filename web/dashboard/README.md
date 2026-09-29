@@ -1,24 +1,43 @@
 # Control Centre
 
-[VERIFIED, source: `web/dashboard/`] React port of the active OpenDesign Control Centre. Views: Overview, Decisions, Knowledge and Connections. It preserves the source assets and synthetic sample records.
+[VERIFIED, source: OpenDesign `index.html`, `falconos-workspace.html`] This port uses the current Control Centre design from project `886c2e41-d9d4-45e0-a67d-148f20cfca61`. It has four views: Overview, Decisions, Knowledge and Connections. The current source is standalone HTML. The port uses the repository's existing React and Vite package.
 
-[REPORTED, clean release checks] From the repository root:
+## Run and preview
+
+[INFERRED, commands] From the FalconOS repository root, run:
 
 ```bash
-npm --prefix web ci
-npm --prefix web run build
+npm --prefix web run dev:local
+```
+
+[INFERRED, route] Open `http://127.0.0.1:4183/dashboard/`. Direct links include `#decisions`, `#knowledge` and `#connections`. Use one web server on port 4183 at a time.
+
+[INFERRED, built preview] Stop development before starting preview:
+
+```bash
+npm --prefix web run build:site
+npm --prefix web run preview:local
+```
+
+## Verify
+
+[INFERRED, commands] The browser harness uses Chrome, temporary profiles and loopback servers. It blocks external HTTP.
+
+```bash
+npm --prefix web run test:dashboard
 npm --prefix web test
+npm --prefix web run build:site
+npm --prefix web run test:dashboard:browser
 ```
 
-[INFERRED, local commands] Start development or preview with:
+## Data and services
 
-```bash
-npm --prefix web run dev -- --host 127.0.0.1 --port 4183
-npm --prefix web run preview -- --host 127.0.0.1 --port 4183
-```
+[VERIFIED, source: `data.json`, `store.mjs`] The five treasury runs are synthetic. The four embedded knowledge snapshots remain in `data.json` as a pinned design fixture but the Knowledge view reads the live mesh API after you connect with an access token (kept in memory only). The saved simulation uses `falconos-control-centre-preview-v1` in browser storage. The wrapper fixes that key for storage and locking. The existing treasury store retains its original default. State stays specific to the browser origin.
 
-[INFERRED, usage] Use one server on port 4183 at a time. Open `http://127.0.0.1:4183/dashboard/`. Inspect an example or create a saved simulation. Record evidence before a cycle. The simulation uses browser storage and cannot move wallet funds.
+[INFERRED, workflow] Inspect examples, or create one saved simulation. Record evidence before running a cycle. Inspect the resulting decision and balances. The dashboard cannot move wallet funds. Its Connections view links to the separate mesh and Devnet terminal.
 
-[VERIFIED, boundary] Knowledge samples are retained fixtures. Connections links to the separate mesh viewer and terminal. This static release does not host the mesh API. Local Vite does not run the hosted signup Function. See the [release record](../../docs/website-release.md).
+[VERIFIED, asset provenance] The dashboard reuses the four font files under `web/landing/assets/`. Their extracted bytes match the source fonts. Existing font licenses remain there. The Alpine mark comes from the source SVG path. Earlier advisory pages remain original HTML under `/design-reference/`; they use their own browser storage key.
 
-[VERIFIED, browser harness] `npm --prefix web run test:dashboard:browser` starts temporary Chrome profiles and blocks external HTTP. It compares the original OpenDesign files with the build. Set `FALCON_DASHBOARD_SOURCE` to the original project directory when it differs from the default local path.
+[INFERRED, design contract] See [Control Centre](../../docs/control-centre.md) for persistence, history, export and verification requirements.
+
+[VERIFIED, local checks] Web suite: `tests 161`, `pass 161`, `fail 0`. Final Chrome run: `passed:95`, `total:95`, `exceptions:[]`. See [verification and screenshots](../../docs/verification/2026-09-27-dashboard.md).

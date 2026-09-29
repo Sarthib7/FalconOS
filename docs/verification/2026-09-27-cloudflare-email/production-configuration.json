@@ -1,0 +1,76 @@
+{
+  "method": "GET",
+  "path": "/accounts/f646b35b9c52945d4a7e6d19909981d8/pages/projects/falconos",
+  "status": 200,
+  "checks": {
+    "identity": true,
+    "d1": true,
+    "secret": true,
+    "previewEmpty": true,
+    "onlyApprovedBinding": true
+  },
+  "all_checks_passed": true,
+  "production": {
+    "bindings": {
+      "ai_bindings": [],
+      "analytics_engine_datasets": [],
+      "browsers": [],
+      "d1_databases": [
+        "WAITLIST_DB"
+      ],
+      "durable_object_namespaces": [],
+      "hyperdrive_bindings": [],
+      "kv_namespaces": [],
+      "mtls_certificates": [],
+      "queue_producers": [],
+      "r2_buckets": [],
+      "services": [],
+      "vectorize_bindings": []
+    },
+    "env_variables": [
+      {
+        "name": "WAITLIST_IP_SALT",
+        "type": "secret_text"
+      }
+    ]
+  },
+  "preview": {
+    "bindings": {
+      "ai_bindings": [],
+      "analytics_engine_datasets": [],
+      "browsers": [],
+      "d1_databases": [],
+      "durable_object_namespaces": [],
+      "hyperdrive_bindings": [],
+      "kv_namespaces": [],
+      "mtls_certificates": [],
+      "queue_producers": [],
+      "r2_buckets": [],
+      "services": [],
+      "vectorize_bindings": []
+    },
+    "env_variable_names": []
+  },
+  "canonical_deployment": {
+    "id": "84226b75-79dc-4ddc-9e3b-af6b3edc1ea1",
+    "environment": "production",
+    "url": "https://84226b75.falconos.pages.dev",
+    "commit_hash": "61fa1a9762bab188e7f43cdea1078fdc4e4e13df",
+    "branch": "main",
+    "latest_stage": {
+      "name": "deploy",
+      "status": "success"
+    }
+  },
+  "latest_deployment": {
+    "id": "84226b75-79dc-4ddc-9e3b-af6b3edc1ea1",
+    "environment": "production",
+    "url": "https://84226b75.falconos.pages.dev",
+    "commit_hash": "61fa1a9762bab188e7f43cdea1078fdc4e4e13df",
+    "branch": "main",
+    "latest_stage": {
+      "name": "deploy",
+      "status": "success"
+    }
+  }
+}

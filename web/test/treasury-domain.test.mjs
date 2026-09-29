@@ -290,6 +290,32 @@ test('V83: identical duplicates return the input run without replaying a transfe
   assert.throws(() => appendEvent(run, observe(1, '2001')), /conflicting content/);
 });
 
+test('V83: event ID letter case is idempotent but cannot hide conflicting content', () => {
+  const lowerId = 'a0000000-0000-4000-8000-000000000001';
+  const upperId = lowerId.toUpperCase();
+  const original = { ...event(1), id: lowerId };
+  const run = appendEvent(createRun(setup()), original);
+
+  assert.strictEqual(appendEvent(run, { ...original, id: upperId }), run);
+  assert.equal(run.events.length, 1);
+  assert.equal(run.events[0].id, lowerId);
+  assert.throws(() => appendEvent(run, { ...original, id: upperId, type: 'owner_redeem' }), /conflicting content/);
+});
+
+test('V87: schema-2 replay preserves uppercase event IDs and saved records', () => {
+  const upperId = 'A0000000-0000-4000-8000-000000000001';
+  const savedFixture = appendEvent(createRun(setup()), { ...event(1), id: upperId });
+  assert.equal(savedFixture.schemaVersion, 2);
+  assert.equal(savedFixture.events[0].id, upperId);
+  assert.equal(savedFixture.records[0].eventId, upperId);
+
+  const expectedState = clone(replayRun(savedFixture).state);
+  const reloaded = replayRun(clone(savedFixture));
+  assert.deepEqual(reloaded.state, expectedState);
+  assert.equal(reloaded.entries[0].eventId, upperId);
+  assert.strictEqual(appendEvent(savedFixture, { ...savedFixture.events[0], id: upperId.toLowerCase() }), savedFixture);
+});
+
 test('V83: idempotence cannot bypass validation of a corrupt existing run', () => {
   const run = funded();
   run.setup.investmentCapUsdc = '900';

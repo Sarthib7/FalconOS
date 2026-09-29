@@ -1,0 +1,93 @@
+{
+  "passed": 1,
+  "total": 2,
+  "checks": [
+    {
+      "name": "V109: ported fixtures equal the exact parsed OpenDesign payload",
+      "pass": true
+    },
+    {
+      "name": "V107/B82: react loads all four original font faces",
+      "pass": false,
+      "detail": {
+        "loads": [
+          "rejected",
+          "rejected",
+          "rejected",
+          "rejected"
+        ],
+        "checks": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "faces": [
+          {
+            "family": "Geist",
+            "weight": "400",
+            "status": "error"
+          },
+          {
+            "family": "Geist",
+            "weight": "500",
+            "status": "error"
+          },
+          {
+            "family": "Geist",
+            "weight": "600",
+            "status": "error"
+          },
+          {
+            "family": "Geist Mono",
+            "weight": "400",
+            "status": "error"
+          }
+        ]
+      }
+    }
+  ],
+  "exceptions": [],
+  "remoteRequests": [],
+  "localRequests": [
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/index-hpEi2cWw.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/index-DJ5PvqaS.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    }
+  ],
+  "localResponses": [
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/index-DJ5PvqaS.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/index-hpEi2cWw.js",
+      "status": 200,
+      "type": "Script"
+    }
+  ],
+  "downloads": [],
+  "artifactDir": "/private/tmp/falcon-dashboard-source-r9g2sbv8/browser-7CFTn2",
+  "root": "/private/tmp/falcon-dashboard-source-r9g2sbv8/negative-b82-web/dist",
+  "sourceRoot": "/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61",
+  "mode": "react-fonts",
+  "limitations": "Isolated synthetic browser records. Source screenshots execute original scripts with outbound HTTP blocked. No live service, wallet, hosting or email delivery tested."
+}

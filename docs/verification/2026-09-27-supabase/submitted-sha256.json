@@ -1,0 +1,5 @@
+{
+  "sha256": "af5241400458e6b2db3eb101f65d285e4ad83dc470e66d7543a1e20532654dc8",
+  "bytes": 3978,
+  "composition": "Exact byte concatenation of the three reviewed files in manifest order. No wrapper or other SQL."
+}

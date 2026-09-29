@@ -1,5 +1,70 @@
 # FalconOS
 
+## Start with the current MVP
+
+[VERIFIED, source inspection, 2026-09-27] This repository contains several runtimes with separate authority. The [component map](docs/README.md#component-map) identifies their inputs, storage, financial boundaries, and review roles. [Status](status.md) records current work. [SPEC.md](SPEC.md) remains the specification; the [documentation drift list](docs/README.md#known-documentation-drift) identifies unresolved older sections.
+
+[VERIFIED, inspected release records] The [website and signup release](docs/verification/2026-09-27-cloudflare-email.md#ui-completion-release) records production commit `9af809b`. Signup returned `201 registered`, then `200 already_registered`. Both responses reported `emailStatus: not_configured`. This form registers early access. It does not provide account sign-in or prove inbox delivery.
+
+[VERIFIED, inspected setup record] Supabase has the reviewed mesh schema, but the application role remains `NOLOGIN`. The Railway API connection is pending. See [runtime prerequisites](docs/supabase-setup.md#runtime-connection). The public mesh page therefore does not establish a hosted backend connection.
+
+### Run locally
+
+[VERIFIED, package manifests] Node `>=24.12.0` is required for the complete local setup. Root, web, and mesh have separate lockfiles. [INFERRED, setup commands] Install each package once from the repository root:
+
+```sh
+npm ci
+npm --prefix mesh ci
+npm --prefix web ci
+```
+
+[INFERRED, local command] Start the site and local signup API, then open `http://127.0.0.1:4183/`:
+
+```sh
+npm --prefix web run dev:local
+```
+
+[VERIFIED, route sources: `web/vite.config.js:53`, `web/mesh/app.mjs:6`] Current routes have different data and execution paths:
+
+| Route | Purpose and prerequisite |
+| --- | --- |
+| `/` | React landing and early-access signup. Local signup uses SQLite; production uses D1. |
+| `/dashboard/` | React Control Centre with retained samples and browser-local treasury simulation. |
+| `/treasury/` | Synthetic decision graph, saved decisions, and replay in this browser. |
+| `/mesh/` | Persistent graph and Devnet lending terminal. Requires the separately running [mesh API and PostgreSQL](mesh/README.md#run). |
+| `/app/` | Separate browser wallet sign-in and manual Devnet swap terminal. Wallet approval is required for a transaction. |
+
+[INFERRED, preview commands] Stop the development server before using the same port for a built preview:
+
+```sh
+npm --prefix web run build:site
+npm --prefix web run preview:local
+```
+
+### Verify the checkout
+
+[INFERRED, command contract] Run `npm run verify` for all five scopes. It reports each scope as `PASS`, `FAIL`, or `BLOCKED`. Missing disposable PostgreSQL configuration blocks mesh verification and gives a nonzero overall result. The runner does not install packages or initialize a database. See [commands, prerequisites, and limits](docs/README.md#verification-and-release-checks) before the full run.
+
+```sh
+npm run verify
+```
+
+[VERIFIED, documentation scope] The component instructions and dated measurements below remain available. Their test counts describe those runs, not the current checkout. Later website and treasury decisions do not grant execution authority to the advisory plugin or Rust engine.
+
+## Earlier local mesh milestone, 2026-09-27
+
+[VERIFIED, current local result] The React treasury landing, retained knowledge mesh, live connectors and browser Devnet lending terminal are built. Final checks returned `97/97` mesh tests, `150/150` web tests, `79/79` mesh browser checks and `53/53` landing browser checks. See [verification and limits](docs/verification/2026-09-27-mvp.md).
+
+[INFERRED, start command] Run `npm --prefix web run dev:local` for the landing and local email capture. Open `http://127.0.0.1:4183/`. The `/mesh/` route also needs PostgreSQL and the [mesh launcher](mesh/README.md). Actual inbox delivery needs sender credentials. A confirmed user-wallet lending round trip remains unverified.
+
+## Treasury MVP work, 2026-09-26
+
+[VERIFIED, user direction] The user approved the staged treasury pitch and selected the local simulation loop first. Start with the [current documentation index](docs/README.md), [implementation plan](plans/treasury-mvp.md), or [saved interactive pitch](docs/pitches/falcon-stages.html).
+
+[INFERRED, scope] The `/treasury/` slice has synthetic balances and observations. Funded lending and restricted automatic execution require later proofs. The earlier advisory and Devnet modules retain their boundaries.
+
+## Earlier modules and evidence
+
 [VERIFIED, local implementation] FalconOS collects public Solana and Base quotes and writes linked Obsidian notes. The first slice compares USDC/EURC in both directions. See [`src/cli.ts`](src/cli.ts) and [`stablecoins/sources.ts`](stablecoins/sources.ts).
 
 [VERIFIED, user-confirmed product direction, 2026-09-18] FalconOS is the umbrella product. Falcon Investment Council is the current module, in the agent-first market intelligence and risk advisory category. [CONTEXT.md](CONTEXT.md) defines the active scope. Start with the [plan index](plans/README.md) for phases, tasks, checkpoints, and passing criteria.

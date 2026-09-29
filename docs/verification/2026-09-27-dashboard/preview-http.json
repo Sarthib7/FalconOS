@@ -1,0 +1,42 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "bytes": 1470
+  },
+  {
+    "path": "/dashboard/",
+    "status": 200,
+    "bytes": 1076
+  },
+  {
+    "path": "/mesh/",
+    "status": 200,
+    "bytes": 14749
+  },
+  {
+    "path": "/treasury/",
+    "status": 200,
+    "bytes": 15674
+  },
+  {
+    "path": "/app/",
+    "status": 200,
+    "bytes": 13050
+  },
+  {
+    "path": "/design-reference/falconos-advisory-workspace.html",
+    "status": 200,
+    "bytes": 498875
+  },
+  {
+    "path": "/design-reference/falconos-knowledge.html",
+    "status": 200,
+    "bytes": 470315
+  },
+  {
+    "path": "/design-reference/falconos-capital.html",
+    "status": 200,
+    "bytes": 470594
+  }
+]

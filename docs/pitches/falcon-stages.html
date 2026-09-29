@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Falcon | A staged architecture</title>
+<style>
+:root{--bg:#0a1110;--panel:#111c19;--panel2:#16231f;--line:#2b4038;--text:#edf5ee;--muted:#a3b7ad;--mint:#b5ed88;--blue:#91c2e4;--amber:#efc986;--radius:18px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:"Avenir Next","Segoe UI",Arial,sans-serif;line-height:1.5}
+button,a{-webkit-tap-highlight-color:transparent}button{font:inherit;color:inherit;cursor:pointer}a{color:var(--mint);text-underline-offset:4px}
+button:focus-visible,a:focus-visible,[role=button]:focus-visible{outline:3px solid var(--amber);outline-offset:5px}
+button{border:1px solid var(--line);background:var(--panel);border-radius:10px}button:hover{border-color:var(--mint)}button:disabled{opacity:.5;cursor:default}
+.shell{max-width:1480px;padding:0 44px;margin:auto}.masthead{display:flex;align-items:center;justify-content:space-between;gap:24px;height:92px;border-bottom:1px solid var(--line)}
+.brand{display:flex;gap:13px;align-items:center;letter-spacing:.17em;font-size:20px;font-weight:700}.brand svg{width:31px;height:31px}
+.mast-meta,.eyebrow,.tiny-label{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase}
+.mast-meta{color:var(--muted);display:flex;align-items:center;gap:20px}.text-button{padding:9px 13px;font-size:12px;letter-spacing:0;text-transform:none;font-family:inherit}
+.tabs{display:flex;gap:7px;padding:24px 0;overflow-x:auto;scrollbar-width:thin}.tab{white-space:nowrap;padding:11px 18px;background:transparent;color:var(--muted);font-size:13px;border-color:transparent}.tab[aria-selected=true]{background:var(--mint);color:#172018;border-color:var(--mint);font-weight:700}.tab span{opacity:.65;padding-right:7px}
+.page{display:none;animation:appear .24s ease-out}.page.active{display:block}@keyframes appear{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.eyebrow{color:var(--mint);display:flex;align-items:center;gap:9px}.dot{width:6px;height:6px;background:var(--mint);border-radius:50%;display:inline-block}
+h1,h2,h3,p{margin:0}h1{font-size:clamp(46px,5.3vw,76px);line-height:1.04;font-weight:500;letter-spacing:-.055em}h1 em{font-style:normal;color:var(--mint)}h2{font-size:clamp(34px,3.7vw,52px);font-weight:500;letter-spacing:-.04em;line-height:1.13}h3{font-size:20px;line-height:1.3;font-weight:500;letter-spacing:-.025em}
+.hero{display:grid;grid-template-columns:1fr 1.05fr;gap:46px;align-items:center;padding:26px 0 36px}.hero h1{margin:19px 0 22px}.hero p{font-size:17px;color:var(--muted);max-width:485px;line-height:1.65}
+.hero-diagram{min-width:0}.hero-diagram svg{width:100%;height:auto;display:block}.small-note{font-size:12px;color:var(--muted)}
+.hero-note{margin-top:18px;display:inline-flex;gap:9px;align-items:center;font-size:12px;color:var(--muted)}.status-ring{width:7px;height:7px;border-radius:50%;border:1px solid var(--amber)}
+.roadmap{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.roadmap-card{display:flex;flex-direction:column;text-align:left;padding:22px 21px 19px;border-radius:var(--radius);min-height:252px;position:relative;background:var(--panel)}.roadmap-card:first-child{border-color:#577247}.roadmap-card:hover{background:#1b2b22;transform:translateY(-2px)}.roadmap-card .step{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px;font-family:ui-monospace,monospace}.step b{font-size:17px;color:var(--mint);font-weight:400}.mini{height:55px;margin:17px 0}.mini svg{width:100%;height:100%}.roadmap-card h3{font-size:22px;margin-bottom:10px}.roadmap-card p{font-size:13px;color:var(--muted);line-height:1.6}.roadmap-card .scope{margin-top:auto;padding-top:16px;font-size:11px;letter-spacing:.04em;color:var(--mint)}
+.core-strip{display:flex;gap:25px;align-items:center;padding:22px 0 24px;margin-top:17px;border-bottom:1px solid var(--line)}.core-strip p{font-size:13px;color:var(--muted)}.core-strip strong{color:var(--text);font-weight:500}.core-strip .tiny-label{flex-shrink:0;color:var(--mint)}
+.provenance{font-size:11px;color:var(--muted);padding:20px 0 27px;display:flex;gap:20px;justify-content:space-between}.provenance a{color:var(--muted)}
+.stage-head{display:flex;justify-content:space-between;gap:30px;align-items:flex-end;padding:16px 0 28px}.stage-head h2{margin-top:12px}.stage-head .intro{font-size:14px;color:var(--muted);max-width:435px;line-height:1.7}.stage-head .intro strong{color:var(--text);font-weight:500}
+.stage-layout{display:grid;grid-template-columns:minmax(0,1fr) 278px;gap:18px;align-items:start}.diagram-wrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}.diagram-top{padding:17px 20px 0;display:flex;align-items:center;justify-content:space-between;gap:15px}.diagram-top .tiny-label{color:var(--muted);font-size:10px}.click-hint{font-size:11px;color:var(--muted)}
+.diagram-scroll{overflow-x:auto}.architecture{width:100%;height:auto;min-width:750px;display:block;padding:6px 9px 0}.architecture text{font-family:"Avenir Next","Segoe UI",Arial,sans-serif}.node{cursor:pointer;outline:none}.node rect{transition:stroke .15s,fill .15s}.node:hover rect,.node:focus-visible rect{stroke:var(--text);stroke-width:2}.node.selected rect{stroke:var(--amber);stroke-width:2}.node-title{font-size:19px;fill:var(--text);font-weight:500}.node-sub{font-size:13px;fill:var(--muted)}.edge-label{font-size:12px;fill:var(--muted)}.boundary-label{font-size:12px;fill:var(--muted);letter-spacing:.8px}.boundary{fill:none;stroke:#3b5248;stroke-dasharray:6 5}.node.accent rect{fill:#273b25;stroke:#739458}.node.accent .node-title{fill:var(--mint)}.node.owner rect{fill:#1b2c26;stroke:#52755f}.node.locked rect{fill:#29251a;stroke:#8f7951}.node.locked .node-title{fill:var(--amber)}.node.broker rect{fill:#1a2730;stroke:#6586a1}.node.broker .node-title{fill:var(--blue)}
+.edge{fill:none;stroke-width:2;vector-effect:non-scaling-stroke}.edge.money{stroke:var(--mint)}.edge.signal{stroke:var(--blue);stroke-dasharray:4 5;opacity:.76}.edge.authority{stroke:var(--amber);stroke-dasharray:9 5}.edge.action{stroke:#e5eee4;opacity:.8}.legend{display:flex;flex-wrap:wrap;gap:18px;padding:6px 20px 18px;font-size:10px;color:var(--muted)}.legend span{display:flex;align-items:center;gap:7px}.legend i{width:20px;height:0;border-top:2px solid var(--mint)}.legend .signal{border-color:var(--blue);border-top-style:dotted}.legend .authority{border-color:var(--amber);border-top-style:dashed}.legend .action{border-color:#e5eee4}
+.side-stack{display:grid;gap:12px}.side-card{border:1px solid var(--line);border-radius:14px;padding:19px 18px;background:var(--panel)}.side-card .tiny-label{color:var(--mint);font-size:10px;display:block;margin-bottom:10px}.side-card h3{font-size:18px;margin-bottom:8px}.side-card p{font-size:12px;color:var(--muted);line-height:1.7}.side-card ol{font-size:12px;color:var(--muted);padding-left:17px;margin:0;line-height:1.7}.side-card li+li{margin-top:7px}.detail-card{min-height:171px;background:#1a281e;border-color:#48613e}.detail-card h3{color:var(--mint)}.proof-card{background:transparent}.proof-card .tiny-label{color:var(--amber)}
+.scenario{padding:17px 20px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#14211a;min-height:107px}.scenario .tiny-label{font-size:9px;color:var(--muted)}.scenario h3{font-size:15px;margin:4px 0}.scenario p{font-size:12px;color:var(--muted);max-width:680px}.scenario button{padding:10px 14px;white-space:nowrap;background:var(--mint);color:#172018;font-size:12px;font-weight:600;border-color:var(--mint)}.scenario.on{background:#282317}.scenario.on h3{color:var(--amber)}.scenario.on button{background:transparent;color:var(--amber);border-color:#77613c}
+.scenario-live{display:none}.scenario.on .scenario-live{display:block}.scenario.on .scenario-default{display:none}
+.stage-notes{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:18px 0 2px}.stage-note{border-left:2px solid var(--line);padding-left:15px;font-size:12px;color:var(--muted)}.stage-note b{display:block;font-weight:500;color:var(--text);font-size:13px;margin-bottom:5px}
+.stage-controls{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:18px}.stage-controls button{padding:10px 16px;font-size:12px}.stage-controls .small-note{font-size:11px}
+.sources{border-top:1px solid var(--line);margin-top:22px;padding-top:25px}.sources summary{cursor:pointer;font-size:13px;color:var(--muted);padding-bottom:18px}.source-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.source-card{padding:20px;border:1px solid var(--line);border-radius:13px}.source-card h3{font-size:17px;margin-bottom:12px}.source-card p,.source-card li{font-size:12px;color:var(--muted);line-height:1.75}.source-card p+p{margin-top:12px}.source-card code{font-size:11px;background:#1e2b24;padding:2px 4px;color:var(--text);overflow-wrap:anywhere}.tag{font-family:ui-monospace,monospace;font-size:10px;color:var(--mint);display:block;margin-bottom:6px}.tag.pending{color:var(--amber)}.source-card ol{padding-left:17px;margin:0}.source-card li+li{margin-top:13px}
+.source-heading{display:none}.bottom-bar{padding:25px 0 30px;color:var(--muted);display:flex;justify-content:space-between;font-size:11px}
+.reduced-only{display:none}.no-script{margin:20px;padding:20px;border:1px solid var(--amber)}
+.mobile-hint{display:none}
+.baseline-strip{display:flex;align-items:center;gap:22px;border:1px solid var(--line);border-radius:14px;padding:17px 20px;margin:0 0 18px;background:var(--panel)}.baseline-strip .tiny-label{display:block;color:var(--muted);font-size:9px;margin-bottom:4px}.baseline-strip strong{font-size:14px;font-weight:500}.baseline-strip .next strong{color:var(--mint)}.baseline-arrow{font-size:23px;color:var(--muted)}.baseline-strip button{margin-left:auto;padding:10px 15px;font-size:12px;white-space:nowrap}
+.progress-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.progress-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:23px}.progress-panel.proposed{border-color:#65583b}.progress-panel>h3{font-size:23px;margin:5px 0 19px}.progress-item{display:grid;grid-template-columns:29px 1fr;gap:12px;padding:15px 0;border-top:1px solid var(--line)}.progress-mark{display:grid;place-items:center;width:27px;height:27px;border:1px solid #557245;border-radius:50%;color:var(--mint);font:12px ui-monospace,monospace}.proposed .progress-mark{border-color:#77613c;color:var(--amber)}.progress-item h4{font-size:15px;font-weight:500;margin:0 0 5px}.progress-item p{font-size:12px;line-height:1.65;color:var(--muted)}.progress-evidence{margin-top:8px;font-size:11px;color:var(--muted)}.progress-evidence summary{cursor:pointer;display:inline;color:var(--blue)}.progress-evidence[open] summary{display:list-item;margin-bottom:7px}.progress-evidence code{display:block;font-size:10px;overflow-wrap:anywhere;margin:4px 0;color:var(--muted)}.progress-evidence small{font-size:11px;display:block;line-height:1.65}.progress-state{display:flex;gap:18px;justify-content:space-between;align-items:center;margin-bottom:19px;padding:12px 16px;border-left:2px solid var(--amber);background:#1c2017;font-size:12px;color:var(--muted)}.progress-state strong{font-weight:500;color:var(--text)}
+.graph-shift{margin-top:18px;border:1px solid var(--line);border-radius:14px;padding:20px 23px}.graph-shift h3{font-size:18px;margin-bottom:16px}.flow-row{display:flex;gap:11px;align-items:center;font-size:12px}.flow-row+.flow-row{margin-top:11px}.flow-row .flow-label{min-width:132px;font:10px ui-monospace,monospace;color:var(--muted)}.flow-node{padding:8px 13px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--muted)}.flow-node.graph{border-color:#739458;color:var(--mint);background:#203323}.flow-arrow{color:var(--muted)}.progress-foot{margin-top:18px;display:flex;align-items:center;justify-content:space-between;gap:18px}.progress-foot p{font-size:12px;color:var(--muted);max-width:740px}.progress-foot button{padding:12px 16px;font-size:12px;background:var(--mint);color:#172018;white-space:nowrap}
+@media(max-width:800px){.progress-grid{grid-template-columns:1fr}.baseline-strip{flex-wrap:wrap;gap:12px}.baseline-strip button{margin-left:0}.flow-row{flex-wrap:wrap;gap:7px}.flow-row .flow-label{flex-basis:100%}.progress-state,.progress-foot{align-items:flex-start;flex-direction:column;gap:10px}.progress-panel{padding:19px}.flow-node{padding:7px 10px}}
+.event-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:18px}.event-main{padding:25px;border:1px solid #739458;border-radius:var(--radius);background:#14231a}.event-main h3{font-size:27px;margin:7px 0 14px}.event-main .event-date{font-size:40px;line-height:1.2;color:var(--mint);letter-spacing:-.035em}.event-main p{font-size:13px;color:var(--muted);margin-top:10px}.event-main .event-links{font-size:11px;margin-top:15px;display:flex;gap:20px;flex-wrap:wrap}.event-options{display:grid;gap:12px}.event-option{border:1px solid var(--line);border-radius:14px;padding:18px 20px;background:var(--panel)}.event-option h3{font-size:18px;margin-bottom:6px}.event-option p{font-size:12px;color:var(--muted);line-height:1.65}.event-option a{font-size:11px}.sprint-head{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:24px 0 13px}.sprint-head h3{font-size:20px}.sprint-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.sprint-card{border:1px solid var(--line);border-top:2px solid #739458;border-radius:12px;padding:17px;background:var(--panel)}.sprint-card .tiny-label{font-size:10px;color:var(--mint)}.sprint-card h4{font-size:16px;font-weight:500;margin:12px 0 8px}.sprint-card p{font-size:12px;color:var(--muted);line-height:1.65}.submission-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.submission-card{padding:18px 20px;border-left:2px solid var(--line)}.submission-card h3{font-size:16px;margin-bottom:8px}.submission-card p{font-size:12px;color:var(--muted);line-height:1.7}.submission-card code{font-size:11px}.event-note{font-size:11px;color:var(--muted);margin-top:14px}.hackathon-open{margin-top:18px;font-size:12px;color:var(--muted)}.hackathon-open summary{cursor:pointer;color:var(--amber)}.hackathon-open ol{line-height:1.7;padding-left:19px}.hackathon-open li+li{margin-top:7px}
+@media(max-width:800px){.event-grid,.submission-grid{grid-template-columns:1fr}.sprint-grid{grid-template-columns:1fr 1fr}.sprint-head{align-items:start;flex-direction:column;gap:5px}.event-main .event-date{font-size:34px}}
+@media(max-width:500px){.sprint-grid{grid-template-columns:1fr}.event-main{padding:20px}.baseline-arrow{display:none}.baseline-strip>div{flex-basis:100%}}
+@media(min-width:1500px){.architecture{min-height:480px}}
+@media(max-width:1050px){.shell{padding:0 25px}.hero{gap:18px}.hero p{font-size:15px}.stage-layout{grid-template-columns:minmax(0,1fr) 244px}.stage-head .intro{max-width:330px}.roadmap-card{padding:18px 16px}.roadmap-card h3{font-size:20px}.mast-meta>span{display:none}}
+@media(max-width:800px){.hero{grid-template-columns:1fr;padding-top:14px;gap:20px}.hero-diagram{max-width:560px}.hero h1{font-size:57px}.hero p{max-width:620px}.roadmap{grid-template-columns:1fr 1fr}.stage-layout{grid-template-columns:1fr}.side-stack{grid-template-columns:1fr 1fr}.detail-card{grid-column:1/-1;min-height:0}.stage-head{align-items:start;flex-direction:column;gap:15px}.stage-head .intro{max-width:none}.core-strip{align-items:start;flex-direction:column;gap:10px}.source-grid{grid-template-columns:1fr}.architecture{min-width:820px}.provenance{flex-direction:column;gap:7px}.tabs{padding:17px 0}.tab{padding:10px 12px}}
+@media(max-width:500px){.shell{padding:0 18px}.masthead{height:74px}.brand{font-size:17px}.mast-meta{gap:0}.hero h1{font-size:49px}.roadmap-card{min-height:260px}.roadmap-card h3{font-size:19px}.roadmap-card p{font-size:12px}.roadmap{gap:10px}.side-stack,.stage-notes{grid-template-columns:1fr}.detail-card{grid-column:auto}.scenario{grid-template-columns:1fr}.scenario button{justify-self:start}.stage-controls .small-note{display:none}.legend{gap:12px}.stage-head h2{font-size:35px}.bottom-bar{gap:10px;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.page{animation:none}*{transition:none!important}}
+@media(max-width:800px){.desktop-hint{display:none}.mobile-hint{display:inline}}
+@media print{
+@page{size:16in 10in;margin:.38in}
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{background:var(--bg)}body{font-size:12px}.shell{max-width:none;padding:0}.masthead{height:50px}.brand{font-size:16px}.mast-meta>span{display:inline}.text-button,.tabs,.click-hint,.scenario button,.stage-controls,.bottom-bar{display:none!important}.page{display:block!important;animation:none;break-after:page;page-break-after:always;padding-top:16px}.hero{padding:22px 0 24px;gap:50px}.hero h1{font-size:68px}.hero-diagram{max-height:320px}.hero-diagram svg{max-height:320px}.roadmap-card{min-height:232px}.stage-head{padding:10px 0 24px}.stage-head h2{font-size:46px}.stage-head .intro{max-width:430px}.stage-layout{grid-template-columns:minmax(0,1fr) 278px;gap:18px}.architecture{min-width:0;min-height:0;max-height:485px}.diagram-top{padding-top:12px}.legend{padding-bottom:13px}.scenario{min-height:79px;padding:12px 18px}.stage-notes{padding-top:13px}.side-card{padding:15px 17px}.side-card p,.side-card ol{font-size:11px}.detail-card{min-height:144px}.provenance{padding:13px 0 0;font-size:10px}.sources{margin:0;padding:16px 0 0;border:none;break-before:page}.sources summary{display:none}.sources .source-heading{display:block;margin:0 0 22px}.sources .source-grid{display:grid!important;grid-template-columns:1fr 1fr}.source-card{break-inside:avoid}.source-card p,.source-card li{font-size:12px}.hero-note{margin-top:12px}
+}
+@media print{.page{zoom:.82}.hero{grid-template-columns:1fr 1.05fr}.roadmap{grid-template-columns:repeat(4,1fr)}.stage-head{flex-direction:row;align-items:flex-end}.side-stack{display:grid;grid-template-columns:1fr}.detail-card{grid-column:auto}.stage-notes{grid-template-columns:1fr 1fr}.provenance{flex-direction:row}.source-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="masthead">
+<div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2 7h27L17 17l-1 12-5-10 10-8H7z" fill="#b5ed88"/></svg>FALCON</div>
+<div class="mast-meta"><span>Architecture pitch · 26 Sep 2026</span><button class="text-button" data-stage="6">Next hackathon →</button></div>
+</header>
+<nav class="tabs" role="tablist" aria-label="Architecture stages">
+<button class="tab" id="tab-0" role="tab" aria-controls="page-0" aria-selected="true" tabindex="0" data-stage="0">The vision</button>
+<button class="tab" id="tab-1" role="tab" aria-controls="page-1" aria-selected="false" tabindex="-1" data-stage="1"><span>01</span>First MVP</button>
+<button class="tab" id="tab-2" role="tab" aria-controls="page-2" aria-selected="false" tabindex="-1" data-stage="2"><span>02</span>Several venues</button>
+<button class="tab" id="tab-3" role="tab" aria-controls="page-3" aria-selected="false" tabindex="-1" data-stage="3"><span>03</span>Across chains</button>
+<button class="tab" id="tab-4" role="tab" aria-controls="page-4" aria-selected="false" tabindex="-1" data-stage="4"><span>04</span>Personal finance</button>
+<button class="tab" id="tab-5" role="tab" aria-controls="page-5" aria-selected="false" tabindex="-1" data-stage="5">Build progress</button>
+<button class="tab" id="tab-6" role="tab" aria-controls="page-6" aria-selected="false" tabindex="-1" data-stage="6">Hackathon plan</button>
+</nav>
+<main>
+<section class="page active" id="page-0" role="tabpanel" aria-labelledby="tab-0">
+<div class="hero">
+<div>
+<div class="eyebrow"><span class="dot"></span>A proposed direction</div>
+<h1>Set the rules.<br><em>Hire Falcon.</em></h1>
+<p>A personal financial agent for people who want their idle money managed within clear limits.</p>
+<div class="hero-note"><span class="status-ring"></span>Start with investable USDC. Expand after proof.</div>
+</div>
+<div class="hero-diagram">
+<svg viewBox="0 0 600 370" role="img" aria-labelledby="vision-title vision-desc">
+<title id="vision-title">Falcon separates spending cash from its investment mandate</title>
+<desc id="vision-desc">The owner sets a reserve outside agent authority and an investment budget. A decision graph proposes actions. Enforced rules limit how the investment budget can move. All components are proposed.</desc>
+<defs><marker id="v-arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 8 4 0 8z" fill="#b5ed88"/></marker><marker id="v-data" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 8 4 0 8z" fill="#91c2e4"/></marker></defs>
+<rect x="7" y="12" width="586" height="344" rx="22" fill="#111c19" stroke="#2b4038"/>
+<text x="32" y="42" fill="#a3b7ad" font-size="10" font-family="monospace" letter-spacing="1.5">PROPOSED / OWNER SETS THE MANDATE</text>
+<rect x="32" y="66" width="245" height="82" rx="12" fill="#29251a" stroke="#8f7951"/><circle cx="54" cy="92" r="4" fill="#efc986"/>
+<text x="69" y="97" fill="#efc986" font-size="17">Spending reserve</text><text x="49" y="123" fill="#a3b7ad" font-size="12">Outside agent authority</text>
+<rect x="321" y="66" width="245" height="82" rx="12" fill="#203323" stroke="#739458"/><circle cx="344" cy="92" r="4" fill="#b5ed88"/>
+<text x="359" y="97" fill="#b5ed88" font-size="17">Investment budget</text><text x="338" y="123" fill="#a3b7ad" font-size="12">Only within approved limits</text>
+<path d="M187 258H237" stroke="#91c2e4" stroke-width="2" stroke-dasharray="4 5" marker-end="url(#v-data)"/>
+<path d="M400 258H446V158" fill="none" stroke="#b5ed88" stroke-width="2" marker-end="url(#v-arr)"/>
+<text x="449" y="197" fill="#a3b7ad" font-size="11">Enforced</text><text x="449" y="212" fill="#a3b7ad" font-size="11">permissions</text>
+<g stroke="#739458" stroke-width="1.4"><path d="M70 230 115 208 162 233 135 282 80 291 70 230 135 282 115 208M162 233 80 291" fill="none"/></g>
+<g fill="#b5ed88"><circle cx="70" cy="230" r="6"/><circle cx="115" cy="208" r="8"/><circle cx="162" cy="233" r="5"/><circle cx="135" cy="282" r="7"/><circle cx="80" cy="291" r="5"/></g>
+<text x="52" y="326" fill="#a3b7ad" font-size="12">Live evidence</text>
+<rect x="237" y="219" width="163" height="79" rx="12" fill="#273b25" stroke="#739458"/><text x="258" y="251" fill="#b5ed88" font-size="18">Decision graph</text><text x="258" y="276" fill="#a3b7ad" font-size="12">Propose and explain</text>
+<text x="341" y="329" fill="#a3b7ad" font-size="11">Confirmed results return to the graph</text>
+</svg>
+</div>
+</div>
+<div class="baseline-strip"><div><span class="tiny-label">Current code · Source checked</span><strong>Advisory + Devnet terminal</strong></div><span class="baseline-arrow" aria-hidden="true">→</span><div class="next"><span class="tiny-label">First MVP · Proposed</span><strong>One capped USDC lending position</strong></div><button data-stage="5">View progress →</button></div>
+<div class="roadmap" id="roadmap"></div>
+<div class="core-strip"><span class="tiny-label">The core stays</span><p><strong>Evidence → decision graph → policy checks → execution → observed result.</strong><br>Each stage expands the mandate. The owner keeps control of its limits.</p></div>
+<div class="provenance"><span>INFERRED · Every stage is a proposed architecture. No stage is labelled shipped.</span><a href="#evidence" data-evidence>See current evidence and open decisions</a></div>
+</section>
+<div id="stages"></div>
+<section class="page" id="page-5" role="tabpanel" aria-labelledby="tab-5">
+<div class="stage-head"><div><div class="eyebrow"><span class="dot"></span>Build progress · 26 Sep 2026</div><h2>What exists.<br>What comes next.</h2></div><p class="intro">The repository has an advisory engine and a Devnet interface. The proposed MVP connects those parts to a stablecoin mandate.</p></div>
+<div class="progress-state"><span><strong>VERIFIED:</strong> 64 web tests passed locally. The offline council demo returned three expected outcomes.</span><span>These checks do not prove funded operation.</span></div>
+<div class="progress-grid">
+<div class="progress-panel"><span class="tag">VERIFIED · Source and local checks</span><h3>Existing foundation</h3>
+<div class="progress-item"><span class="progress-mark" aria-hidden="true">01</span><div><h4>Market evidence</h4><p>Provider adapters collect prices and liquidity. An offline fixture exercises healthy, blocked, and missing-data paths.</p><details class="progress-evidence"><summary>Evidence</summary><code>engine/src/serve.rs:485 · provider collection</code><code>cargo run --offline --quiet --manifest-path engine/Cargo.toml -- demo</code><small>Exit 0. Output: advice=PUBLISHED, advice=BLOCKED, advice=NO_DATA. Synthetic fixtures do not prove live provider health.</small></details></div></div>
+<div class="progress-item"><span class="progress-mark" aria-hidden="true">02</span><div><h4>Council and risk checks</h4><p>The engine validates a snapshot and returns an advisory verdict. The verdict has no execution authority.</p><details class="progress-evidence"><summary>Evidence</summary><code>engine/src/serve.rs:528 · snapshot construction</code><code>engine/src/serve.rs:529 · evaluate_council_with_checks</code><small>Offline demo output includes executionReady=false. SPEC.md:8 keeps the engine and plugin read-only.</small></details></div></div>
+<div class="progress-item"><span class="progress-mark" aria-hidden="true">03</span><div><h4>Explanation graph</h4><p>The current flow builds its graph after the council verdict. That order must change for the proposed decision loop.</p><details class="progress-evidence"><summary>Evidence</summary><code>engine/src/serve.rs:529 · council evaluated</code><code>engine/src/serve.rs:534 · build_graph receives the verdict</code><small>This source check establishes call order. It does not establish decision quality.</small></details></div></div>
+<div class="progress-item"><span class="progress-mark" aria-hidden="true">04</span><div><h4>Wallet-owned Devnet terminal</h4><p>Browser code covers quotes, simulation, wallet signatures, and transaction status. The owner signs each transaction.</p><details class="progress-evidence"><summary>Evidence</summary><code>web/app/app.mjs:545 · simulateDevnet</code><code>web/app/app.mjs:552 · provider.signTransaction</code><code>web/app/app.mjs:577 · sendDevnet</code><code>npm --prefix web test → tests 64, pass 64, fail 0</code><small>Tests passed on 26 Sep 2026. This check sent no transaction. The earlier user-reported sign-in issue remains unresolved in status.md.</small></details></div></div>
+</div>
+<div class="progress-panel proposed"><span class="tag pending">INFERRED · Work required for Stage 01</span><h3>Proposed first MVP</h3>
+<div class="progress-item"><span class="progress-mark" aria-hidden="true">01</span><div><h4>An enforceable mandate</h4><p>Keep spending cash outside delegation. Enforce the investment cap, allowed destinations, and revocation at execution.</p></div></div>
+<div class="progress-item"><span class="progress-mark" aria-hidden="true">02</span><div><h4>A graph that informs action</h4><p>Connect new observations to cash needs and risk. Use that context to propose supply, hold, or redeem.</p></div></div>
+<div class="progress-item"><span class="progress-mark" aria-hidden="true">03</span><div><h4>One verified lending path</h4><p>Prove USDC supply and redemption on Solana. Confirm that the owner controls receipts and returned funds.</p></div></div>
+<div class="progress-item"><span class="progress-mark" aria-hidden="true">04</span><div><h4>Observed outcomes</h4><p>Reconcile balances and costs. Feed results back into the graph. Show failed withdrawals and pending transactions.</p></div></div>
+</div>
+</div>
+<div class="graph-shift"><h3>The central architecture change</h3><div class="flow-row"><span class="flow-label">CURRENT · VERIFIED</span><span class="flow-node">Observations</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-node">Council verdict</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-node graph">Explanation graph</span></div><div class="flow-row"><span class="flow-label">MVP · PROPOSED</span><span class="flow-node">Observations + rules</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-node graph">Decision graph</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-node">Checked action</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-node">Outcome ↺</span></div></div>
+<div class="progress-foot"><p>Current code is a starting point. Only a tested supply, hold, and redemption loop can establish the proposed MVP.</p><button data-stage="6">See the next hackathon plan →</button></div>
+<div class="provenance"><span>Source reads and local checks establish this baseline. Product readiness remains unproven.</span><span>Falcon / Progress</span></div>
+</section>
+<section class="page" id="page-6" role="tabpanel" aria-labelledby="tab-6">
+<div class="stage-head"><div><div class="eyebrow"><span class="dot"></span>Next submission · Proposed plan</div><h2>One treasury demo.<br>One clear deadline.</h2></div><p class="intro"><strong>Recommendation: Crypto World's Fair, Solana track.</strong> Demonstrate Stage 01. Keep the wider architecture as the expansion plan.</p></div>
+<div class="event-grid">
+<div class="event-main"><span class="tag">VERIFIED · Official event and rules, 26 Sep 2026</span><h3>Colosseum · Crypto World's Fair</h3><div class="event-date">12 October 2026</div><p>Submission and registration close at <strong>23:59 Pacific</strong>.<br>Berlin: 13 October, 08:59 CEST.</p><p>Already open since 14 September. The Solana ecosystem track awards $100,000 across ten projects.</p><div class="event-links"><a href="https://colosseum.com/worldsfair">Official event ↗</a><a href="https://colosseum.com/legal/Crypto%20World%27s%20Fair%20Hackathon%20Rules.pdf">Rules §§5, 6, 14 ↗</a></div></div>
+<div class="event-options"><div class="event-option"><span class="tag">VERIFIED · Next scheduled Solana-directory event</span><h3>Perps and Prediction Markets</h3><p>2 to 9 October 2026. Exact cutoff time remains unverified.</p><p><strong>INFERRED:</strong> Plain lending has a weak fit with its perps and prediction scope.</p><a href="https://hackathons.solana.com/hackathons/perps-and-prediction-markets">Event ↗</a> · <a href="https://hackathons.solana.com/hackathons">Start date ↗</a></div><div class="event-option"><span class="tag pending">VERIFIED · Seeking sponsors</span><h3>Agentic Payments</h3><p>No date is listed. Scheduling depends on its funding goal. Watch this theme for agent spending controls.</p><a href="https://hackathons.solana.com/hackathons/agentic-payments-mtxd9fkr">Official status ↗</a></div></div>
+</div>
+<div class="sprint-head"><h3>Proposed sprint to submission</h3><span class="tag pending">INFERRED · Planning estimates, not completed work</span></div>
+<div class="sprint-grid">
+<div class="sprint-card"><span class="tiny-label">26 to 28 Sep</span><h4>Complete one simulated loop</h4><p>Set reserve and cap. Feed evidence into the graph. Show a decision and its simulated outcome.</p></div>
+<div class="sprint-card"><span class="tiny-label">29 Sep to 3 Oct</span><h4>Prove the lending path</h4><p>Test supply, receipt ownership, and redemption in a declared environment. Keep owner signatures until permissions are proven.</p></div>
+<div class="sprint-card"><span class="tiny-label">4 to 7 Oct</span><h4>Show why Falcon stops</h4><p>Demonstrate stale-data rejection and a blocked cap breach. Test revocation before any delegated execution. Collect user feedback.</p></div>
+<div class="sprint-card"><span class="tiny-label">8 to 11 Oct</span><h4>Package the proof</h4><p>Record the pitch and demo. Link the repository and test evidence. Document prior work and demand. Target submission on 11 October.</p></div>
+</div>
+<p class="event-note">INFERRED: These dates assume focused work and an available lending test environment. If integration remains simulated, label it clearly. Stage 01 autonomy stays unproven until its controls pass.</p>
+<div class="submission-grid"><div class="submission-card"><span class="tag">VERIFIED · Current Colosseum FAQ</span><h3>What the submission needs</h3><p>Repository, a 2 to 3 minute presentation, and a demo of at most 3 minutes. Include team details, demand evidence, and a distribution plan. <a href="https://colosseum.com/hackathon">Submission FAQ ↗</a></p></div><div class="submission-card"><span class="tag">VERIFIED · Prior-work rule</span><h3>Disclose what already exists</h3><p>Earlier code is allowed with disclosure. Judging covers work within the contest window. Use repository history to distinguish work before 14 September from contest work. <a href="https://colosseum.com/hackathon">Eligibility FAQ ↗</a></p></div></div>
+<details class="hackathon-open"><summary>Least confident decisions</summary><ol><li><strong>Integration time:</strong> lending and restricted authority may exceed this proposed sprint.</li><li><strong>Entry eligibility:</strong> participant restrictions and Falcon's funding history have not been checked against the rules.</li><li><strong>Event fit:</strong> the Solana-track recommendation follows the published scope. It is not organizer approval.</li></ol></details>
+<div class="progress-foot"><p>INFERRED demo story: reserve → investment cap → explained decision → lending position → confirmed result. Include one rejected action.</p><button data-stage="1">Inspect the first MVP →</button></div>
+<div class="provenance"><span>Official sources checked 26 Sep 2026. No registration or submission has been made by this task.</span><span>Falcon / Next hackathon</span></div>
+</section>
+</main>
+<details class="sources" id="evidence">
+<summary>Evidence, scope, and least confident decisions</summary>
+<h2 class="source-heading">What this pitch rests on.</h2>
+<div class="source-grid">
+<div class="source-card">
+<h3>Current code and proposed change</h3>
+<p><span class="tag">VERIFIED · Local source read, 26 Sep 2026</span><code>SPEC.md:8</code>: “The plugin and Rust engine remain read-only.” This records the current engine boundary.</p>
+<p><span class="tag">VERIFIED · Local source read, 26 Sep 2026</span><code>engine/src/serve.rs:529</code> calls <code>evaluate_council_with_checks</code>. The later <code>build_graph</code> call at line 534 uses the verdict. Inspection proves this order, not live decision quality.</p>
+<p><span class="tag pending">INFERRED · Design proposal</span>This pitch proposes graph input before each decision, persistent observations, and a separate executor with restricted authority. It does not amend SPEC.md or claim an implemented money manager.</p>
+</div>
+<div class="source-card">
+<h3>Provider evidence</h3>
+<p><span class="tag">VERIFIED · Official pages read in this session</span>Kamino: “The flash borrow and repay must be in the same transaction.” Its supplying page makes withdrawals conditional on available liquidity. <a href="https://kamino.com/docs/build/developers/multiply/flash-loans">Flash guide</a> · <a href="https://kamino.com/docs/products/borrow/supplying">Supplying</a>. Documentation does not prove current reserve settings or our integration.</p>
+<p><span class="tag">VERIFIED · Official pages read in this session</span>Backpack's eligibility page states that Securities is unavailable in the US, UK, UAE, and Japan. It also excludes Backpack EU. <a href="https://support.backpack.exchange/backpack-securities/eligibility-and-access">Eligibility</a>. This does not establish Falcon's legal classification.</p>
+<p><span class="tag pending">INFERRED · Scope</span>Swig is a candidate for restricted authority. Its documented roles do not establish a tested Kamino policy. <a href="https://build.onswig.com/reference/typescript/actions">Permission primitives</a>.</p>
+</div>
+<div class="source-card">
+<h3>Global reach, explicit access</h3>
+<p><span class="tag pending">INFERRED · Product proposal</span>Keep Falcon's positioning global. Enable each financial service only after checking customer eligibility, venue access, and Falcon's service model. Recheck these conditions when the mandate changes.</p>
+<p><span class="tag pending">INFERRED · Release condition</span>Owner-signed proof transactions come before bounded automation. Customer-funded use requires tested controls and a reviewed launch scope. An audit of a wallet does not prove a new Falcon adapter is correct.</p>
+<p><span class="tag">VERIFIED · Documentation boundary</span>The July 2026 SEC commissioner statement discusses potential securities-law implications of vaults and lending. It is a commissioner statement, not a new rule or a determination about Falcon. <a href="https://www.sec.gov/newsroom/speeches-statements/peirce-statement-crypto-vaults-lending-strategies-072226">Statement</a>.</p>
+</div>
+<div class="source-card">
+<h3>Least confident decisions</h3>
+<ol>
+<li><span class="tag pending">INFERRED · Integration choice</span><strong>Swig plus Kamino.</strong> Exact instruction limits, receipt ownership, and outstanding exposure enforcement need adversarial integration tests.</li>
+<li><span class="tag pending">INFERRED · Launch choice</span><strong>First funded region.</strong> US demand is worth testing. Kamino's current US access terms and Falcon's service classification remain unresolved.</li>
+<li><span class="tag pending">INFERRED · Expansion choice</span><strong>Value after costs.</strong> Several venues and chains may add more cost than benefit. Expand only when measured outcomes justify the added work and risk.</li>
+</ol>
+</div>
+</div>
+</details>
+<footer class="bottom-bar"><span>Falcon · Architecture proposal · 26 September 2026</span><span>Local presentation. Scenarios are illustrative. Funds never move here.</span><button class="text-button" id="print">Print / save PDF</button></footer>
+<noscript><p class="no-script">Enable JavaScript to switch stages. This file runs locally and makes no network requests.</p></noscript>
+</div>
+<script>
+'use strict';
+const NS = 'http://www.w3.org/2000/svg';
+const esc = value => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+const stages = [
+{
+ id:1, short:'One strategy', title:'Put idle USDC to work.', card:'One lending position. A fixed investment budget.', scope:'SOLANA · NATIVE USDC', outcome:'The user keeps a spending reserve and delegates only their investable USDC.',
+ intro:'The user sets the reserve and investment cap. Falcon manages one permitted lending position.',
+ proof:['Confirm deposit and redemption with owner signatures.','Prove receipt ownership, amount limits, and allowed recipients.','Reject revoked authority, extra instructions, and stale inputs.','Then complete the loop with restricted automatic execution.'],
+ open:'Exact Kamino reserve, Swig permission enforcement, and funded-user eligibility.',
+ change:'Build the first complete path: approved budget, graph decision, checked transaction, and confirmed outcome.',
+ value:'Show net interest and costs. Report failed or delayed withdrawals. The reserve stays outside Falcon\'s authority.',
+ scenario:'Pool liquidity drops', scenarioDefault:'See why a higher displayed yield does not always justify a new deposit.',
+ scenarioResult:'Stop new deposits when liquidity breaches the user\'s rule. Redeem only when liquidity permits. Keep a failed redemption visible.',
+ focus:'policy', defaultDetail:'graph',
+ detailTitle:'The graph informs the decision',
+ detailText:'Connect the user\'s cash needs to reserve liquidity, collateral, and source freshness. The agent proposes an action. Rules constrain execution.',
+ nodes:[
+ ['owner',24,54,174,82,'Owner wallet','Sets the mandate','owner','The user chooses the investment amount and keeps the reserve outside the agent\'s authority. Only the user can widen the mandate.'],
+ ['reserve',267,38,239,88,'Spending reserve','Outside agent authority','locked','Falcon receives no spending authority over this balance. Keeping USDC here does not remove stablecoin issuer or depeg risk.'],
+ ['account',636,59,235,91,'Investment account','USDC within the cap','owner','A user-controlled strategy account holds investable USDC. The execution guard must limit instructions, market, amount, and recipients.'],
+ ['position',636,180,235,70,'Lending position','Owner controls receipts','owner','Deposit receipts or the position must stay under the user\'s control. A valid destination pool alone does not prove this ownership.'],
+ ['lender',956,59,218,91,'Kamino reserve','First candidate','normal','Proposed integration: direct, unlevered USDC supply and redemption. Current reserve settings and user eligibility still need verification.'],
+ ['feeds',45,355,217,83,'Live observations','Source + freshness checks','normal','Read chain and reserve state. Keep source, slot or time, and freshness with each fact. Missing critical data stops new investment.'],
+ ['graph',305,355,229,83,'Decision graph','Supply / hold / redeem','accent','The graph is decision input. It links user needs, positions, liquidity, collateral dependencies, and observations to a proposed action.'],
+ ['policy',576,355,228,83,'Policy checks','Deterministic validation','normal','Check the mandate and evidence before constructing a transaction. Model output cannot widen spending permissions or invent missing state.'],
+ ['guard',850,355,324,83,'Restricted executor','Onchain enforcement required','locked','Swig is a candidate. The integration must enforce allowed instructions, reserve, amount, receipt owner, and return account. It remains unverified.'],
+ ['outcome',576,494,281,72,'Confirmed outcome','Balance + cost reconciliation','normal','A proposed or submitted transaction is not a confirmed result. Reconcile balances, receipt ownership, fees, and withdrawal failures, then update the graph.']
+ ],
+ boundaries:[[615,21,278,251,'OWNER CONTROLS THIS POSITION'],[24,320,1163,263,'PROPOSED FALCON EXECUTION LOOP']],
+ edges:[
+ ['money','M198 89H267','keep',221,76],
+ ['money','M151 136V226H586V105H636','investment amount',276,211],
+ ['money','M871 89H956','supply',887,77],
+ ['money','M956 129H871','redeem',886,153],
+ ['money','M1065 150V215H871','receipts',931,201],
+ ['authority','M85 136V288H1012V355','signed mandate / revoke',610,277],
+ ['signal','M262 396H305'],
+ ['signal','M534 396H576'],
+ ['action','M804 396H850'],
+ ['action','M1129 355V309H916V111H871','permitted instruction',944,303],
+ ['signal','M1174 111H1190V530H857'],
+ ['signal','M576 530H420V438','observed result',439,514]
+ ]
+},
+{
+ id:2, short:'Several venues', title:'Allocate with context.', card:'Compare lending positions and their shared risks.', scope:'ONE CHAIN · SEVERAL VENUES', outcome:'The user delegates allocation across approved venues within one total risk budget.',
+ intro:'Add approved Solana lending venues. Move funds only when expected benefit justifies costs and fits the mandate.',
+ proof:['Measure net results against the chosen single-venue baseline.','Count shared issuer, collateral, oracle, and protocol exposures.','Handle partial exits and failed rebalances without duplicate actions.'],
+ open:'Which additional venue creates enough benefit after costs and shared risks.',
+ change:'Add venue adapters and an allocation policy. Keep one owner, one USDC budget, and the same execution controls.',
+ value:'Explain why Falcon moved or held. Several venues can still depend on the same issuer, collateral, or oracle.',
+ scenario:'A new venue shares existing risk', scenarioDefault:'See why another venue does not automatically create diversification.',
+ scenarioResult:'Count both positions against their shared-risk cap. Reject the new allocation when the combined exposure breaks that cap.',
+ focus:'graph', defaultDetail:'graph',
+ detailTitle:'Relationships change allocation',
+ detailText:'Compare positions by net benefit and shared dependencies. The graph can reject a higher quoted APY because it adds the same underlying risk.',
+ nodes:[
+ ['reserve',24,36,233,81,'Spending reserve','Outside agent authority','locked','The reserve remains outside delegation. Adding venues does not expand the agent\'s access to this balance.'],
+ ['issuer',297,37,183,73,'USDC issuer','Shared dependency','normal','Every USDC lending position keeps exposure to the same stablecoin issuer. Different venues do not remove this common risk.'],
+ ['collateral',509,37,181,73,'Collateral','Overlap across pools','normal','Link the collateral supporting each reserve to every affected position. Count correlated exposures together where the policy requires it.'],
+ ['oracle',719,37,150,73,'Oracles','Shared feeds','normal','Track which positions depend on the same pricing system. A common failure can affect several venues at once.'],
+ ['account',904,36,270,81,'Investment account','One total investment cap','owner','Capital allocated across positions counts against one user budget. Repeated transfers must not bypass the exposure cap.'],
+ ['feeds',24,255,214,86,'Venue observations','Rates, liquidity, fees','normal','Compare fresh observations with consistent asset and fee definitions. Displayed APY alone is insufficient to authorize a move.'],
+ ['graph',280,243,235,110,'Decision graph','Positions + dependencies','accent','Read issuer, collateral, oracle, and protocol links before selecting an allocation. Apply the user\'s liquidity needs and shared-risk caps.'],
+ ['policy',555,255,213,86,'Allocation policy','Benefit after costs','normal','Propose a move only when expected benefit exceeds costs under an explicit holding horizon. Expected benefit remains an estimate.'],
+ ['guard',803,255,148,86,'Executor','Same limits','locked','The same enforceable instruction, recipient, and amount checks apply to every added venue adapter.'],
+ ['a',997,180,177,75,'Venue A','Approved reserve','normal','The initial reserve remains a measured baseline. Its availability and risks are checked with the same rules as later candidates.'],
+ ['b',997,291,177,75,'Venue B','New candidate','normal','Add a venue only after deposit, exit, ownership, permissions, and failure handling are tested. An integration is not evidence of higher returns.'],
+ ['c',997,402,177,75,'Venue C','New candidate','normal','The graph represents common dependencies between this venue and existing positions. A new name does not prove independent exposure.'],
+ ['outcome',555,490,244,72,'Reconciled positions','Actual balances and costs','normal','Record each confirmed allocation and its costs. Retain pending and failed actions so the next decision uses the actual portfolio.']
+ ],
+ boundaries:[],
+ edges:[
+ ['signal','M388 110V184H353V243'],
+ ['signal','M599 110V165H398V243'],
+ ['signal','M794 110V145H441V243'],
+ ['signal','M238 298H280'],
+ ['signal','M515 298H555'],
+ ['action','M768 298H803'],
+ ['action','M951 280H972V218H997'],
+ ['action','M951 298H972V328H997'],
+ ['action','M951 318H972V439H997'],
+ ['money','M1118 117V148H1188V213H1174','capital',1124,141],
+ ['money','M1188 213V325H1174'],
+ ['money','M1188 325V436H1174'],
+ ['signal','M1085 477V526H799'],
+ ['signal','M555 526H398V353','outcomes update decisions',314,566]
+ ]
+},
+{
+ id:3, short:'Across chains', title:'Expand where value holds.', card:'Track capital across accounts and transfer states.', scope:'SEPARATE CHAIN ACCOUNTS', outcome:'The user can allocate across approved chains while Falcon tracks every amount in transit.',
+ intro:'Add a second chain only when measured benefits justify transfer costs, delays, and added failure paths.',
+ proof:['Count in-transit capital once and keep it inside exposure caps.','Handle delayed confirmation and reconcile before retrying.','Test per-chain permissions and recovery before funded use.'],
+ open:'Second chain, approved transfer route, and measured benefit after transfer costs.',
+ change:'Add per-chain accounts and an asynchronous transfer workflow. Keep each chain\'s permission checks local.',
+ value:'Show available, committed, in-transit, received, and reconciled capital. Funds become deployable after reconciliation.',
+ scenario:'Transfer confirmation is delayed', scenarioDefault:'See how Falcon handles uncertainty without sending the same allocation twice.',
+ scenarioResult:'Keep the amount in transit and inside its cap. Stop dependent deployment. Reconcile source and destination before any retry.',
+ focus:'reconcile', defaultDetail:'reconcile',
+ detailTitle:'Capital needs a state',
+ detailText:'The graph records both chain positions and transfer status. A sent transfer is not spendable destination capital. Reconciliation unlocks deployment.',
+ nodes:[
+ ['mandate',24,41,209,79,'User mandate','Chain + transfer caps','locked','The user approves which chains and transfer routes Falcon may use. A new chain or broader risk budget requires a new mandate.'],
+ ['graph',276,41,224,79,'Decision graph','All accounts + transfers','accent','Keep a shared view of balances, dependencies, finality, and transfer status. Do not count the same capital on both chains.'],
+ ['budget',544,41,228,79,'Global risk budget','Includes funds in transit','normal','Committed and in-transit capital remains allocated. Do not free its budget merely because it left the source account.'],
+ ['workflow',815,41,359,79,'Transfer workflow','Plan / submit / reconcile','normal','Use a durable intent and reconcile both chains before retrying. A timeout is not proof the transfer failed.'],
+ ['sol',48,300,134,80,'Account A','Owner / guard','owner','The owner controls this account and its receipt tokens. A local guard checks the signed mandate for both lending and transfer instructions.'],
+ ['solvenue',204,300,134,80,'Lending A','Protocol','normal','The protocol holds supplied liquidity. The user controls the lending position or receipts, not the protocol reserve. Redemption depends on liquidity.'],
+ ['route',430,300,313,80,'Approved transfer route','Method still to be selected','normal','An approved transfer method moves USDC between the guarded accounts. The source account enforces the route, amount, and destination. Submission does not prove arrival.'],
+ ['chainb',839,300,134,80,'Account B','Owner / guard','owner','A separate owner-approved guard controls this account. Received tokens become deployable only after destination identity, finality, amount, and permissions are reconciled.'],
+ ['venueb',997,300,151,80,'Lending B','Protocol','normal','The protocol holds supplied liquidity. The owner controls its account and resulting position. A source-chain check cannot authorize destination transactions.'],
+ ['reconcile',430,476,337,80,'State + reconciliation','Committed / in transit / received','accent','Committed capital stays in the source account until submission. Track it once through transit and receipt. Reconcile both chains before deployment or retry.'],
+ ['atomic',839,476,309,80,'Optional atomic strategies','Separate budget / single chain','normal','Optional later module: flash borrow, trades, and repayment in one transaction. It cannot fund an asynchronous cross-chain transfer or use spending reserves.']
+ ],
+ boundaries:[[24,215,338,209,'SOLANA'],[407,215,360,209,'TRANSFER INTEGRATION'],[815,215,359,209,'SECOND CHAIN']],
+ edges:[
+ ['signal','M233 80H276'],
+ ['signal','M500 80H544'],
+ ['action','M772 80H815'],
+ ['authority','M128 120V165H166V300','owner-approved permissions',437,154],
+ ['authority','M128 165H964V300'],
+ ['action','M1010 120V194H378V278H13V340H48','checked requests',809,179],
+ ['action','M1100 120V184H791V319H839'],
+ ['money','M182 329H204'],
+ ['money','M204 354H182'],
+ ['money','M115 380V407H389V341H430'],
+ ['money','M743 341H839'],
+ ['money','M973 341H997','after reconciliation',997,289],
+ ['signal','M908 380V448H634V476'],
+ ['signal','M586 380V476','transfer status',592,430],
+ ['signal','M115 407V516H430'],
+ ['signal','M598 556V589H391V120','confirmed state returns to graph',59,579]
+ ]
+},
+{
+ id:4, short:'Personal finance', title:'One agent. Broader goals.', card:'Coordinate cash goals and eligible investment accounts.', scope:'MORE GOALS · DISTINCT ACCOUNTS', outcome:'The user hires one agent to coordinate approved financial accounts and explain the whole plan.',
+ intro:'Expand cash planning and account coverage. Add securities only through eligible partners with separate controls.',
+ proof:['Prove permissions and settlement handling for each account.','Check customer eligibility for each financial service.','Make account custody and pending capital clear to the user.'],
+ open:'Broker partner, account permissions, regional access, and demand beyond stablecoin management.',
+ change:'Add planning across goals and accounts. The first individual user remains the target; team treasury is an optional later product.',
+ value:'One interface can explain the portfolio. Each account retains its own custody, authority, and settlement rules.',
+ scenario:'A securities route is unavailable', scenarioDefault:'See how a global product handles a service that a particular user cannot access.',
+ scenarioResult:'Block that securities action for this account. Keep the existing stablecoin mandate in force. Do not silently use another route.',
+ focus:'eligible', defaultDetail:'broker',
+ detailTitle:'One interface, separate authority',
+ detailText:'An onchain mandate cannot govern a broker\'s internal account. Each integration needs its own allowed actions, custody explanation, and settlement checks.',
+ nodes:[
+ ['person',24,55,217,91,'Person + goals','Cash needs and time horizon','owner','Basic cash needs already inform Stage 1. This stage coordinates several goals, accounts, and investment horizons. The user approves material mandate changes.'],
+ ['agent',282,55,224,91,'Falcon agent','Plan and explain','accent','One conversational entry point turns user goals into a proposed mandate. The agent does not give itself new financial authority.'],
+ ['graph',547,55,269,91,'Decision graph','Goals, accounts, obligations','accent','Link the user\'s cash needs to available balances, investment exposure, account eligibility, and settlement times.'],
+ ['router',857,55,317,91,'Policy + account routing','Use each account\'s controls','locked','Check the account-specific mandate and service eligibility before routing an action. Onchain and broker permissions remain distinct.'],
+ ['onchain',49,312,224,87,'Investment account','Owner / onchain guard','owner','The owner approves this account\'s mandate. Its local guard limits action requests from the router. Spending reserves remain outside investment authority.'],
+ ['protocols',331,312,223,87,'Approved protocols','Per-chain permissions','normal','The chain account permits only verified instructions and destinations. A financial goal does not bypass its local controls.'],
+ ['eligible',637,312,206,87,'Eligibility gate','Account + API scope','locked','Evaluate the current account and regional eligibility before using the broker integration. Restricted scopes and revocation must be established.'],
+ ['broker',900,312,248,87,'Broker account','Separate custody + settlement','broker','The broker or its intermediaries hold the securities under the applicable account structure. An interface or wallet connection does not change that custody.'],
+ ['chainrecord',139,439,327,65,'Confirmed chain positions','Reconcile balances and receipts','normal','Chain confirmation and position reconciliation update the shared portfolio. Preserve failed and pending actions.'],
+ ['brokerrecord',716,439,365,65,'Broker statements + settlement','Pending orders stay visible','broker','Broker acceptance is not the same as settled cash or securities. Reconcile the broker\'s actual account state before redeploying capital.']
+ ],
+ boundaries:[[24,251,555,276,'ONCHAIN / ACCOUNT + EXTERNAL PROTOCOLS'],[610,251,564,276,'BROKER CUSTODY / SEPARATE AUTHORITY']],
+ edges:[
+ ['signal','M241 100H282'],
+ ['signal','M506 100H547'],
+ ['signal','M816 100H857'],
+ ['authority','M132 146V230H115V312'],
+ ['authority','M184 146V192H786V312','owner-approved mandate / scopes',285,181],
+ ['action','M963 146V222H242V312','checked onchain action',283,215],
+ ['action','M1047 146V239H740V312','checked broker action',867,233],
+ ['money','M273 342H331','supply',282,331],
+ ['money','M331 371H273','redeem',280,390],
+ ['action','M843 355H900','order',855,344],
+ ['signal','M442 399V439'],
+ ['signal','M1024 399V439'],
+ ['signal','M466 471H594V177H648V146'],
+ ['signal','M716 471H594','reconciled account state',471,566]
+ ]
+}
+];
+const miniArt = [
+ '<path d="M18 28H80M104 28H171" fill="none" stroke="#739458" stroke-width="2"/><rect x="1" y="10" width="46" height="36" rx="7" fill="#203323" stroke="#739458"/><rect x="76" y="10" width="46" height="36" rx="7" fill="#273b25" stroke="#b5ed88"/><rect x="151" y="10" width="46" height="36" rx="7" fill="#203323" stroke="#739458"/>',
+ '<path d="M39 28H85L150 9M85 28H150M85 28 150 47" stroke="#739458" fill="none" stroke-width="2"/><circle cx="28" cy="28" r="17" fill="#273b25" stroke="#b5ed88"/><g fill="#203323" stroke="#739458"><rect x="148" y="0" width="44" height="17" rx="4"/><rect x="148" y="20" width="44" height="17" rx="4"/><rect x="148" y="40" width="44" height="17" rx="4"/></g>',
+ '<rect x="1" y="4" width="59" height="48" rx="8" fill="#203323" stroke="#739458"/><rect x="142" y="4" width="59" height="48" rx="8" fill="#203323" stroke="#739458"/><path d="M60 28H142" stroke="#efc986" stroke-width="2" stroke-dasharray="5 4"/><circle cx="101" cy="28" r="10" fill="#29251a" stroke="#efc986"/>',
+ '<path d="M33 28H91M112 28H168M103 15V1M103 42V57" stroke="#739458" fill="none" stroke-width="2"/><circle cx="24" cy="28" r="15" fill="#203323" stroke="#739458"/><circle cx="103" cy="28" r="19" fill="#273b25" stroke="#b5ed88"/><rect x="167" y="10" width="33" height="36" rx="5" fill="#1a2730" stroke="#91c2e4"/>'
+];
+function defs(id){return '<defs>'+[['money','#b5ed88'],['signal','#91c2e4'],['authority','#efc986'],['action','#e5eee4']].map(([name,color])=>'<marker id="'+id+'-'+name+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 8 4 0 8z" fill="'+color+'"/></marker>').join('')+'</defs>'}
+function node(n,id){
+ const [key,x,y,w,h,title,sub,kind,detail]=n;
+ return '<g class="node '+kind+'" role="button" tabindex="0" aria-label="'+esc(title+'. '+sub+'. Show explanation.')+'" data-node="'+key+'" data-owner="'+id+'"><title>'+esc(detail)+'</title><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="10" fill="#17231f" stroke="#40574b"/><text class="node-title" x="'+(x+16)+'" y="'+(y+(h>90?38:33))+'">'+esc(title)+'</text><text class="node-sub" x="'+(x+16)+'" y="'+(y+(h>90?66:56))+'">'+esc(sub)+'</text></g>';
+}
+function diagram(s){
+ let out='<svg class="architecture" viewBox="0 0 1208 608" role="group" aria-labelledby="title-'+s.id+' desc-'+s.id+'">'+defs('s'+s.id)+'<title id="title-'+s.id+'">Proposed stage '+s.id+': '+esc(s.title)+'</title><desc id="desc-'+s.id+'">'+esc(s.outcome+' Solid green arrows show assets, dotted blue arrows show evidence, dashed amber arrows show authority, and white arrows show action requests. Each node has an explanation.')+'</desc>';
+ out+=s.boundaries.map(b=>'<rect class="boundary" x="'+b[0]+'" y="'+b[1]+'" width="'+b[2]+'" height="'+b[3]+'" rx="14"/><text class="boundary-label" x="'+(b[0]+15)+'" y="'+(b[1]+24)+'">'+esc(b[4])+'</text>').join('');
+ out+=s.edges.map(e=>'<path class="edge '+e[0]+'" d="'+e[1]+'" marker-end="url(#s'+s.id+'-'+e[0]+')"/>'+(e[2]?'<text class="edge-label" x="'+e[3]+'" y="'+e[4]+'">'+esc(e[2])+'</text>':'')).join('');
+ out+=s.nodes.map(n=>node(n,s.id)).join('')+'</svg>';
+ return out;
+}
+function stagePage(s){
+ return '<section class="page" id="page-'+s.id+'" role="tabpanel" aria-labelledby="tab-'+s.id+'">'+
+ '<div class="stage-head"><div><div class="eyebrow"><span class="dot"></span>Stage 0'+s.id+(s.id===1?' · First MVP':'')+' · Proposed</div><h2>'+esc(s.title)+'</h2></div><p class="intro">'+esc(s.intro)+'</p></div>'+
+ '<div class="stage-layout"><div class="diagram-wrap"><div class="diagram-top"><span class="tiny-label">'+esc(s.scope)+'</span><span class="click-hint"><span class="desktop-hint">Select any block to inspect it</span><span class="mobile-hint">Swipe diagram horizontally</span></span></div><div class="diagram-scroll" tabindex="0" role="region" aria-label="Stage '+s.id+' architecture diagram. Scroll horizontally on small screens.">'+diagram(s)+'</div>'+
+ '<div class="legend"><span><i></i>Asset movement</span><span><i class="signal"></i>Evidence</span><span><i class="authority"></i>Authority</span><span><i class="action"></i>Action request</span></div>'+
+ '<div class="scenario" id="scenario-'+s.id+'"><div><div class="tiny-label">Illustrative scenario · No live data</div><h3>'+esc(s.scenario)+'</h3><p class="scenario-default">'+esc(s.scenarioDefault)+'</p><p class="scenario-live" role="status">'+esc(s.scenarioResult)+'</p></div><button data-scenario="'+s.id+'" aria-pressed="false">Run scenario</button></div></div>'+
+ '<aside class="side-stack"><div class="side-card detail-card" id="detail-'+s.id+'" aria-live="polite"><span class="tiny-label">Architecture note</span><h3>'+esc(s.detailTitle)+'</h3><p>'+esc(s.detailText)+'</p></div>'+
+ '<div class="side-card"><span class="tiny-label">User outcome</span><p>'+esc(s.outcome)+'</p></div>'+
+ '<div class="side-card proof-card"><span class="tiny-label">Proof before expansion</span><ol>'+s.proof.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol></div></aside></div>'+
+ '<div class="stage-notes"><div class="stage-note"><b>What this stage adds</b>'+esc(s.change)+'</div><div class="stage-note"><b>What remains open</b>'+esc(s.open)+'</div></div>'+
+ '<div class="stage-controls"><button data-stage="'+(s.id-1)+'">← '+(s.id===1?'The vision':'Previous stage')+'</button><span class="small-note">'+esc(s.value)+'</span>'+(s.id<4?'<button data-stage="'+(s.id+1)+'">Stage 0'+(s.id+1)+' →</button>':'<button data-evidence>Evidence and open decisions →</button>')+'</div>'+
+ '<div class="provenance"><span>INFERRED · Proposed architecture. Integration and live operation are not established.</span><span>Falcon / 0'+s.id+'</span></div></section>';
+}
+document.querySelector('#roadmap').innerHTML=stages.map((s,i)=>'<button class="roadmap-card" data-stage="'+s.id+'"><span class="step"><b>0'+s.id+'</b>'+(s.id===1?'FIRST MVP':'EXPANSION')+'</span><div class="mini"><svg viewBox="0 0 204 58" aria-hidden="true">'+miniArt[i]+'</svg></div><h3>'+esc(s.short)+'</h3><p>'+esc(s.card)+'</p><span class="scope">'+esc(s.scope)+' ↗</span></button>').join('');
+document.querySelector('#stages').innerHTML=stages.map(stagePage).join('');
+let current=0;
+function setStage(id,{focus=false,updateHash=true}={}){
+ if(!Number.isInteger(id)||!document.querySelector('#page-'+id))return;
+ current=id;
+ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+id));
+ document.querySelectorAll('.tab').forEach(t=>{const active=Number(t.dataset.stage)===id;t.setAttribute('aria-selected',String(active));t.tabIndex=active?0:-1;if(active&&focus)t.focus()});
+ if(updateHash)history.replaceState(null,'',id===6?'#hackathon':id===5?'#progress':id?'#stage-'+id:'#vision');
+}
+function selectNode(key,id){
+ const s=stages.find(x=>x.id===id);const n=s&&s.nodes.find(x=>x[0]===key);if(!n)return;
+ document.querySelectorAll('#page-'+id+' .node').forEach(el=>el.classList.toggle('selected',el.dataset.node===key));
+ const card=document.querySelector('#detail-'+id);
+ card.querySelector('h3').textContent=n[5];card.querySelector('p').textContent=n[8];
+}
+function showEvidence(){const details=document.querySelector('#evidence');details.open=true;details.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});details.querySelector('summary').focus();}
+document.addEventListener('click',event=>{
+ const stage=event.target.closest('[data-stage]');if(stage){setStage(Number(stage.dataset.stage),{focus:stage.classList.contains('tab')});return}
+ const n=event.target.closest('[data-node]');if(n){selectNode(n.dataset.node,Number(n.dataset.owner));return}
+ const sc=event.target.closest('[data-scenario]');if(sc){const id=Number(sc.dataset.scenario);const box=document.querySelector('#scenario-'+id);const on=box.classList.toggle('on');sc.setAttribute('aria-pressed',String(on));sc.textContent=on?'Reset scenario':'Run scenario';selectNode(on?stages[id-1].focus:stages[id-1].defaultDetail,id);return}
+ if(event.target.closest('[data-evidence]')){event.preventDefault();showEvidence()}
+});
+document.addEventListener('keydown',event=>{
+ const n=event.target.closest('[data-node]');
+ if(n&&(event.key==='Enter'||event.key===' ')){event.preventDefault();selectNode(n.dataset.node,Number(n.dataset.owner));return}
+ if(event.target.closest('[role=tab]')){
+ const order=Array.from(document.querySelectorAll('.tab'),t=>Number(t.dataset.stage));const at=order.indexOf(current);
+ let next=current;
+ if(event.key==='ArrowRight')next=order[(at+1)%order.length];else if(event.key==='ArrowLeft')next=order[(at+order.length-1)%order.length];else if(event.key==='Home')next=order[0];else if(event.key==='End')next=order[order.length-1];else return;
+ event.preventDefault();setStage(next,{focus:true});
+ }
+});
+document.querySelector('#print').addEventListener('click',()=>window.print());
+let evidenceWasOpen=false;
+window.addEventListener('beforeprint',()=>{const d=document.querySelector('#evidence');evidenceWasOpen=d.open;d.open=true});
+window.addEventListener('afterprint',()=>{document.querySelector('#evidence').open=evidenceWasOpen});
+function fromHash(){if(location.hash==='#evidence'){showEvidence();return}if(location.hash==='#hackathon'||location.hash==='#progress'){setStage(location.hash==='#hackathon'?6:5,{updateHash:false});return}const m=location.hash.match(/^#stage-([1-4])$/);setStage(m?Number(m[1]):0,{updateHash:false})}
+window.addEventListener('hashchange',fromHash);fromHash();
+</script>
+</body>
+</html>

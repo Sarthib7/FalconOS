@@ -1,0 +1,42 @@
+[
+  {
+    "path": "web/treasury/domain.mjs",
+    "sha256": "897f0230523f1da5f5b819c4c17db1a6304c14d07b24462492a7d1049e385ee0"
+  },
+  {
+    "path": "web/treasury/store.mjs",
+    "sha256": "7552e8d2b15917c36e7e73f6201937e4f5682f74ea0f415a3c522576cb70598c"
+  },
+  {
+    "path": "web/treasury/app.mjs",
+    "sha256": "f2148b99fdc6d1e09fb65592355e4d71599f2289d692f4475c69585b3252b246"
+  },
+  {
+    "path": "web/treasury/index.html",
+    "sha256": "9d4f8b257eef711d02847b8ddcb91db3b55c255784ae5f0a1b4b16db4937a4ac"
+  },
+  {
+    "path": "web/treasury/style.css",
+    "sha256": "18abffdaf2cbe7c38bd7543e2d50c39abc674be9500a52a7196a9cbb9a7a359b"
+  },
+  {
+    "path": "web/test/treasury-domain.test.mjs",
+    "sha256": "c83c92d8c975a227ae41dd8101a36e3c276524e6a4ae13d12f85cea6a3217ff9"
+  },
+  {
+    "path": "web/test/treasury-store.test.mjs",
+    "sha256": "82f0c9525e3306eafaac1e97f24a2998399cbbc4a9aeac59c94d4aeea3df8607"
+  },
+  {
+    "path": "web/test/treasury-browser.mjs",
+    "sha256": "a91e61a617a9f5165578d687099035b12ec3168e8efb5e9afc7ae4a41af5eecf"
+  },
+  {
+    "path": "web/vite.treasury.config.js",
+    "sha256": "3c2c44be3de0e23cccc40ecc9282b0208e2cb28730d204d2444e779926340d75"
+  },
+  {
+    "path": "web/package.json",
+    "sha256": "f49c2e0c1755280da76439c0554daad5d04833044d68e9eaef5f8b2677acdc5d"
+  }
+]

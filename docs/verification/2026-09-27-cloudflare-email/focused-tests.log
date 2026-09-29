@@ -1,0 +1,35 @@
+✔ V105: signup sends the bounded landing request and accepts only explicit registration (1.387417ms)
+✔ V105: provider acceptance is distinct from sending or delivery (0.30725ms)
+✔ V105: signup rejects HTTP errors and unknown success bodies (1.412459ms)
+✔ V105: invalid email never reaches the API (0.245125ms)
+✔ V106: provider acceptance is retained and duplicate signup cannot send twice (53.046833ms)
+✔ V106: overlapping signup claims one delivery and reports the second as pending (16.813209ms)
+✔ V106: ambiguous delivery retries the same stored body and idempotency key (12.741292ms)
+✔ V106: unknown delivery after the idempotency window requires review and cannot resend (11.587917ms)
+✔ V106: partial, invalid and absent sender configuration capture without calling a provider (20.669ms)
+✔ V106: strict sender dot-atom and length validation prevents invalid provider requests (31.253291ms)
+✔ V106: rejected, oversized and invalid provider receipts never claim acceptance (27.725041ms)
+✔ V106: atomic enqueue failure cannot return capture success or call a provider (1.043708ms)
+✔ V105,V106: full migration history preserves captured rows and older databases are not upgraded automatically (4.483959ms)
+✔ waitlist accepts and normalizes a valid email (8.631375ms)
+✔ waitlist rejects invalid email before database writes (0.544291ms)
+✔ waitlist rejects oversized chunked bodies before database writes (1.291792ms)
+✔ waitlist counts repeated submissions even for one email (2.400333ms)
+✔ waitlist limits concurrent new emails with one atomic counter (1.195917ms)
+✔ waitlist rate-limits when the atomic counter reaches the limit (0.39075ms)
+✔ waitlist fails closed when production bindings are missing (0.190667ms)
+✔ V105: storage exceptions and malformed write results return safe 503 JSON (1.939542ms)
+✔ V105: malformed UTF-8, unknown fields and invalid source cannot reach storage (1.305041ms)
+✔ V105: same-origin and exact JSON media type checks run before writes (0.377375ms)
+✔ V105: real local HTTP capture persists and survives a fresh database connection (37.292334ms)
+✔ V105,V106: repeated and concurrent signup identifies the original durable registration (21.7915ms)
+✔ V105: local middleware bounds input and does not trust spoofed IP headers (27.349583ms)
+✔ V105: local middleware refuses unknown existing schemas without changing their rows (2.727291ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 275.6465

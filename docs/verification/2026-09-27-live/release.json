@@ -1,0 +1,9 @@
+{
+  "commit": "bfa82caaf5bdf2208ce057a7db6397302ebfaeae",
+  "baseCommit": "4f8e78c81dede71bc8ef0401df9184a81d05ad38",
+  "cloudflareProject": "falconos",
+  "deploymentId": "4f49f5dc-b6d4-487f-af2b-3d69522183b2",
+  "customDomain": "https://falconos.markets/",
+  "statusAtFirstCheck": "in_progress",
+  "signup": "Existing endpoint returned503; no hosted bindings or schema changed."
+}

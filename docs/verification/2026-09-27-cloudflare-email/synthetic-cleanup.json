@@ -1,0 +1,21 @@
+{
+  "database_id": "c9e9f157-2432-4b55-9a3e-058bf42eb356",
+  "deleted": 1,
+  "synthetic_rows_after": 0,
+  "retained_rate_rows": 1,
+  "rate_before": [
+    {
+      "window_start": 497364,
+      "attempts": 4
+    }
+  ],
+  "rate_after": [
+    {
+      "window_start": 497364,
+      "attempts": 4
+    }
+  ],
+  "outbox_tables": 0,
+  "passed": true,
+  "secret_or_ip_hash_returned": false
+}

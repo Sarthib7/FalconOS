@@ -1,0 +1,221 @@
+{
+  "passed": 1,
+  "total": 2,
+  "checks": [
+    {
+      "name": "V109: ported fixtures equal the exact parsed OpenDesign payload",
+      "pass": true
+    },
+    {
+      "name": "V108/B78: valid schema-1 history renders Overview without changing saved bytes",
+      "pass": false
+    }
+  ],
+  "exceptions": [
+    {
+      "exceptionId": 1,
+      "text": "Uncaught",
+      "lineNumber": 8,
+      "columnNumber": 211926,
+      "scriptId": "5",
+      "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+      "stackTrace": {
+        "callFrames": [
+          {
+            "functionName": "D",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 8,
+            "columnNumber": 211926
+          },
+          {
+            "functionName": "j",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 8,
+            "columnNumber": 226294
+          },
+          {
+            "functionName": "He",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 8,
+            "columnNumber": 235452
+          },
+          {
+            "functionName": "es",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 7,
+            "columnNumber": 49214
+          },
+          {
+            "functionName": "qc",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 7,
+            "columnNumber": 71957
+          },
+          {
+            "functionName": "ml",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 7,
+            "columnNumber": 82866
+          },
+          {
+            "functionName": "Zd",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 7,
+            "columnNumber": 128063
+          },
+          {
+            "functionName": "Jd",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 7,
+            "columnNumber": 127144
+          },
+          {
+            "functionName": "qd",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 7,
+            "columnNumber": 126982
+          },
+          {
+            "functionName": "Fd",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 7,
+            "columnNumber": 123706
+          },
+          {
+            "functionName": "jf",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 7,
+            "columnNumber": 136002
+          },
+          {
+            "functionName": "E",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:53797/assets/index-BQuqwTTW.js",
+            "lineNumber": 0,
+            "columnNumber": 10603
+          }
+        ]
+      },
+      "exception": {
+        "type": "object",
+        "subtype": "error",
+        "className": "Error",
+        "description": "Error: Run has missing or unknown fields.\n    at D (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:9:211927)\n    at j (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:9:226295)\n    at He (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:9:235453)\n    at es (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:49215)\n    at qc (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:71958)\n    at ml (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:82867)\n    at Zd (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:128064)\n    at Jd (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:127145)\n    at qd (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:126983)\n    at Fd (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:123707)",
+        "objectId": "4495225818890664486.2.1",
+        "preview": {
+          "type": "object",
+          "subtype": "error",
+          "description": "Error: Run has missing or unknown fields.\n    at D (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:9:211927)\n    at j (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:9:226295)\n    at He (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:9:235453)\n    at es (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:49215)\n    at qc (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:71958)\n    at ml (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:82867)\n    at Zd (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:128064)\n    at Jd (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:127145)\n    at qd (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:126983)\n    at Fd (http://127.0.0.1:53797/assets/index-BQuqwTTW.js:8:123707)",
+          "overflow": false,
+          "properties": [
+            {
+              "name": "stack",
+              "type": "string",
+              "value": "Error: Run has missing or unknown fields.\n    at D…27.0.0.1:53797/assets/index-BQuqwTTW.js:8:123707)"
+            },
+            {
+              "name": "message",
+              "type": "string",
+              "value": "Run has missing or unknown fields."
+            }
+          ]
+        }
+      },
+      "executionContextId": 2
+    }
+  ],
+  "remoteRequests": [],
+  "localRequests": [
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/index-BQuqwTTW.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/index-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    }
+  ],
+  "localResponses": [
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/index-BQuqwTTW.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/index-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    }
+  ],
+  "downloads": [],
+  "artifactDir": "/private/tmp/falcon-dashboard-source-r9g2sbv8/browser-Rt1WO5",
+  "root": "/private/tmp/falcon-dashboard-source-r9g2sbv8/negative-b78-web/dist",
+  "sourceRoot": "/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61",
+  "mode": "react-legacy",
+  "limitations": "Isolated synthetic browser records. Source screenshots execute original scripts with outbound HTTP blocked. No live service, wallet, hosting or email delivery tested."
+}

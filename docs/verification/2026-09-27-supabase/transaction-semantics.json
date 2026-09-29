@@ -1,0 +1,8 @@
+{
+  "provenance": "VERIFIED against official source and docs fetched this session",
+  "mcpSource": "https://raw.githubusercontent.com/supabase/mcp/main/packages/mcp-server-supabase/src/platform/api-platform.ts",
+  "mcpMethod": "applyMigration passes query and name to POST /v1/projects/{ref}/database/migrations",
+  "rollbackDocumentation": "https://supabase.com/docs/guides/integrations/supabase-for-platforms#make-database-changes",
+  "rollbackQuote": "If the schema migration fails, the changes will be rolled back.",
+  "decision": "One apply_migration call with the complete reviewed SQL. No inner COMMIT."
+}

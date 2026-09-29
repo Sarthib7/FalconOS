@@ -1,0 +1,107 @@
+[
+  {
+    "before": {
+      "method": "GET",
+      "path": "/accounts/f646b35b9c52945d4a7e6d19909981d8/pages/projects/falconos",
+      "status": 200,
+      "success": true,
+      "error_codes": [],
+      "id": "f987c34e-eb3b-4699-b8fd-e5a3fa22237c",
+      "name": "falconos",
+      "branch": "main",
+      "deployment": "4f49f5dc-b6d4-487f-af2b-3d69522183b2",
+      "map_states": {
+        "production": {
+          "d1_databases": "absent",
+          "env_vars": "null"
+        },
+        "preview": {
+          "d1_databases": "absent",
+          "env_vars": "null"
+        }
+      },
+      "d1_binding_id": {
+        "production": null,
+        "preview": null
+      },
+      "env_var_names": {
+        "production": [],
+        "preview": []
+      }
+    },
+    "error_codes": []
+  },
+  {
+    "before": {
+      "method": "GET",
+      "path": "/accounts/f646b35b9c52945d4a7e6d19909981d8/pages/projects/falconos",
+      "status": 200,
+      "success": true,
+      "error_codes": [],
+      "id": "f987c34e-eb3b-4699-b8fd-e5a3fa22237c",
+      "name": "falconos",
+      "branch": "main",
+      "deployment": "4f49f5dc-b6d4-487f-af2b-3d69522183b2",
+      "map_states": {
+        "production": {
+          "d1_databases": "absent",
+          "env_vars": "null"
+        },
+        "preview": {
+          "d1_databases": "absent",
+          "env_vars": "null"
+        }
+      },
+      "d1_binding_id": {
+        "production": null,
+        "preview": null
+      },
+      "env_var_names": {
+        "production": [],
+        "preview": []
+      }
+    },
+    "PATCH": {
+      "method": "PATCH",
+      "path": "/accounts/f646b35b9c52945d4a7e6d19909981d8/pages/projects/falconos",
+      "status": 200,
+      "success": true,
+      "error_codes": []
+    },
+    "after": {
+      "method": "GET",
+      "path": "/accounts/f646b35b9c52945d4a7e6d19909981d8/pages/projects/falconos",
+      "status": 200,
+      "success": true,
+      "error_codes": [],
+      "id": "f987c34e-eb3b-4699-b8fd-e5a3fa22237c",
+      "name": "falconos",
+      "branch": "main",
+      "deployment": "4f49f5dc-b6d4-487f-af2b-3d69522183b2",
+      "map_states": {
+        "production": {
+          "d1_databases": "nonempty",
+          "env_vars": "empty"
+        },
+        "preview": {
+          "d1_databases": "absent",
+          "env_vars": "null"
+        }
+      },
+      "d1_binding_id": {
+        "production": "c9e9f157-2432-4b55-9a3e-058bf42eb356",
+        "preview": null
+      },
+      "env_var_names": {
+        "production": [],
+        "preview": []
+      },
+      "preview_equal": true,
+      "unrelated_production_equal": false
+    },
+    "error_codes": [
+      "UNRELATED_PRODUCTION_CONFIG_CHANGED",
+      "FULL_CONFIG_COMPARISON_FAILED"
+    ]
+  }
+]

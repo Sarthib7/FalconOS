@@ -1,0 +1,28 @@
+✔ V107,V109: extracted data retains the active source payload and all five canonical treasury runs (58.893208ms)
+✔ V109: all eight retained source hashes and four graph projections match their exact source content (7.752416ms)
+✔ V109,V111: twelve knowledge analyses reproduce at saved cutoffs and exclude unrelated positions (8.967125ms)
+✔ V108: dashboard namespace isolates storage and locks while the treasury default remains unchanged (4.790375ms)
+✔ V108: corrupt dashboard bytes cannot be replaced by create, dispatch or export (11.239ms)
+✔ V108: quota failure preserves committed dashboard state and cannot create an unsaved run (6.163125ms)
+✔ V108: two dashboard stores serialize writes, reject stale revisions and preserve exact retries (7.566916ms)
+✔ V108: unavailable dashboard storage or Web Locks cannot write another namespace (2.79925ms)
+✔ V82 V83: a saved supply survives a new store instance and JSON export replays it (39.151584ms)
+✔ V82: a failed storage write preserves the prior position, revision, and raw history (10.614208ms)
+✔ V82: concurrent stores serialize; the stale second writer cannot overwrite a committed action (17.771542ms)
+✔ V82: corrupt stored data cannot be replaced by initialization or another event (1.923542ms)
+✔ V82: unavailable reads and unavailable Web Locks fail without writing (0.812542ms)
+✔ V82 V83: exact retries are idempotent even after the original revision; conflicting retries fail (13.873666ms)
+✔ V82: create never overwrites a valid run and an empty browser has no export (1.16125ms)
+✔ V82: oversized saved records and malformed revisions stop before writing (1.556292ms)
+✔ V87: stored policy and decision snapshots survive reload and export (9.687167ms)
+✔ V87: altered saved decisions and unsupported policies cannot be overwritten (21.161042ms)
+✔ V82 V87: failed legacy upgrade preserves bytes; successful upgrade retains commands (4.062666ms)
+✔ V83 V87: all 200 decision records fit the supported storage bound and replay (5063.16275ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5479.937291

@@ -1,0 +1,10 @@
+{
+  "compared": 39,
+  "equal": 39,
+  "added": [
+    "_routes.json",
+    "_worker.js"
+  ],
+  "worker_sha256": "1be288ad5ee65977b3d65a45464f3599d3e4c1d306e9939236a88c065f6ed86d",
+  "artifact_file_count": 41
+}

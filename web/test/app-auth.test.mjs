@@ -7,6 +7,7 @@ import { bytesToBase64, createSignInMessage, createSignInRequest, decodeSolanaAd
 const html = await readFile(new URL('../app/index.html', import.meta.url), 'utf8');
 const appSource = await readFile(new URL('../app/app.mjs', import.meta.url), 'utf8');
 const dataSource = await readFile(new URL('../app/data.mjs', import.meta.url), 'utf8');
+const legSource = await readFile(new URL('../app/leg-execution.mjs', import.meta.url), 'utf8');
 const tradeSource = await readFile(new URL('../app/devnet-execution.mjs', import.meta.url), 'utf8');
 const dashHtml = await readFile(new URL('../dash/index.html', import.meta.url), 'utf8');
 
@@ -37,8 +38,10 @@ test('dashboard entry opens the wallet terminal', () => {
 test('production trade UI has a fixed Devnet path and manual wallet sign step', () => {
   assert.match(appSource, /getDevnetQuote\(/);
   assert.match(dataSource, /https:\/\/api\.devnet\.solana\.com/);
-  assert.match(appSource, /signTransaction\(transaction\)/);
-  assert.match(appSource, /simulateDevnet\(/);
+  assert.match(appSource, /signAndSubmit\(/);
+  assert.match(legSource, /signTransaction\(transaction\)/);
+  assert.match(legSource, /simulateDevnet\(/);
+  assert.doesNotMatch(legSource, /127\.0\.0\.1:18488|jup\.ag|api\.mainnet-beta\.solana\.com/i);
   assert.doesNotMatch(appSource, /127\.0\.0\.1:18488|jup\.ag|api\.mainnet-beta\.solana\.com/i);
   assert.doesNotMatch(tradeSource, /127\.0\.0\.1:18488|jup\.ag|api\.mainnet-beta\.solana\.com/i);
 });
@@ -89,4 +92,32 @@ test('SIWS proof verifies the signature and rejects changed scope or message', a
   const legacySignature = new Uint8Array(await webcrypto.subtle.sign('Ed25519', pair.privateKey, new TextEncoder().encode(legacyRequest.message)));
   const legacyProof = { ...legacyRequest, signature: bytesToBase64(legacySignature) };
   assert.equal(await verifySignInProof(legacyProof, 'https://falconos.markets', now + 1000, webcrypto), true);
+});
+
+test('verifyEd25519 falls back when subtle lacks Ed25519', async () => {
+  const pair = await webcrypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const publicKey = new Uint8Array(await webcrypto.subtle.exportKey('raw', pair.publicKey));
+  const address = encodeBase58(publicKey);
+  const message = new TextEncoder().encode('fallback sign-in message');
+  const signature = new Uint8Array(await webcrypto.subtle.sign('Ed25519', pair.privateKey, message));
+
+  // Pre-Chrome-137 stub: real randomness, but Ed25519 importKey/verify are unsupported.
+  const oldBrowser = {
+    getRandomValues: (array) => webcrypto.getRandomValues(array),
+    subtle: {
+      importKey: async () => { throw new DOMException('Ed25519 unsupported', 'NotSupportedError'); },
+      verify: async () => { throw new DOMException('Ed25519 unsupported', 'NotSupportedError'); },
+    },
+  };
+  // Fallback loader stands in for @noble/ed25519 verifyAsync(signature, message, publicKey).
+  const loadFallback = async () => ({
+    verifyAsync: async (sig, msg, pk) => {
+      const key = await webcrypto.subtle.importKey('raw', pk, { name: 'Ed25519' }, false, ['verify']);
+      return webcrypto.subtle.verify({ name: 'Ed25519' }, key, sig, msg);
+    },
+  });
+
+  assert.equal(await verifyEd25519(address, message, signature, oldBrowser, loadFallback), true);
+  const tampered = new TextEncoder().encode('fallback sign-in message!');
+  assert.equal(await verifyEd25519(address, tampered, signature, oldBrowser, loadFallback), false);
 });

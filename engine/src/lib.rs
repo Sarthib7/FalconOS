@@ -1,4 +1,5 @@
 pub mod council;
+pub mod demo;
 pub mod dexscreener;
 pub mod domain;
 pub mod graph;

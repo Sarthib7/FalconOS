@@ -1,0 +1,17 @@
+[
+  {
+    "path": "assets/index-Cb547kWz.js",
+    "bytes": 39448,
+    "sha256": "8f236295131d9531848b4a4ef898760f3ddc90f8cd469ab7bda07679f46929c2"
+  },
+  {
+    "path": "assets/index-Dhgfkcad.css",
+    "bytes": 23633,
+    "sha256": "4988885fca9772ea8985a60fb5c0c162c6fd9e6e7fcecea883df288a8f47e12e"
+  },
+  {
+    "path": "treasury/index.html",
+    "bytes": 15503,
+    "sha256": "beffdb2f7c4aff536a260a75c432351417eea79a280eb4189e844e7d6a9a66c9"
+  }
+]

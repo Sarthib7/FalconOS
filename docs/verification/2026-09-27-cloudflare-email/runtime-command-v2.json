@@ -1,0 +1,16 @@
+[
+  "node",
+  "/private/tmp/falcon-wrangler-tools-FYq5lp/node_modules/wrangler/bin/wrangler.js",
+  "pages",
+  "dev",
+  "/private/tmp/falcon-email-release-l1mn8621/artifact",
+  "--port",
+  "8893",
+  "--ip",
+  "127.0.0.1",
+  "--inspector-port",
+  "9293",
+  "--persist-to",
+  "/private/tmp/falcon-email-release-l1mn8621/state",
+  "--show-interactive-dev-session=false"
+]

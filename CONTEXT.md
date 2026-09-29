@@ -1,5 +1,43 @@
 # FalconOS
 
+## Repository work: 2026-09-27
+
+[VERIFIED, user choice] The user selected option `1`: retain folders, document current architecture and authority, expose component verification, and check website/API release inputs. The [current map](docs/README.md) is the navigation entry point. [Status](status.md) records active tasks and measured results. Dated sections below preserve prior product decisions and evidence; their old current-state labels do not supersede newer records for the same component.
+
+## Active dashboard port: 2026-09-27
+
+[VERIFIED, retained release evidence] The user requested the new website live. Initial React release `bfa82ca` was followed by signup backend `61fa1a9` and completion UI `9af809b` at `https://falconos.markets/`. The dashboard remains `/dashboard/`. The latest retained proof matches all 39 public asset hashes. This corrects the earlier pending-signup-repair statement. Hosted mesh connectivity and inbox delivery remain unverified. See [the signup release evidence](docs/verification/2026-09-27-cloudflare-email.md).
+
+[VERIFIED, user direction] The user requested the dashboard designs from the same OpenDesign project as runnable React. Its current index opens Control Centre. The additive `/dashboard/` route preserves Overview, Decisions, Knowledge and Connections. See [the port contract](docs/control-centre.md). Existing mesh and wallet services retain their current boundaries.
+
+## Active knowledge mesh MVP: 2026-09-27
+
+[VERIFIED, user direction] The graph must connect knowledge and support analysis. The user named local Citadel as a reference, accepted a separate Falcon mesh, and approved Railway API plus Postgres. The user then selected the personal workspace and said, "before that build the mvp first", including connectors, the terminal, and Devnet execution.
+
+[VERIFIED, correction] Earlier graph completion describes the six-node browser decision trace. It does not complete the connected knowledge layer. `web/treasury/domain.mjs:170` is the existing fixed graph. Preserve its saved history while adding the [persistent mesh](docs/knowledge-mesh.md).
+
+[INFERRED, working order] Build local persistence and source-linked traversal. Connect approved live sources and the terminal. Verify the Devnet lending path and retained results after graph acceptance. Hosting follows local MVP evidence. Real-fund tests remain later.
+
+[VERIFIED, expanded user direction] The landing must preserve the active OpenDesign project in runnable React. Email signup must persist addresses. Optional confirmation delivery must state its actual result. See [local run commands](mesh/README.md) and [the email contract](docs/landing-email.md).
+
+## Active graph work: 2026-09-27
+
+[VERIFIED, user direction] The user approved this order: finish decision graphs, hosting design, interface, and full flow; then Devnet execution; then define the final live test. The user said, "start working on it."
+
+[INFERRED, implementation scope] Build the browser decision-graph prototype with synthetic evidence, versioned saved decisions, rule inspection, and replay. Prepare Cloudflare Pages hosting. See [graph contract](docs/decision-graph.md) and [updated plan](plans/treasury-mvp.md).
+
+[VERIFIED, correction] The earlier local simulation completion does not mean the decision-graph product is finished. The user's correction makes graph acceptance the prerequisite for execution work.
+
+## Active treasury direction: 2026-09-26
+
+[VERIFIED, new user direction] The user accepted the [staged Falcon pitch](docs/pitches/falcon-stages.html), requested the spec and MVP, and confirmed: "Local loop first, let's do that." The user also requested a future cloud path so others can test it.
+
+[INFERRED, scoped change] Falcon's new product direction is a personal stablecoin treasury agent within owner-set rules. The active slice is an isolated, explicitly simulated treasury loop. It does not expand the authority of the existing advisory engine, plugin, or Devnet terminal. The complete Stage 01 lending and delegated-execution design remains proposed until its integration gates pass.
+
+[INFERRED, record correction] The earlier statements that exclude every future Falcon treasury execution path describe the prior direction. The new accepted pitch supersedes that product direction for the treasury work. Earlier implementation boundaries remain effective for their named modules. Start with [the new documentation index](docs/README.md), [the plan](plans/treasury-mvp.md), and SPEC I14.
+
+## Earlier advisory direction and evidence
+
 [VERIFIED, user-confirmed direction, 2026-09-18] FalconOS is the umbrella product. Falcon Investment Council is the current module: agent-first market intelligence and risk advisory, advisory-only and read-only. See "Confirmed domain decisions" below. [SUPERSEDED, 2026-09-20] The original 2026-09-05 framing ("a multichain research and trading layer" with liquidity pooling, arbitrage, sniping, and execution) is historical. Execution-adjacent capabilities belong, if ever, to a separate regulated Falcon entity, not to FalconOS.
 
 [VERIFIED, user authorization] The user requested: "ok document and update the plan" and "lets start building". This authorizes the local build. The previous validation verdict remains go validate. Starting the prototype does not establish customer demand.
@@ -37,7 +75,7 @@
 
 [VERIFIED, user-confirmed domain/API decision, 2026-09-11] FalconOS exposes separate `council.advice` and `council.copilot` operations with exact, non-interchangeable schemas. `council.advice` returns canonical-snapshot/evidence-backed, non-binding Trade Proposals with risk-veto outcomes `BLOCKED`/`NO_DATA`. `council.copilot` explains an existing proposal, snapshot, or result and cannot create or alter stance, size, leverage, risk bounds, policy, veto, expiry, or execution. Provider, model, and tool selection stays host-controlled. The existing stablecoin `plugin` contract remains unchanged.
 
-[VERIFIED, repository implementation boundary, 2026-09-11] The first local slice fixes exact schemas and host transport for both operations in `preps/perps.ts`: advice executes Lead Specialist then independent Risk Review; Copilot retains full snapshot evidence and is explanation-only. Durable host transport/adapters remain outside this module.
+[VERIFIED, repository implementation boundary, 2026-09-11] The first local slice fixes exact schemas and host transport for both operations in `perps/perps.ts` (folder renamed from `preps/` on 2026-09-20): advice executes Lead Specialist then independent Risk Review; Copilot retains full snapshot evidence and is explanation-only. Durable host transport/adapters remain outside this module.
 
 [VERIFIED, user-confirmed domain decision, 2026-09-11] Falcon Investment is a council of specialist advisory agents, not an autonomous trader. The council's specialist domains are perps, stocks, stablecoins, arbitrage, memecoins, liquidity pools, and AMMs. All of these specialists are defined in the domain model; only the Perps Specialist is built first.
 

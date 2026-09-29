@@ -4,7 +4,10 @@ use std::time::Duration;
 async fn run_preipo(watch: bool, interval: Duration) {
     loop {
         let evaluation = evaluate_once(&config()).await;
-        println!("{}\ntick latency_ms={}", evaluation.rendered, evaluation.advice.latency_ms);
+        println!(
+            "{}\ntick latency_ms={}",
+            evaluation.rendered, evaluation.advice.latency_ms
+        );
         if !watch {
             break;
         }
@@ -32,13 +35,15 @@ async fn main() {
     match args.first().map(String::as_str) {
         Some("preipo") => {
             let watch = args.iter().any(|arg| arg == "--watch");
-            let interval_ms = option_u64(&args, "--interval-ms", 2000);
+            let interval_ms = option_u64(&args, "--interval-ms", 15_000);
             run_preipo(watch, Duration::from_millis(interval_ms.max(1))).await;
         }
         Some("serve") => {
             let port = option_u64(&args, "--port", 8787).min(u64::from(u16::MAX)) as u16;
-            let interval_ms = option_u64(&args, "--interval-ms", 2000);
-            if let Err(error) = run_server(config(), port, Duration::from_millis(interval_ms.max(1))).await {
+            let interval_ms = option_u64(&args, "--interval-ms", 15_000);
+            if let Err(error) =
+                run_server(config(), port, Duration::from_millis(interval_ms.max(1))).await
+            {
                 eprintln!("server error: {error}");
             }
         }
@@ -55,8 +60,9 @@ async fn main() {
                 eprintln!("graph error: {error}");
             }
         }
+        Some("demo") => println!("{}", falcon_engine::demo::render_demo()),
         _ => {
-            eprintln!("usage: falcon-engine <preipo|serve|graph>");
+            eprintln!("usage: falcon-engine <preipo|serve|graph|demo>");
         }
     }
 }

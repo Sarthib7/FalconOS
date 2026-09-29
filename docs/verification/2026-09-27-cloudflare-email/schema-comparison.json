@@ -1,0 +1,56 @@
+{
+  "database_id": "c9e9f157-2432-4b55-9a3e-058bf42eb356",
+  "passed": 8,
+  "total": 8,
+  "checks": [
+    {
+      "name": "catalog_inventory",
+      "success": true,
+      "matches": true
+    },
+    {
+      "name": "entry_columns",
+      "success": true,
+      "matches": true
+    },
+    {
+      "name": "rate_columns",
+      "success": true,
+      "matches": true
+    },
+    {
+      "name": "entry_indexes",
+      "success": true,
+      "matches": true
+    },
+    {
+      "name": "rate_indexes",
+      "success": true,
+      "matches": true
+    },
+    {
+      "name": "explicit_index_columns",
+      "success": true,
+      "matches": true
+    },
+    {
+      "name": "initial_counts",
+      "success": true,
+      "matches": true
+    },
+    {
+      "name": "no_outbox",
+      "success": true,
+      "matches": true
+    }
+  ],
+  "provider_internal_objects": [
+    {
+      "type": "table",
+      "name": "_cf_KV",
+      "tbl_name": "_cf_KV",
+      "sql": "CREATE TABLE _cf_KV (\n        key TEXT PRIMARY KEY,\n        value BLOB\n      ) WITHOUT ROWID"
+    }
+  ],
+  "limits": "Catalog and counts before public requests; does not prove the deployed Function."
+}

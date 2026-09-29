@@ -1,0 +1,2033 @@
+{
+  "passed": 95,
+  "total": 95,
+  "checks": [
+    {
+      "name": "V109: ported fixtures equal the exact parsed OpenDesign payload",
+      "pass": true
+    },
+    {
+      "name": "V107/B82: source loads all four original font faces",
+      "pass": true,
+      "detail": {
+        "loads": [
+          "fulfilled",
+          "fulfilled",
+          "fulfilled",
+          "fulfilled"
+        ],
+        "checks": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "faces": [
+          {
+            "family": "Geist",
+            "weight": "400",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "500",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "600",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist Mono",
+            "weight": "400",
+            "status": "loaded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "V107/B82: source renders text with custom Geist and Geist Mono",
+      "pass": true,
+      "detail": [
+        {
+          "selector": "#page-title",
+          "expected": "Geist Mono",
+          "fonts": [
+            {
+              "familyName": "Geist Mono",
+              "postScriptName": "GeistMono-Regular",
+              "isCustomFont": true,
+              "glyphCount": 14
+            }
+          ]
+        },
+        {
+          "selector": "#page-description",
+          "expected": "Geist",
+          "fonts": [
+            {
+              "familyName": "Geist",
+              "postScriptName": "Geist-Regular",
+              "isCustomFont": true,
+              "glyphCount": 45
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "V107: source overview fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "V107: source decisions fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "V107: source knowledge fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "V107: source connections fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "V107: source overview fits 320px",
+      "pass": true
+    },
+    {
+      "name": "V107: source decisions fits 320px",
+      "pass": true
+    },
+    {
+      "name": "V107: source knowledge fits 320px",
+      "pass": true
+    },
+    {
+      "name": "V107: source connections fits 320px",
+      "pass": true
+    },
+    {
+      "name": "V107/B82: react loads all four original font faces",
+      "pass": true,
+      "detail": {
+        "loads": [
+          "fulfilled",
+          "fulfilled",
+          "fulfilled",
+          "fulfilled"
+        ],
+        "checks": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "faces": [
+          {
+            "family": "Geist",
+            "weight": "400",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "500",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist",
+            "weight": "600",
+            "status": "loaded"
+          },
+          {
+            "family": "Geist Mono",
+            "weight": "400",
+            "status": "loaded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "V107/B82: react renders text with custom Geist and Geist Mono",
+      "pass": true,
+      "detail": [
+        {
+          "selector": "#page-title",
+          "expected": "Geist Mono",
+          "fonts": [
+            {
+              "familyName": "Geist Mono",
+              "postScriptName": "GeistMono-Regular",
+              "isCustomFont": true,
+              "glyphCount": 14
+            }
+          ]
+        },
+        {
+          "selector": "#page-description",
+          "expected": "Geist",
+          "fonts": [
+            {
+              "familyName": "Geist",
+              "postScriptName": "Geist-Regular",
+              "isCustomFont": true,
+              "glyphCount": 45
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "V107/B82: four local font resources return HTTP 200",
+      "pass": true,
+      "detail": [
+        {
+          "path": "/assets/geist-regular-BktvGMAi.ttf",
+          "status": 200,
+          "type": "Font"
+        },
+        {
+          "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+          "status": 200,
+          "type": "Font"
+        },
+        {
+          "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+          "status": 200,
+          "type": "Font"
+        },
+        {
+          "path": "/assets/geist-semibold-DsJNybWY.ttf",
+          "status": 200,
+          "type": "Font"
+        }
+      ]
+    },
+    {
+      "name": "V107/V108: default Hold sample is read-only and leaves existing records intact",
+      "pass": true
+    },
+    {
+      "name": "V107: react overview fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "V107: react decisions fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "V107: react knowledge fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "V107: react connections fits 1440px",
+      "pass": true
+    },
+    {
+      "name": "V107: react overview fits 320px",
+      "pass": true
+    },
+    {
+      "name": "V107: react decisions fits 320px",
+      "pass": true
+    },
+    {
+      "name": "V107: react knowledge fits 320px",
+      "pass": true
+    },
+    {
+      "name": "V107: react connections fits 320px",
+      "pass": true
+    },
+    {
+      "name": "V109: supply displays canonical sample balances and recorded decision",
+      "pass": true
+    },
+    {
+      "name": "V109: supply history opens original graph cutoff and result",
+      "pass": true
+    },
+    {
+      "name": "V109: hold displays canonical sample balances and recorded decision",
+      "pass": true
+    },
+    {
+      "name": "V109: hold history opens original graph cutoff and result",
+      "pass": true
+    },
+    {
+      "name": "V109: redeem displays canonical sample balances and recorded decision",
+      "pass": true
+    },
+    {
+      "name": "V109: redeem history opens original graph cutoff and result",
+      "pass": true
+    },
+    {
+      "name": "V109: blocked displays canonical sample balances and recorded decision",
+      "pass": true
+    },
+    {
+      "name": "V109: blocked history opens original graph cutoff and result",
+      "pass": true
+    },
+    {
+      "name": "V109: stale displays canonical sample balances and recorded decision",
+      "pass": true
+    },
+    {
+      "name": "V109: stale history opens original graph cutoff and result",
+      "pass": true
+    },
+    {
+      "name": "V108: browsing every sample caused no simulation write",
+      "pass": true
+    },
+    {
+      "name": "V107: Space activates a graph node and retains keyboard focus",
+      "pass": true
+    },
+    {
+      "name": "V109: rule inspector marks its exact evidence nodes",
+      "pass": true
+    },
+    {
+      "name": "V107: reduced motion creates no running transition animations",
+      "pass": true
+    },
+    {
+      "name": "V108: invalid setup is marked without changing stored history",
+      "pass": true
+    },
+    {
+      "name": "V108/V109: setup saves one isolated schema-2 run with exact authority boundaries",
+      "pass": true
+    },
+    {
+      "name": "V109: supply records the original input and moves only delegated 500 USDC",
+      "pass": true
+    },
+    {
+      "name": "V109: low liquidity blocks full exit and preserves the position",
+      "pass": true
+    },
+    {
+      "name": "V109: stale evidence records NO_DATA with zero movement",
+      "pass": true
+    },
+    {
+      "name": "V110: older supply remains READY after later blocked and stale cycles",
+      "pass": true
+    },
+    {
+      "name": "V108: failed persistence leaves committed record and history unchanged",
+      "pass": true
+    },
+    {
+      "name": "V108/V110: reload retains exact record and leaves the loop stopped",
+      "pass": true
+    },
+    {
+      "name": "V108/V110: another tab receives committed writes and stops an active loop",
+      "pass": true
+    },
+    {
+      "name": "V110: hidden page cancels its next scheduled cycle",
+      "pass": true
+    },
+    {
+      "name": "V111: cancelling revocation preserves authority",
+      "pass": true
+    },
+    {
+      "name": "V109/V110: revocation preserves the position and disables agent cycles",
+      "pass": true
+    },
+    {
+      "name": "V109: owner redemption remains available after revocation",
+      "pass": true
+    },
+    {
+      "name": "V111: treasury export replays every retained event and snapshot",
+      "pass": true
+    },
+    {
+      "name": "V111: export copy writes exact bytes or selects the complete fallback",
+      "pass": true
+    },
+    {
+      "name": "V111: exported download contains the complete saved record",
+      "pass": true
+    },
+    {
+      "name": "V107/V111: Escape closes export and restores trigger focus",
+      "pass": true
+    },
+    {
+      "name": "V111: delayed native close event cannot dismiss a reopened export",
+      "pass": true
+    },
+    {
+      "name": "V111/B79: delayed clipboard resolve cannot change a newer export or its focus",
+      "pass": true
+    },
+    {
+      "name": "V111/B79: delayed clipboard reject cannot change a newer export or its focus",
+      "pass": true
+    },
+    {
+      "name": "V108: saved operations preserve existing treasury and advisory bytes",
+      "pass": true
+    },
+    {
+      "name": "V109: liquid/3 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: liquid/2 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: liquid/1 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: illiquid/3 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: illiquid/2 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: illiquid/1 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: stale/3 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: stale/2 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: stale/1 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: missing/3 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: missing/2 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109: missing/1 uses the retained sample analysis and coverage",
+      "pass": true
+    },
+    {
+      "name": "V109/B75: source inspector preserves exact retained bytes",
+      "pass": true,
+      "detail": {
+        "retainedSha256": "036ca59713933a7fd1e5de25f1004442baa99678c6020503d999c711ee37fe16",
+        "displayedSha256": "036ca59713933a7fd1e5de25f1004442baa99678c6020503d999c711ee37fe16"
+      }
+    },
+    {
+      "name": "V111/B77: knowledge export describes graph, analysis and sources without commands",
+      "pass": true,
+      "detail": {
+        "description": "This synthetic sample contains its graph, retained analysis, and source records. It contains no treasury command journal. You can also select and copy the text.",
+        "keys": [
+          "mode",
+          "sample",
+          "graph",
+          "analysis",
+          "sources"
+        ]
+      }
+    },
+    {
+      "name": "V109: entity directory can inspect the unrelated position without adding it to the exit",
+      "pass": true
+    },
+    {
+      "name": "V109: entity selection opens its retained relationships and provenance",
+      "pass": true
+    },
+    {
+      "name": "V111: connections distinguish embedded samples and link to the separate live mesh",
+      "pass": true
+    },
+    {
+      "name": "V110/B76: current decision expires with its evidence without another click",
+      "pass": true,
+      "detail": {
+        "observed": "NO_DATA",
+        "age": "70s / 60s limit"
+      }
+    },
+    {
+      "name": "V110: historical decision retains original cutoff after the live clock advances",
+      "pass": true
+    },
+    {
+      "name": "V108/B78: valid schema-1 history renders Overview without changing saved bytes",
+      "pass": true
+    },
+    {
+      "name": "V111/B78: legacy export describes commands without claiming saved snapshots",
+      "pass": true,
+      "detail": "This legacy record contains the setup and command journal. Graphs, rule checks, and outcomes are reconstructed during replay; they are not stored in this export."
+    },
+    {
+      "name": "V108: corrupt or unsupported record remains intact and cannot be replaced",
+      "pass": true
+    },
+    {
+      "name": "V108: setup cannot overwrite an unreadable existing record",
+      "pass": true
+    },
+    {
+      "name": "V108: corrupt or unsupported record remains intact and cannot be replaced",
+      "pass": true
+    },
+    {
+      "name": "V108: setup cannot overwrite an unreadable existing record",
+      "pass": true
+    },
+    {
+      "name": "V108: absent Web Locks retains sample inspection and blocks persistent setup",
+      "pass": true
+    },
+    {
+      "name": "V110/B80: Stop stays available while a loop cycle waits for the storage lock",
+      "pass": true
+    },
+    {
+      "name": "V110/B80: stopping a queued loop prevents its cycle from being saved after lock release",
+      "pass": true
+    },
+    {
+      "name": "V110: manually started loop stops after exactly ten retained cycles",
+      "pass": true,
+      "detail": {
+        "fixture": "Only the five-second loop delay is accelerated to 40ms."
+      }
+    },
+    {
+      "name": "V110: reload does not restart a completed loop",
+      "pass": true
+    },
+    {
+      "name": "V110: leaving the dashboard stops subsequent simulation cycles",
+      "pass": true
+    },
+    {
+      "name": "V108/V111: original reference falconos-advisory-workspace.html writes only its own legacy namespace",
+      "pass": true
+    },
+    {
+      "name": "V108/V111: original reference falconos-knowledge.html writes only its own legacy namespace",
+      "pass": true
+    },
+    {
+      "name": "V108/V111: original reference falconos-capital.html writes only its own legacy namespace",
+      "pass": true
+    },
+    {
+      "name": "V111: dashboard made no backend, wallet, or provider requests",
+      "pass": true
+    },
+    {
+      "name": "V111: instrumented pages attempted no external HTTP requests",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "V107: browser has no uncaught runtime exceptions",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "exceptions": [],
+  "remoteRequests": [],
+  "localRequests": [
+    {
+      "method": "GET",
+      "path": "/__source__/falconos-workspace.html"
+    },
+    {
+      "method": "GET",
+      "path": "/favicon.ico"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-CNgJYtwZ.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/store-o_Evag90.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/dashboard-DkTy1_Xl.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-semibold-DsJNybWY.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/main-ByYKOjtC.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/main-DTNyFvQo.css"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-regular-BktvGMAi.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf"
+    },
+    {
+      "method": "GET",
+      "path": "/assets/falcon-tVU9rPew.svg"
+    },
+    {
+      "method": "GET",
+      "path": "/__source__/falconos-advisory-workspace.html"
+    },
+    {
+      "method": "GET",
+      "path": "/__source__/falconos-knowledge.html"
+    },
+    {
+      "method": "GET",
+      "path": "/__source__/falconos-capital.html"
+    }
+  ],
+  "localResponses": [
+    {
+      "path": "/__source__/falconos-workspace.html",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/favicon.ico",
+      "status": 404,
+      "type": "Other"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/dashboard/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/dashboard-CNgJYtwZ.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/dashboard-DkTy1_Xl.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/store-o_Evag90.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-semibold-DsJNybWY.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/assets/main-ByYKOjtC.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/main-DTNyFvQo.css",
+      "status": 200,
+      "type": "Stylesheet"
+    },
+    {
+      "path": "/assets/rolldown-runtime-B0Z9INg1.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/modulepreload-polyfill-P2Xu9kJm.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/FONT-LICENSE-B0vi4pmd.js",
+      "status": 200,
+      "type": "Script"
+    },
+    {
+      "path": "/assets/geist-regular-BktvGMAi.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-mono-regular-BV1xlXkC.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/geist-medium-BBUaz6Yt.ttf",
+      "status": 200,
+      "type": "Font"
+    },
+    {
+      "path": "/assets/falcon-tVU9rPew.svg",
+      "status": 200,
+      "type": "Other"
+    },
+    {
+      "path": "/__source__/falconos-advisory-workspace.html",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/__source__/falconos-knowledge.html",
+      "status": 200,
+      "type": "Document"
+    },
+    {
+      "path": "/__source__/falconos-capital.html",
+      "status": 200,
+      "type": "Document"
+    }
+  ],
+  "downloads": [
+    {
+      "frameId": "D5B149DC69A0206FDEA7072202B10DDC",
+      "guid": "48a0e9a3-2be0-4813-b935-5879491a8e42",
+      "url": "blob:http://127.0.0.1:54325/aaab5ad6-53f6-48c8-a241-ee7ce88ec39c",
+      "suggestedFilename": "falcon-simulation.json",
+      "state": "completed",
+      "totalBytes": 65024,
+      "receivedBytes": 65024,
+      "filePath": "/private/tmp/falcon-dashboard-source-r9g2sbv8/browser-JTXcfC/falcon-simulation.json"
+    }
+  ],
+  "artifactDir": "/private/tmp/falcon-dashboard-source-r9g2sbv8/browser-JTXcfC",
+  "root": "/Volumes/Sarthi MAC/FalconOS/web/dist",
+  "sourceRoot": "/Users/sarthiborkar/Library/Application Support/Open Design/namespaces/release-stable/data/projects/886c2e41-d9d4-45e0-a67d-148f20cfca61",
+  "mode": "react-integration",
+  "limitations": "Isolated synthetic browser records. Source screenshots execute original scripts with outbound HTTP blocked. No live service, wallet, hosting or email delivery tested."
+}

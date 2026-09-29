@@ -1,0 +1,316 @@
+[
+  {
+    "results": [
+      {
+        "type": "index",
+        "name": "sqlite_autoindex_waitlist_entries_1",
+        "tbl_name": "waitlist_entries",
+        "sql": null
+      },
+      {
+        "type": "index",
+        "name": "sqlite_autoindex_waitlist_rate_limits_1",
+        "tbl_name": "waitlist_rate_limits",
+        "sql": null
+      },
+      {
+        "type": "index",
+        "name": "waitlist_entries_ip_created_idx",
+        "tbl_name": "waitlist_entries",
+        "sql": "CREATE INDEX waitlist_entries_ip_created_idx\n  ON waitlist_entries (ip_hash, created_at)"
+      },
+      {
+        "type": "table",
+        "name": "_cf_KV",
+        "tbl_name": "_cf_KV",
+        "sql": "CREATE TABLE _cf_KV (\n        key TEXT PRIMARY KEY,\n        value BLOB\n      ) WITHOUT ROWID"
+      },
+      {
+        "type": "table",
+        "name": "waitlist_entries",
+        "tbl_name": "waitlist_entries",
+        "sql": "CREATE TABLE waitlist_entries (\n  email TEXT PRIMARY KEY,\n  source TEXT NOT NULL,\n  ip_hash TEXT NOT NULL,\n  created_at TEXT NOT NULL DEFAULT (datetime('now')),\n  updated_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+      },
+      {
+        "type": "table",
+        "name": "waitlist_rate_limits",
+        "tbl_name": "waitlist_rate_limits",
+        "sql": "CREATE TABLE waitlist_rate_limits (\n  ip_hash TEXT PRIMARY KEY,\n  window_start INTEGER NOT NULL,\n  attempts INTEGER NOT NULL\n)"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.1983
+      },
+      "duration": 0.1983,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 12,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "cid": 0,
+        "name": "email",
+        "type": "TEXT",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "source",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "ip_hash",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": "datetime('now')",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": "datetime('now')",
+        "pk": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.1167
+      },
+      "duration": 0.1167,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "cid": 0,
+        "name": "ip_hash",
+        "type": "TEXT",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "window_start",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "attempts",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0684
+      },
+      "duration": 0.0684,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "seq": 0,
+        "name": "waitlist_entries_ip_created_idx",
+        "unique": 0,
+        "origin": "c",
+        "partial": 0
+      },
+      {
+        "seq": 1,
+        "name": "sqlite_autoindex_waitlist_entries_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0641
+      },
+      "duration": 0.0641,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "seq": 0,
+        "name": "sqlite_autoindex_waitlist_rate_limits_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0546
+      },
+      "duration": 0.0546,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "seqno": 0,
+        "cid": 2,
+        "name": "ip_hash"
+      },
+      {
+        "seqno": 1,
+        "cid": 3,
+        "name": "created_at"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0666
+      },
+      "duration": 0.0666,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "name": "waitlist_entries",
+        "row_count": 0
+      },
+      {
+        "name": "waitlist_rate_limits",
+        "row_count": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.5898
+      },
+      "duration": 0.5898,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 2,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "AMS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0825
+      },
+      "duration": 0.0825,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 32768,
+      "rows_read": 6,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

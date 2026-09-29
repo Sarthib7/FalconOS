@@ -1,0 +1,910 @@
+diff --git a/web/test/treasury-browser.mjs b/web/test/treasury-browser.mjs
+index 046d409..5dc52d6 100644
+--- a/web/test/treasury-browser.mjs
++++ b/web/test/treasury-browser.mjs
+@@ -1,7 +1,7 @@
+ import assert from 'node:assert/strict';
+ import { spawn } from 'node:child_process';
+ import { createServer } from 'node:http';
+-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
++import { mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
+ import { extname, resolve, sep } from 'node:path';
+ import { fileURLToPath } from 'node:url';
+ import { replayRun } from '../treasury/domain.mjs';
+@@ -112,6 +112,7 @@ async function screenshot(p, name, full = false) {
+ }
+ 
+ try {
++  await call('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: artifactDir });
+   const p = await page();
+   check('V84: fresh browser shows labeled demo defaults', await p.evaluate('!document.getElementById("setup-panel").hidden && document.querySelector(".demo-note").textContent.includes("Demo defaults")'));
+   await p.evaluate('document.getElementById("reserve-usdc").value = "900"');
+@@ -125,13 +126,23 @@ try {
+   const initial = await p.evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)}))`);
+   check('V78: setup saves exact reserve, cap, and undelegated remainder', initial.setup.reserveUsdc === '200' && initial.setup.investmentCapUsdc === '500' && replayRun(initial).state.balances.undelegatedUnits === '300000000');
+   if (!setupOnly) {
+-    check('I14: slice 02 exposes only supported controls', await p.evaluate('!document.querySelector("#graph-nodes, #history-list, #export-run, #start-agent, #stop-agent")'));
++    check('I14: slice 03 exposes only supported controls', await p.evaluate('!document.querySelector("#start-agent, #stop-agent")'));
+     await p.event('run-cycle');
+     check('V81: missing observation gives NO_DATA', await p.evaluate('document.getElementById("decision-status").textContent === "NO_DATA" && document.getElementById("position-balance").textContent === "0"'));
+     await p.event('scenario-healthy'); await p.event('run-cycle');
+     check('V78 V80: supply moves only the 500 delegated USDC', await p.evaluate('document.getElementById("position-balance").textContent === "500" && document.getElementById("idle-balance").textContent === "0" && document.getElementById("reserve-balance").textContent === "200"'));
+     await p.event('scenario-low'); await p.event('run-cycle');
+     check('V81: illiquid exit is blocked and retains position', await p.evaluate('document.getElementById("decision-status").textContent === "BLOCKED" && document.getElementById("position-balance").textContent === "500"'));
++    await p.click('inspect-decision'); await p.click('graph-node-position');
++    check('V79 V84: graph inspection shows the selected decision input', await p.evaluate('document.getElementById("graph-context").textContent.includes("Input graph") && JSON.parse(document.getElementById("node-data").textContent).positionUnits === "500000000"'));
++    const ax = await p.send('Accessibility.getFullAXTree');
++    check('V86: graph relationships are available to assistive technology', ax.nodes.some((n) => n.name?.value?.includes('Owner mandate → authorizes → Investment account')));
++    await p.evaluate('document.getElementById("graph-node-reserve").focus()');
++    await p.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, text: '\r' });
++    await p.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
++    check('V84: keyboard opens graph node details', await p.evaluate('document.getElementById("node-title").textContent === "Spending reserve"'), await p.evaluate('({ active: document.activeElement.id, title: document.getElementById("node-title").textContent })'));
++    await p.click('show-current');
++    await p.evaluate('scrollTo(0,0)'); await screenshot(p, 'desktop', true);
+     await p.event('scenario-stale'); await p.event('run-cycle');
+     check('V81: stale evidence gives NO_DATA without movement', await p.evaluate('document.getElementById("decision-status").textContent === "NO_DATA" && document.getElementById("position-balance").textContent === "500"'));
+     await p.event('scenario-unavailable'); await p.event('run-cycle');
+@@ -142,6 +153,11 @@ try {
+     const saved = await p.evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`);
+     await p.send('Page.reload'); await p.wait('!document.getElementById("workspace").hidden');
+     check('V83 V84: reload preserves the exact journal', await p.evaluate(`localStorage.getItem(${JSON.stringify(KEY)}) === ${JSON.stringify(saved)}`));
++    await p.click('export-run');
++    let downloaded;
++    for (let i = 0; i < 60; i++) { downloaded = (await readdir(artifactDir)).find((name) => name.endsWith('.json')); if (downloaded) break; await pause(50); }
++    const exported = JSON.parse(await readFile(`${artifactDir}/${downloaded}`, 'utf8'));
++    check('V83: downloaded JSON replays the saved run', JSON.stringify(replayRun(exported)) === JSON.stringify(replayRun(JSON.parse(saved))));
+     const other = await page();
+     await p.event('scenario-healthy'); await p.event('run-cycle');
+     await other.wait('document.getElementById("position-balance").textContent === "500"');
+@@ -155,7 +171,6 @@ try {
+     check('V80 V84: revocation disables agent movement', await p.evaluate('document.getElementById("run-cycle").disabled && document.getElementById("mandate-status").textContent === "Permanently revoked"'));
+     await p.event('owner-redeem');
+     check('V80: explicit owner exit works after revocation', await p.evaluate('document.getElementById("position-balance").textContent === "0" && document.getElementById("idle-balance").textContent === "500"'));
+-    await p.evaluate('scrollTo(0,0)'); await screenshot(p, 'desktop', true);
+     for (const width of [390, 320]) {
+       await p.send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: true });
+       check(`V84: ${width}px page has no horizontal overflow`, await p.evaluate('document.documentElement.scrollWidth <= innerWidth'));
+diff --git a/web/test/treasury-store.test.mjs b/web/test/treasury-store.test.mjs
+index 1e4d373..1357036 100644
+--- a/web/test/treasury-store.test.mjs
++++ b/web/test/treasury-store.test.mjs
+@@ -1,6 +1,7 @@
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { createStore } from '../treasury/store.mjs';
++import { replayRun } from '../treasury/domain.mjs';
+ 
+ const KEY = 'falcon.treasury.simulation.v1';
+ const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+@@ -29,7 +30,7 @@ function environment() {
+   return { records, storage, locks, store: createStore({ storage, locks }) };
+ }
+ 
+-test('V82 V83: a saved supply survives a new store instance', async () => {
++test('V82 V83: a saved supply survives a new store instance and JSON export replays it', async () => {
+   const env = environment();
+   await env.store.create(setup());
+   await env.store.dispatch(observation(), 0);
+@@ -37,6 +38,7 @@ test('V82 V83: a saved supply survives a new store instance', async () => {
+   const reopened = createStore({ storage: env.storage, locks: env.locks }).load();
+   assert.deepEqual(reopened, supplied);
+   assert.equal(reopened.view.state.balances.positionUnits, '500000000');
++  assert.deepEqual(replayRun(JSON.parse(env.store.exportRun())), supplied.view);
+   assert.equal(env.locks.calls.length, 3);
+   assert.ok(env.locks.calls.every(call => call.name === KEY && call.options.mode === 'exclusive'));
+ });
+@@ -100,13 +102,14 @@ test('V82 V83: exact retries are idempotent even after the original revision; co
+   assert.equal(env.storage.writes, writes);
+ });
+ 
+-test('V82: create never overwrites a valid run', async () => {
++test('V82: create never overwrites a valid run and an empty browser has no export', async () => {
+   const env = environment();
+   assert.equal(env.store.load(), null);
++  assert.throws(() => env.store.exportRun(), /no saved simulation/);
+   await env.store.create(setup());
+-  const before = env.storage.getItem(KEY);
++  const before = env.store.exportRun();
+   await assert.rejects(env.store.create({ ...setup(), id: id(5) }), /already has a simulation/);
+-  assert.equal(env.storage.getItem(KEY), before);
++  assert.equal(env.store.exportRun(), before);
+ });
+ 
+ test('V82: oversized saved records and malformed revisions stop before writing', async () => {
+diff --git a/web/treasury/app.mjs b/web/treasury/app.mjs
+index 4ee32a3..c8c814e 100644
+--- a/web/treasury/app.mjs
++++ b/web/treasury/app.mjs
+@@ -3,12 +3,28 @@ import { createStore } from './store.mjs';
+ 
+ const store = createStore();
+ const $ = (id) => document.getElementById(id);
++const SVG_NS = 'http://www.w3.org/2000/svg';
+ const MAX_EVENTS = 200;
++const NODE_POSITIONS = {
++  reserve: [12, 16], mandate: [334, 16], undelegated: [656, 16],
++  observation: [12, 218], position: [334, 218], account: [656, 218],
++};
++const EDGE_PATHS = {
++  'mandate:reserve:excludes': ['M334 62H244', 289, 45],
++  'mandate:undelegated:excludes': ['M566 62H656', 611, 45],
++  'mandate:account:authorizes': ['M450 109V161H772V218', 640, 150],
++  'account:position:owns': ['M656 264H566', 611, 248],
++  'position:observation:depends_on': ['M334 264H244', 289, 248],
++};
++const EVENT_LABELS = { observe: 'Synthetic observation', cycle: 'Agent cycle', revoke: 'Mandate revoked', owner_redeem: 'Owner redemption' };
+ 
+ let current = null;
+ let busy = false;
+ let storageFailed = false;
++let selectedNode = 'mandate';
++let selectedHistoryId = null;
+ let selectedScenario = null;
++let shownGraph = null;
+ 
+ function node(tag, className, text) {
+   const element = document.createElement(tag);
+@@ -21,6 +37,7 @@ function setText(id, value) { $(id).textContent = value; }
+ function money(units) { return formatUsdc(units); }
+ function tone(status) { return status === 'BLOCKED' ? 'blocked' : status === 'NO_DATA' ? 'warn' : 'ok'; }
+ function stamp(iso) { return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' }); }
++function selectedEntry() { return current?.view.entries.find((entry) => entry.eventId === selectedHistoryId) ?? null; }
+ function latestDecisionEntry() { return current?.view.entries.findLast((entry) => entry.decision !== null) ?? null; }
+ 
+ function message(text) { setText('action-message', text); }
+@@ -40,6 +57,7 @@ function updateControls() {
+   $('run-cycle').disabled = locked || !current || full || revoked;
+   $('owner-redeem').disabled = locked || !current || full;
+   $('revoke-mandate').disabled = locked || !current || full || revoked;
++  $('export-run').disabled = locked || !current;
+   $('confirm-revoke').disabled = locked || !current || full || revoked;
+   if (current) setText('event-count', `${current.run.events.length} / ${MAX_EVENTS} events saved`);
+ }
+@@ -69,17 +87,111 @@ function renderObservation() {
+   setText('observation-time', `Observed ${stamp(observation.observedAt)}`);
+ }
+ 
++function renderNodeInspector() {
++  const graphNode = shownGraph?.nodes.find((item) => item.id === selectedNode) ?? shownGraph?.nodes[0];
++  if (!graphNode) return;
++  selectedNode = graphNode.id;
++  document.querySelectorAll('[data-node]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.node === selectedNode)));
++  setText('node-title', graphNode.label);
++  setText('node-kind', graphNode.kind);
++  setText('node-detail', graphNode.detail);
++  setText('node-data', JSON.stringify(graphNode.data, null, 2));
++}
++
++function renderGraph() {
++  const entry = selectedEntry();
++  shownGraph = entry?.graph ?? current.view.graph;
++  setText('graph-context', entry ? `Event ${current.view.entries.indexOf(entry) + 1} / Input graph` : 'Current state');
++  $('show-current').hidden = !entry;
++  const buttons = shownGraph.nodes.map((graphNode) => {
++    const button = node('button', 'graph-node');
++    button.type = 'button';
++    button.id = `graph-node-${graphNode.id}`;
++    button.dataset.node = graphNode.id;
++    button.setAttribute('aria-pressed', String(graphNode.id === selectedNode));
++    const [x, y] = NODE_POSITIONS[graphNode.id] ?? [12, 16];
++    button.style.left = `${x / 9}%`;
++    button.style.top = `${y / 3.3}%`;
++    button.append(node('span', 'node-type', graphNode.kind), node('strong', '', graphNode.label), node('span', 'node-summary', graphNode.detail));
++    button.addEventListener('click', () => { selectedNode = graphNode.id; renderNodeInspector(); });
++    return button;
++  });
++  $('graph-nodes').replaceChildren(...buttons);
++  const paths = [];
++  const relations = [];
++  for (const edge of shownGraph.edges) {
++    const relation = edge.relation.replaceAll('_', ' ');
++    const source = shownGraph.nodes.find((item) => item.id === edge.source)?.label ?? edge.source;
++    const target = shownGraph.nodes.find((item) => item.id === edge.target)?.label ?? edge.target;
++    relations.push(node('li', '', `${source} → ${relation} → ${target}`));
++    const position = EDGE_PATHS[`${edge.source}:${edge.target}:${edge.relation}`];
++    if (!position) continue;
++    const path = document.createElementNS(SVG_NS, 'path');
++    path.setAttribute('d', position[0]);
++    path.setAttribute('class', 'connection');
++    const label = document.createElementNS(SVG_NS, 'text');
++    label.setAttribute('x', position[1]);
++    label.setAttribute('y', position[2]);
++    label.textContent = relation;
++    paths.push(path, label);
++  }
++  $('graph-paths').replaceChildren(...paths);
++  $('graph-relations').replaceChildren(...relations);
++  renderNodeInspector();
++}
++
+ function renderDecision() {
+-  const entry = latestDecisionEntry();
++  const historical = selectedEntry();
++  const entry = historical ?? latestDecisionEntry();
+   const decision = entry?.decision;
+-  setText('decision-title', decision ? { SUPPLY: 'Supply', REDEEM: 'Redeem', HOLD: 'Hold' }[decision.action] : 'Ready when you are.');
+-  setText('decision-status', decision?.status ?? 'Awaiting a cycle');
+-  $('decision-status').dataset.tone = tone(decision?.status);
++  setText('decision-eyebrow', historical ? 'SELECTED EVENT' : 'LATEST DECISION');
++  setText('decision-title', decision ? { SUPPLY: 'Supply', REDEEM: 'Redeem', HOLD: 'Hold' }[decision.action] : entry ? EVENT_LABELS[entry.type] : 'Ready when you are.');
++  setText('decision-status', decision?.status ?? entry?.outcome.status ?? 'Awaiting a cycle');
++  $('decision-status').dataset.tone = tone(decision?.status ?? entry?.outcome.status);
+   setText('decision-amount', decision ? `${money(decision.amountUnits)} USDC` : '');
+-  setText('decision-time', entry ? `Last evaluated ${stamp(entry.at)}` : '');
+-  const reasons = decision?.reasons ?? ['Choose synthetic evidence, then run one cycle.'];
++  setText('decision-time', entry ? `${historical ? 'Recorded' : 'Last evaluated'} ${stamp(entry.at)}` : '');
++  const reasons = decision?.reasons ?? (entry ? ['This event records a change. Run a cycle to evaluate the graph.'] : ['Choose synthetic evidence, then run one cycle.']);
+   $('decision-reasons').replaceChildren(...reasons.map((reason) => node('li', '', reason)));
+   setText('decision-outcome', entry?.outcome.message ?? 'No movement has been simulated.');
++  $('inspect-decision').hidden = !decision || Boolean(historical);
++  $('history-balances').hidden = !historical;
++  if (historical) {
++    const b = historical.balances;
++    setText('history-balances', `After this event: reserve ${money(b.reserveUnits)}, undelegated ${money(b.undelegatedUnits)}, idle ${money(b.idleUnits)}, position ${money(b.positionUnits)} USDC. The balance cards above show current state.`);
++  }
++}
++
++function inspectHistory(eventId) {
++  selectedHistoryId = eventId;
++  renderGraph();
++  renderDecision();
++  document.querySelectorAll('[data-event-id]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.eventId === eventId)));
++}
++
++function renderHistory() {
++  const entries = current.view.entries;
++  $('empty-history').hidden = entries.length > 0;
++  $('history-list').replaceChildren(...entries.map((entry, index) => {
++    const item = node('li');
++    const button = node('button', 'history-event');
++    button.type = 'button';
++    button.dataset.eventId = entry.eventId;
++    button.setAttribute('aria-pressed', String(entry.eventId === selectedHistoryId));
++    const body = node('span');
++    body.append(node('span', 'event-name', EVENT_LABELS[entry.type]), node('span', 'event-message', entry.outcome.message));
++    const meta = node('span', 'event-meta');
++    const status = node('span', 'event-status', `${entry.outcome.action ? `${entry.outcome.action} · ` : ''}${entry.outcome.status}`);
++    status.dataset.tone = tone(entry.outcome.status);
++    meta.append(status, node('span', '', stamp(entry.at)));
++    button.append(node('span', 'event-number', String(index + 1).padStart(2, '0')), body, meta);
++    button.addEventListener('click', () => {
++      inspectHistory(entry.eventId);
++      $('graph-title').scrollIntoView({ block: 'start', behavior: 'instant' });
++    });
++    item.append(button);
++    return item;
++  }));
++  setText('run-id', `Run ${current.run.id} · Created ${stamp(current.run.createdAt)} · Simulation command log`);
+ }
+ 
+ function render() {
+@@ -92,7 +204,9 @@ function render() {
+     setText('mandate-status', revoked ? 'Permanently revoked' : 'Active mandate');
+     $('mandate-status').dataset.tone = revoked ? 'blocked' : 'ok';
+     renderObservation();
++    renderGraph();
+     renderDecision();
++    renderHistory();
+   }
+   updateControls();
+ }
+@@ -105,6 +219,7 @@ async function command(type, payload = {}) {
+   try {
+     const event = { id: crypto.randomUUID(), at: new Date().toISOString(), type, ...payload };
+     current = await store.dispatch(event, current.view.state.revision);
++    selectedHistoryId = null;
+     render();
+     message(current.view.entries.at(-1)?.outcome.message ?? 'Event saved.');
+     return true;
+@@ -181,6 +296,27 @@ $('revoke-mandate').addEventListener('click', () => {
+ $('revoke-dialog').addEventListener('close', () => {
+   if ($('revoke-dialog').returnValue === 'confirm') void command('revoke');
+ });
++$('show-current').addEventListener('click', () => inspectHistory(null));
++$('inspect-decision').addEventListener('click', () => {
++  const entry = latestDecisionEntry();
++  if (entry) inspectHistory(entry.eventId);
++});
++$('export-run').addEventListener('click', () => {
++  clearError();
++  try {
++    const json = store.exportRun();
++    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
++    const link = node('a');
++    link.href = url;
++    link.download = `falcon-treasury-simulation-${current.run.id}.json`;
++    document.body.append(link);
++    link.click();
++    link.remove();
++    setTimeout(() => URL.revokeObjectURL(url), 1000);
++    message('Simulation JSON prepared for download. It contains this browser’s saved command log.');
++  } catch (error) { showError(error); }
++});
++
+ window.addEventListener('storage', (event) => {
+   if (event.key !== 'falcon.treasury.simulation.v1' && event.key !== null) return;
+   try {
+@@ -188,6 +324,7 @@ window.addEventListener('storage', (event) => {
+     if (!saved) throw new Error('The saved simulation is missing. Reload to check browser storage.');
+     current = saved;
+     storageFailed = false;
++    selectedHistoryId = null;
+     selectedScenario = null;
+     clearError();
+     render();
+diff --git a/web/treasury/index.html b/web/treasury/index.html
+index 2742ee5..86429d2 100644
+--- a/web/treasury/index.html
++++ b/web/treasury/index.html
+@@ -27,7 +27,7 @@
+       <p id="action-message" class="action-message" role="status" aria-live="polite"></p>
+ 
+       <section id="setup-panel" class="setup-panel panel" aria-labelledby="setup-title" hidden>
+-        <div class="setup-intro"><p class="eyebrow">01 / SET YOUR MANDATE</p><h2 id="setup-title">Give Falcon a boundary.</h2><p>The reserve stays outside agent authority. Only the investment cap becomes delegated idle USDC.</p><div class="setup-example"><span class="tiny-label">ONE SAVED RUN</span><p>The mandate stays fixed. You can revoke it and request a separate owner redemption.</p></div></div>
++        <div class="setup-intro"><p class="eyebrow">01 / SET YOUR MANDATE</p><h2 id="setup-title">Give Falcon a boundary.</h2><p>The reserve stays outside agent authority. Only the investment cap becomes delegated idle USDC.</p><div class="setup-example"><span class="tiny-label">ONE SAVED RUN</span><p>The mandate stays fixed. You can revoke it, redeem as owner, and export its history.</p></div></div>
+         <form id="setup-form">
+           <p class="demo-note"><strong>Demo defaults</strong> are filled below. Edit them before creating your simulation.</p>
+           <fieldset id="setup-fields">
+@@ -69,20 +69,35 @@
+           <div id="observation-summary" class="observation-summary"><p id="observation-value">No observation recorded.</p><p><span id="observation-freshness"></span><span id="observation-age"></span></p><p id="observation-time"></p></div>
+         </section>
+ 
+-        <div class="manual-decision">
++        <div class="decision-layout">
++          <section class="panel graph-panel" aria-labelledby="graph-title">
++            <div class="section-heading compact"><div><p class="eyebrow">03 / INSPECT THE INPUT</p><h2 id="graph-title">The decision graph.</h2></div><span id="graph-context" class="subtle-badge">Current state</span></div>
++            <p class="section-copy">Select a node to inspect its type, data, and relationships.</p>
++            <div class="graph-canvas">
++              <svg id="graph-connections" viewBox="0 0 900 330" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="graph-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 8 4 0 8z" fill="currentColor"/></marker></defs><g id="graph-paths"></g></svg>
++              <div id="graph-nodes" class="graph-nodes" role="group" aria-label="Decision graph nodes"></div>
++            </div>
++            <ul id="graph-relations" class="graph-relations" aria-label="Graph relationships"></ul>
++            <div id="node-inspector" class="node-inspector" aria-live="polite"><div class="inspector-heading"><h3 id="node-title">Mandate</h3><span id="node-kind" class="tiny-label"></span></div><p id="node-detail"></p><details><summary>Inspect node data</summary><pre id="node-data"></pre></details></div>
++            <button id="show-current" class="text-button" type="button" hidden>Return to current state →</button>
++          </section>
++
+           <section id="decision-panel" class="panel decision-panel" aria-labelledby="decision-title">
+-            <p id="decision-eyebrow" class="eyebrow">LATEST DECISION</p><h2 id="decision-title">Ready when you are.</h2><span id="decision-status" class="status-badge">Awaiting a cycle</span><p id="decision-amount" class="decision-amount"></p><p id="decision-time" class="small-note"></p><ul id="decision-reasons" class="decision-reasons"><li>Choose synthetic evidence, then run one cycle.</li></ul><div class="outcome-box"><span class="tiny-label">SIMULATED OUTCOME</span><p id="decision-outcome">No movement has been simulated.</p></div>
++            <p id="decision-eyebrow" class="eyebrow">LATEST DECISION</p><h2 id="decision-title">Ready when you are.</h2><span id="decision-status" class="status-badge">Awaiting a cycle</span><p id="decision-amount" class="decision-amount"></p><p id="decision-time" class="small-note"></p><ul id="decision-reasons" class="decision-reasons"><li>Choose synthetic evidence, then run one cycle.</li></ul><div class="outcome-box"><span class="tiny-label">SIMULATED OUTCOME</span><p id="decision-outcome">No movement has been simulated.</p></div><button id="inspect-decision" class="text-button" type="button" hidden>Inspect this decision's input →</button><p id="history-balances" class="small-note" hidden></p>
+           </section>
+         </div>
+ 
+         <section class="panel control-panel" aria-labelledby="control-title">
+-          <div><p class="eyebrow">03 / RUN ONE CYCLE</p><h2 id="control-title">Act within the mandate.</h2><p class="section-copy">Each click runs one cycle against the saved observation. Evidence never refreshes automatically.</p></div>
++          <div><p class="eyebrow">04 / RUN ONE CYCLE</p><h2 id="control-title">Act within the mandate.</h2><p class="section-copy">Each click runs one cycle against the saved observation. Evidence never refreshes automatically.</p></div>
+           <div class="agent-controls"><button id="run-cycle" class="button primary" type="button">Run one cycle</button></div>
+           <p id="event-count" class="small-note">0 / 200 events saved</p>
+         </section>
+ 
+         <section class="owner-panel" aria-labelledby="owner-title"><div><p class="eyebrow">OWNER CONTROLS</p><h2 id="owner-title">You keep the exit.</h2><p class="section-copy">Revocation permanently stops agent movements in this run. Owner redemption stays available with fresh evidence and enough liquidity.</p></div><div class="owner-controls"><button id="owner-redeem" class="button" type="button">Redeem as owner</button><button id="revoke-mandate" class="button danger" type="button">Revoke mandate</button></div></section>
+ 
++        <section class="panel history-panel" aria-labelledby="history-title">
++          <div class="section-heading compact"><div><p class="eyebrow">THE SAVED RECORD</p><h2 id="history-title">Replay every step.</h2></div><button id="export-run" class="button" type="button">Export JSON ↓</button></div><p class="section-copy">Select an event to inspect its input graph and outcome. This browser record can be edited by its owner.</p><p id="empty-history" class="empty-state">Your run is saved. Record an observation to begin.</p><ol id="history-list" class="history-list"></ol><p id="run-id" class="record-id"></p>
++        </section>
+       </div>
+     </main>
+     <footer><span>Falcon / Treasury simulation</span><span>One browser. One saved run. No real funds.</span></footer>
+diff --git a/web/treasury/store.mjs b/web/treasury/store.mjs
+index 6f921b8..ae44369 100644
+--- a/web/treasury/store.mjs
++++ b/web/treasury/store.mjs
+@@ -40,7 +40,7 @@ export function createStore({ storage, locks } = {}) {
+ 
+   function save(run) {
+     const raw = JSON.stringify(run);
+-    if (raw.length > MAX_RECORD_LENGTH) throw new Error('Simulation record exceeds the record limit.');
++    if (raw.length > MAX_RECORD_LENGTH) throw new Error('Simulation record is full. Export the saved history before continuing.');
+     try {
+       backend().setItem(KEY, raw);
+     } catch {
+@@ -82,5 +82,11 @@ export function createStore({ storage, locks } = {}) {
+     });
+   }
+ 
+-  return { load, create, dispatch };
++  function exportRun() {
++    const current = load();
++    if (!current) throw new Error('There is no saved simulation to export.');
++    return JSON.stringify(current.run, null, 2);
++  }
++
++  return { load, create, dispatch, exportRun };
+ }
+diff --git a/web/treasury/style.css b/web/treasury/style.css
+index c81be39..eddab26 100644
+--- a/web/treasury/style.css
++++ b/web/treasury/style.css
+@@ -36,11 +36,13 @@ input {
+ 
+ button,
+ a,
+-input {
++input,
++summary {
+   -webkit-tap-highlight-color: transparent;
+ }
+ 
+-button {
++button,
++summary {
+   cursor: pointer;
+ }
+ 
+@@ -55,7 +57,8 @@ a {
+ 
+ button:focus-visible,
+ a:focus-visible,
+-input:focus-visible {
++input:focus-visible,
++summary:focus-visible {
+   outline: 3px solid var(--amber);
+   outline-offset: 4px;
+ }
+@@ -580,6 +583,199 @@ input:invalid:not(:placeholder-shown):focus {
+   font-variant-numeric: tabular-nums;
+ }
+ 
++.decision-layout {
++  display: grid;
++  grid-template-columns: minmax(0,1.9fr) minmax(270px,1fr);
++  gap: 18px;
++  margin: 18px 0;
++}
++
++.graph-panel {
++  padding: 23px 20px;
++}
++
++.graph-panel .section-heading {
++  gap: 8px;
++}
++
++.graph-panel h2 {
++  font-size: 27px;
++}
++
++.graph-canvas {
++  aspect-ratio: 900/330;
++  position: relative;
++  margin-top: 19px;
++}
++
++.graph-canvas svg {
++  position: absolute;
++  inset: 0;
++  width: 100%;
++  height: 100%;
++  color: #77926f;
++  overflow: visible;
++}
++
++.graph-canvas svg path.connection {
++  fill: none;
++  stroke: currentColor;
++  stroke-width: 1.5;
++  marker-end: url(#graph-arrow);
++}
++
++.graph-canvas svg text {
++  fill: var(--muted);
++  font: 12px ui-monospace,monospace;
++  text-anchor: middle;
++}
++
++.graph-nodes {
++  position: absolute;
++  inset: 0;
++}
++
++.graph-node {
++  position: absolute;
++  width: 25.78%;
++  height: 28%;
++  display: flex;
++  flex-direction: column;
++  justify-content: center;
++  gap: 4px;
++  padding: 10px 12px;
++  text-align: left;
++  background: #14211b;
++  border-color: #3d5444;
++  min-width: 0;
++}
++
++.graph-node[data-node=reserve],
++.graph-node[data-node=undelegated] {
++  border-style: dashed;
++}
++
++.graph-node[data-node=mandate] {
++  border-color: #789a5e;
++}
++
++.graph-node[data-node=observation] {
++  border-color: #4d7189;
++}
++
++.graph-node[aria-pressed=true] {
++  border-color: var(--mint);
++  background: #213621;
++  box-shadow: 0 0 0 1px var(--mint);
++}
++
++.graph-node .node-type {
++  font: 8px ui-monospace,monospace;
++  color: var(--muted);
++  text-transform: uppercase;
++  letter-spacing: .06em;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.graph-node strong {
++  font-size: 12px;
++  line-height: 1.25;
++  font-weight: 500;
++}
++
++.graph-node .node-summary {
++  font-size: 10px;
++  line-height: 1.35;
++  color: var(--muted);
++  display: -webkit-box;
++  -webkit-box-orient: vertical;
++  -webkit-line-clamp: 2;
++  overflow: hidden;
++}
++
++.graph-relations {
++  list-style: none;
++  margin: 0;
++  padding: 0;
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  overflow: hidden;
++  clip: rect(0,0,0,0);
++  white-space: nowrap;
++}
++
++.node-inspector {
++  padding: 15px 17px;
++  background: #0e1813;
++  border: 1px solid var(--line);
++  border-radius: 10px;
++}
++
++.inspector-heading {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 12px;
++}
++
++.inspector-heading h3 {
++  font-size: 14px;
++}
++
++.inspector-heading .tiny-label {
++  font-size: 9px;
++  overflow-wrap: anywhere;
++}
++
++.node-inspector>p {
++  font-size: 12px;
++  color: var(--muted);
++  margin-top: 7px;
++  overflow-wrap: anywhere;
++}
++
++.node-inspector details {
++  margin-top: 10px;
++  font-size: 10px;
++  color: var(--muted);
++}
++
++.node-inspector summary {
++  width: fit-content;
++  color: var(--blue);
++}
++
++pre {
++  white-space: pre-wrap;
++  overflow-wrap: anywhere;
++  font: 10px/1.7 ui-monospace,monospace;
++  max-height: 250px;
++  overflow: auto;
++  margin-bottom: 0;
++}
++
++.text-button {
++  border: 0;
++  background: transparent;
++  border-radius: 4px;
++  font-size: 11px;
++  color: var(--mint);
++  padding: 9px 0;
++  text-align: left;
++}
++
++.text-button:not(:disabled):hover {
++  text-decoration: underline;
++  text-underline-offset: 4px;
++}
++
++#show-current {
++  margin-top: 9px;
++}
++
+ .decision-panel {
+   display: flex;
+   flex-direction: column;
+@@ -684,6 +880,89 @@ input:invalid:not(:placeholder-shown):focus {
+   flex-shrink: 0;
+ }
+ 
++.history-list {
++  list-style: none;
++  padding: 0;
++  margin: 19px 0 0;
++}
++
++.history-list li+li {
++  margin-top: 7px;
++}
++
++.history-event {
++  display: grid;
++  grid-template-columns: 36px minmax(0,1fr) auto;
++  align-items: center;
++  gap: 13px;
++  width: 100%;
++  padding: 13px 15px;
++  text-align: left;
++  background: #111b16;
++}
++
++.history-event[aria-pressed=true] {
++  background: #213021;
++  border-color: var(--mint);
++}
++
++.event-number {
++  font: 11px ui-monospace,monospace;
++  color: var(--muted);
++}
++
++.event-name {
++  display: block;
++  font-size: 12px;
++}
++
++.event-message {
++  display: block;
++  font-size: 11px;
++  color: var(--muted);
++  margin-top: 3px;
++  overflow-wrap: anywhere;
++}
++
++.event-meta {
++  text-align: right;
++  font-size: 10px;
++  color: var(--muted);
++}
++
++.event-meta span {
++  display: block;
++}
++
++.event-meta .event-status {
++  color: var(--mint);
++  margin-bottom: 3px;
++}
++
++.event-status[data-tone=warn] {
++  color: var(--amber);
++}
++
++.event-status[data-tone=blocked] {
++  color: var(--red);
++}
++
++.empty-state {
++  border: 1px dashed var(--line);
++  border-radius: 10px;
++  padding: 23px 18px;
++  font-size: 12px;
++  color: var(--muted);
++  margin-top: 20px;
++}
++
++.record-id {
++  font: 9px/1.5 ui-monospace,monospace;
++  color: var(--muted);
++  overflow-wrap: anywhere;
++  margin-top: 18px;
++}
++
+ footer {
+   display: flex;
+   justify-content: space-between;
+@@ -757,6 +1036,20 @@ dialog p:not(.eyebrow) {
+   color: var(--amber);
+ }
+ 
++@media(min-width:1250px) {
++  .graph-node strong {
++    font-size: 14px;
++  }
++
++  .graph-node .node-summary {
++    font-size: 11px;
++  }
++
++  .graph-node .node-type {
++    font-size: 9px;
++  }
++}
++
+ @media(max-width:1050px) {
+   .shell {
+     padding: 0 25px;
+@@ -766,6 +1059,23 @@ dialog p:not(.eyebrow) {
+     gap: 30px;
+   }
+ 
++  .decision-layout {
++    grid-template-columns: minmax(0,1.5fr) minmax(250px,1fr);
++  }
++
++  .graph-panel .section-heading {
++    align-items: flex-start;
++    flex-direction: column;
++  }
++
++  .graph-node {
++    padding: 7px;
++  }
++
++  .graph-node .node-summary {
++    display: none;
++  }
++
+   .control-panel {
+     grid-template-columns: 1fr;
+   }
+@@ -881,6 +1191,77 @@ dialog p:not(.eyebrow) {
+     padding: 12px 10px;
+   }
+ 
++  .decision-layout {
++    grid-template-columns: 1fr;
++  }
++
++  .graph-panel .section-heading {
++    flex-direction: row;
++  }
++
++  .graph-canvas {
++    aspect-ratio: auto;
++    margin-top: 20px;
++  }
++
++  .graph-canvas svg {
++    display: none;
++  }
++
++  .graph-nodes {
++    position: static;
++    display: grid;
++    grid-template-columns: repeat(2,minmax(0,1fr));
++    gap: 10px;
++  }
++
++  .graph-node {
++    position: static;
++    width: 100%;
++    height: auto;
++    min-height: 100px;
++    padding: 13px;
++  }
++
++  .graph-node strong {
++    font-size: 13px;
++  }
++
++  .graph-node .node-type {
++    font-size: 8px;
++  }
++
++  .graph-node .node-summary {
++    display: -webkit-box;
++    font-size: 10px;
++  }
++
++  .graph-relations {
++    position: static;
++    width: auto;
++    height: auto;
++    overflow: visible;
++    clip: auto;
++    white-space: normal;
++    display: flex;
++    flex-wrap: wrap;
++    gap: 7px;
++    margin: 14px 0;
++  }
++
++  .graph-relations li {
++    font-size: 9px;
++    color: var(--muted);
++    padding: 5px 8px;
++    border: 1px solid var(--line);
++    border-radius: 6px;
++    overflow-wrap: anywhere;
++  }
++
++  .node-inspector {
++    margin-top: 15px;
++  }
++
+   .decision-panel {
+     min-height: 300px;
+   }
+@@ -901,6 +1282,31 @@ dialog p:not(.eyebrow) {
+     flex-wrap: wrap;
+   }
+ 
++  .history-panel .section-heading {
++    align-items: center;
++  }
++
++  .history-event {
++    grid-template-columns: 24px minmax(0,1fr);
++    gap: 8px;
++    padding: 12px;
++  }
++
++  .event-meta {
++    grid-column: 2;
++    text-align: left;
++    display: flex;
++    gap: 10px;
++  }
++
++  .event-meta .event-status {
++    margin: 0;
++  }
++
++  .record-id {
++    font-size: 8px;
++  }
++
+   footer {
+     flex-direction: column;
+     gap: 5px;
+@@ -922,6 +1328,14 @@ dialog p:not(.eyebrow) {
+     font-size: 9px;
+   }
+ 
++  .graph-node {
++    padding: 10px;
++  }
++
++  .graph-node strong {
++    font-size: 12px;
++  }
++
+   .agent-controls {
+     gap: 7px;
+   }
+@@ -934,7 +1348,3 @@ dialog p:not(.eyebrow) {
+     font-size: 8px;
+   }
+ }
+-
+-.manual-decision {
+-  margin: 18px 0;
+-}

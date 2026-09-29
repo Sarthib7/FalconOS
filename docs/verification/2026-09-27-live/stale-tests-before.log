@@ -1,0 +1,199 @@
+
+> falconos-web@0.0.0 test
+> node --test test/*.test.mjs
+
+✖ public landing stays unchanged while dashboard opens the Devnet app (2.490584ms)
+✔ dashboard entry opens the wallet terminal (2.32875ms)
+✔ production trade UI has a fixed Devnet path and manual wallet sign step (0.668417ms)
+✔ SIWS request binds domain, address, nonce, and expiry without a cluster chain ID (112.486292ms)
+✔ wallet signature parsing accepts wrapped and raw provider results (43.943292ms)
+✔ SIWS proof verifies the signature and rejects changed scope or message (340.252209ms)
+✔ Devnet account reads use only the fixed RPC and validate balance (576.505958ms)
+✔ Devnet SPL and Token-2022 balances are parsed and combined by mint (741.852ms)
+✔ Devnet recent signatures validate limits and keep failed status visible (2.154625ms)
+✔ Devnet token decimals use the live mint supply response (1.28425ms)
+✔ token display formatting keeps integer precision (3405.124875ms)
+✔ invalid wallet addresses fail before RPC access (0.776083ms)
+✔ TestV76: production quote validates every pool and ordered mint hop in a two-leg route (1212.348042ms)
+✔ TestV76: production quote validates mixed CLMM and AMM V4 state layouts (150.599666ms)
+✔ TestV76: production quote rejects broken mint continuity before pool lookup (60.703542ms)
+✔ TestV76: production quote rejects repeated pools and routes above four legs (26.831583ms)
+✔ TestV76: production quote accepts a verified single CPMM route (95.764667ms)
+✔ TestV76: production transaction builder revalidates a multi-hop quote and returns one unsigned transaction (137.791083ms)
+✔ blockhash, simulation, send, and confirmation stay on Devnet (107.217667ms)
+✔ portfolio watchlist persists by wallet and removes invalid or duplicate mints (267.842334ms)
+✔ order journal persists order states and signatures by wallet (17.028792ms)
+✔ order journal rejects non-Devnet, invalid mint, and malformed amounts (3.28575ms)
+✔ session proof can be stored and cleared without deleting account history (12.640292ms)
+✔ signed Devnet transaction keeps the simulated message and verifies every signer (383.812125ms)
+✔ transaction signer check rejects changed messages, missing signatures, and unrelated wallets (95.157791ms)
+graph-before-trade advice-on-graph terminal font-family: ui-monospace node.kind node.detail value source reason Surfpool 18488 Devnet
+✔ copilot surface contains Surfpool and Devnet wallet controls (157.836334ms)
+✔ copilot page contains no private-key or seed handling strings (34.275334ms)
+✔ every inline script compiles (179.617625ms)
+✔ sign path deserializes before wallet handoff and copilot stays out of the production build (521.889833ms)
+✔ dashboard route links to the Devnet terminal and states its execution boundary (3.168167ms)
+✔ validOhlc rejects zero and negative price values (0.702292ms)
+✔ normalizeSnapshot emits normalized OHLC and derived metrics (85.766834ms)
+✔ normalizeSnapshot ignores forged metadata (17.238083ms)
+✔ deriveMetrics rejects non-finite derived values (0.828ms)
+✔ validPrice rejects stale and future provider timestamps (0.323625ms)
+✔ only the selected Surfpool or Devnet RPC is an allowed send target (12.406208ms)
+✔ send rejects public mainnet before making an RPC request (284.512167ms)
+✔ send uses the selected Devnet RPC when Devnet is allowed (2617.45825ms)
+✔ latest blockhash comes from the Surfpool RPC (2.460042ms)
+✔ Devnet blockhash and block height use only the Devnet RPC (470.12325ms)
+✔ Jupiter quote and unsigned build use the selected supported mint (9.849625ms)
+✔ V71 rejects an invalid wallet public key before the Jupiter build call (0.8405ms)
+✔ Devnet quote checks the live CPMM owner, pool mints, amount, and sole route (169.391833ms)
+✔ Devnet quote rejects a wrong pool owner or a quote route through another pool (4.826ms)
+✔ Devnet quote rejects a pool whose on-chain mint pair does not match the request (5.940292ms)
+✔ Devnet build pins one CPMM quote and returns one unsigned transaction (387.239666ms)
+✔ Devnet build rejects missing input accounts and multiple transactions (5.089125ms)
+✔ token account lookup uses only the selected target RPC (0.585458ms)
+✔ simulation fails closed on an error or a missing err field (187.708375ms)
+✔ signature status reads only Surfpool and returns confirmed status (1.1225ms)
+✔ signature status requests abort at their timeout (403.901708ms)
+✔ confirmation wait distinguishes success, on-chain failure, and timeout (13.587833ms)
+✖ V48: landing leads with a concise product view (87.204208ms)
+✖ V51 V53: public landing keeps advisory boundaries (12.128834ms)
+✖ V55: production links resolve within deployed page (1.827375ms)
+✔ V56: every inline landing script compiles (3.349459ms)
+✔ V58: product and research pages carry the deeper context (209.524916ms)
+✔ waitlist accepts and normalizes a valid email (1649.324958ms)
+✔ waitlist rejects invalid email before database writes (4.032292ms)
+✔ waitlist rejects oversized chunked bodies before database writes (3.726583ms)
+✔ waitlist counts repeated submissions even for one email (231.454125ms)
+✔ waitlist limits concurrent new emails with one atomic counter (32.389541ms)
+✔ waitlist rate-limits when the atomic counter reaches the limit (79.938542ms)
+✔ waitlist fails closed when production bindings are missing (1.018292ms)
+ℹ tests 64
+ℹ suites 0
+ℹ pass 60
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9846.262083
+
+✖ failing tests:
+
+test at test/access.test.mjs:8:1
+✖ public landing stays unchanged while dashboard opens the Devnet app (2.490584ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /id="market-snap"/. Input:
+  
+  '<!doctype html>\n' +
+    '<html lang="en">\n' +
+    '<head>\n' +
+    '  <meta charset="utf-8">\n' +
+    '  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+    '  <meta name="theme-color" content="#101512">\n' +
+    '  <meta name="description" content="A personal stablecoin treasury agent, guided by your rules. Explore FalconOS through a visual simulation of capital, evidence, and decisions.">\n' +
+    '  <meta property="og:title" content="FalconOS | Your rules. Every move explained.">\n' +
+    '  <meta property="og:description" content="Explore synthetic treasury scenarios, inspect decision evidence, and follow the FalconOS build.">\n' +
+    '  <meta property="og:type" content="website">\n' +
+    '  <meta property="og:url" content="https://falconos.markets/">\n' +
+    '  <link rel="canonical" href="https://falconos.markets/">\n' +
+    '  <link rel="icon" type="image/svg+xml" href="/landing/assets/falcon.svg">\n' +
+    '  <title>FalconOS · Your rules. Every move explained.</title>\n' +
+    '  <script type="module" src="/landing/main.jsx"></script>\n' +
+    '</head>\n' +
+    '<body>\n' +
+    '  <div id="root"></div>\n' +
+    '  <noscript><p>Enable JavaScript to explore the synthetic treasury scenarios and join the email list.</p></noscript>\n' +
+    '</body>\n' +
+    '</html>\n'
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-site-release-lgLn0b/web/test/access.test.mjs:9:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="theme-color" content="#101512">\n  <meta name="description" content="A personal stablecoin treasury agent, guided by your rules. Explore FalconOS through a visual simulation of capital, evidence, and decisions.">\n  <meta property="og:title" content="FalconOS | Your rules. Every move explained.">\n  <meta property="og:description" content="Explore synthetic treasury scenarios, inspect decision evidence, and follow the FalconOS build.">\n  <meta property="og:type" content="website">\n  <meta property="og:url" content="https://falconos.markets/">\n  <link rel="canonical" href="https://falconos.markets/">\n  <link rel="icon" type="image/svg+xml" href="/landing/assets/falcon.svg">\n  <title>FalconOS · Your rules. Every move explained.</title>\n  <script type="module" src="/landing/main.jsx"></script>\n</head>\n<body>\n  <div id="root"></div>\n  <noscript><p>Enable JavaScript to explore the synthetic treasury scenarios and join the email list.</p></noscript>\n</body>\n</html>\n',
+    expected: /id="market-snap"/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at test/landing.test.mjs:14:1
+✖ V48: landing leads with a concise product view (87.204208ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /An investment firm built around agents\./. Input:
+  
+  'FalconOS · Your rules. Every move explained. Enable JavaScript to explore the synthetic treasury scenarios and join the email list.'
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-site-release-lgLn0b/web/test/landing.test.mjs:15:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FalconOS · Your rules. Every move explained. Enable JavaScript to explore the synthetic treasury scenarios and join the email list.',
+    expected: /An investment firm built around agents\./,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at test/landing.test.mjs:22:1
+✖ V51 V53: public landing keeps advisory boundaries (12.128834ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Read-only snapshot across sample instruments/. Input:
+  
+  'FalconOS · Your rules. Every move explained. Enable JavaScript to explore the synthetic treasury scenarios and join the email list.'
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-site-release-lgLn0b/web/test/landing.test.mjs:23:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FalconOS · Your rules. Every move explained. Enable JavaScript to explore the synthetic treasury scenarios and join the email list.',
+    expected: /Read-only snapshot across sample instruments/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at test/landing.test.mjs:29:1
+✖ V55: production links resolve within deployed page (1.827375ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /rel="icon"[^>]+href="\/falcon-symbol\.png"/. Input:
+  
+  '<!doctype html>\n' +
+    '<html lang="en">\n' +
+    '<head>\n' +
+    '  <meta charset="utf-8">\n' +
+    '  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+    '  <meta name="theme-color" content="#101512">\n' +
+    '  <meta name="description" content="A personal stablecoin treasury agent, guided by your rules. Explore FalconOS through a visual simulation of capital, evidence, and decisions.">\n' +
+    '  <meta property="og:title" content="FalconOS | Your rules. Every move explained.">\n' +
+    '  <meta property="og:description" content="Explore synthetic treasury scenarios, inspect decision evidence, and follow the FalconOS build.">\n' +
+    '  <meta property="og:type" content="website">\n' +
+    '  <meta property="og:url" content="https://falconos.markets/">\n' +
+    '  <link rel="canonical" href="https://falconos.markets/">\n' +
+    '  <link rel="icon" type="image/svg+xml" href="/landing/assets/falcon.svg">\n' +
+    '  <title>FalconOS · Your rules. Every move explained.</title>\n' +
+    '  <script type="module" src="/landing/main.jsx"></script>\n' +
+    '</head>\n' +
+    '<body>\n' +
+    '  <div id="root"></div>\n' +
+    '  <noscript><p>Enable JavaScript to explore the synthetic treasury scenarios and join the email list.</p></noscript>\n' +
+    '</body>\n' +
+    '</html>\n'
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-site-release-lgLn0b/web/test/landing.test.mjs:34:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="theme-color" content="#101512">\n  <meta name="description" content="A personal stablecoin treasury agent, guided by your rules. Explore FalconOS through a visual simulation of capital, evidence, and decisions.">\n  <meta property="og:title" content="FalconOS | Your rules. Every move explained.">\n  <meta property="og:description" content="Explore synthetic treasury scenarios, inspect decision evidence, and follow the FalconOS build.">\n  <meta property="og:type" content="website">\n  <meta property="og:url" content="https://falconos.markets/">\n  <link rel="canonical" href="https://falconos.markets/">\n  <link rel="icon" type="image/svg+xml" href="/landing/assets/falcon.svg">\n  <title>FalconOS · Your rules. Every move explained.</title>\n  <script type="module" src="/landing/main.jsx"></script>\n</head>\n<body>\n  <div id="root"></div>\n  <noscript><p>Enable JavaScript to explore the synthetic treasury scenarios and join the email list.</p></noscript>\n</body>\n</html>\n',
+    expected: /rel="icon"[^>]+href="\/falcon-symbol\.png"/,
+    operator: 'match',
+    diff: 'simple'
+  }

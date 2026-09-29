@@ -1,0 +1,92 @@
+{
+  "passed": 8,
+  "total": 8,
+  "checks": [
+    {
+      "name": "0001 has exactly the two capture tables and explicit index",
+      "passed": true
+    },
+    {
+      "name": "reapplying 0001 preserves captured and rate-limit rows",
+      "passed": true
+    },
+    {
+      "name": "capture works with only 0001 and returns the durable duplicate status",
+      "passed": true
+    },
+    {
+      "name": "unconfigured confirmation makes no outbox query or provider request",
+      "passed": true
+    },
+    {
+      "name": "duplicate signup stores one new address and preserves the original row",
+      "passed": true
+    },
+    {
+      "name": "full history upgrade preserves all capture and rate-limit rows",
+      "passed": true
+    },
+    {
+      "name": "upgraded schema equals fresh full-history schema",
+      "passed": true
+    },
+    {
+      "name": "new outbox is empty after upgrade",
+      "passed": true
+    }
+  ],
+  "migrationHashes": {
+    "web/migrations/0001_waitlist.sql": "adef9fb6982eedd1627cd9ceadf700a049ade5d75586d06f11ca5bcba074a6d1",
+    "web/migrations/0002_waitlist_email_outbox.sql": "9cae47f65f4bcd6a2703da1d524fc16088ca99c594a57b67b0a267348501025d"
+  },
+  "captureOnlyResponses": [
+    {
+      "status": 201,
+      "body": {
+        "status": "registered",
+        "emailStatus": "not_configured"
+      }
+    },
+    {
+      "status": 200,
+      "body": {
+        "status": "already_registered",
+        "emailStatus": "not_configured"
+      }
+    }
+  ],
+  "providerCalls": 0,
+  "beforeUpgradeRowsSha256": "3428d15b8d941016f56f465cef5135c59e8e738df9497edb234f9a9496da3cde",
+  "afterUpgradeRowsSha256": "3428d15b8d941016f56f465cef5135c59e8e738df9497edb234f9a9496da3cde",
+  "preservedCounts": {
+    "waitlist_entries": 2,
+    "waitlist_rate_limits": 2
+  },
+  "fullHistoryCatalog": [
+    {
+      "type": "index",
+      "name": "waitlist_entries_ip_created_idx",
+      "tbl_name": "waitlist_entries",
+      "sql": "CREATE INDEX waitlist_entries_ip_created_idx\n  ON waitlist_entries (ip_hash, created_at)"
+    },
+    {
+      "type": "table",
+      "name": "waitlist_email_outbox",
+      "tbl_name": "waitlist_email_outbox",
+      "sql": "CREATE TABLE waitlist_email_outbox (\n  id TEXT PRIMARY KEY,\n  email TEXT NOT NULL UNIQUE REFERENCES waitlist_entries(email),\n  request_body TEXT NOT NULL,\n  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'inflight', 'accepted', 'failed', 'unknown')),\n  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),\n  claim_id TEXT,\n  first_attempt_at INTEGER,\n  retry_until INTEGER,\n  lease_until INTEGER,\n  provider_email_id TEXT,\n  last_error_code TEXT,\n  created_at TEXT NOT NULL DEFAULT (datetime('now')),\n  updated_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+    },
+    {
+      "type": "table",
+      "name": "waitlist_entries",
+      "tbl_name": "waitlist_entries",
+      "sql": "CREATE TABLE waitlist_entries (\n  email TEXT PRIMARY KEY,\n  source TEXT NOT NULL,\n  ip_hash TEXT NOT NULL,\n  created_at TEXT NOT NULL DEFAULT (datetime('now')),\n  updated_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+    },
+    {
+      "type": "table",
+      "name": "waitlist_rate_limits",
+      "tbl_name": "waitlist_rate_limits",
+      "sql": "CREATE TABLE waitlist_rate_limits (\n  ip_hash TEXT PRIMARY KEY,\n  window_start INTEGER NOT NULL,\n  attempts INTEGER NOT NULL\n)"
+    }
+  ],
+  "limits": "Disposable in-memory Node SQLite with D1-shaped adapter. This does not prove hosted D1 runtime behavior, Cloudflare configuration, real registrations, or inbox delivery."
+}

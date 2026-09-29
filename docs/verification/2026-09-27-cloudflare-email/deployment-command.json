@@ -1,0 +1,21 @@
+{
+  "status": "PROPOSED ONLY; no deployment executed",
+  "cwd": "/private/tmp/falcon-email-release-l1mn8621/artifact",
+  "environment": {
+    "CLOUDFLARE_ACCOUNT_ID": "f646b35b9c52945d4a7e6d19909981d8",
+    "WRANGLER_LOG_PATH": "/private/tmp/falcon-email-release-l1mn8621/deployment.log",
+    "WRANGLER_LOG_SANITIZE": "true",
+    "WRANGLER_SEND_METRICS": "false"
+  },
+  "argv": [
+    "node",
+    "/private/tmp/falcon-wrangler-tools-FYq5lp/node_modules/wrangler/bin/wrangler.js",
+    "pages",
+    "deploy",
+    ".",
+    "--project-name",
+    "falconos",
+    "--branch",
+    "main"
+  ]
+}

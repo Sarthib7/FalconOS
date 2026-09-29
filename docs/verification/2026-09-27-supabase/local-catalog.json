@@ -1,0 +1,524 @@
+{
+  "namespace": [
+    {
+      "nspname": "falcon_mesh",
+      "comment": "falcon_mesh_schema_version=2"
+    }
+  ],
+  "tables": [
+    {
+      "relname": "analyses",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "relname": "lending_events",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "relname": "lending_intents",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "relname": "source_heads",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    },
+    {
+      "relname": "source_revisions",
+      "relkind": "r",
+      "relrowsecurity": false,
+      "relforcerowsecurity": false
+    }
+  ],
+  "columns": [
+    {
+      "relname": "analyses",
+      "attname": "owner_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "analyses",
+      "attname": "id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "analyses",
+      "attname": "request_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "analyses",
+      "attname": "created_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "analyses",
+      "attname": "observation_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "analyses",
+      "attname": "max_hops",
+      "type": "smallint",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "analyses",
+      "attname": "graph",
+      "type": "jsonb",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "analyses",
+      "attname": "analysis",
+      "type": "jsonb",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_events",
+      "attname": "owner_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_events",
+      "attname": "intent_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_events",
+      "attname": "id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_events",
+      "attname": "request_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_events",
+      "attname": "created_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_events",
+      "attname": "kind",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_events",
+      "attname": "data",
+      "type": "jsonb",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_intents",
+      "attname": "owner_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_intents",
+      "attname": "id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_intents",
+      "attname": "request_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_intents",
+      "attname": "analysis_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_intents",
+      "attname": "created_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_intents",
+      "attname": "request",
+      "type": "jsonb",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "lending_intents",
+      "attname": "intent",
+      "type": "jsonb",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_heads",
+      "attname": "owner_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_heads",
+      "attname": "source_key",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_heads",
+      "attname": "revision_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_revisions",
+      "attname": "owner_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_revisions",
+      "attname": "revision_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_revisions",
+      "attname": "source_key",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_revisions",
+      "attname": "source_url",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_revisions",
+      "attname": "observed_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_revisions",
+      "attname": "captured_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_revisions",
+      "attname": "sha256",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    },
+    {
+      "relname": "source_revisions",
+      "attname": "content",
+      "type": "text",
+      "attnotnull": true,
+      "default_expression": null
+    }
+  ],
+  "constraints": [
+    {
+      "relname": "analyses",
+      "conname": "analyses_analysis_check",
+      "contype": "c",
+      "definition": "CHECK ((jsonb_typeof(analysis) = 'object'::text))",
+      "convalidated": true
+    },
+    {
+      "relname": "analyses",
+      "conname": "analyses_graph_check",
+      "contype": "c",
+      "definition": "CHECK ((jsonb_typeof(graph) = 'object'::text))",
+      "convalidated": true
+    },
+    {
+      "relname": "analyses",
+      "conname": "analyses_max_hops_check",
+      "contype": "c",
+      "definition": "CHECK (((max_hops >= 1) AND (max_hops <= 3)))",
+      "convalidated": true
+    },
+    {
+      "relname": "analyses",
+      "conname": "analyses_owner_id_check",
+      "contype": "c",
+      "definition": "CHECK ((owner_id ~ '^[a-z0-9_-]{1,64}$'::text))",
+      "convalidated": true
+    },
+    {
+      "relname": "analyses",
+      "conname": "analyses_owner_id_request_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (owner_id, request_id)",
+      "convalidated": true
+    },
+    {
+      "relname": "analyses",
+      "conname": "analyses_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (owner_id, id)",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_events",
+      "conname": "lending_events_data_check",
+      "contype": "c",
+      "definition": "CHECK (((jsonb_typeof(data) = 'object'::text) AND (octet_length((data)::text) <= 1048576)))",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_events",
+      "conname": "lending_events_kind_check",
+      "contype": "c",
+      "definition": "CHECK (((length(kind) <= 16) AND (kind = ANY (ARRAY['SUBMITTED'::text, 'RECEIPT'::text]))))",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_events",
+      "conname": "lending_events_owner_id_check",
+      "contype": "c",
+      "definition": "CHECK ((owner_id ~ '^[a-z0-9_-]{1,64}$'::text))",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_events",
+      "conname": "lending_events_owner_id_intent_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (owner_id, intent_id) REFERENCES falcon_mesh.lending_intents(owner_id, id)",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_events",
+      "conname": "lending_events_owner_id_request_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (owner_id, request_id)",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_events",
+      "conname": "lending_events_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (owner_id, id)",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_intents",
+      "conname": "lending_intents_intent_check",
+      "contype": "c",
+      "definition": "CHECK (((jsonb_typeof(intent) = 'object'::text) AND (octet_length((intent)::text) <= 1048576)))",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_intents",
+      "conname": "lending_intents_owner_id_analysis_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (owner_id, analysis_id) REFERENCES falcon_mesh.analyses(owner_id, id)",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_intents",
+      "conname": "lending_intents_owner_id_check",
+      "contype": "c",
+      "definition": "CHECK ((owner_id ~ '^[a-z0-9_-]{1,64}$'::text))",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_intents",
+      "conname": "lending_intents_owner_id_request_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (owner_id, request_id)",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_intents",
+      "conname": "lending_intents_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (owner_id, id)",
+      "convalidated": true
+    },
+    {
+      "relname": "lending_intents",
+      "conname": "lending_intents_request_check",
+      "contype": "c",
+      "definition": "CHECK (((jsonb_typeof(request) = 'object'::text) AND (octet_length((request)::text) <= 4096)))",
+      "convalidated": true
+    },
+    {
+      "relname": "source_heads",
+      "conname": "source_heads_owner_id_source_key_revision_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (owner_id, source_key, revision_id) REFERENCES falcon_mesh.source_revisions(owner_id, source_key, revision_id)",
+      "convalidated": true
+    },
+    {
+      "relname": "source_heads",
+      "conname": "source_heads_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (owner_id, source_key)",
+      "convalidated": true
+    },
+    {
+      "relname": "source_revisions",
+      "conname": "source_revisions_check",
+      "contype": "c",
+      "definition": "CHECK ((captured_at >= observed_at))",
+      "convalidated": true
+    },
+    {
+      "relname": "source_revisions",
+      "conname": "source_revisions_content_check",
+      "contype": "c",
+      "definition": "CHECK ((octet_length(content) <= 131072))",
+      "convalidated": true
+    },
+    {
+      "relname": "source_revisions",
+      "conname": "source_revisions_owner_id_check",
+      "contype": "c",
+      "definition": "CHECK ((owner_id ~ '^[a-z0-9_-]{1,64}$'::text))",
+      "convalidated": true
+    },
+    {
+      "relname": "source_revisions",
+      "conname": "source_revisions_owner_id_source_key_revision_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (owner_id, source_key, revision_id)",
+      "convalidated": true
+    },
+    {
+      "relname": "source_revisions",
+      "conname": "source_revisions_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (owner_id, revision_id)",
+      "convalidated": true
+    },
+    {
+      "relname": "source_revisions",
+      "conname": "source_revisions_sha256_check",
+      "contype": "c",
+      "definition": "CHECK ((sha256 ~ '^[a-f0-9]{64}$'::text))",
+      "convalidated": true
+    }
+  ],
+  "indexes": [
+    {
+      "tablename": "analyses",
+      "indexname": "analyses_owner_created_at",
+      "indexdef": "CREATE INDEX analyses_owner_created_at ON falcon_mesh.analyses USING btree (owner_id, created_at DESC, id DESC)"
+    },
+    {
+      "tablename": "analyses",
+      "indexname": "analyses_owner_id_request_id_key",
+      "indexdef": "CREATE UNIQUE INDEX analyses_owner_id_request_id_key ON falcon_mesh.analyses USING btree (owner_id, request_id)"
+    },
+    {
+      "tablename": "analyses",
+      "indexname": "analyses_pkey",
+      "indexdef": "CREATE UNIQUE INDEX analyses_pkey ON falcon_mesh.analyses USING btree (owner_id, id)"
+    },
+    {
+      "tablename": "lending_events",
+      "indexname": "lending_events_intent_created",
+      "indexdef": "CREATE INDEX lending_events_intent_created ON falcon_mesh.lending_events USING btree (owner_id, intent_id, created_at, id)"
+    },
+    {
+      "tablename": "lending_events",
+      "indexname": "lending_events_one_submission",
+      "indexdef": "CREATE UNIQUE INDEX lending_events_one_submission ON falcon_mesh.lending_events USING btree (owner_id, intent_id) WHERE (kind = 'SUBMITTED'::text)"
+    },
+    {
+      "tablename": "lending_events",
+      "indexname": "lending_events_owner_id_request_id_key",
+      "indexdef": "CREATE UNIQUE INDEX lending_events_owner_id_request_id_key ON falcon_mesh.lending_events USING btree (owner_id, request_id)"
+    },
+    {
+      "tablename": "lending_events",
+      "indexname": "lending_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX lending_events_pkey ON falcon_mesh.lending_events USING btree (owner_id, id)"
+    },
+    {
+      "tablename": "lending_intents",
+      "indexname": "lending_intents_owner_created",
+      "indexdef": "CREATE INDEX lending_intents_owner_created ON falcon_mesh.lending_intents USING btree (owner_id, created_at DESC, id DESC)"
+    },
+    {
+      "tablename": "lending_intents",
+      "indexname": "lending_intents_owner_id_request_id_key",
+      "indexdef": "CREATE UNIQUE INDEX lending_intents_owner_id_request_id_key ON falcon_mesh.lending_intents USING btree (owner_id, request_id)"
+    },
+    {
+      "tablename": "lending_intents",
+      "indexname": "lending_intents_pkey",
+      "indexdef": "CREATE UNIQUE INDEX lending_intents_pkey ON falcon_mesh.lending_intents USING btree (owner_id, id)"
+    },
+    {
+      "tablename": "source_heads",
+      "indexname": "source_heads_pkey",
+      "indexdef": "CREATE UNIQUE INDEX source_heads_pkey ON falcon_mesh.source_heads USING btree (owner_id, source_key)"
+    },
+    {
+      "tablename": "source_revisions",
+      "indexname": "source_revisions_owner_id_source_key_revision_id_key",
+      "indexdef": "CREATE UNIQUE INDEX source_revisions_owner_id_source_key_revision_id_key ON falcon_mesh.source_revisions USING btree (owner_id, source_key, revision_id)"
+    },
+    {
+      "tablename": "source_revisions",
+      "indexname": "source_revisions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX source_revisions_pkey ON falcon_mesh.source_revisions USING btree (owner_id, revision_id)"
+    }
+  ]
+}

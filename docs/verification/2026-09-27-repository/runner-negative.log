@@ -1,0 +1,88 @@
+✖ REPO-VERIFY-1: missing test database blocks mesh without using DATABASE_URL (1.515833ms)
+✖ REPO-VERIFY-1: failed command stops its scope while other scopes continue (0.787959ms)
+✖ REPO-VERIFY-1: an unavailable child fails verification (0.27525ms)
+✔ REPO-VERIFY-1: successful local scopes accept Unix socket database URLs without logging them (0.289917ms)
+✔ REPO-VERIFY-1: unknown or multiple scopes are rejected before a command starts (0.266667ms)
+✖ REPO-VERIFY-1: CLI preserves blocked and invalid-scope exit codes (45.542042ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 2
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 118.238833
+
+✖ failing tests:
+
+test at ../../../private/tmp/falcon-verify-negative-VkTR7N/scripts/test/verify.test.mjs:12:1
+✖ REPO-VERIFY-1: missing test database blocks mesh without using DATABASE_URL (1.515833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-verify-negative-VkTR7N/scripts/test/verify.test.mjs:19:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../private/tmp/falcon-verify-negative-VkTR7N/scripts/test/verify.test.mjs:26:1
+✖ REPO-VERIFY-1: failed command stops its scope while other scopes continue (0.787959ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-verify-negative-VkTR7N/scripts/test/verify.test.mjs:33:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../private/tmp/falcon-verify-negative-VkTR7N/scripts/test/verify.test.mjs:42:1
+✖ REPO-VERIFY-1: an unavailable child fails verification (0.27525ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-verify-negative-VkTR7N/scripts/test/verify.test.mjs:47:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../private/tmp/falcon-verify-negative-VkTR7N/scripts/test/verify.test.mjs:83:1
+✖ REPO-VERIFY-1: CLI preserves blocked and invalid-scope exit codes (45.542042ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///private/tmp/falcon-verify-negative-VkTR7N/scripts/test/verify.test.mjs:90:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

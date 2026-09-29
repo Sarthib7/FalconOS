@@ -1,10 +1,12 @@
 use crate::domain::FieldCapture;
 use reqwest::Client;
 use serde_json::Value;
+use std::cmp::Ordering;
 use std::time::Duration;
 
 const BASE_URL: &str = "https://api.dexscreener.com";
 const MAX_BODY_BYTES: usize = 2 * 1024 * 1024;
+const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 async fn bounded_response_bytes(mut response: reqwest::Response) -> Result<Vec<u8>, String> {
     let mut body = Vec::new();
@@ -36,6 +38,9 @@ fn decimal(value: &Value) -> Option<String> {
         Value::Number(number) => number.to_string(),
         _ => return None,
     };
+    if text.len() > 256 {
+        return None;
+    }
     let mut dots = 0;
     let mut digits = 0;
     for ch in text.chars() {
@@ -114,40 +119,14 @@ pub async fn fetch_asset(asset: &DexAsset, base_url: Option<&str>) -> AssetCaptu
     let Some(pairs) = body.as_array() else {
         return failed(&observed, "response was not a pair array");
     };
-    let mut deepest: Option<&Value> = None;
-    let mut deepest_liquidity: Option<String> = None;
-    for pair in pairs {
-        if pair.get("chainId").and_then(Value::as_str) != Some("solana")
-            || pair
-                .get("baseToken")
-                .and_then(|v| v.get("address"))
-                .and_then(Value::as_str)
-                != Some(asset.asset_id.as_str())
-        {
-            continue;
-        }
-        let candidate = pair
-            .get("liquidity")
-            .and_then(|v| v.get("usd"))
-            .and_then(decimal);
-        let replace = match (&deepest_liquidity, &candidate) {
-            (None, Some(_)) => true,
-            (Some(current), Some(next)) => decimal_units(next, 0) > decimal_units(current, 0),
-            _ => deepest.is_none(),
-        };
-        if replace {
-            deepest = Some(pair);
-            deepest_liquidity = candidate;
-        }
-    }
-    let Some(pair) = deepest else {
+    let Some(pair) = select_pair(pairs, &asset.asset_id) else {
         return failed(&observed, "no indexed solana pool for mint");
     };
-    let Some(liquidity) = deepest_liquidity else {
-        return failed(&observed, "null liquidity in deepest pool");
+    let Some(liquidity) = pair_liquidity(pair) else {
+        return failed(&observed, "null liquidity in selected pool");
     };
     let Some(price) = pair.get("priceUsd").and_then(decimal) else {
-        return failed(&observed, "null price in deepest pool");
+        return failed(&observed, "null price in selected pool");
     };
     let Some(price_value) = scale_decimal(&price, asset.price_scale) else {
         return failed(&observed, "unparseable pool price");
@@ -159,9 +138,16 @@ pub async fn fetch_asset(asset: &DexAsset, base_url: Option<&str>) -> AssetCaptu
         .get("pairAddress")
         .and_then(Value::as_str)
         .unwrap_or("");
-    let raw = format!(
-        r#"{{"pairAddress":{pair_address:?},"priceUsd":{price:?},"liquidityUsd":{liquidity:?}}}"#
-    );
+    let quote_token = pair.get("quoteToken").unwrap_or(&Value::Null);
+    let raw = serde_json::json!({
+        "pairAddress": pair_address,
+        "baseTokenAddress": pair.get("baseToken").and_then(|token| token.get("address")).and_then(Value::as_str),
+        "quoteTokenAddress": quote_token.get("address").and_then(Value::as_str),
+        "quoteTokenSymbol": quote_token.get("symbol").and_then(Value::as_str),
+        "priceUsd": price,
+        "liquidityUsd": liquidity
+    })
+    .to_string();
     AssetCaptures {
         price: FieldCapture::ok(
             "dexscreener",
@@ -180,10 +166,96 @@ pub async fn fetch_asset(asset: &DexAsset, base_url: Option<&str>) -> AssetCaptu
     }
 }
 
-fn decimal_units(value: &str, scale: u32) -> u128 {
-    scale_decimal(value, scale)
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(0)
+fn pair_liquidity(pair: &Value) -> Option<String> {
+    pair.get("liquidity")
+        .and_then(|value| value.get("usd"))
+        .and_then(decimal)
+}
+
+/// Prefer the deepest USDC-quoted pool. A non-USD quote makes `priceUsd` depend on that quote token.
+/// Fall back to the deepest pool only when no USDC quote exists.
+fn select_pair<'a>(pairs: &'a [Value], asset_id: &str) -> Option<&'a Value> {
+    let mut usdc: Option<&Value> = None;
+    let mut usdc_liq: Option<String> = None;
+    let mut any: Option<&Value> = None;
+    let mut any_liq: Option<String> = None;
+    for pair in pairs {
+        if pair.get("chainId").and_then(Value::as_str) != Some("solana")
+            || pair
+                .get("baseToken")
+                .and_then(|value| value.get("address"))
+                .and_then(Value::as_str)
+                != Some(asset_id)
+        {
+            continue;
+        }
+        let liquidity = pair_liquidity(pair);
+        let quote_usdc = pair
+            .get("quoteToken")
+            .and_then(|value| value.get("address"))
+            .and_then(Value::as_str)
+            == Some(USDC_MINT);
+        if quote_usdc
+            && let Some(next) = liquidity.as_deref()
+            && match &usdc_liq {
+                None => true,
+                Some(current) => compare_decimals(next, current) == Ordering::Greater,
+            }
+        {
+            usdc = Some(pair);
+            usdc_liq = liquidity.clone();
+        }
+        let replace = match (&any_liq, &liquidity) {
+            (None, Some(_)) => true,
+            (Some(current), Some(next)) => compare_decimals(next, current) == Ordering::Greater,
+            _ => any.is_none(),
+        };
+        if replace {
+            any = Some(pair);
+            any_liq = liquidity;
+        }
+    }
+    usdc.or(any)
+}
+
+fn compare_decimals(left: &str, right: &str) -> Ordering {
+    let (left_whole, left_fraction) = left.split_once('.').unwrap_or((left, ""));
+    let (right_whole, right_fraction) = right.split_once('.').unwrap_or((right, ""));
+    let left_whole = left_whole.trim_start_matches('0');
+    let right_whole = right_whole.trim_start_matches('0');
+    let left_whole = if left_whole.is_empty() {
+        "0"
+    } else {
+        left_whole
+    };
+    let right_whole = if right_whole.is_empty() {
+        "0"
+    } else {
+        right_whole
+    };
+
+    match left_whole.len().cmp(&right_whole.len()) {
+        Ordering::Equal => {}
+        ordering => return ordering,
+    }
+    match left_whole.cmp(right_whole) {
+        Ordering::Equal => {}
+        ordering => return ordering,
+    }
+
+    for index in 0..left_fraction.len().max(right_fraction.len()) {
+        let left_digit = left_fraction.as_bytes().get(index).copied().unwrap_or(b'0');
+        let right_digit = right_fraction
+            .as_bytes()
+            .get(index)
+            .copied()
+            .unwrap_or(b'0');
+        match left_digit.cmp(&right_digit) {
+            Ordering::Equal => {}
+            ordering => return ordering,
+        }
+    }
+    Ordering::Equal
 }
 
 #[cfg(test)]
@@ -192,7 +264,71 @@ mod tests {
 
     #[test]
     fn decimal_math_is_integer_based() {
-        assert_eq!(decimal_units("100.50", 0), 100);
         assert_eq!(scale_decimal("1.25", 6), Some("1250000".into()));
+        assert_eq!(compare_decimals("100.50", "100.5"), Ordering::Equal);
+        assert_eq!(compare_decimals("100.09", "100.01"), Ordering::Greater);
+        assert_eq!(compare_decimals("0.9", "0.89"), Ordering::Greater);
+        assert_eq!(
+            compare_decimals("999999999999999999999999", "1000000000000000000000000"),
+            Ordering::Less
+        );
+    }
+
+    #[test]
+    fn usdc_quote_beats_a_deeper_non_usd_pool() {
+        // V67: a deeper non-USDC quote must not beat a liquid USDC quote.
+        let mint = "PreANxuXjsy2pvisWWMNB6YaJNzr7681wJJr2rHsfTh";
+        let pairs = vec![
+            serde_json::json!({
+                "chainId": "solana",
+                "baseToken": {"address": mint},
+                "quoteToken": {"address": "Xs3oZwbHvqis4NYcf4YKWmEia2eC84wSiVrcYcTqpH8", "symbol": "SPCXx"},
+                "liquidity": {"usd": 117709.46},
+                "priceUsd": "541.74"
+            }),
+            serde_json::json!({
+                "chainId": "solana",
+                "baseToken": {"address": "PreC1KtJ"},
+                "quoteToken": {"address": mint, "symbol": "SPACEX"},
+                "liquidity": {"usd": 900000.0},
+                "priceUsd": "78.45"
+            }),
+            serde_json::json!({
+                "chainId": "solana",
+                "baseToken": {"address": mint},
+                "quoteToken": {"address": USDC_MINT, "symbol": "USDC"},
+                "liquidity": {"usd": 51377.8},
+                "priceUsd": "573.41"
+            }),
+        ];
+        let selected = select_pair(&pairs, mint).expect("pair");
+        assert_eq!(
+            selected.get("priceUsd").and_then(Value::as_str),
+            Some("573.41")
+        );
+    }
+
+    #[test]
+    fn exact_liquidity_comparison_keeps_fractional_and_large_values() {
+        // V68: ranking must preserve fractional precision and avoid integer overflow.
+        let mint = "mint-a";
+        let pairs = vec![
+            serde_json::json!({
+                "chainId": "solana",
+                "baseToken": {"address": mint},
+                "quoteToken": {"address": USDC_MINT, "symbol": "USDC"},
+                "liquidity": {"usd": "900000000000000000000000.01"},
+                "priceUsd": "10"
+            }),
+            serde_json::json!({
+                "chainId": "solana",
+                "baseToken": {"address": mint},
+                "quoteToken": {"address": USDC_MINT, "symbol": "USDC"},
+                "liquidity": {"usd": "900000000000000000000000.09"},
+                "priceUsd": "11"
+            }),
+        ];
+        let selected = select_pair(&pairs, mint).expect("pair");
+        assert_eq!(selected.get("priceUsd").and_then(Value::as_str), Some("11"));
     }
 }

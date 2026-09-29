@@ -1,0 +1,162 @@
+{
+  "passed": 36,
+  "total": 37,
+  "checks": [
+    {
+      "name": "V84: fresh browser shows labeled demo defaults",
+      "pass": true
+    },
+    {
+      "name": "V85: rejected setup preserves editable input without saving a run",
+      "pass": true
+    },
+    {
+      "name": "V85: setup snapshots enabled form values before disabling controls",
+      "pass": true
+    },
+    {
+      "name": "V84 V85: corrected setup clears obsolete error status",
+      "pass": true
+    },
+    {
+      "name": "V78: setup saves exact reserve, cap, and undelegated remainder",
+      "pass": true
+    },
+    {
+      "name": "V81: missing observation gives NO_DATA",
+      "pass": true
+    },
+    {
+      "name": "V78 V80: supply moves only the 500 delegated USDC",
+      "pass": true
+    },
+    {
+      "name": "V87: browser saves the original input, policy, checks, and outcome",
+      "pass": true
+    },
+    {
+      "name": "V88: selecting a rule marks supporting graph nodes with visible labels",
+      "pass": true
+    },
+    {
+      "name": "V89: recording new evidence shows current state separately",
+      "pass": true
+    },
+    {
+      "name": "V88 V89: latest-decision check opens its old evidence after a newer observation",
+      "pass": true
+    },
+    {
+      "name": "V89: inspector gives source and age at the original decision",
+      "pass": true
+    },
+    {
+      "name": "V89: historical evidence age does not advance with the wall clock",
+      "pass": true
+    },
+    {
+      "name": "V88 V89: keyboard selects a rule and retains a usable focus",
+      "pass": true
+    },
+    {
+      "name": "V81: illiquid exit is blocked and retains position",
+      "pass": true
+    },
+    {
+      "name": "V79 V84: graph inspection shows the selected decision input",
+      "pass": true
+    },
+    {
+      "name": "V86: graph relationships are available to assistive technology",
+      "pass": true
+    },
+    {
+      "name": "V84: keyboard opens graph node details",
+      "pass": true,
+      "detail": {
+        "active": "graph-node-reserve",
+        "title": "Spending reserve"
+      }
+    },
+    {
+      "name": "V88: blocked rule remains visibly linked to its decision and outcome",
+      "pass": true
+    },
+    {
+      "name": "V81: stale evidence gives NO_DATA without movement",
+      "pass": true
+    },
+    {
+      "name": "V81: unavailable evidence gives NO_DATA",
+      "pass": true
+    },
+    {
+      "name": "V78 V85: invalid custom liquidity preserves history and editable fields",
+      "pass": true
+    },
+    {
+      "name": "V79 V81 V88: custom graph evidence causes a liquid redemption below the floor",
+      "pass": true
+    },
+    {
+      "name": "V84: explicit start runs the first bounded cycle",
+      "pass": true
+    },
+    {
+      "name": "V84: stop prevents the next scheduled cycle",
+      "pass": true
+    },
+    {
+      "name": "V80 V81: owner redemption returns delegated idle only",
+      "pass": true
+    },
+    {
+      "name": "V83 V84: reload preserves the exact journal and stays stopped",
+      "pass": true
+    },
+    {
+      "name": "V83: downloaded JSON replays the saved run",
+      "pass": true
+    },
+    {
+      "name": "V82 V84: another tab receives saved changes with its loop stopped",
+      "pass": true
+    },
+    {
+      "name": "V80: revocation requires a visible confirmation",
+      "pass": true
+    },
+    {
+      "name": "V80: cancelling retains active authority",
+      "pass": true
+    },
+    {
+      "name": "V80 V84: revocation disables agent movement",
+      "pass": true
+    },
+    {
+      "name": "V80: explicit owner exit works after revocation",
+      "pass": true
+    },
+    {
+      "name": "V84: 390px page has no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "V84: 320px page has no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "V87: legacy load labels reconstruction without changing stored commands",
+      "pass": true
+    },
+    {
+      "name": "V90: legacy export describes commands without claiming saved snapshots",
+      "pass": false
+    }
+  ],
+  "exceptions": [],
+  "remoteRequests": [],
+  "artifactDir": "/private/tmp/falcon-treasury-browser-27WoTJ",
+  "root": "/private/tmp/falcon-graph-export-negative-j0m1dzr4"
+}

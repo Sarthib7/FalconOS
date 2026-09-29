@@ -1,0 +1,55 @@
+{
+  "baseCommit": "bfa82caaf5bdf2208ce057a7db6397302ebfaeae",
+  "sliceCommit": "b1a86787605b6d97bb3a9cafd706060fd641535e",
+  "patchSha256": "b28327fb5115be1b3b7f303d15782111beec39ea01822421e854089763095f15",
+  "changedFiles": [
+    {
+      "path": "web/.gitignore",
+      "candidateSha256": "efc7d2e8be179bdd59f01a93fe97d86e6814edb9e82cf344122f83b4fc59ea5c",
+      "currentSha256": "efc7d2e8be179bdd59f01a93fe97d86e6814edb9e82cf344122f83b4fc59ea5c",
+      "matchesCurrent": true
+    },
+    {
+      "path": "web/functions/_waitlist-email.js",
+      "candidateSha256": "9402a4da61c82c7282b0f43e101351e53af458f15026c346fec9e6a705544250",
+      "currentSha256": "9402a4da61c82c7282b0f43e101351e53af458f15026c346fec9e6a705544250",
+      "matchesCurrent": true
+    },
+    {
+      "path": "web/functions/api/waitlist.js",
+      "candidateSha256": "d567061aa7fde5963d167fceaaa96511c9e4bfe3bedb4ea620f5aba878179b44",
+      "currentSha256": "d567061aa7fde5963d167fceaaa96511c9e4bfe3bedb4ea620f5aba878179b44",
+      "matchesCurrent": true
+    },
+    {
+      "path": "web/local-web.mjs",
+      "candidateSha256": "5f82a094305ac34b9754db13a95cf0b6eda5d8372a8bd40f2b688ddd36a18e65",
+      "currentSha256": "5f82a094305ac34b9754db13a95cf0b6eda5d8372a8bd40f2b688ddd36a18e65",
+      "matchesCurrent": true
+    },
+    {
+      "path": "web/migrations/0002_waitlist_email_outbox.sql",
+      "candidateSha256": "9cae47f65f4bcd6a2703da1d524fc16088ca99c594a57b67b0a267348501025d",
+      "currentSha256": "9cae47f65f4bcd6a2703da1d524fc16088ca99c594a57b67b0a267348501025d",
+      "matchesCurrent": true
+    },
+    {
+      "path": "web/test/waitlist-email.test.mjs",
+      "candidateSha256": "2bf4c54158be35b244bcf53f64c47fa528c4b826282154cab09b9b24ab1b1f9e",
+      "currentSha256": "2bf4c54158be35b244bcf53f64c47fa528c4b826282154cab09b9b24ab1b1f9e",
+      "matchesCurrent": true
+    },
+    {
+      "path": "web/test/waitlist.test.mjs",
+      "candidateSha256": "493c6b0d7788320f48a08f213b0323de9fe7a66ba9f9016aec4bbfbb1ca0a15f",
+      "currentSha256": "493c6b0d7788320f48a08f213b0323de9fe7a66ba9f9016aec4bbfbb1ca0a15f",
+      "matchesCurrent": true
+    },
+    {
+      "path": "web/waitlist-local.mjs",
+      "candidateSha256": "e283c889fae5fa68ec819b573396001377262f6676e7f959bf1e1a6ecd3adcd5",
+      "currentSha256": "e283c889fae5fa68ec819b573396001377262f6676e7f959bf1e1a6ecd3adcd5",
+      "matchesCurrent": true
+    }
+  ]
+}

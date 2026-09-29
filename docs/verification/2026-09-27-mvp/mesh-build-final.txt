@@ -1,0 +1,14 @@
+
+> falconos-web@0.0.0 build:mesh
+> vite build --config vite.mesh.config.js
+
+vite v8.3.0 building client environment for production...
+transforming...
+✓ 67 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-mesh/mesh/index.html             14.49 kB │ gzip:  4.28 kB
+dist-mesh/assets/index-CeVDsQlk.css   17.27 kB │ gzip:  4.25 kB
+dist-mesh/assets/index-XCCp6nos.js   267.64 kB │ gzip: 84.03 kB
+
+✓ built in 128ms

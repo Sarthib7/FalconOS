@@ -7,10 +7,20 @@ import { STORE_KEY, createStore } from '../dashboard/store.mjs';
 import { createStore as createTreasuryStore } from '../treasury/store.mjs';
 import { replayRun } from '../treasury/domain.mjs';
 import { projectGraph, analyzeGraph } from '../../mesh/domain.mjs';
+import { selectionAfterDispatch } from '../dashboard/selection.mjs';
+import { API_BASE, TOKEN_PATTERN, connectorObservation, meshReady, meshRequest } from '../dashboard/api.mjs';
 
 const text = readFileSync(new URL('../dashboard/data.json', import.meta.url), 'utf8');
 const data = JSON.parse(text);
 const sha256 = value => createHash('sha256').update(value).digest('hex');
+
+test('V88,V89: decision inspection stays selected across observations', () => {
+  const latestDecision = 'decision-1';
+  assert.equal(selectionAfterDispatch({ eventId: 'observe-1', decision: null, selectedEvent: latestDecision }), latestDecision);
+  assert.equal(selectionAfterDispatch({ eventId: 'observe-2', decision: null, selectedEvent: null }), null);
+  assert.equal(selectionAfterDispatch({ eventId: 'decision-2', decision: {}, selectedEvent: latestDecision }), 'decision-2');
+  assert.equal(selectionAfterDispatch({ eventId: 'observe-3', decision: null, selectedEvent: 'historical-1' }), 'historical-1');
+});
 const TREASURY_KEY = 'falcon.treasury.simulation.v1';
 const LEGACY_KEY = 'falconos-workspace-v1';
 const id = number => `00000000-0000-4000-8000-${String(number).padStart(12, '0')}`;
@@ -239,4 +249,86 @@ test('V110 B80: abort after the synchronous commit enters preserves its recorded
   assert.equal(saved.view.state.balances.positionUnits, '500000000');
   assert.deepEqual(store.load(), saved);
   assert.equal(env.storage.writes.length, 3);
+});
+
+const TOKEN = 'a'.repeat(32);
+function stubFetch(t, respond) {
+  const calls = [], timeouts = [], original = globalThis.fetch, timeout = AbortSignal.timeout;
+  globalThis.fetch = async (url, init) => { calls.push({ url, init }); return respond(url, init); };
+  AbortSignal.timeout = milliseconds => { timeouts.push(milliseconds); return timeout.call(AbortSignal, milliseconds); };
+  t.after(() => { globalThis.fetch = original; AbortSignal.timeout = timeout; });
+  return { calls, timeouts };
+}
+const json = (status, payload) => new Response(JSON.stringify(payload), { status, headers: { 'content-type': 'application/json' } });
+
+test('dashboard mesh client: GET sends only the bearer token and never credentials, cookies or a body', async t => {
+  const stub = stubFetch(t, () => json(200, { graph: { nodes: [] } }));
+  assert.deepEqual(await meshRequest(TOKEN, '/v1/graph'), { graph: { nodes: [] } });
+  const [{ url, init }] = stub.calls;
+  assert.equal(url, `${API_BASE}/v1/graph`);
+  assert.equal(init.method, 'GET'); assert.equal(init.credentials, 'omit'); assert.equal(init.redirect, 'error');
+  assert.deepEqual(init.headers, { accept: 'application/json', authorization: `Bearer ${TOKEN}` });
+  assert.equal(init.body, undefined); assert.deepEqual(stub.timeouts, [15000]);
+  assert.ok(!url.includes('?') && !url.includes(TOKEN));
+});
+
+test('dashboard mesh client: POST adds a JSON body and the long timeout only for capture and lending paths', async t => {
+  const stub = stubFetch(t, () => json(200, { ok: true }));
+  await meshRequest(TOKEN, '/v1/captures', { a: 1 });
+  await meshRequest(TOKEN, '/v1/lending/quote', {});
+  await meshRequest(TOKEN, '/v1/analyses', {});
+  assert.equal(stub.calls[0].init.method, 'POST');
+  assert.equal(stub.calls[0].init.headers['content-type'], 'application/json');
+  assert.equal(stub.calls[0].init.body, '{"a":1}');
+  assert.deepEqual(stub.timeouts, [45000, 45000, 15000]);
+});
+
+test('dashboard mesh client: error envelopes, missing envelopes, unreadable bodies and network failures each surface a distinct message', async t => {
+  let next;
+  stubFetch(t, () => next());
+  next = () => json(401, { error: { code: 'UNAUTHORIZED', message: 'Missing or invalid token.' } });
+  await assert.rejects(meshRequest(TOKEN, '/v1/graph'), { message: 'UNAUTHORIZED: Missing or invalid token.' });
+  next = () => json(500, {});
+  await assert.rejects(meshRequest(TOKEN, '/v1/graph'), { message: 'HTTP 500: The request failed.' });
+  next = () => new Response('<html>', { status: 502 });
+  await assert.rejects(meshRequest(TOKEN, '/v1/graph'), /unreadable response \(HTTP 502\)/);
+  next = () => { throw new TypeError('Failed to fetch'); };
+  await assert.rejects(meshRequest(TOKEN, '/v1/graph'), /did not respond/);
+});
+
+test('dashboard mesh client: the token pattern matches the service charset and length bounds', () => {
+  for (const good of ['a'.repeat(32), 'A1._~-'.repeat(6), 'z'.repeat(256)]) assert.ok(TOKEN_PATTERN.test(good), good);
+  for (const bad of ['a'.repeat(31), 'a'.repeat(257), `${'a'.repeat(31)} `, `${'a'.repeat(31)}/`, `${'a'.repeat(31)}\n`, '']) assert.ok(!TOKEN_PATTERN.test(bad), JSON.stringify(bad));
+});
+
+test('dashboard mesh client: meshReady is unauthenticated and true only for HTTP 200 {status:ready}; it never throws', async t => {
+  let next;
+  const stub = stubFetch(t, () => next());
+  next = () => json(200, { status: 'ready' });
+  assert.deepEqual(await meshReady(), { ok: true, status: 'ready' });
+  const [{ url, init }] = stub.calls;
+  assert.equal(url, `${API_BASE}/readyz`); assert.equal(init.method, 'GET'); assert.equal(init.credentials, 'omit');
+  assert.deepEqual(init.headers, { accept: 'application/json' });
+  next = () => json(503, { error: { code: 'STORAGE_UNAVAILABLE', message: 'down' } });
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unavailable' });
+  next = () => json(200, { status: 'starting' });
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unavailable' });
+  next = () => json(503, { status: 'ready' });
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unavailable' });
+  next = () => new Response('<html>', { status: 502 });
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unavailable' });
+  next = () => { throw new TypeError('Failed to fetch'); };
+  assert.deepEqual(await meshReady(), { ok: false, status: 'unreachable' });
+});
+
+test('dashboard mesh client: connector status comes from the connector-specific live observation node', () => {
+  const observation = (id, status, reasonCode = null) => ({ id: `observation:live:${id}`, kind: 'observation', properties: { status, reasonCode } });
+  const graph = { nodes: [observation('kamino-program-docs', 'ok'), observation('solana-devnet-klend', 'unavailable', 'ACCOUNT_MISSING'), { id: 'observation:live:other', kind: 'document', properties: { status: 'ok' } }] };
+  assert.deepEqual(connectorObservation(graph, 'kamino-program-docs'), { label: 'OBSERVED', kind: 'ok', reasonCode: null });
+  assert.deepEqual(connectorObservation(graph, 'solana-devnet-klend'), { label: 'UNAVAILABLE', kind: 'warn', reasonCode: 'ACCOUNT_MISSING' });
+  assert.equal(connectorObservation(graph, 'other').label, 'NO_DATA');
+  assert.equal(connectorObservation({ nodes: [] }, 'kamino-program-docs').label, 'NO_DATA');
+  assert.equal(connectorObservation({ nodes: [observation('x', 'invalid', 'WRONG_CLUSTER')] }, 'x').label, 'INVALID');
+  assert.equal(connectorObservation({ nodes: [observation('x', 'too_large', 'TOO_LARGE')] }, 'x').label, 'TOO_LARGE');
+  assert.equal(connectorObservation({ nodes: [observation('x', 'weird')] }, 'x').label, 'NO_DATA');
 });

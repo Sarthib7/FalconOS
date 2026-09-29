@@ -5,13 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "node local-web.mjs dev",
+    "build:site": "vite build",
+    "preview:local": "node local-web.mjs preview",
     "snapshot": "node snapshot.mjs",
     "build": "npm run build:site",
+    "build:treasury": "vite build --config vite.treasury.config.js",
+    "build:mesh": "vite build --config vite.mesh.config.js",
     "test": "node --test test/*.test.mjs",
-    "preview": "vite preview",
-    "build:site": "vite build",
+    "test:browser": "node test/treasury-browser.mjs && node test/dashboard-browser.mjs",
     "test:dashboard": "node --test test/dashboard.test.mjs",
-    "test:dashboard:browser": "node test/dashboard-browser.mjs"
+    "test:dashboard:browser": "node test/dashboard-browser.mjs",
+    "test:devnet-e2e": "node test/devnet-e2e.mjs",
+    "preview": "vite preview"
   },
   "devDependencies": {
     "vite": "^8.3.0"

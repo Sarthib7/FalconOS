@@ -1,0 +1,2118 @@
+{
+  "catalog": {
+    "tables": [
+      {
+        "relkind": "r",
+        "relname": "analyses",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      {
+        "relkind": "r",
+        "relname": "lending_events",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      {
+        "relkind": "r",
+        "relname": "lending_intents",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      {
+        "relkind": "r",
+        "relname": "source_heads",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      {
+        "relkind": "r",
+        "relname": "source_revisions",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      }
+    ],
+    "columns": [
+      {
+        "type": "text",
+        "attname": "owner_id",
+        "relname": "analyses",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "id",
+        "relname": "analyses",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "request_id",
+        "relname": "analyses",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "timestamp with time zone",
+        "attname": "created_at",
+        "relname": "analyses",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "observation_id",
+        "relname": "analyses",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "smallint",
+        "attname": "max_hops",
+        "relname": "analyses",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "jsonb",
+        "attname": "graph",
+        "relname": "analyses",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "jsonb",
+        "attname": "analysis",
+        "relname": "analyses",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "owner_id",
+        "relname": "lending_events",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "intent_id",
+        "relname": "lending_events",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "id",
+        "relname": "lending_events",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "request_id",
+        "relname": "lending_events",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "timestamp with time zone",
+        "attname": "created_at",
+        "relname": "lending_events",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "kind",
+        "relname": "lending_events",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "jsonb",
+        "attname": "data",
+        "relname": "lending_events",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "owner_id",
+        "relname": "lending_intents",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "id",
+        "relname": "lending_intents",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "request_id",
+        "relname": "lending_intents",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "analysis_id",
+        "relname": "lending_intents",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "timestamp with time zone",
+        "attname": "created_at",
+        "relname": "lending_intents",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "jsonb",
+        "attname": "request",
+        "relname": "lending_intents",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "jsonb",
+        "attname": "intent",
+        "relname": "lending_intents",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "owner_id",
+        "relname": "source_heads",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "source_key",
+        "relname": "source_heads",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "revision_id",
+        "relname": "source_heads",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "owner_id",
+        "relname": "source_revisions",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "uuid",
+        "attname": "revision_id",
+        "relname": "source_revisions",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "source_key",
+        "relname": "source_revisions",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "source_url",
+        "relname": "source_revisions",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "timestamp with time zone",
+        "attname": "observed_at",
+        "relname": "source_revisions",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "timestamp with time zone",
+        "attname": "captured_at",
+        "relname": "source_revisions",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "sha256",
+        "relname": "source_revisions",
+        "attnotnull": true,
+        "default_expression": null
+      },
+      {
+        "type": "text",
+        "attname": "content",
+        "relname": "source_revisions",
+        "attnotnull": true,
+        "default_expression": null
+      }
+    ],
+    "indexes": [
+      {
+        "indexdef": "CREATE INDEX analyses_owner_created_at ON falcon_mesh.analyses USING btree (owner_id, created_at DESC, id DESC)",
+        "indexname": "analyses_owner_created_at",
+        "tablename": "analyses"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX analyses_owner_id_request_id_key ON falcon_mesh.analyses USING btree (owner_id, request_id)",
+        "indexname": "analyses_owner_id_request_id_key",
+        "tablename": "analyses"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX analyses_pkey ON falcon_mesh.analyses USING btree (owner_id, id)",
+        "indexname": "analyses_pkey",
+        "tablename": "analyses"
+      },
+      {
+        "indexdef": "CREATE INDEX lending_events_intent_created ON falcon_mesh.lending_events USING btree (owner_id, intent_id, created_at, id)",
+        "indexname": "lending_events_intent_created",
+        "tablename": "lending_events"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX lending_events_one_submission ON falcon_mesh.lending_events USING btree (owner_id, intent_id) WHERE (kind = 'SUBMITTED'::text)",
+        "indexname": "lending_events_one_submission",
+        "tablename": "lending_events"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX lending_events_owner_id_request_id_key ON falcon_mesh.lending_events USING btree (owner_id, request_id)",
+        "indexname": "lending_events_owner_id_request_id_key",
+        "tablename": "lending_events"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX lending_events_pkey ON falcon_mesh.lending_events USING btree (owner_id, id)",
+        "indexname": "lending_events_pkey",
+        "tablename": "lending_events"
+      },
+      {
+        "indexdef": "CREATE INDEX lending_intents_owner_created ON falcon_mesh.lending_intents USING btree (owner_id, created_at DESC, id DESC)",
+        "indexname": "lending_intents_owner_created",
+        "tablename": "lending_intents"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX lending_intents_owner_id_request_id_key ON falcon_mesh.lending_intents USING btree (owner_id, request_id)",
+        "indexname": "lending_intents_owner_id_request_id_key",
+        "tablename": "lending_intents"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX lending_intents_pkey ON falcon_mesh.lending_intents USING btree (owner_id, id)",
+        "indexname": "lending_intents_pkey",
+        "tablename": "lending_intents"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX source_heads_pkey ON falcon_mesh.source_heads USING btree (owner_id, source_key)",
+        "indexname": "source_heads_pkey",
+        "tablename": "source_heads"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX source_revisions_owner_id_source_key_revision_id_key ON falcon_mesh.source_revisions USING btree (owner_id, source_key, revision_id)",
+        "indexname": "source_revisions_owner_id_source_key_revision_id_key",
+        "tablename": "source_revisions"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX source_revisions_pkey ON falcon_mesh.source_revisions USING btree (owner_id, revision_id)",
+        "indexname": "source_revisions_pkey",
+        "tablename": "source_revisions"
+      }
+    ],
+    "namespace": [
+      {
+        "comment": "falcon_mesh_schema_version=2",
+        "nspname": "falcon_mesh"
+      }
+    ],
+    "constraints": [
+      {
+        "conname": "analyses_analysis_check",
+        "contype": "c",
+        "relname": "analyses",
+        "definition": "CHECK ((jsonb_typeof(analysis) = 'object'::text))",
+        "convalidated": true
+      },
+      {
+        "conname": "analyses_graph_check",
+        "contype": "c",
+        "relname": "analyses",
+        "definition": "CHECK ((jsonb_typeof(graph) = 'object'::text))",
+        "convalidated": true
+      },
+      {
+        "conname": "analyses_max_hops_check",
+        "contype": "c",
+        "relname": "analyses",
+        "definition": "CHECK (((max_hops >= 1) AND (max_hops <= 3)))",
+        "convalidated": true
+      },
+      {
+        "conname": "analyses_owner_id_check",
+        "contype": "c",
+        "relname": "analyses",
+        "definition": "CHECK ((owner_id ~ '^[a-z0-9_-]{1,64}$'::text))",
+        "convalidated": true
+      },
+      {
+        "conname": "analyses_owner_id_request_id_key",
+        "contype": "u",
+        "relname": "analyses",
+        "definition": "UNIQUE (owner_id, request_id)",
+        "convalidated": true
+      },
+      {
+        "conname": "analyses_pkey",
+        "contype": "p",
+        "relname": "analyses",
+        "definition": "PRIMARY KEY (owner_id, id)",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_events_data_check",
+        "contype": "c",
+        "relname": "lending_events",
+        "definition": "CHECK (((jsonb_typeof(data) = 'object'::text) AND (octet_length((data)::text) <= 1048576)))",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_events_kind_check",
+        "contype": "c",
+        "relname": "lending_events",
+        "definition": "CHECK (((length(kind) <= 16) AND (kind = ANY (ARRAY['SUBMITTED'::text, 'RECEIPT'::text]))))",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_events_owner_id_check",
+        "contype": "c",
+        "relname": "lending_events",
+        "definition": "CHECK ((owner_id ~ '^[a-z0-9_-]{1,64}$'::text))",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_events_owner_id_intent_id_fkey",
+        "contype": "f",
+        "relname": "lending_events",
+        "definition": "FOREIGN KEY (owner_id, intent_id) REFERENCES falcon_mesh.lending_intents(owner_id, id)",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_events_owner_id_request_id_key",
+        "contype": "u",
+        "relname": "lending_events",
+        "definition": "UNIQUE (owner_id, request_id)",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_events_pkey",
+        "contype": "p",
+        "relname": "lending_events",
+        "definition": "PRIMARY KEY (owner_id, id)",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_intents_intent_check",
+        "contype": "c",
+        "relname": "lending_intents",
+        "definition": "CHECK (((jsonb_typeof(intent) = 'object'::text) AND (octet_length((intent)::text) <= 1048576)))",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_intents_owner_id_analysis_id_fkey",
+        "contype": "f",
+        "relname": "lending_intents",
+        "definition": "FOREIGN KEY (owner_id, analysis_id) REFERENCES falcon_mesh.analyses(owner_id, id)",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_intents_owner_id_check",
+        "contype": "c",
+        "relname": "lending_intents",
+        "definition": "CHECK ((owner_id ~ '^[a-z0-9_-]{1,64}$'::text))",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_intents_owner_id_request_id_key",
+        "contype": "u",
+        "relname": "lending_intents",
+        "definition": "UNIQUE (owner_id, request_id)",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_intents_pkey",
+        "contype": "p",
+        "relname": "lending_intents",
+        "definition": "PRIMARY KEY (owner_id, id)",
+        "convalidated": true
+      },
+      {
+        "conname": "lending_intents_request_check",
+        "contype": "c",
+        "relname": "lending_intents",
+        "definition": "CHECK (((jsonb_typeof(request) = 'object'::text) AND (octet_length((request)::text) <= 4096)))",
+        "convalidated": true
+      },
+      {
+        "conname": "source_heads_owner_id_source_key_revision_id_fkey",
+        "contype": "f",
+        "relname": "source_heads",
+        "definition": "FOREIGN KEY (owner_id, source_key, revision_id) REFERENCES falcon_mesh.source_revisions(owner_id, source_key, revision_id)",
+        "convalidated": true
+      },
+      {
+        "conname": "source_heads_pkey",
+        "contype": "p",
+        "relname": "source_heads",
+        "definition": "PRIMARY KEY (owner_id, source_key)",
+        "convalidated": true
+      },
+      {
+        "conname": "source_revisions_check",
+        "contype": "c",
+        "relname": "source_revisions",
+        "definition": "CHECK ((captured_at >= observed_at))",
+        "convalidated": true
+      },
+      {
+        "conname": "source_revisions_content_check",
+        "contype": "c",
+        "relname": "source_revisions",
+        "definition": "CHECK ((octet_length(content) <= 131072))",
+        "convalidated": true
+      },
+      {
+        "conname": "source_revisions_owner_id_check",
+        "contype": "c",
+        "relname": "source_revisions",
+        "definition": "CHECK ((owner_id ~ '^[a-z0-9_-]{1,64}$'::text))",
+        "convalidated": true
+      },
+      {
+        "conname": "source_revisions_owner_id_source_key_revision_id_key",
+        "contype": "u",
+        "relname": "source_revisions",
+        "definition": "UNIQUE (owner_id, source_key, revision_id)",
+        "convalidated": true
+      },
+      {
+        "conname": "source_revisions_pkey",
+        "contype": "p",
+        "relname": "source_revisions",
+        "definition": "PRIMARY KEY (owner_id, revision_id)",
+        "convalidated": true
+      },
+      {
+        "conname": "source_revisions_sha256_check",
+        "contype": "c",
+        "relname": "source_revisions",
+        "definition": "CHECK ((sha256 ~ '^[a-f0-9]{64}$'::text))",
+        "convalidated": true
+      }
+    ]
+  },
+  "app_role": [
+    {
+      "rolname": "falcon_mesh_app",
+      "rolsuper": false,
+      "rolinherit": false,
+      "rolcanlogin": false,
+      "rolcreatedb": false,
+      "rolbypassrls": false,
+      "rolcreaterole": false,
+      "rolreplication": false
+    }
+  ],
+  "database": "postgres",
+  "schema_acl": "{postgres=UC/postgres,falcon_mesh_app=U/postgres}",
+  "current_user": "postgres",
+  "index_status": [
+    {
+      "indexname": "analyses_owner_created_at",
+      "indislive": true,
+      "tablename": "analyses",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "indexname": "analyses_owner_id_request_id_key",
+      "indislive": true,
+      "tablename": "analyses",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "indexname": "analyses_pkey",
+      "indislive": true,
+      "tablename": "analyses",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "indexname": "lending_events_intent_created",
+      "indislive": true,
+      "tablename": "lending_events",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "indexname": "lending_events_one_submission",
+      "indislive": true,
+      "tablename": "lending_events",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "indexname": "lending_events_owner_id_request_id_key",
+      "indislive": true,
+      "tablename": "lending_events",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "indexname": "lending_events_pkey",
+      "indislive": true,
+      "tablename": "lending_events",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "indexname": "lending_intents_owner_created",
+      "indislive": true,
+      "tablename": "lending_intents",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "indexname": "lending_intents_owner_id_request_id_key",
+      "indislive": true,
+      "tablename": "lending_intents",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "indexname": "lending_intents_pkey",
+      "indislive": true,
+      "tablename": "lending_intents",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "indexname": "source_heads_pkey",
+      "indislive": true,
+      "tablename": "source_heads",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "indexname": "source_revisions_owner_id_source_key_revision_id_key",
+      "indislive": true,
+      "tablename": "source_revisions",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "indexname": "source_revisions_pkey",
+      "indislive": true,
+      "tablename": "source_revisions",
+      "indisready": true,
+      "indisvalid": true,
+      "indisunique": true
+    }
+  ],
+  "schema_owner": "postgres",
+  "server_version": "17.6",
+  "app_memberships": [
+    {
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "set_option": false,
+      "admin_option": true,
+      "granted_role": "falcon_mesh_app",
+      "inherit_option": false
+    }
+  ],
+  "table_privileges": [
+    {
+      "role": "anon",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "analyses"
+    },
+    {
+      "role": "anon",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "lending_events"
+    },
+    {
+      "role": "anon",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "lending_intents"
+    },
+    {
+      "role": "anon",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "source_heads"
+    },
+    {
+      "role": "anon",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "source_revisions"
+    },
+    {
+      "role": "authenticated",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "analyses"
+    },
+    {
+      "role": "authenticated",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "lending_events"
+    },
+    {
+      "role": "authenticated",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "lending_intents"
+    },
+    {
+      "role": "authenticated",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "source_heads"
+    },
+    {
+      "role": "authenticated",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "source_revisions"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "delete": false,
+      "insert": true,
+      "select": true,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "analyses"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "delete": false,
+      "insert": true,
+      "select": true,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "lending_events"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "delete": false,
+      "insert": true,
+      "select": true,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "lending_intents"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "delete": false,
+      "insert": true,
+      "select": true,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "source_heads"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "delete": false,
+      "insert": true,
+      "select": true,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "source_revisions"
+    },
+    {
+      "role": "service_role",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "analyses"
+    },
+    {
+      "role": "service_role",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "lending_events"
+    },
+    {
+      "role": "service_role",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "lending_intents"
+    },
+    {
+      "role": "service_role",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "source_heads"
+    },
+    {
+      "role": "service_role",
+      "delete": false,
+      "insert": false,
+      "select": false,
+      "update": false,
+      "trigger": false,
+      "maintain": false,
+      "truncate": false,
+      "references": false,
+      "table_name": "source_revisions"
+    }
+  ],
+  "column_privileges": [
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "request_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "created_at"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "observation_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "max_hops"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "graph"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "analysis"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "intent_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "request_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "created_at"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "kind"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "data"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "request_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "analysis_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "created_at"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "request"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "intent"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "source_key"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "revision_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "revision_id"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "source_key"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "source_url"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "observed_at"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "captured_at"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "sha256"
+    },
+    {
+      "role": "anon",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "content"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "request_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "created_at"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "observation_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "max_hops"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "graph"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "analysis"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "intent_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "request_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "created_at"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "kind"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "data"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "request_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "analysis_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "created_at"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "request"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "intent"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "source_key"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "revision_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "revision_id"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "source_key"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "source_url"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "observed_at"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "captured_at"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "sha256"
+    },
+    {
+      "role": "authenticated",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "content"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "request_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "created_at"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "observation_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "max_hops"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "graph"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "analysis"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "intent_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "request_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "created_at"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "kind"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "data"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "request_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "analysis_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "created_at"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "request"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "intent"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "source_key"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": true,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "revision_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "revision_id"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "source_key"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "source_url"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "observed_at"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "captured_at"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "sha256"
+    },
+    {
+      "role": "falcon_mesh_app",
+      "insert": true,
+      "select": true,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "content"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "request_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "created_at"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "observation_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "max_hops"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "graph"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "analyses",
+      "column_name": "analysis"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "intent_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "request_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "created_at"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "kind"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_events",
+      "column_name": "data"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "request_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "analysis_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "created_at"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "request"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "lending_intents",
+      "column_name": "intent"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "source_key"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_heads",
+      "column_name": "revision_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "owner_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "revision_id"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "source_key"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "source_url"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "observed_at"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "captured_at"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "sha256"
+    },
+    {
+      "role": "service_role",
+      "insert": false,
+      "select": false,
+      "update": false,
+      "references": false,
+      "table_name": "source_revisions",
+      "column_name": "content"
+    }
+  ],
+  "schema_privileges": [
+    {
+      "role": "anon",
+      "schema_usage": false,
+      "schema_create": false
+    },
+    {
+      "role": "authenticated",
+      "schema_usage": false,
+      "schema_create": false
+    },
+    {
+      "role": "falcon_mesh_app",
+      "schema_usage": true,
+      "schema_create": false
+    },
+    {
+      "role": "service_role",
+      "schema_usage": false,
+      "schema_create": false
+    }
+  ],
+  "app_database_privileges": {
+    "create": false,
+    "connect": true,
+    "temporary": true
+  }
+}

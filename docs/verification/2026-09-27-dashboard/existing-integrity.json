@@ -1,0 +1,7 @@
+{
+  "checkedExistingFiles": 58,
+  "changed": [
+    "web/landing/sections.jsx"
+  ],
+  "scope": "Only files in initial backend, wallet, landing and mesh baseline; this does not enumerate all repository edits."
+}

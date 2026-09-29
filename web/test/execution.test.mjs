@@ -373,10 +373,14 @@ test('signature status requests abort at their timeout', async () => {
   });
 });
 
-test('confirmation wait distinguishes success, on-chain failure, and timeout', async () => {
+test('confirmation wait distinguishes success, on-chain failure, and timeout', async t => {
+  // A controlled clock keeps CPU contention outside the polling contract.
+  let now = 1_000;
+  t.mock.method(Date, 'now', () => now);
   let call = 0;
   await withFetch(async () => {
     call += 1;
+    now += 1;
     return Response.json({
       result: {
         value: [call === 1 ? null : { err: null, confirmationStatus: 'finalized' }],

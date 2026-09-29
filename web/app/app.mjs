@@ -1,19 +1,26 @@
 import { DEVNET_RPC, formatTokenAmount, getDevnetBalance, getDevnetSignatures, getDevnetTokenAccounts, getDevnetTokenDecimals } from './data.mjs';
-import { bytesToBase64, createSignInRequest, decodeSolanaAddress, signatureBytes, verifySignInProof } from './auth.mjs';
-import { buildDevnetUnsignedSwap, getDevnetBlockHeight, getDevnetBlockhash, getDevnetQuote, sendDevnet, simulateDevnet, waitForDevnetConfirmation } from './devnet-execution.mjs';
+import { bytesToBase64, createSignInRequest, decodeSolanaAddress, verifySignInProof } from './auth.mjs';
+import { createSignInWalletSession } from './wallet-signin.mjs';
+import { getDevnetQuote } from './devnet-execution.mjs';
+import { executeLeg, signAndSubmit } from './leg-execution.mjs';
 import { clearSession, readOrders, readPortfolio, readSession, saveOrder, updateOrder, writePortfolio, writeSession } from './state.mjs';
-import { encodeSignatureBase58, verifySignedTransaction } from './transaction.mjs';
+import { ANALOG_MINTS, baseUnitsToUsdc, fetchAdvice, removeLeg, resolveCouncilBase, setLegAllocation, toView, usdcToBaseUnits } from './strategy.mjs';
 
 const byId = (id) => document.getElementById(id);
-const SIGNER_LIBRARY = 'https://esm.sh/@solana/web3.js@1.95.8';
+const signInWalletSession = createSignInWalletSession();
 const APP_ORDER_HISTORY = 50;
 const TOKEN_DECIMAL_LIMIT = 18;
+const NO_TRADE_PROVIDER_REASON = 'This wallet supports sign-in but does not expose a browser Solana wallet extension for Devnet trading. Connect a wallet extension (e.g. Phantom, Solflare) to trade.';
 let sessionProof = null;
 let walletProvider = null;
 let connectedAddress = null;
 let portfolioData = { balance: null, tokens: [], signatures: [] };
 let activeQuote = null;
 let quoteRevision = 0;
+let strategyAdvice = null;
+let strategyPlan = null;
+const executedLegs = new Map();
+let executingLeg = null;
 let tradeInFlight = false;
 let authInFlight = false;
 let boundProvider = null;
@@ -97,21 +104,31 @@ function injectedWallet() {
 }
 
 function activeAddress() { return sessionProof?.address || null; }
+function tradeGapReason(suffix) {
+  if (connectedAddress === activeAddress()) return null;
+  return injectedWallet() ? `Reconnect the signed-in wallet ${suffix}.` : NO_TRADE_PROVIDER_REASON;
+}
 
 function renderSession() {
   const authenticated = Boolean(sessionProof);
+  const tradeReady = connectedAddress === activeAddress();
+  const hasInjectedWallet = Boolean(injectedWallet());
   byId('login-view').hidden = authenticated;
   byId('workspace-view').hidden = !authenticated;
   byId('sign-out').hidden = !authenticated;
   byId('session-chip').textContent = authenticated ? 'LOCAL SESSION · DEVNET' : 'WALLET · SIGN IN';
   byId('connect-wallet').textContent = !authenticated
     ? 'Sign in with wallet'
-    : connectedAddress === activeAddress() ? 'Refresh account' : 'Reconnect wallet';
+    : tradeReady ? 'Refresh account'
+    : hasInjectedWallet ? 'Reconnect wallet'
+    : 'Wallet extension required';
   if (authenticated) {
     byId('wallet-address').textContent = activeAddress();
-    byId('wallet-connection-state').textContent = connectedAddress === activeAddress()
+    byId('wallet-connection-state').textContent = tradeReady
       ? 'Proof verified · wallet connected'
-      : 'Proof verified · reconnect wallet for live balances';
+      : hasInjectedWallet
+        ? 'Proof verified · reconnect wallet for live balances'
+        : 'Proof verified · sign-in only, no browser wallet extension for Devnet trading';
     renderPortfolio();
     renderWatchlist();
     renderHistory();
@@ -124,14 +141,10 @@ function renderSession() {
 
 function renderPortfolio() {
   byId('sol-balance').textContent = portfolioData.balance === null ? '—' : formatSol(portfolioData.balance);
-  byId('balance-source').textContent = portfolioData.balance === null ? 'Devnet RPC · connect wallet to load' : 'Devnet RPC · confirmed';
+  byId('balance-source').textContent = portfolioData.balance === null ? 'Devnet RPC · not loaded' : 'Devnet RPC · confirmed';
   byId('token-count').textContent = String(portfolioData.tokens.length);
   byId('chain-tx-count').textContent = String(portfolioData.signatures.length);
   const rows = byId('portfolio-rows');
-  if (connectedAddress !== activeAddress()) {
-    emptyRow(rows, 4, 'Reconnect the verified wallet to load live Devnet balances.');
-    return;
-  }
   if (!portfolioData.tokens.length) {
     emptyRow(rows, 4, 'No SPL Token or Token-2022 balances found on Devnet.');
     return;
@@ -206,7 +219,7 @@ function renderHistory() {
   });
   entries.sort((left, right) => right.epoch - left.epoch);
   if (!entries.length) {
-    emptyRow(rows, 4, connectedAddress === activeAddress() ? 'No saved orders or recent Devnet transactions.' : 'Reconnect wallet to load Devnet transactions.');
+    emptyRow(rows, 4, 'No saved orders or recent Devnet transactions.');
     return;
   }
   rows.replaceChildren();
@@ -244,7 +257,7 @@ function scheduleSessionExpiry(proof) {
 
 async function connectVerifiedWallet() {
   const provider = injectedWallet();
-  if (!provider || typeof provider.connect !== 'function') throw new Error('No compatible Solana wallet was found. Install a wallet with connect and message-signing support.');
+  if (!provider || typeof provider.connect !== 'function') throw new Error(NO_TRADE_PROVIDER_REASON);
   const result = await provider.connect();
   const address = providerAddress({ publicKey: result?.publicKey || provider.publicKey });
   if (!address) throw new Error('Wallet returned an invalid public key.');
@@ -254,27 +267,141 @@ async function connectVerifiedWallet() {
   return address;
 }
 
-async function signIn() {
-  const address = await connectVerifiedWallet();
-  const provider = walletProvider;
-  if (typeof provider.signMessage !== 'function') throw new Error('This wallet cannot sign a sign-in message. No transaction was created.');
+function chooseWallet(wallets, unavailable = []) {
+  return new Promise((resolve) => {
+    const dialog = byId('wallet-picker');
+    const options = byId('wallet-picker-options');
+    const cancel = byId('wallet-picker-cancel');
+    if (!dialog || !options || typeof dialog.showModal !== 'function') { resolve(null); return; }
+    let settled = false;
+    const cleanup = () => {
+      dialog.removeEventListener?.('close', onClose);
+      cancel?.removeEventListener?.('click', onCancel);
+    };
+    const onClose = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(null);
+    };
+    const finish = (id) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      dialog.close();
+      resolve(id);
+    };
+    const onCancel = () => finish(null);
+    const renderOption = (wallet, selectable) => {
+      const button = document.createElement('button');
+      button.className = selectable ? 'app-wallet-option' : 'app-wallet-option app-wallet-option-unavailable';
+      button.type = 'button';
+      button.setAttribute('aria-label', selectable ? 'Choose ' + wallet.name : wallet.name + ': ' + wallet.reason);
+      if (!selectable) {
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+      }
+      const icon = document.createElement('span');
+      icon.className = 'app-wallet-option-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      if (wallet.icon) {
+        const image = document.createElement('img');
+        image.src = wallet.icon;
+        image.alt = '';
+        icon.appendChild(image);
+      } else icon.textContent = 'W';
+      const name = document.createElement('span');
+      name.className = 'app-wallet-option-name';
+      name.textContent = wallet.name;
+      const detail = document.createElement('span');
+      detail.className = selectable ? 'app-wallet-option-arrow' : 'app-wallet-option-reason';
+      detail.textContent = selectable ? '→' : wallet.reason;
+      button.append(icon, name, detail);
+      if (selectable) button.addEventListener('click', () => finish(wallet.id));
+      options.appendChild(button);
+    };
+    options.replaceChildren();
+    wallets.forEach((wallet) => renderOption(wallet, true));
+    unavailable.forEach((wallet) => renderOption(wallet, false));
+    dialog.addEventListener('close', onClose, { once: true });
+    cancel?.addEventListener('click', onCancel, { once: true });
+    try {
+      dialog.showModal();
+      options.children[0]?.focus();
+    } catch { onClose(); }
+  });
+}
+
+export async function signIn() {
+  const listed = signInWalletSession.list();
+  const usable = listed.filter((wallet) => wallet.available);
+  const unavailable = listed.filter((wallet) => !wallet.available);
+  let walletId;
+  if (!usable.length) {
+    if (!listed.length) setAppStatus('No compatible wallet is available. On mobile, open this page inside your wallet\'s in-app browser (Phantom or Solflare); on desktop, install a wallet extension.');
+    else {
+      const reasons = [...new Set(unavailable.map((wallet) => wallet.reason).filter(Boolean))];
+      setAppStatus(reasons.length === 1 ? reasons[0] : 'No usable wallet is available: ' + reasons.join(' · '));
+    }
+    return;
+  }
+  if (usable.length === 1) walletId = usable[0].id;
+  else {
+    walletId = await chooseWallet(usable, unavailable);
+    if (!walletId) {
+      setAppStatus('Sign-in cancelled.');
+      return;
+    }
+  }
+  const selected = await signInWalletSession.connect(walletId);
+  const address = selected?.address;
+  if (!address) throw new Error('Wallet returned an invalid public key.');
   const request = createSignInRequest({ address, origin: window.location.origin });
   setAppStatus('Wallet connected. Confirm the sign-in message in your wallet.');
-  const result = await provider.signMessage(new TextEncoder().encode(request.message), 'utf8');
+  const signature = await signInWalletSession.signMessage(new TextEncoder().encode(request.message));
   setAppStatus('Wallet returned a signature. Checking wallet ownership and site origin.');
-  const signature = signatureBytes(result);
-  if (!signature || signature.length !== 64) throw new Error('Wallet returned an invalid sign-in signature.');
-  const signedAddress = providerAddress({ publicKey: result?.publicKey || provider.publicKey });
-  if (signedAddress !== address) throw new Error('Wallet account changed during sign-in.');
+  if (!(signature instanceof Uint8Array) || signature.length !== 64) throw new Error('Wallet returned an invalid sign-in signature.');
   const proof = { ...request, signature: bytesToBase64(signature) };
   if (!await verifySignInProof(proof, window.location.origin)) throw new Error('Wallet signature did not verify for this origin.');
   writeSession(proof);
   sessionProof = proof;
+  walletProvider = null;
+  connectedAddress = null;
   scheduleSessionExpiry(proof);
   renderSession();
   byId('overview').scrollIntoView({ block: 'start' });
-  setAppStatus('Wallet proof verified. Dashboard opened. Refreshing Devnet account data.', 'success');
+  setAppStatus('Wallet proof verified. Dashboard opened. Looking for a Devnet trading provider…', 'success');
+
+  // Best-effort trade bridge: connectedAddress only becomes trade-ready when a legacy-injected
+  // provider actually binds to this exact address. A Wallet-Standard-only wallet has no injected
+  // provider, so it correctly stays sign-in-only instead of reporting a live trading connection.
+  try {
+    const provider = injectedWallet();
+    if (provider) {
+      let legacyAddress = null;
+      if (typeof provider.connect === 'function') {
+        const result = await provider.connect();
+        legacyAddress = providerAddress({ publicKey: result?.publicKey || provider.publicKey });
+      } else {
+        legacyAddress = providerAddress(provider);
+      }
+      // Race guard: a sign-out or a new sign-in during the pending prompt must win.
+      if (sessionProof === proof && legacyAddress && legacyAddress === address) {
+        walletProvider = provider;
+        connectedAddress = address;
+        bindWalletEvents(provider);
+      }
+    }
+  } catch { /* best-effort trade bridge; never touches the completed sign-in */ }
+
+  if (sessionProof !== proof) return; // Signed out or re-signed-in while the bridge attempt was pending.
+  renderSession();
+  setAppStatus(connectedAddress === address
+    ? 'Wallet proof verified. Dashboard opened. Refreshing Devnet account data.'
+    : 'Wallet proof verified. Dashboard opened. Loading Devnet account data.', 'success');
   await refreshAccount();
+  if (sessionProof !== proof) return; // Signed out or re-signed-in while Devnet reads were loading.
+  if (connectedAddress !== address && byId('app-status').dataset.kind !== 'error') setAppStatus(`Devnet account data loaded. ${NO_TRADE_PROVIDER_REASON}`, 'success');
 }
 
 function bindWalletEvents(provider) {
@@ -330,7 +457,7 @@ async function connectAction() {
   }
 }
 
-function signOut() {
+export function signOut() {
   try { clearSession(); } catch {}
   const provider = walletProvider;
   sessionProof = null;
@@ -345,7 +472,6 @@ function signOut() {
 
 async function refreshAccount() {
   requireSession();
-  if (connectedAddress !== activeAddress()) throw new Error('Reconnect the signed-in wallet to read Devnet account data.');
   setAppStatus('Reading wallet balances and recent signatures from Solana Devnet…');
   const reads = await Promise.allSettled([
     getDevnetBalance(activeAddress()),
@@ -413,7 +539,8 @@ function invalidateQuote() {
 
 async function requestQuote() {
   requireSession();
-  if (connectedAddress !== activeAddress()) throw new Error('Reconnect the signed-in wallet before quoting a trade.');
+  const gapReason = tradeGapReason('before quoting a trade');
+  if (gapReason) throw new Error(gapReason);
   const side = byId('order-side').value;
   const assetMint = byId('asset-mint').value.trim();
   const quoteMint = byId('quote-mint').value.trim();
@@ -491,102 +618,63 @@ async function getQuoteAction() {
   }
 }
 
-function bytesToBase64Transaction(bytes) {
-  let binary = '';
-  for (let offset = 0; offset < bytes.length; offset += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
-  }
-  return btoa(binary);
-}
-
-async function simulateSignSend() {
+function signingWallet(subject) {
   requireSession();
-  if (tradeInFlight) return;
   const provider = walletProvider;
   const signer = activeAddress();
   if (!provider || connectedAddress !== signer || providerAddress(provider) !== signer) {
-    throw new Error('Reconnect the signed-in wallet before signing this Devnet order.');
+    throw new Error(tradeGapReason(`before signing this ${subject}`) || `Reconnect the signed-in wallet before signing this ${subject}.`);
   }
   if (typeof provider.signTransaction !== 'function') throw new Error('This wallet cannot sign transactions. No transaction was sent.');
+  return { provider, signer };
+}
+
+async function simulateSignSend() {
+  if (tradeInFlight) return;
+  const { provider, signer } = signingWallet('Devnet order');
   const trade = activeQuote;
   const revision = quoteRevision;
   if (!trade) throw new Error('Request and review a fresh quote before signing.');
   tradeInFlight = true;
   byId('sign-send').disabled = true;
   byId('get-quote').disabled = true;
-  let predictedSignature = null;
-  let sentSignature = null;
-  let sendAttempted = false;
+  const progress = { predictedSignature: null, sentSignature: null, sendAttempted: false };
+  const guard = (message) => {
+    if (revision !== quoteRevision || activeQuote !== trade || providerAddress(provider) !== signer) throw new Error(message);
+  };
+  let readyOrder = null;
   try {
-    setTradeResult('Building one unsigned Devnet transaction…');
-    const payload = await buildDevnetUnsignedSwap({
-      quoteResponse: trade.quote,
-      userPublicKey: signer,
+    const { predictedSignature, sentSignature, outcome } = await signAndSubmit({
+      quote: trade.quote,
       inputMint: trade.inputMint,
       outputMint: trade.outputMint,
       amount: trade.inputBaseUnits,
-    });
-    if (revision !== quoteRevision || activeQuote !== trade || providerAddress(provider) !== signer) {
-      throw new Error('The wallet or order changed during transaction build. Nothing was signed.');
-    }
-    if (typeof payload !== 'string' || !payload) throw new Error('Raydium returned no unsigned transaction.');
-    const web3 = await import(SIGNER_LIBRARY);
-    if (revision !== quoteRevision || activeQuote !== trade || providerAddress(provider) !== signer) {
-      throw new Error('The wallet or order changed before simulation. Nothing was signed.');
-    }
-    const transaction = web3.VersionedTransaction.deserialize(Uint8Array.from(atob(payload), (character) => character.charCodeAt(0)));
-    if (!transaction.signatures.length || transaction.signatures.some((signature) => signature.some((byte) => byte !== 0))) {
-      throw new Error('Raydium transaction is already signed or has no required signer. Refusing to send.');
-    }
-    const blockhashWindow = await getDevnetBlockhash();
-    transaction.message.recentBlockhash = blockhashWindow.blockhash;
-    const unsignedMessage = transaction.message.serialize();
-    const simulation = bytesToBase64Transaction(transaction.serialize());
-    await simulateDevnet(simulation);
-    if (revision !== quoteRevision || activeQuote !== trade || providerAddress(provider) !== signer) {
-      throw new Error('The wallet or order changed during simulation. Nothing was signed.');
-    }
-    const signerKeys = transaction.message.staticAccountKeys || transaction.message.accountKeys || [];
-    const requiredSignerKeys = signerKeys.slice(0, transaction.message.header.numRequiredSignatures).map((key) => key.toString());
-    const readyOrder = updateOrder(signer, trade.order.id, { status: 'ready' });
-    const signed = await provider.signTransaction(transaction);
-    if (revision !== quoteRevision || activeQuote !== trade || providerAddress(provider) !== signer) {
-      throw new Error('Wallet account or order changed after signing. Nothing was sent.');
-    }
-    if (!signed?.message?.serialize || !signed?.serialize || !Array.isArray(signed.signatures)) {
-      throw new Error('Wallet returned an invalid signed transaction. Nothing was sent.');
-    }
-    const verified = await verifySignedTransaction({
-      unsignedMessage,
-      signedMessage: signed.message.serialize(),
       signer,
-      requiredSignerKeys,
-      signatures: signed.signatures,
+      provider,
+      guard,
+      progress,
+      hooks: {
+        status: setTradeResult,
+        ready: () => { readyOrder = updateOrder(signer, trade.order.id, { status: 'ready' }); },
+        signed: (signature) => { updateOrder(signer, readyOrder.id, { signature, status: 'ready' }); },
+        sending: (signature) => {
+          setTradeResult(`Submitting to Devnet. Check signature ${signature} before retrying.`);
+          activeQuote = null;
+          byId('quote-panel').hidden = true;
+        },
+        sent: (signature) => {
+          updateOrder(signer, readyOrder.id, { signature, status: 'sent' });
+          renderHistory();
+          setTradeResult(`Sent to Solana Devnet. Checking ${signature}…`);
+        },
+      },
     });
-    predictedSignature = encodeSignatureBase58(verified.signature);
-    updateOrder(signer, readyOrder.id, { signature: predictedSignature, status: 'ready' });
-    const blockHeight = await getDevnetBlockHeight();
-    if (blockHeight > blockhashWindow.lastValidBlockHeight) throw new Error('Devnet blockhash expired. Nothing was sent. Get a new quote.');
-    if (revision !== quoteRevision || activeQuote !== trade || providerAddress(provider) !== signer) {
-      throw new Error('Wallet account or order changed before send. Nothing was sent.');
-    }
-    setTradeResult(`Submitting to Devnet. Check signature ${predictedSignature} before retrying.`);
-    sendAttempted = true;
-    activeQuote = null;
-    byId('quote-panel').hidden = true;
-    sentSignature = await sendDevnet(bytesToBase64Transaction(signed.serialize()));
-    if (sentSignature !== predictedSignature) {
+    if (!outcome) {
       updateOrder(signer, readyOrder.id, { signature: predictedSignature, status: 'send-unknown' });
       renderHistory();
       setTradeResult(`RPC signature mismatch. Check both signatures before retrying: ${predictedSignature} / ${sentSignature}`, 'error');
       return;
     }
-    updateOrder(signer, readyOrder.id, { signature: sentSignature, status: 'sent' });
-    activeQuote = null;
-    byId('quote-panel').hidden = true;
-    renderHistory();
-    setTradeResult(`Sent to Solana Devnet. Checking ${sentSignature}…`);
-    const outcome = await waitForDevnetConfirmation(sentSignature, { timeoutMs: 30000, pollIntervalMs: 1000 });
     if (outcome.status === 'confirmed') {
       updateOrder(signer, readyOrder.id, { signature: sentSignature, status: 'confirmed' });
       setTradeResult(`Confirmed on Devnet (${outcome.confirmationStatus}): ${sentSignature}`, 'success');
@@ -599,15 +687,15 @@ async function simulateSignSend() {
     }
     await refreshAccount();
   } catch (error) {
-    if (sendAttempted && predictedSignature && !sentSignature) {
-      try { updateOrder(signer, trade.order.id, { signature: predictedSignature, status: 'send-unknown' }); } catch {}
-      setTradeResult(`Send status is unknown. Check this Devnet signature before retrying: ${predictedSignature}. ${error?.message || ''}`, 'error');
-    } else if (!sentSignature && activeQuote?.order?.id === trade?.order?.id) {
+    if (progress.sendAttempted && progress.predictedSignature && !progress.sentSignature) {
+      try { updateOrder(signer, trade.order.id, { signature: progress.predictedSignature, status: 'send-unknown' }); } catch {}
+      setTradeResult(`Send status is unknown. Check this Devnet signature before retrying: ${progress.predictedSignature}. ${error?.message || ''}`, 'error');
+    } else if (!progress.sentSignature && activeQuote?.order?.id === trade?.order?.id) {
       try { updateOrder(signer, trade.order.id, { signature: null, status: 'quoted' }); } catch {}
       setTradeResult(error?.message || 'Transaction was not sent.', 'error');
-    } else if (sentSignature) {
-      try { updateOrder(signer, trade.order.id, { signature: sentSignature, status: 'lookup-failed' }); } catch {}
-      setTradeResult(`Transaction may have been sent. Check before retrying: ${sentSignature}. ${error?.message || ''}`, 'error');
+    } else if (progress.sentSignature) {
+      try { updateOrder(signer, trade.order.id, { signature: progress.sentSignature, status: 'lookup-failed' }); } catch {}
+      setTradeResult(`Transaction may have been sent. Check before retrying: ${progress.sentSignature}. ${error?.message || ''}`, 'error');
     } else {
       setTradeResult(error?.message || 'Transaction was not sent.', 'error');
     }
@@ -616,6 +704,178 @@ async function simulateSignSend() {
     tradeInFlight = false;
     byId('get-quote').disabled = false;
     byId('sign-send').disabled = !activeQuote;
+  }
+}
+
+function setStrategyMessage(message, kind = '') {
+  const element = byId('strategy-message');
+  element.textContent = message;
+  element.dataset.kind = kind;
+}
+
+function renderStrategy() {
+  executedLegs.clear();
+  const status = byId('strategy-status');
+  const legs = byId('strategy-legs');
+  const rows = byId('strategy-plan');
+  if (!strategyAdvice) {
+    status.textContent = 'NOT LOADED';
+    status.className = 'state-off';
+    byId('strategy-reasons').textContent = '—';
+    byId('strategy-residual').textContent = '—';
+    emptyRow(legs, 2, 'Load the council decision to see basket legs.');
+    emptyRow(rows, 4, 'Enter capital and load a PUBLISHED decision to build a plan.');
+    return;
+  }
+  let capital = null;
+  const capitalText = byId('strategy-capital').value.trim();
+  let capitalError = null;
+  if (capitalText) {
+    try { capital = usdcToBaseUnits(capitalText); } catch (error) { capitalError = error.message; }
+  }
+  const view = toView({ advice: strategyAdvice, capitalBaseUnits: capital, analogMints: ANALOG_MINTS });
+  strategyPlan = view.plan;
+  status.textContent = view.decision.status;
+  status.className = view.decision.status === 'PUBLISHED' ? 'state-on' : 'state-off';
+  byId('strategy-reasons').textContent = view.decision.reasons.length ? view.decision.reasons.join(' · ') : 'None';
+  if (!view.decision.legs.length) emptyRow(legs, 2, 'No basket legs for this decision.');
+  else {
+    legs.replaceChildren();
+    view.decision.legs.forEach((leg) => {
+      const row = document.createElement('tr');
+      appendCell(row, leg.underlying);
+      appendCell(row, `${(leg.target_weight_bps / 100).toFixed(2)}%`);
+      legs.appendChild(row);
+    });
+  }
+  renderStrategyPlan(rows);
+  if (view.planError) setStrategyMessage(`Plan unavailable: ${view.planError}`, 'error');
+  else if (capitalError) setStrategyMessage(capitalError, 'error');
+  else if (view.decision.status !== 'PUBLISHED') setStrategyMessage('Council did not publish a decision; no plan is built.');
+  else if (!view.plan) setStrategyMessage('Enter a USDC capital amount to size the plan.');
+  else setStrategyMessage('Advisory plan. Edit allocations freely; nothing runs until you press Execute leg and sign that one Devnet swap in your wallet.', 'success');
+}
+
+function renderStrategyPlan(rows) {
+  if (!strategyPlan) {
+    byId('strategy-residual').textContent = '—';
+    emptyRow(rows, 4, 'Enter capital and load a PUBLISHED decision to build a plan.');
+    return;
+  }
+  byId('strategy-residual').textContent = baseUnitsToUsdc(strategyPlan.residualBaseUnits);
+  if (!strategyPlan.legs.length) {
+    emptyRow(rows, 4, 'All legs removed.');
+    return;
+  }
+  rows.replaceChildren();
+  strategyPlan.legs.forEach((leg) => {
+    const row = document.createElement('tr');
+    appendCell(row, `${leg.underlying} · ${(leg.targetWeightBps / 100).toFixed(2)}%`);
+    const allocation = document.createElement('td');
+    const input = document.createElement('input');
+    input.inputMode = 'decimal';
+    input.autocomplete = 'off';
+    input.value = baseUnitsToUsdc(leg.allocationBaseUnits);
+    input.dataset.leg = leg.assetId;
+    input.setAttribute('aria-label', `${leg.underlying} allocation in USDC`);
+    allocation.appendChild(input);
+    row.appendChild(allocation);
+    appendCell(row, leg.executable ? `${leg.label} · ${short(leg.analogMint)}` : `${leg.label} · Devnet analog mint not configured (executable: false)`);
+    const action = document.createElement('td');
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'app-secondary-button';
+    remove.dataset.leg = leg.assetId;
+    remove.dataset.action = 'remove';
+    remove.textContent = 'Remove';
+    const execute = document.createElement('button');
+    execute.type = 'button';
+    execute.className = 'app-primary-button';
+    execute.dataset.leg = leg.assetId;
+    execute.dataset.action = 'execute';
+    const done = executedLegs.get(leg.assetId);
+    execute.textContent = done ? 'Executed' : executingLeg === leg.assetId ? 'Executing…' : 'Execute leg';
+    execute.disabled = !leg.executable || Boolean(done) || tradeInFlight;
+    if (!leg.executable) execute.title = 'No Devnet analog mint configured for this leg';
+    action.append(execute, ' ', remove);
+    row.appendChild(action);
+    rows.appendChild(row);
+  });
+}
+
+async function executeStrategyLeg(event) {
+  const button = event.target.closest('button[data-action="execute"]');
+  if (!button || !strategyPlan || tradeInFlight || button.disabled) return;
+  const leg = strategyPlan.legs.find((item) => item.assetId === button.dataset.leg);
+  if (!leg || !leg.executable || executedLegs.has(leg.assetId)) return;
+  let wallet;
+  try { wallet = signingWallet('Devnet leg'); } catch (error) { setStrategyMessage(error.message, 'error'); return; }
+  const { provider, signer } = wallet;
+  const planAtStart = strategyPlan;
+  tradeInFlight = true;
+  executingLeg = leg.assetId;
+  renderStrategyPlan(byId('strategy-plan'));
+  byId('sign-send').disabled = true;
+  byId('get-quote').disabled = true;
+  try {
+    const result = await executeLeg({
+      leg,
+      signer,
+      provider,
+      guard: (message) => { if (providerAddress(provider) !== signer || activeAddress() !== signer || strategyPlan !== planAtStart) throw new Error(message); },
+      hooks: { status: (message) => setStrategyMessage(message) },
+    });
+    if (result.status === 'confirmed') {
+      if (strategyPlan === planAtStart) executedLegs.set(leg.assetId, result.signature);
+      setStrategyMessage(`${leg.underlying} leg confirmed on Devnet (${result.confirmationStatus}): ${result.signature}${result.journalError ? ` · journal write failed: ${result.journalError}` : ''}`, 'success');
+      renderHistory();
+      refreshAccount().catch(() => {});
+    } else {
+      setStrategyMessage(`${result.error}${result.signature ? ` Signature: ${result.signature}` : ''}`, result.status === 'pending' ? '' : 'error');
+    }
+  } finally {
+    tradeInFlight = false;
+    executingLeg = null;
+    byId('get-quote').disabled = false;
+    byId('sign-send').disabled = !activeQuote;
+    renderStrategyPlan(byId('strategy-plan'));
+  }
+}
+
+function applyStrategyEdit(result) {
+  strategyPlan = result.plan;
+  renderStrategyPlan(byId('strategy-plan'));
+  if (result.error) setStrategyMessage(result.error, 'error');
+  else setStrategyMessage('Advisory plan. Edit allocations freely; nothing runs until you press Execute leg and sign that one Devnet swap in your wallet.', 'success');
+}
+
+function editStrategyLeg(event) {
+  const input = event.target.closest('input[data-leg]');
+  if (input && strategyPlan) applyStrategyEdit(setLegAllocation(strategyPlan, input.dataset.leg, input.value));
+}
+
+function removeStrategyLeg(event) {
+  const button = event.target.closest('button[data-action="remove"]');
+  if (button && strategyPlan) applyStrategyEdit(removeLeg(strategyPlan, button.dataset.leg));
+}
+
+async function loadStrategy() {
+  const button = byId('strategy-load');
+  button.disabled = true;
+  setStrategyMessage('Loading council decision…');
+  try {
+    const result = await fetchAdvice({ base: resolveCouncilBase() });
+    if (!result.ok) {
+      strategyAdvice = null;
+      strategyPlan = null;
+      renderStrategy();
+      setStrategyMessage(`Council decision unavailable (${result.error.code}): ${result.error.message}`, 'error');
+      return;
+    }
+    strategyAdvice = result.advice;
+    renderStrategy();
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -629,6 +889,11 @@ function bindUI() {
   byId('watchlist').addEventListener('click', removeWatchMint);
   byId('get-quote').addEventListener('click', getQuoteAction);
   byId('sign-send').addEventListener('click', () => simulateSignSend().catch((error) => setTradeResult(error?.message || 'Devnet order failed.', 'error')));
+  byId('strategy-load').addEventListener('click', loadStrategy);
+  byId('strategy-capital').addEventListener('change', renderStrategy);
+  byId('strategy-plan').addEventListener('change', editStrategyLeg);
+  byId('strategy-plan').addEventListener('click', removeStrategyLeg);
+  byId('strategy-plan').addEventListener('click', executeStrategyLeg);
   ['order-side', 'order-amount', 'asset-mint', 'quote-mint'].forEach((id) => {
     byId(id).addEventListener('input', invalidateQuote);
     byId(id).addEventListener('change', invalidateQuote);

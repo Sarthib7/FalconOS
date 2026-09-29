@@ -1,0 +1,18 @@
+[
+  {
+    "case": "baseline",
+    "exit": 1,
+    "tests": 8,
+    "pass": 0,
+    "fail": 8,
+    "output": "/private/tmp/falcon-graph-verification-fj8ifkii/baseline/output.txt"
+  },
+  {
+    "case": "snapshot-guard",
+    "exit": 1,
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "output": "/private/tmp/falcon-graph-verification-fj8ifkii/snapshot-guard/output.txt"
+  }
+]
