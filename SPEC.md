@@ -524,17 +524,17 @@ T45|~|connect landing signup to durable local/Pages storage and configurable ide
 T46|x|port active OpenDesign Control Centre to React; preserve four views and isolated saved simulation; verify source parity, current/history semantics, storage failures and browser flows|I16,V107,V108,V109,V110,V111
 
 T47|x|publish new landing and Control Centre on the existing Pages site from a clean scoped checkout; preserve hosted signup and verify public routes and assets|I16,V104,V107,V111
-T48|~|wire dashboard Knowledge view to live §I15 mesh graph/analyses/sources behind in-memory token gate|I16,V113
-T49|~|wire dashboard Connections view to live connectors, `/readyz` health and live capture status|I16,V113
+T48|x|wire dashboard Knowledge view to live §I15 mesh graph/analyses/sources behind in-memory token gate|I16,V113
+T49|x|wire dashboard Connections view to live connectors, `/readyz` health and live capture status|I16,V113
 T50|.|add §I17 treasury runs API: additive `treasury_runs` migration, shared `mesh/treasury-domain.mjs`, `treasury-store.mjs`, runs/events/preview routes|I14,I17,V77,V114,V115,V116
 T51|.|wire dashboard Decisions view to server-persisted treasury runs (§I17)|I16,I17,V114
 T52|.|wire dashboard Overview view to server treasury run projection (§I17)|I16,I17,V114
 T53|.|deploy live Control Centre build (`VITE_MESH_API_URL`) and verify end-to-end vs falcon-mesh production|I16,I17,V113,V114
-T54|.|extend engine GET /advice PUBLISHED to include basket legs (asset_id, underlying, target_weight_bps); execution_ready false; empty legs on BLOCKED/NO_DATA|I11,I18,V119
-T55|.|add advisory capital-plan sizing module (capital × weight-bps -> per-leg USDC, editable, residual, devnet-analog mapping)|I18,V117
-T56|.|wire web/app/ Strategy panel to engine /advice; render decision + editable sized plan|I13,I18,V117
-T57|.|execute one plan leg on Devnet from web/app/ via V76 swap (human-signed, persisted)|I13,I18,V76,V118
-T58|.|automated Devnet e2e: funded keypair drives data->decision->plan->execute->confirm; assert signature + deltas + persisted|I18,V118
+T54|x|extend engine GET /advice PUBLISHED to include basket legs (asset_id, underlying, target_weight_bps); execution_ready false; empty legs on BLOCKED/NO_DATA|I11,I18,V119
+T55|x|add advisory capital-plan sizing module (capital × weight-bps -> per-leg USDC, editable, residual, devnet-analog mapping)|I18,V117
+T56|x|wire web/app/ Strategy panel to engine /advice; render decision + editable sized plan|I13,I18,V117
+T57|x|execute one plan leg on Devnet from web/app/ via V76 swap (human-signed, persisted)|I13,I18,V76,V118
+T58|x|automated Devnet e2e: funded keypair drives data->decision->plan->execute->confirm; assert signature + deltas + persisted|I18,V118
 T59|.|manual real-wallet sign-off session; capture confirmed signatures + screenshots|I18,V118
 
 ## §B BUGS
