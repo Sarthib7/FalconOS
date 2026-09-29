@@ -39,12 +39,20 @@ pub struct AdviceCitation {
 }
 
 #[derive(Clone, Debug, Serialize)]
+pub struct AdviceLeg {
+    pub asset_id: String,
+    pub underlying: String,
+    pub target_weight_bps: u32,
+}
+
+#[derive(Clone, Debug, Serialize)]
 pub struct AdviceResponse {
     pub status: String,
     pub snapshot_sha256: String,
     pub created_at: String,
     pub execution_ready: bool,
     pub reasons: Vec<String>,
+    pub legs: Vec<AdviceLeg>,
     pub evidence: Vec<AdviceEvidence>,
     pub citations: Vec<AdviceCitation>,
     pub latency_ms: u128,
@@ -339,11 +347,24 @@ fn advice(
     } else {
         Vec::new()
     };
+    let legs = match verdict {
+        Verdict::Published(proposal) => proposal
+            .legs
+            .iter()
+            .map(|leg| AdviceLeg {
+                asset_id: leg.asset_id.clone(),
+                underlying: leg.underlying.clone(),
+                target_weight_bps: leg.target_weight_bps,
+            })
+            .collect(),
+        Verdict::Blocked { .. } | Verdict::NoData { .. } => Vec::new(),
+    };
     AdviceResponse {
         status: verdict.status().to_string(),
         snapshot_sha256: snapshot.sha256.clone(),
         created_at: snapshot.created_at.clone(),
         execution_ready: false,
+        legs,
         reasons: verdict.reasons().to_vec(),
         evidence,
         citations,
@@ -686,6 +707,8 @@ mod tests {
         assert!(matches!(verdict, Verdict::NoData { .. }));
         assert_eq!(response.status, "NO_DATA");
         assert!(!response.execution_ready);
+        // V119: NO_DATA carries empty legs.
+        assert!(response.legs.is_empty());
         assert!(response.citations.is_empty());
         assert!(
             response
@@ -941,5 +964,23 @@ mod tests {
             citation.raw_excerpt_sha256.len() == 64
                 && ["price", "liquidity", "reference"].contains(&citation.field.as_str())
         }));
+        // V119: published /advice carries the basket legs; weights sum to 10000.
+        assert!(!response.legs.is_empty());
+        assert!(response.legs.iter().all(|leg| {
+            !leg.asset_id.is_empty() && !leg.underlying.is_empty() && leg.target_weight_bps > 0
+        }));
+        assert_eq!(
+            response
+                .legs
+                .iter()
+                .map(|leg| leg.target_weight_bps)
+                .sum::<u32>(),
+            10_000
+        );
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(
+            json["legs"][0]["target_weight_bps"],
+            response.legs[0].target_weight_bps
+        );
     }
 }
