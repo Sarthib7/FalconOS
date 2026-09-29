@@ -32,7 +32,7 @@ npm --prefix web run test:dashboard:browser
 
 ## Data and services
 
-[VERIFIED, source: `data.json`, `store.mjs`] The five treasury runs and four knowledge snapshots are synthetic. The saved simulation uses `falconos-control-centre-preview-v1` in browser storage. The wrapper fixes that key for storage and locking. The existing treasury store retains its original default. State stays specific to the browser origin.
+[VERIFIED, source: `data.json`, `store.mjs`] The five treasury runs are synthetic. The four embedded knowledge snapshots remain in `data.json` as a pinned design fixture but the Knowledge view reads the live mesh API after you connect with an access token (kept in memory only). The saved simulation uses `falconos-control-centre-preview-v1` in browser storage. The wrapper fixes that key for storage and locking. The existing treasury store retains its original default. State stays specific to the browser origin.
 
 [INFERRED, workflow] Inspect examples, or create one saved simulation. Record evidence before running a cycle. Inspect the resulting decision and balances. The dashboard cannot move wallet funds. Its Connections view links to the separate mesh and Devnet terminal.
 

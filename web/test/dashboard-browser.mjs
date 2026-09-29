@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { appendEvent, createRun, formatUsdc, replayRun } from '../treasury/domain.mjs';
 
 // Every browser profile, storage record and source action is disposable.
-// The dashboard is synthetic. No service token, wallet or external HTTP is used.
+// The treasury is synthetic. Knowledge API responses are injected at the network layer for the default mesh origin.
+// Only fixture tokens are used. No wallet, real service or external HTTP is used.
 const root = resolve(process.env.FALCON_DASHBOARD_WEB_ROOT || fileURLToPath(new URL('../dist/', import.meta.url)));
 const sourceRoot = process.env.FALCON_DASHBOARD_SOURCE;
 if (!sourceRoot) throw new Error('Set FALCON_DASHBOARD_SOURCE to the OpenDesign project data root before running the dashboard browser harness.');
@@ -33,6 +34,51 @@ const prettyUnits = value => {
   const [whole, fraction] = formatUsdc(value).split('.');
   return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (fraction ? `.${fraction}` : '');
 };
+const apiOrigin = 'http://127.0.0.1:8791';
+const MESH_TOKEN = 'dashboard-test-token-0123456789abcdef', BAD_TOKEN = 'x'.repeat(40);
+const ANALYSIS_IDS = ['3f1c2a9e-0b7d-4c55-9a51-6d0e8f2b7a01', '8a4d6e21-5c93-4f0a-b1e7-2c9d3a6f5b02'];
+const LIVE_CONTENT = '# klend readme fixture\n';
+const LIVE_SOURCE = { revisionId: 'c0ffee00-1111-4222-8333-444455556666', sourceKey: 'kamino/readme', sourceUrl: 'https://github.com/Kamino-Finance/klend/blob/master/README.md', observedAt: '2026-09-28T09:00:00.000Z', capturedAt: '2026-09-28T09:00:05.000Z', sha256: hash(LIVE_CONTENT) };
+const meshRequests = [];
+let meshMode = 'populated';
+const metadata = ({ content, ...rest }) => rest;
+const nodeIn = (id, kind, label, properties = {}) => ({ id, kind, label, properties, sourceRevisionIds: [LIVE_SOURCE.revisionId] });
+const edgeIn = (id, source, target, relation) => ({ id, source, target, relation, sourceRevisionIds: [LIVE_SOURCE.revisionId] });
+const emptyGraph = mode => ({ schemaVersion: 1, mode, revision: hash(`empty-${mode}`), asOf: '2026-09-28T09:00:00.000Z', nodes: [], edges: [], sources: [], issues: [], coverage: { status: 'complete', nodeLimit: 256, edgeLimit: 512, sourceLimit: 32 } });
+function meshFixture() {
+  const packs = sourceData.knowledge;
+  const liveGraph = { ...emptyGraph('live'), revision: hash('live-graph-fixture'), nodes: [nodeIn('document:klend-readme', 'document', 'Kamino klend README', { sourceKey: 'kamino/readme' }), nodeIn('protocol:kamino', 'protocol', 'Kamino Lend'), nodeIn('account:klend-program', 'account', 'KLend program account', { network: 'devnet' }), nodeIn('observation:live:klend', 'observation', 'Live program capture', { status: 'ok' })],
+    edges: [edgeIn('edge:doc-claims', 'document:klend-readme', 'account:klend-program', 'claims_program'), edgeIn('edge:doc-documents', 'document:klend-readme', 'protocol:kamino', 'documents'), edgeIn('edge:obs-observes', 'observation:live:klend', 'account:klend-program', 'observes')],
+    sources: [LIVE_SOURCE], issues: ['Current capture kamino/devnet failed: rpc_unreachable.'] };
+  const sources = new Map([...Object.values(packs).flatMap(pack => pack.sources), { ...LIVE_SOURCE, content: LIVE_CONTENT }].map(source => [source.revisionId, source]));
+  const records = [{ id: ANALYSIS_IDS[0], createdAt: '2026-09-28T08:00:00.000Z', graph: packs.liquid.graph, analysis: packs.liquid.analyses['3'] }, { id: ANALYSIS_IDS[1], createdAt: '2026-09-28T08:30:00.000Z', graph: packs.illiquid.graph, analysis: packs.illiquid.analyses['3'] }];
+  return { liveGraph, sources, records, synthetic: packs.liquid.graph };
+}
+const meshError = (status, code, message) => [status, { error: { code, message } }];
+function meshRoute(path, authorized) {
+  if (!authorized) return meshError(401, 'UNAUTHORIZED', 'Missing or invalid bearer token.');
+  const fixture = meshFixture(), empty = meshMode === 'empty';
+  if (path === '/v1/graph') return [200, { graph: empty ? emptyGraph('synthetic') : fixture.synthetic }];
+  if (path === '/v1/graph/live') return meshMode === 'error' ? meshError(500, 'STORE_UNAVAILABLE', 'The evidence store is unavailable.') : [200, { graph: empty ? emptyGraph('live') : fixture.liveGraph }];
+  if (path === '/v1/analyses') return [200, { records: empty ? [] : fixture.records.map(({ id, createdAt, analysis }) => ({ id, createdAt, analysis })), limit: 20 }];
+  const analysis = path.match(/^\/v1\/analyses\/([a-f0-9-]{36})$/i);
+  if (analysis) {
+    const record = fixture.records.find(item => item.id === analysis[1]);
+    return record && !(meshMode === 'error' && record.id === ANALYSIS_IDS[1]) ? [200, { record: { ...record, requestId: randomUUID() } }] : meshError(404, 'NOT_FOUND', 'The analysis was not found.');
+  }
+  const source = path.match(/^\/v1\/sources\/([a-f0-9-]{36})$/i);
+  if (source) return fixture.sources.has(source[1]) && meshMode !== 'error' ? [200, { source: fixture.sources.get(source[1]) }] : meshError(404, 'NOT_FOUND', 'The source revision was not found.');
+  return meshError(404, 'NOT_FOUND', 'Unknown route.');
+}
+async function fulfillMesh(message) {
+  const { request, requestId } = message.params;
+  const url = new URL(request.url), headers = [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: origin }, { name: 'Access-Control-Allow-Headers', value: 'authorization, accept, content-type' }, { name: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' }];
+  if (request.method === 'OPTIONS') return call('Fetch.fulfillRequest', { requestId, responseCode: 204, responseHeaders: headers }, message.sessionId);
+  const authorization = Object.entries(request.headers).find(([name]) => name.toLowerCase() === 'authorization')?.[1];
+  const [status, body] = request.method === 'GET' ? meshRoute(url.pathname, authorization === `Bearer ${MESH_TOKEN}`) : meshError(405, 'METHOD_NOT_ALLOWED', 'Read-only fixture.');
+  meshRequests.push({ method: request.method, path: url.pathname, hasQuery: Boolean(url.search), authorization, status });
+  return call('Fetch.fulfillRequest', { requestId, responseCode: status, responseHeaders: headers, body: Buffer.from(JSON.stringify(body)).toString('base64') }, message.sessionId);
+}
 function check(name, value, detail, fatal = true) {
   checks.push({ name, pass: Boolean(value), ...(detail === undefined ? {} : { detail }) });
   if (fatal) assert.ok(value, name);
@@ -81,6 +127,7 @@ function receive(data) {
     }
     if (message.method === 'Fetch.requestPaused') {
       const url = new URL(message.params.request.url);
+      if (url.origin === apiOrigin) { void fulfillMesh(message).catch(failPending); continue; }
       const allowed = !['http:', 'https:'].includes(url.protocol) || url.origin === origin;
       if (!allowed) remoteRequests.push(`${url.origin}${url.pathname}`);
       void call(allowed ? 'Fetch.continueRequest' : 'Fetch.failRequest', { requestId: message.params.requestId,
@@ -401,36 +448,117 @@ async function runReact() {
   await staleClipboard(p);
   check('V108: saved operations preserve existing treasury and advisory bytes', await p.evaluate(`Object.entries(${JSON.stringify(SENTINELS)}).every(([key,value])=>localStorage.getItem(key)===value)`));
 
-  await route(p, 'knowledge');
-  for (const name of ['liquid', 'illiquid', 'stale', 'missing']) {
-    for (const depth of ['3', '2', '1']) {
-      const expected = sourceData.knowledge[name].analyses[depth];
-      await chooseKnowledge(p, name, depth);
-      const text = await p.evaluate('document.querySelector(".mesh-result").textContent');
-      check(`V109: ${name}/${depth} uses the retained sample analysis and coverage`, await p.evaluate('document.querySelector(".mesh-result .badge").textContent.trim().replaceAll(" ","_")') === expected.status && text.includes(expected.summary) && text.includes(expected.coverage.status.replaceAll('_', ' ')));
-    }
-  }
-  await chooseKnowledge(p, 'liquid', '3'); await evidenceRegressions(p, true);
-  await field(p, '#entity-search', 'position:unrelated');
-  check('V109: entity directory can inspect the unrelated position without adding it to the exit', await p.evaluate('document.querySelectorAll("#entity-directory [data-entity]").length === 1 && document.querySelector("#entity-directory [data-entity]").dataset.entity === "position:unrelated" && document.querySelector(".mesh-result").textContent.includes("500")'));
-  await p.click('#entity-directory [data-entity]');
-  check('V109: entity selection opens its retained relationships and provenance', await p.evaluate('document.getElementById("knowledge-inspector").textContent.includes("position:unrelated") && document.querySelectorAll("#knowledge-inspector [data-source]").length > 0'));
+  await liveKnowledgeCases();
   await route(p, 'connections');
-  check('V111: connections distinguish embedded samples and link to the separate live mesh', await p.evaluate('document.getElementById("view").textContent.includes("DISCONNECTED") && document.getElementById("view").textContent.includes("NOT CAPTURED") && [...document.querySelectorAll("a[href]")].some(link=>new URL(link.href).pathname==="/mesh/")'));
+  check('V111: connections show the mesh disconnected until a token is entered and link to the separate live mesh', await p.evaluate('document.getElementById("view").textContent.includes("DISCONNECTED") && document.getElementById("view").textContent.includes("NOT CAPTURED") && [...document.querySelectorAll("a[href]")].some(link=>new URL(link.href).pathname==="/mesh/")'));
   await clockRegression();
   await storageCases();
   await queuedLoopStop();
   await boundedLoop();
   await legacyReferences();
-  check('V111: dashboard made no backend, wallet, or provider requests', localRequests.every(request => request.method === 'GET' && !request.path.startsWith('/v1/') && !request.path.startsWith('/api/')));
+  check('V111: dashboard made no same-origin backend, wallet, or provider requests', localRequests.every(request => request.method === 'GET' && !request.path.startsWith('/v1/') && !request.path.startsWith('/api/')));
+  check('V111: every mesh request was a read-only GET with the bearer token and no query string', meshRequests.length > 0 && meshRequests.every(request => request.method === 'GET' && !request.hasQuery && (request.authorization === `Bearer ${MESH_TOKEN}` || request.authorization === `Bearer ${BAD_TOKEN}`)));
   await writeFile(`${artifactDir}/ui-copy.txt`, await p.evaluate('document.body.innerText'));
 }
 
-async function chooseKnowledge(p, name, depth) {
-  await field(p, '#mesh-scenario', name); await field(p, '#mesh-depth', depth);
-  await p.click('#analyze-sample');
-  const summary = sourceData.knowledge[name].analyses[depth].summary;
-  await p.wait(`!document.getElementById('analyze-sample').disabled && document.querySelector('.mesh-result').textContent.includes(${JSON.stringify(summary)})`);
+async function connectMesh(p, token = MESH_TOKEN) {
+  if (await p.evaluate('Boolean(document.getElementById("knowledge-connect"))')) { await field(p, '#knowledge-token', token); await p.click('#connect-submit'); }
+  await p.wait('Boolean(document.querySelector("#graph-nodes, #knowledge-empty, #knowledge-error")) && Boolean(document.querySelector("#analysis-history [data-analysis], #analysis-empty, #history-error"))');
+}
+function seen(method, path) { return meshRequests.some(request => request.method === method && request.path === path); }
+function texts(p, selector) { return p.evaluate(`[...document.querySelectorAll(${JSON.stringify(selector)})].map(node => node.textContent.trim())`); }
+async function liveKnowledgeCases() {
+  meshMode = 'populated'; meshRequests.length = 0;
+  const fixture = meshFixture(), synthetic = fixture.synthetic;
+  const p = await page({ isolated: true }); activePage = p;
+  await route(p, 'knowledge');
+  check('LIVE1: Knowledge waits behind the connect gate with a password field and makes no service request', await p.evaluate('Boolean(document.getElementById("knowledge-connect")) && document.getElementById("knowledge-token").type === "password" && !document.getElementById("graph-nodes") && !document.getElementById("entity-directory")') && meshRequests.length === 0);
+  await field(p, '#knowledge-token', 'too-short'); await p.click('#connect-submit');
+  check('LIVE1: a malformed token is refused locally without a request', await p.evaluate('document.getElementById("connect-error").textContent.includes("32 to 256") && document.getElementById("knowledge-token").getAttribute("aria-invalid") === "true"') && meshRequests.length === 0);
+  await field(p, '#knowledge-token', BAD_TOKEN); await p.click('#connect-submit');
+  await p.wait('document.getElementById("connect-error").textContent.includes("UNAUTHORIZED")');
+  check('LIVE1: an invalid token stays gated, surfaces the API error and loads only the validation request', await p.evaluate('Boolean(document.getElementById("knowledge-connect")) && !document.getElementById("graph-nodes") && document.getElementById("mesh-status").textContent === "OFFLINE" && !document.getElementById("connect-submit").disabled') && meshRequests.length === 1 && meshRequests[0].path === '/v1/graph' && meshRequests[0].status === 401);
+  await field(p, '#knowledge-token', MESH_TOKEN); await p.click('#connect-submit');
+  await p.wait('Boolean(document.getElementById("graph-nodes")) && document.querySelectorAll("#analysis-history [data-analysis]").length === 2');
+  check('LIVE1: a valid token connects and loads the graph and analysis history with the bearer token', await p.evaluate('document.getElementById("mesh-status").textContent === "MESH CONNECTED" && !document.getElementById("knowledge-connect")') && seen('GET', '/v1/graph') && seen('GET', '/v1/analyses') && meshRequests.slice(1).every(request => request.authorization === `Bearer ${MESH_TOKEN}` && request.status === 200));
+  check('LIVE1: the token is held in memory only, never in browser storage or the page URL', await p.evaluate(`!JSON.stringify({ ...localStorage, ...sessionStorage }).includes(${JSON.stringify(MESH_TOKEN)}) && !location.href.includes(${JSON.stringify(MESH_TOKEN)}) && document.getElementById('knowledge-token') === null`));
+  await route(p, 'connections');
+  check('LIVE1: Connections reports the connected mesh', await p.evaluate('document.getElementById("view").textContent.includes("CONNECTED") && !document.getElementById("view").textContent.includes("DISCONNECTED")'));
+  await route(p, 'knowledge');
+  check('LIVE1: leaving and returning keeps the session connected without asking for the token again', await p.evaluate('!document.getElementById("knowledge-connect")'));
+  await connectMesh(p);
+  const kinds = [...new Set(synthetic.nodes.map(node => node.kind))].sort();
+  check('LIVE2: nodes render grouped by kind from the injected graph', JSON.stringify((await p.evaluate('[...document.querySelectorAll("#graph-nodes .kind-group")].map(group => group.dataset.kind)')).sort()) === JSON.stringify(kinds) && (await p.evaluate('document.querySelectorAll("#graph-nodes [data-entity]").length')) === synthetic.nodes.length && await p.evaluate(`[...document.querySelectorAll('#graph-nodes .kind-group')].every(group => group.querySelectorAll('[data-entity]').length === ${JSON.stringify(Object.fromEntries(kinds.map(kind => [kind, synthetic.nodes.filter(node => node.kind === kind).length])))}[group.dataset.kind])`));
+  const relations = [...new Set(synthetic.edges.map(edge => edge.relation))].sort();
+  check('LIVE2: edges render grouped by relation with every relationship listed', JSON.stringify((await p.evaluate('[...document.querySelectorAll("#graph-edges [data-relation]")].map(group => group.dataset.relation)')).sort()) === JSON.stringify(relations) && (await p.evaluate('document.querySelectorAll("#graph-edges [data-edge]").length')) === synthetic.edges.length);
+  check('LIVE2: the source list and coverage footer describe the injected snapshot', JSON.stringify((await texts(p, '#source-list [data-source] .mono')).sort()) === JSON.stringify(synthetic.sources.map(source => `${source.sourceKey} ↗`).sort()) && await p.evaluate(`document.getElementById('graph-coverage').textContent.includes(${JSON.stringify(synthetic.revision)}) && document.querySelector('#graph-nodes').closest('.panel').querySelector('.badge').textContent.trim() === 'complete'`));
+  check('LIVE2: no embedded sample pack or sample controls remain in the Knowledge view', await p.evaluate('!document.getElementById("mesh-scenario") && !document.getElementById("analyze-sample") && !document.getElementById("view").textContent.includes("SAMPLE KNOWLEDGE")'));
+  const structure = synthetic.sources.find(source => source.sourceKey === 'demo/structure'), retained = fixture.sources.get(structure.revisionId);
+  await p.click(`#source-list [data-source="${structure.revisionId}"]`);
+  await p.wait('Boolean(document.querySelector("#knowledge-inspector .source-json"))');
+  const shownContent = await p.evaluate('document.querySelector("#knowledge-inspector .source-json").textContent');
+  check('LIVE3: selecting a source loads its exact retained content from /v1/sources/:id', shownContent === retained.content && seen('GET', `/v1/sources/${structure.revisionId}`) && hash(shownContent) === structure.sha256, { displayed: hash(shownContent), expected: structure.sha256 });
+  const before = meshRequests.length;
+  await p.click(`#source-list [data-source="${structure.revisionId}"]`);
+  check('LIVE3: reopening a loaded source reuses it without another request', meshRequests.length === before && await p.evaluate('Boolean(document.querySelector("#knowledge-inspector .source-json"))'));
+  await p.click(`#analysis-history [data-analysis="${ANALYSIS_IDS[0]}"]`);
+  await p.wait(`document.getElementById('analysis-detail').dataset.analysisId === ${JSON.stringify(ANALYSIS_IDS[0])}`);
+  const ready = fixture.records[0].analysis, ledger = ready.positionResults;
+  check('LIVE4: selecting a READY analysis loads /v1/analyses/:id and renders status, summary, coverage and position results', seen('GET', `/v1/analyses/${ANALYSIS_IDS[0]}`) && await p.evaluate(`(() => { const box = document.getElementById('analysis-detail'); return box.querySelector('.badge').textContent.trim() === ${JSON.stringify(ready.status)} && box.textContent.includes(${JSON.stringify(ready.summary)}) && document.getElementById('analysis-coverage').textContent.includes(${JSON.stringify(ready.coverage.status)}) && document.getElementById('analysis-coverage').textContent.includes(${JSON.stringify(`${new Set(ready.coverage.visitedNodeIds).size} nodes visited`)}) && document.querySelectorAll('#analysis-detail .ledger-row').length === ${ledger.length} && box.textContent.includes(${JSON.stringify(prettyUnits(ready.totalAffectedUnits))}); })()`));
+  check('LIVE4: the analysis path is marked on its entities', JSON.stringify((await p.evaluate('[...new Set([...document.querySelectorAll("#graph-nodes [data-path=true]")].map(node => node.dataset.entity))]')).sort()) === JSON.stringify([...new Set(ledger.flatMap(position => position.pathNodeIds))].sort()));
+  await p.click(`#analysis-history [data-analysis="${ANALYSIS_IDS[1]}"]`);
+  const blocked = fixture.records[1];
+  await p.wait(`document.getElementById('analysis-detail').dataset.analysisId === ${JSON.stringify(ANALYSIS_IDS[1])}`);
+  check('LIVE4: choosing another analysis shows its BLOCKED result on the retained graph snapshot it was made from', await p.evaluate(`document.querySelector('#analysis-detail .badge').textContent.trim() === 'BLOCKED' && document.getElementById('analysis-detail').textContent.includes(${JSON.stringify(blocked.analysis.summary)}) && document.getElementById('graph-coverage').textContent.includes(${JSON.stringify(blocked.graph.revision)}) && document.querySelectorAll('#analysis-history [aria-pressed=true]').length === 1`));
+  await p.click(`#analysis-history [data-analysis="${ANALYSIS_IDS[0]}"]`);
+  await p.wait(`document.getElementById('analysis-detail').dataset.analysisId === ${JSON.stringify(ANALYSIS_IDS[0])}`);
+  await p.click('#export-mesh'); await p.wait('document.getElementById("export-dialog").open');
+  const description = await p.evaluate('document.querySelector("#export-dialog .dialog-content .form-note").textContent');
+  const exported = JSON.parse(await p.evaluate('document.getElementById("export-json").value'));
+  check('LIVE5: export contains the shown graph, analysis and every source with its exact content, and no treasury commands', exported.mode === 'synthetic' && exported.graph.revision === fixture.records[0].graph.revision && exported.analysisId === ANALYSIS_IDS[0] && JSON.stringify(exported.analysis) === JSON.stringify(ready) && exported.sources.length === synthetic.sources.length && exported.sources.every(source => source.content === fixture.sources.get(source.revisionId).content) && /graph/i.test(description) && /analysis/i.test(description) && /source/i.test(description) && !/commands|outcomes/i.test(description), { description, keys: Object.keys(exported) });
+  await closeDialog(p, 'export-dialog');
+  await p.click(`#analysis-history [data-analysis="${ANALYSIS_IDS[0]}"]`);
+  await p.wait('document.getElementById("analysis-detail").textContent.includes("Select a retained analysis")');
+  await field(p, '#entity-search', 'position:unrelated');
+  check('LIVE2: entity directory can find an entity that is not on the analysis path', await p.evaluate('document.querySelectorAll("#entity-directory [data-entity]").length === 1 && document.querySelector("#entity-directory [data-entity]").dataset.entity === "position:unrelated"'));
+  await p.click('#entity-directory [data-entity]');
+  check('LIVE2: selecting an entity opens its relationships and supporting sources', await p.evaluate('document.getElementById("knowledge-inspector").textContent.includes("position:unrelated") && document.getElementById("knowledge-inspector").textContent.includes("Connected relationships") && document.querySelectorAll("#knowledge-inspector [data-source]").length > 0'));
+  await field(p, '#entity-search', '');
+  await field(p, '#mesh-mode', 'live');
+  await p.wait('Boolean(document.querySelector("#graph-nodes [data-kind=document]"))');
+  const live = fixture.liveGraph;
+  check('LIVE6: the live mode toggle loads /v1/graph/live and renders its own kinds, relations, issues and source', seen('GET', '/v1/graph/live') && JSON.stringify((await p.evaluate('[...document.querySelectorAll("#graph-nodes .kind-group")].map(group => group.dataset.kind)')).sort()) === JSON.stringify(['account', 'document', 'observation', 'protocol']) && JSON.stringify((await p.evaluate('[...document.querySelectorAll("#graph-edges [data-relation]")].map(group => group.dataset.relation)')).sort()) === JSON.stringify(['claims_program', 'documents', 'observes']) && await p.evaluate(`document.getElementById('graph-issues').textContent.includes(${JSON.stringify(live.issues[0])}) && document.getElementById('source-list').textContent.includes('kamino/readme') && document.getElementById('graph-coverage').textContent.includes(${JSON.stringify(live.revision)}) && document.getElementById('analysis-detail').textContent.includes('Select a retained analysis')`));
+  await p.click(`#source-list [data-source="${LIVE_SOURCE.revisionId}"]`);
+  await p.wait('Boolean(document.querySelector("#knowledge-inspector .source-json"))');
+  check('LIVE6: a live source loads its exact content', await p.evaluate('document.querySelector("#knowledge-inspector .source-json").textContent') === LIVE_CONTENT);
+  await field(p, '#mesh-mode', 'synthetic');
+  await p.wait(`document.getElementById('graph-coverage')?.textContent.includes(${JSON.stringify(synthetic.revision)})`);
+  await p.click('[data-action="disconnect"]'); await p.wait('Boolean(document.getElementById("knowledge-connect"))');
+  check('LIVE1: Disconnect discards the session and returns to the gate with no data shown', await p.evaluate('document.getElementById("mesh-status").textContent === "OFFLINE" && !document.getElementById("graph-nodes") && !document.getElementById("entity-directory") && document.getElementById("knowledge-token").value === ""'));
+  await p.close();
+
+  meshMode = 'empty';
+  const emptyPage = await page({ isolated: true }); activePage = emptyPage;
+  await route(emptyPage, 'knowledge'); await connectMesh(emptyPage);
+  await emptyPage.wait('Boolean(document.getElementById("knowledge-empty"))');
+  check('LIVE7: an owner with no evidence sees a clear empty state instead of a broken graph', await emptyPage.evaluate('document.getElementById("knowledge-empty").textContent.includes("No evidence yet") && document.getElementById("analysis-empty").textContent.includes("No analysis") && !document.querySelector(".kind-group") && document.querySelectorAll("#source-list [data-source]").length === 0 && document.getElementById("knowledge-error") === null'));
+  await field(emptyPage, '#mesh-mode', 'live'); await emptyPage.wait('Boolean(document.getElementById("knowledge-empty")) && document.getElementById("knowledge-empty").textContent.includes("live")');
+  check('LIVE7: the empty owner also sees the empty state in live mode from /v1/graph/live', seen('GET', '/v1/graph/live') && await emptyPage.evaluate('document.getElementById("knowledge-empty").textContent.includes("retained live evidence")'));
+  await emptyPage.close();
+
+  meshMode = 'error';
+  const errorPage = await page({ isolated: true }); activePage = errorPage;
+  await route(errorPage, 'knowledge'); await connectMesh(errorPage);
+  await errorPage.wait('Boolean(document.getElementById("graph-nodes"))');
+  await field(errorPage, '#mesh-mode', 'live'); await errorPage.wait('Boolean(document.getElementById("knowledge-error"))');
+  check('LIVE8: a failed graph request surfaces the API error code and message and shows no stale graph', await errorPage.evaluate('document.getElementById("knowledge-error").textContent.includes("STORE_UNAVAILABLE: The evidence store is unavailable.") && !document.getElementById("graph-nodes") && document.getElementById("graph-status").textContent.includes("unavailable")'));
+  await field(errorPage, '#mesh-mode', 'synthetic'); await errorPage.wait('!document.getElementById("knowledge-error") && Boolean(document.getElementById("graph-nodes"))');
+  await errorPage.click(`#analysis-history [data-analysis="${ANALYSIS_IDS[1]}"]`); await errorPage.wait('Boolean(document.getElementById("analysis-error"))');
+  check('LIVE8: a failed analysis request surfaces its error without changing the shown graph', await errorPage.evaluate(`document.getElementById('analysis-error').textContent.includes('NOT_FOUND: The analysis was not found.') && document.getElementById('graph-coverage').textContent.includes(${JSON.stringify(synthetic.revision)})`));
+  await errorPage.click(`#source-list [data-source="${synthetic.sources[0].revisionId}"]`); await errorPage.wait('Boolean(document.getElementById("source-error"))');
+  check('LIVE8: a failed source request surfaces its error instead of blank content', await errorPage.evaluate('document.getElementById("source-error").textContent.includes("NOT_FOUND") && !document.querySelector("#knowledge-inspector .source-json")'));
+  await errorPage.close();
+  meshMode = 'populated';
 }
 async function staleClipboard(p) {
   for (const outcome of ['resolve', 'reject']) {
@@ -445,8 +573,8 @@ async function staleClipboard(p) {
     await p.click('[data-action="copy-export"]');
     await p.wait('typeof window.__dashboardFinishCopy === "function"');
     await closeDialog(p, 'export-dialog');
-    await route(p, 'knowledge');
-    await p.click('[data-action="export-mesh"]'); await p.wait('document.getElementById("export-dialog").open');
+    await route(p, 'knowledge'); await connectMesh(p);
+    await p.click('[data-action="export-mesh"]'); await p.wait('!document.getElementById("export-mesh").disabled && document.getElementById("export-dialog").open');
     const before = await p.evaluate('document.getElementById("export-status").textContent');
     await p.evaluate('document.querySelector("[data-action=download-export]").focus(); window.__dashboardFinishCopy();');
     await pause(100);
@@ -454,6 +582,7 @@ async function staleClipboard(p) {
     await p.evaluate('navigator.clipboard.writeText = window.__dashboardOriginalClipboard; delete window.__dashboardFinishCopy;');
     await closeDialog(p, 'export-dialog');
   }
+  await route(p, 'knowledge'); await p.click('[data-action="disconnect"]'); await p.wait('Boolean(document.getElementById("knowledge-connect"))');
 }
 async function legacyCase() {
   const legacy = structuredClone(sourceData.samples.hold);

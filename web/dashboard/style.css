@@ -56,3 +56,4 @@ dialog{border:1px solid var(--border);border-radius:2px;background:var(--surface
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
 
 .figure-wrap{position:relative;display:inline-block}.figure-old{position:absolute;left:0;top:0;pointer-events:none;animation:figure-out 180ms ease-out both}@keyframes figure-out{from{opacity:.6;transform:translateY(0)}to{opacity:0;transform:translateY(-8px)}}
+.kind-group{display:grid;gap:12px;margin-bottom:24px}.kind-group-nodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}.entity-node[data-path="true"]{border-color:var(--green)}#knowledge-empty h3{margin-bottom:8px}#knowledge-empty a{color:var(--green)}
