@@ -3,6 +3,7 @@ import { bytesToBase64, createSignInRequest, decodeSolanaAddress, verifySignInPr
 import { createSignInWalletSession } from './wallet-signin.mjs';
 import { buildDevnetUnsignedSwap, getDevnetBlockHeight, getDevnetBlockhash, getDevnetQuote, sendDevnet, simulateDevnet, waitForDevnetConfirmation } from './devnet-execution.mjs';
 import { clearSession, readOrders, readPortfolio, readSession, saveOrder, updateOrder, writePortfolio, writeSession } from './state.mjs';
+import { ANALOG_MINTS, baseUnitsToUsdc, fetchAdvice, removeLeg, resolveCouncilBase, setLegAllocation, toView, usdcToBaseUnits } from './strategy.mjs';
 import { encodeSignatureBase58, verifySignedTransaction } from './transaction.mjs';
 
 const byId = (id) => document.getElementById(id);
@@ -17,6 +18,8 @@ let connectedAddress = null;
 let portfolioData = { balance: null, tokens: [], signatures: [] };
 let activeQuote = null;
 let quoteRevision = 0;
+let strategyAdvice = null;
+let strategyPlan = null;
 let tradeInFlight = false;
 let authInFlight = false;
 let boundProvider = null;
@@ -742,6 +745,129 @@ async function simulateSignSend() {
   }
 }
 
+function setStrategyMessage(message, kind = '') {
+  const element = byId('strategy-message');
+  element.textContent = message;
+  element.dataset.kind = kind;
+}
+
+function renderStrategy() {
+  const status = byId('strategy-status');
+  const legs = byId('strategy-legs');
+  const rows = byId('strategy-plan');
+  if (!strategyAdvice) {
+    status.textContent = 'NOT LOADED';
+    status.className = 'state-off';
+    byId('strategy-reasons').textContent = '—';
+    byId('strategy-residual').textContent = '—';
+    emptyRow(legs, 2, 'Load the council decision to see basket legs.');
+    emptyRow(rows, 4, 'Enter capital and load a PUBLISHED decision to build a plan.');
+    return;
+  }
+  let capital = null;
+  const capitalText = byId('strategy-capital').value.trim();
+  let capitalError = null;
+  if (capitalText) {
+    try { capital = usdcToBaseUnits(capitalText); } catch (error) { capitalError = error.message; }
+  }
+  const view = toView({ advice: strategyAdvice, capitalBaseUnits: capital, analogMints: ANALOG_MINTS });
+  strategyPlan = view.plan;
+  status.textContent = view.decision.status;
+  status.className = view.decision.status === 'PUBLISHED' ? 'state-on' : 'state-off';
+  byId('strategy-reasons').textContent = view.decision.reasons.length ? view.decision.reasons.join(' · ') : 'None';
+  if (!view.decision.legs.length) emptyRow(legs, 2, 'No basket legs for this decision.');
+  else {
+    legs.replaceChildren();
+    view.decision.legs.forEach((leg) => {
+      const row = document.createElement('tr');
+      appendCell(row, leg.underlying);
+      appendCell(row, `${(leg.target_weight_bps / 100).toFixed(2)}%`);
+      legs.appendChild(row);
+    });
+  }
+  renderStrategyPlan(rows);
+  if (view.planError) setStrategyMessage(`Plan unavailable: ${view.planError}`, 'error');
+  else if (capitalError) setStrategyMessage(capitalError, 'error');
+  else if (view.decision.status !== 'PUBLISHED') setStrategyMessage('Council did not publish a decision; no plan is built.');
+  else if (!view.plan) setStrategyMessage('Enter a USDC capital amount to size the plan.');
+  else setStrategyMessage('Advisory plan only. Edit allocations freely; nothing is executed in this view.', 'success');
+}
+
+function renderStrategyPlan(rows) {
+  if (!strategyPlan) {
+    byId('strategy-residual').textContent = '—';
+    emptyRow(rows, 4, 'Enter capital and load a PUBLISHED decision to build a plan.');
+    return;
+  }
+  byId('strategy-residual').textContent = baseUnitsToUsdc(strategyPlan.residualBaseUnits);
+  if (!strategyPlan.legs.length) {
+    emptyRow(rows, 4, 'All legs removed.');
+    return;
+  }
+  rows.replaceChildren();
+  strategyPlan.legs.forEach((leg) => {
+    const row = document.createElement('tr');
+    appendCell(row, `${leg.underlying} · ${(leg.targetWeightBps / 100).toFixed(2)}%`);
+    const allocation = document.createElement('td');
+    const input = document.createElement('input');
+    input.inputMode = 'decimal';
+    input.autocomplete = 'off';
+    input.value = baseUnitsToUsdc(leg.allocationBaseUnits);
+    input.dataset.leg = leg.assetId;
+    input.setAttribute('aria-label', `${leg.underlying} allocation in USDC`);
+    allocation.appendChild(input);
+    row.appendChild(allocation);
+    appendCell(row, leg.executable ? `${leg.label} · ${short(leg.analogMint)}` : `${leg.label} · Devnet analog mint not configured (executable: false)`);
+    const action = document.createElement('td');
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'app-secondary-button';
+    remove.dataset.leg = leg.assetId;
+    remove.dataset.action = 'remove';
+    remove.textContent = 'Remove';
+    action.appendChild(remove);
+    row.appendChild(action);
+    rows.appendChild(row);
+  });
+}
+
+function applyStrategyEdit(result) {
+  strategyPlan = result.plan;
+  renderStrategyPlan(byId('strategy-plan'));
+  if (result.error) setStrategyMessage(result.error, 'error');
+  else setStrategyMessage('Advisory plan only. Edit allocations freely; nothing is executed in this view.', 'success');
+}
+
+function editStrategyLeg(event) {
+  const input = event.target.closest('input[data-leg]');
+  if (input && strategyPlan) applyStrategyEdit(setLegAllocation(strategyPlan, input.dataset.leg, input.value));
+}
+
+function removeStrategyLeg(event) {
+  const button = event.target.closest('button[data-action="remove"]');
+  if (button && strategyPlan) applyStrategyEdit(removeLeg(strategyPlan, button.dataset.leg));
+}
+
+async function loadStrategy() {
+  const button = byId('strategy-load');
+  button.disabled = true;
+  setStrategyMessage('Loading council decision…');
+  try {
+    const result = await fetchAdvice({ base: resolveCouncilBase() });
+    if (!result.ok) {
+      strategyAdvice = null;
+      strategyPlan = null;
+      renderStrategy();
+      setStrategyMessage(`Council decision unavailable (${result.error.code}): ${result.error.message}`, 'error');
+      return;
+    }
+    strategyAdvice = result.advice;
+    renderStrategy();
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function bindUI() {
   byId('connect-wallet').addEventListener('click', connectAction);
   byId('login-action').addEventListener('click', connectAction);
@@ -752,6 +878,10 @@ function bindUI() {
   byId('watchlist').addEventListener('click', removeWatchMint);
   byId('get-quote').addEventListener('click', getQuoteAction);
   byId('sign-send').addEventListener('click', () => simulateSignSend().catch((error) => setTradeResult(error?.message || 'Devnet order failed.', 'error')));
+  byId('strategy-load').addEventListener('click', loadStrategy);
+  byId('strategy-capital').addEventListener('change', renderStrategy);
+  byId('strategy-plan').addEventListener('change', editStrategyLeg);
+  byId('strategy-plan').addEventListener('click', removeStrategyLeg);
   ['order-side', 'order-amount', 'asset-mint', 'quote-mint'].forEach((id) => {
     byId(id).addEventListener('input', invalidateQuote);
     byId(id).addEventListener('change', invalidateQuote);
