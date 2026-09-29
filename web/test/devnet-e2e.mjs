@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
 import { Keypair, PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 
 // Automated Devnet round-trip for /app/: SIWS sign-in -> capital -> council decision -> editable plan -> ONE leg executed
@@ -117,7 +118,7 @@ await new Promise((done, fail) => { site.once('error', fail); site.listen(0, '12
 const origin = `http://127.0.0.1:${site.address().port}`;
 
 // ---- Chrome over CDP pipe ----
-const artifactDir = await mkdtemp('/private/tmp/falcon-devnet-e2e-');
+const artifactDir = await mkdtemp(resolve(tmpdir(), 'falcon-devnet-e2e-'));
 const chrome = spawn(process.env.FALCON_CHROME_BIN || process.env.CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
   '--headless=new', '--disable-gpu', '--disable-background-networking', '--disable-component-update', '--disable-default-apps',
   '--disable-sync', '--disable-extensions', '--no-first-run', '--no-default-browser-check', '--metrics-recording-only',
@@ -411,9 +412,11 @@ try {
 } finally {
   clearTimeout(watchdog);
   chrome.removeAllListeners('exit');
-  const exited = new Promise((done) => chrome.once('exit', done));
-  chrome.kill();
-  await exited;
+  if (chrome.exitCode === null && chrome.signalCode === null) {
+    const exited = new Promise((done) => chrome.once('exit', done));
+    chrome.kill();
+    await exited;
+  }
   site.close(); council.close();
   if (!failed) await rm(artifactDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
