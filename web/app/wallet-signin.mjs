@@ -35,6 +35,11 @@ function walletReason(wallet, requiredChain = CHAIN) {
     ? wallet.chains.some(chain => typeof chain === 'string' && chain.startsWith('solana:'))
     : wallet.chains.includes(requiredChain));
   if (!supportsChain) return requiredChain ? 'This wallet does not support ' + requiredChain + '.' : 'This wallet does not support a Solana chain.';
+  if (requiredChain !== null) {
+    const disconnect = wallet.features?.['standard:disconnect'];
+    if (!disconnect || typeof disconnect.disconnect !== 'function') return 'This wallet does not support standard:disconnect.';
+    if (disconnect.version !== '1.0.0') return 'This wallet uses an unsupported standard:disconnect version.';
+  }
   for (const [name, method] of REQUIRED) {
     const feature = wallet.features?.[name];
     if (!feature || typeof feature[method] !== 'function') {

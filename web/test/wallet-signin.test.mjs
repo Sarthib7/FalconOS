@@ -71,7 +71,7 @@ test('V103: registry discovery works without window.solana', async () => {
 test('message-signing login does not require a disconnect feature', async () => {
   const fixture = makeWallet();
   delete fixture.wallet.features['standard:disconnect'];
-  const session = createSignInWalletSession({ registry: makeRegistry(fixture.wallet) });
+  const session = createSignInWalletSession({ registry: makeRegistry(fixture.wallet), requiredChain: null });
   assert.equal(session.list()[0].available, true);
   await session.connect(session.list()[0].id);
   await session.signMessage(Uint8Array.of(4));
