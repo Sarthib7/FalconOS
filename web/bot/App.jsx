@@ -4,6 +4,7 @@ import Agent from '../dashboard/Agent.jsx';
 import { meshRequest } from '../dashboard/api.mjs';
 import { clearWalletSession, createWalletSession, restoreWalletSession, revokeWalletSession } from './auth.mjs';
 import { createSignInWalletSession } from '../app/wallet-signin.mjs';
+import { createInjectedPhantomSession, detectPhantomProvider } from './phantom-injected.mjs';
 import PhantomWalletConnect from './PhantomWalletConnect.jsx';
 
 function Brand({ compact = false }) {
@@ -22,8 +23,10 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authPending, setAuthPending] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [injectedPhantom, setInjectedPhantom] = useState(null);
   const sessionRef = useRef(null);
   const selectedAddressRef = useRef(null);
+  const injectedSessionRef = useRef(null);
 
   useEffect(() => walletSession.subscribe((state) => {
     setWalletState(state);
@@ -39,6 +42,46 @@ export default function App() {
     }
     selectedAddressRef.current = address;
   }), [walletSession]);
+  useEffect(() => {
+    let timer;
+    const detect = () => {
+      const detected = detectPhantomProvider(window);
+      if (!detected) return;
+      setInjectedPhantom(detected);
+      if (timer) window.clearInterval(timer);
+    };
+    detect();
+    if (!detectPhantomProvider(window)) timer = window.setInterval(detect, 250);
+    return () => { if (timer) window.clearInterval(timer); };
+  }, []);
+
+  useEffect(() => {
+    const provider = injectedPhantom?.provider;
+    if (!provider || typeof provider.on !== 'function' || typeof provider.off !== 'function') return;
+    const revokeInjectedSession = () => {
+      const activeInjected = injectedSessionRef.current;
+      if (!activeInjected || activeInjected.provider !== provider) return;
+      injectedSessionRef.current = null;
+      const active = sessionRef.current;
+      sessionRef.current = null;
+      setSession(null);
+      try { clearWalletSession(); } catch {}
+      if (active) void revokeWalletSession(active).catch(() => {});
+      setAuthError('Phantom account changed. Sign in again.');
+    };
+    const accountChanged = (publicKey) => {
+      const activeInjected = injectedSessionRef.current;
+      if (!activeInjected || activeInjected.provider !== provider) return;
+      if (!publicKey || publicKey.toString() !== activeInjected.address
+        || activeInjected.session.current()?.address !== activeInjected.address) revokeInjectedSession();
+    };
+    provider.on('accountChanged', accountChanged);
+    provider.on('disconnect', revokeInjectedSession);
+    return () => {
+      provider.off('accountChanged', accountChanged);
+      provider.off('disconnect', revokeInjectedSession);
+    };
+  }, [injectedPhantom?.provider]);
 
   useEffect(() => {
     let active = true;
@@ -60,6 +103,7 @@ export default function App() {
     if (authPending) return;
     setAuthPending(true);
     setAuthError('');
+    injectedSessionRef.current = null;
     try {
       const selected = walletSession.current();
       if (!selected || selected.walletId !== walletId) await walletSession.connect(walletId);
@@ -67,6 +111,30 @@ export default function App() {
       sessionRef.current = next;
       setSession(next);
     } catch (error) {
+      setAuthError(error?.message || 'Phantom sign-in failed. Try again.');
+    } finally {
+      setAuthPending(false);
+    }
+  }
+
+  async function signInInjected() {
+    if (authPending || !injectedPhantom?.available) return;
+    setAuthPending(true);
+    setAuthError('');
+    try {
+      const injectedSession = createInjectedPhantomSession(injectedPhantom.provider);
+      const account = await injectedSession.connect();
+      injectedSessionRef.current = { provider: injectedPhantom.provider, session: injectedSession, address: account.address };
+      const next = await createWalletSession(injectedSession);
+      if (injectedSession.current()?.address !== account.address) {
+        await revokeWalletSession(next).catch(() => { try { clearWalletSession(); } catch {} });
+        injectedSessionRef.current = null;
+        throw new Error('The Phantom account changed during sign-in. Connect again.');
+      }
+      sessionRef.current = next;
+      setSession(next);
+    } catch (error) {
+      injectedSessionRef.current = null;
       setAuthError(error?.message || 'Phantom sign-in failed. Try again.');
     } finally {
       setAuthPending(false);
@@ -81,13 +149,14 @@ export default function App() {
     try {
       await revokeWalletSession(active);
       sessionRef.current = null;
+      injectedSessionRef.current = null;
       setSession(null);
     } catch (error) {
       if (typeof error?.message === 'string' && error.message.startsWith('UNAUTHORIZED:')) {
         sessionRef.current = null;
+        injectedSessionRef.current = null;
         setSession(null);
         try { clearWalletSession(); } catch {}
-      } else {
         setAuthError(error?.message || 'Falcon could not revoke this session. Try again.');
       }
     } finally {
@@ -122,7 +191,7 @@ export default function App() {
         <FalconMark />
         <h1 id="bot-title">Meet Falcon, your<br />Solana yield agent.</h1>
         <p className="bot-hero-copy">Find provider-indexed lending opportunities. Set your own limits. Review every simulated allocation before you decide.</p>
-        <div id="sign-in"><PhantomWalletConnect wallets={walletState.wallets} current={walletState.current} pending={authPending} error={authError} onSignIn={signIn} onSignOut={signOut} /></div>
+        <div id="sign-in"><PhantomWalletConnect wallets={walletState.wallets} current={walletState.current} injected={injectedPhantom} pending={authPending} error={authError} onSignIn={signIn} onInjectedSignIn={signInInjected} onSignOut={signOut} /></div>
 
       </section>
       <section id="how-it-works" className="bot-capabilities" aria-label="Falcon capabilities">

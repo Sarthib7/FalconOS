@@ -83,9 +83,13 @@ After creating the Pages project, open **Pages → the project → Custom domain
 - [Cloudflare Pages: Build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/): root directory and deployment settings.
 - [Cloudflare Pages: Build image](https://developers.cloudflare.com/pages/configuration/build-image/): Node.js version defaults and overrides.
 - [Cloudflare Pages: Custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/): custom-domain setup and DNS requirements.
+- [Phantom: Detect the provider](https://docs.phantom.com/solana/detecting-the-provider): browser-extension detection for Solana.
+- [Phantom: Sign a message](https://docs.phantom.com/solana/signing-a-message): message signing with the injected Solana provider.
 
 ## Yield Agent bot
 
 [VERIFIED, source: `package.json`, `vite.bot.config.js`] From the repository root, run `npm --prefix web run dev:bot` to serve the bot at `/`. Run `npm --prefix web run build:bot` to write `web/dist-bot/`.
 
 [VERIFIED, source: `web/bot/auth.mjs`, `mesh/wallet-auth.mjs`] Phantom signs an origin-bound challenge with `solana:signMessage`. The browser stores the server-issued session token in `sessionStorage`. Sign-in does not sign transactions or move funds. The Agent reads yield data and creates simulation plans only.
+
+[VERIFIED, source: `web/bot/phantom-injected.mjs`, `web/bot/PhantomWalletConnect.jsx`, `web/bot/App.jsx`; local fake-provider browser run: `button=Continue with Phantom`, `connectCalls=0` before click, `connectCalls=1` after click] When Wallet Standard has no available Phantom entry, the bot falls back to Phantom's injected provider. It calls Phantom's `connect()` only after the user clicks `Continue with Phantom`.
