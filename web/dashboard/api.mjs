@@ -7,7 +7,7 @@ export async function meshRequest(token, path, body) {
   try {
     response = await fetch(`${API_BASE}${path}`, {
       method: body === undefined ? 'GET' : 'POST', credentials: 'omit', redirect: 'error',
-      headers: { accept: 'application/json', authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
+      headers: { accept: 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(path === '/v1/captures' || path.startsWith('/v1/lending/') ? 45000 : 15000),
     });
   } catch { throw new Error('The mesh service did not respond. Check the service and its allowed viewer origin, then try again.'); }
@@ -34,3 +34,5 @@ export function connectorObservation(graph, connectorId) {
   const [label, kind] = OBSERVATION[node.properties?.status] ?? ['NO_DATA', 'warn'];
   return { label, kind, reasonCode: node.properties?.reasonCode ?? null };
 }
+export const getYieldOpportunities = token => meshRequest(token, '/v1/yield/opportunities');
+export const simulateYield = (token, input) => meshRequest(token, '/v1/yield/simulations', input);

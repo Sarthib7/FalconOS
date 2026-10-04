@@ -66,7 +66,7 @@ async function fixture(overrides = {}) {
 before(async () => {
   await createStore(pool).ready();
   const version = await pool.query("SELECT obj_description(oid, 'pg_namespace') AS version FROM pg_namespace WHERE nspname = 'falcon_mesh'");
-  assert.equal(version.rows[0]?.version, 'falcon_mesh_schema_version=2');
+  assert.equal(version.rows[0]?.version, 'falcon_mesh_schema_version=3');
 });
 after(async () => { await pool.end(); });
 

@@ -7,7 +7,6 @@ const CHANGED = 'The wallet account or signing capability changed. Connect again
 const REQUIRED = [
   ['standard:connect', 'connect'],
   ['standard:events', 'on'],
-  ['standard:disconnect', 'disconnect'],
   [SIGN, 'signMessage'],
 ];
 
@@ -16,8 +15,11 @@ function equalBytes(left, right) {
     && left.length === right.length && left.every((byte, index) => byte === right[index]);
 }
 
-function accountReason(account) {
-  if (!account || !Array.isArray(account.chains) || !account.chains.includes(CHAIN)) return 'The account does not support Solana Devnet.';
+function accountReason(account, requiredChain = CHAIN) {
+  const supportsChain = Array.isArray(account?.chains) && (requiredChain === null
+    ? account.chains.some(chain => typeof chain === 'string' && chain.startsWith('solana:'))
+    : account.chains.includes(requiredChain));
+  if (!account || !supportsChain) return requiredChain ? 'The account does not support ' + requiredChain + '.' : 'The account does not support a Solana chain.';
   if (!Array.isArray(account.features) || !account.features.includes(SIGN)) {
     return 'The account must support solana:signMessage. A signAndSend-only account cannot support sign-in.';
   }
@@ -27,9 +29,12 @@ function accountReason(account) {
   return null;
 }
 
-function walletReason(wallet) {
+function walletReason(wallet, requiredChain = CHAIN) {
   if (!wallet || wallet.version !== '1.0.0') return 'This Wallet Standard version is unsupported.';
-  if (!Array.isArray(wallet.chains) || !wallet.chains.includes(CHAIN)) return 'This wallet does not support Solana Devnet.';
+  const supportsChain = Array.isArray(wallet.chains) && (requiredChain === null
+    ? wallet.chains.some(chain => typeof chain === 'string' && chain.startsWith('solana:'))
+    : wallet.chains.includes(requiredChain));
+  if (!supportsChain) return requiredChain ? 'This wallet does not support ' + requiredChain + '.' : 'This wallet does not support a Solana chain.';
   for (const [name, method] of REQUIRED) {
     const feature = wallet.features?.[name];
     if (!feature || typeof feature[method] !== 'function') {
@@ -48,8 +53,10 @@ function safeIcon(value) {
     && /^data:image\/(?:svg\+xml|webp|png|gif);base64,[A-Za-z0-9+/]*={0,2}$/.test(value) ? value : null;
 }
 
-export function createSignInWalletSession({ registry = getWallets() } = {}) {
+export function createSignInWalletSession({ registry = getWallets(), requiredChain = CHAIN } = {}) {
   if (typeof registry?.get !== 'function' || typeof registry?.on !== 'function') throw new Error('A Wallet Standard registry is required.');
+  if (requiredChain !== null && typeof requiredChain !== 'string') throw new TypeError('requiredChain must be a Solana chain or null.');
+  if (requiredChain !== null && !requiredChain.startsWith('solana:')) throw new TypeError('requiredChain must be a Solana chain or null.');
   const entries = new Map();
   const ids = new WeakMap();
   const subscribers = new Set();
@@ -70,8 +77,8 @@ export function createSignInWalletSession({ registry = getWallets() } = {}) {
   }
   function list() {
     return [...entries].map(([wallet, entry]) => {
-      const unsupported = entry.error ?? walletReason(wallet)
-        ?? (wallet.accounts.length && !wallet.accounts.some((account) => !accountReason(account)) ? accountReason(wallet.accounts[0]) : null);
+      const unsupported = entry.error ?? walletReason(wallet, requiredChain)
+        ?? (wallet.accounts.length && !wallet.accounts.some((account) => !accountReason(account, requiredChain)) ? accountReason(wallet.accounts[0], requiredChain) : null);
       return { id: entry.id, name: typeof wallet.name === 'string' ? wallet.name : 'Unnamed wallet', icon: safeIcon(wallet.icon), available: !unsupported, reason: unsupported };
     });
   }
@@ -87,10 +94,10 @@ export function createSignInWalletSession({ registry = getWallets() } = {}) {
     reason = message;
   }
   function selectedAccount() {
-    if (!selected || !wallets().includes(selected.wallet) || walletReason(selected.wallet)) return null;
+    if (!selected || !wallets().includes(selected.wallet) || walletReason(selected.wallet, requiredChain)) return null;
     const feature = selected.wallet.features[SIGN];
     if (feature.signMessage !== selected.signMethod) return null;
-    return selected.wallet.accounts.find((account) => !accountReason(account)
+    return selected.wallet.accounts.find((account) => !accountReason(account, requiredChain)
       && account.address === selected.address && equalBytes(account.publicKey, selected.publicKey)) ?? null;
   }
   function current() {
@@ -135,7 +142,7 @@ export function createSignInWalletSession({ registry = getWallets() } = {}) {
     const pair = [...entries].find(([, entry]) => entry.id === id);
     if (!pair) throw new Error('The selected wallet is no longer installed.');
     const [wallet, entry] = pair;
-    const unsupported = entry.error ?? walletReason(wallet);
+    const unsupported = entry.error ?? walletReason(wallet, requiredChain);
     if (unsupported) throw new Error(unsupported);
     clear();
     const requestGeneration = generation;
@@ -144,12 +151,12 @@ export function createSignInWalletSession({ registry = getWallets() } = {}) {
     try {
       const response = await wallet.features['standard:connect'].connect();
       if (requestGeneration !== generation || !wallets().includes(wallet)) throw new Error('The wallet changed while connecting. Connect again.');
-      const changedCapability = walletReason(wallet);
+      const changedCapability = walletReason(wallet, requiredChain);
       if (changedCapability) throw new Error(changedCapability);
       if (!Array.isArray(response?.accounts) || !response.accounts.length) throw new Error('The wallet did not authorize an account.');
-      const account = response.accounts.find((value) => !accountReason(value)
-        && wallet.accounts.some((current) => !accountReason(current) && current.address === value.address && equalBytes(current.publicKey, value.publicKey)));
-      if (!account) throw new Error(response.accounts.every((value) => accountReason(value)) ? accountReason(response.accounts[0]) : 'The authorized wallet account changed while connecting.');
+      const account = response.accounts.find((value) => !accountReason(value, requiredChain)
+        && wallet.accounts.some((current) => !accountReason(current, requiredChain) && current.address === value.address && equalBytes(current.publicKey, value.publicKey)));
+      if (!account) throw new Error(response.accounts.every((value) => accountReason(value, requiredChain)) ? accountReason(response.accounts[0], requiredChain) : 'The authorized wallet account changed while connecting.');
       selected = { wallet, id: entry.id, address: account.address, publicKey: Uint8Array.from(account.publicKey), signMethod: wallet.features[SIGN].signMessage };
       reason = null;
       emit();
@@ -164,7 +171,8 @@ export function createSignInWalletSession({ registry = getWallets() } = {}) {
     connecting = null;
     clear();
     emit();
-    if (wallet) await wallet.features['standard:disconnect'].disconnect();
+    const disconnect = wallet?.features?.['standard:disconnect']?.disconnect;
+    if (typeof disconnect === 'function') await disconnect();
   }
 
   async function signMessage(message) {
@@ -173,7 +181,7 @@ export function createSignInWalletSession({ registry = getWallets() } = {}) {
     const account = selectedAccount();
     if (!account) {
       if (selected) { clear(CHANGED); emit(); }
-      throw new Error(reason ?? 'Connect a Devnet account before signing.');
+      throw new Error(reason ?? (requiredChain ? 'Connect a ' + requiredChain + ' account before signing.' : 'Connect a Solana account before signing.'));
     }
     const active = selected;
     const requestGeneration = generation;

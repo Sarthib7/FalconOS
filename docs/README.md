@@ -52,7 +52,9 @@
 
 [INFERRED, aggregate command] `npm run verify` runs those five scopes sequentially. A scope failure stops that scope; other scopes continue. The final report names `PASS`, `FAIL`, or `BLOCKED` for every requested scope. A failure or block gives a nonzero exit. Missing mesh database configuration cannot count as passing coverage. The runner never falls back to `DATABASE_URL`, initializes a schema, or installs dependencies.
 
-[INFERRED, database setup boundary] Follow [mesh setup](../mesh/README.md#run) with a new disposable local database. Review both SQL files before explicit initialization. Configure the test URL separately from the runtime URL. Verification never applies a migration. Hosted schema changes require their own review.
+[VERIFIED, workflow source: `.github/workflows/ci.yml`] GitHub Actions runs `npm run verify` on pushes and pull requests, plus manual dispatch. It uses disposable PostgreSQL, initializes schema version 3, checks restricted-role DML, builds and smoke-tests the Mesh container, and builds four web targets. It does not deploy. Browser harnesses with private OpenDesign inputs and live Jupiter swap checks remain local.
+
+[INFERRED, database setup boundary] Follow [mesh setup](../mesh/README.md#run) with a new disposable local database. Review `schema.sql`, `migrations/0002_lending.sql`, and `migrations/0003_wallet_auth.sql` before explicit initialization. Configure the test URL separately from the runtime URL. Verification never applies a migration. Hosted schema changes require their own review.
 
 | Release command | What it checks and what remains separate |
 | --- | --- |

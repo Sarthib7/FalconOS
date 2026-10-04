@@ -14,3 +14,7 @@ GRANT SELECT, INSERT ON
   falcon_mesh.lending_events
 TO falcon_mesh_app;
 GRANT UPDATE (revision_id) ON falcon_mesh.source_heads TO falcon_mesh_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  falcon_mesh.wallet_auth_challenges,
+  falcon_mesh.wallet_auth_sessions
+TO falcon_mesh_app;

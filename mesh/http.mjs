@@ -5,7 +5,7 @@ import { CONNECTORS } from './live.mjs';
 
 const BODY_LIMIT = 1024 * 1024;
 const EVIDENCE_EXCHANGES = 2;
-const STATUSES = { INVALID_INPUT: 400, UNAUTHORIZED: 401, ORIGIN_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, TOO_LARGE: 413, STORAGE_UNAVAILABLE: 503, INTERNAL_ERROR: 500 };
+const STATUSES = { INVALID_INPUT: 400, UNAUTHORIZED: 401, ORIGIN_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, TOO_LARGE: 413, RATE_LIMITED: 429, STORAGE_UNAVAILABLE: 503, AUTH_UNAVAILABLE: 503, INTERNAL_ERROR: 500 };
 
 export function parseTokenHashes(raw) {
   let value;
@@ -65,8 +65,27 @@ async function body(request) {
   } catch { throw new MeshError('INVALID_INPUT', 'Request body must contain valid UTF-8 JSON.'); }
 }
 
-export function createApi({ store, lending = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString() }) {
+export function createApi({
+  store, lending = null, yieldService = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
+  rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600, clock = () => Date.now(),
+}) {
   if (!(tokenHashes instanceof Map) || !tokenHashes.size) throw new Error('Mesh authentication is required.');
+  let windowStart = clock();
+  let globalCount = 0;
+  const ownerCounts = new Map();
+  const rateLimit = owner => {
+    const time = clock();
+    if (time - windowStart >= rateWindowMs) { windowStart = time; globalCount = 0; ownerCounts.clear(); }
+    const nextOwner = (ownerCounts.get(owner) || 0) + 1;
+    const nextGlobal = globalCount + 1;
+    if (nextOwner > rateMaxPerOwner || nextGlobal > rateMaxGlobal) {
+      const error = new MeshError('RATE_LIMITED', 'Rate limit exceeded. Retry shortly.');
+      error.retryAfter = Math.max(1, Math.ceil((windowStart + rateWindowMs - time) / 1000));
+      throw error;
+    }
+    ownerCounts.set(owner, nextOwner);
+    globalCount = nextGlobal;
+  };
   const server = createServer({ maxHeaderSize: 8192, requestTimeout: 15000, headersTimeout: 10000 }, async (request, response) => {
     const send = (status, payload) => {
       response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
@@ -92,13 +111,83 @@ export function createApi({ store, lending = null, tokenHashes, allowedOrigins =
       }
       if (request.method === 'GET' && url.pathname === '/healthz') { send(200, { status: 'alive' }); return; }
       if (request.method === 'GET' && url.pathname === '/readyz') {
-        try { await store.ready(); send(200, { status: 'ready' }); }
-        catch { send(503, { error: { code: 'STORAGE_UNAVAILABLE', message: 'Mesh storage is not ready.' } }); }
+        try { await store.ready(); await walletAuth?.ready(); send(200, { status: 'ready' }); }
+        catch (error) {
+          process.stderr.write(`readyz store.ready failed: ${error?.code || error?.name || 'UnknownError'}\n`);
+          send(503, { error: { code: 'STORAGE_UNAVAILABLE', message: 'Mesh storage is not ready.' } });
+        }
         return;
       }
-      const token = /^Bearer ([A-Za-z0-9._~-]{32,256})$/.exec(request.headers.authorization || '')?.[1];
-      const owner = token && tokenHashes.get(createHash('sha256').update(token).digest('hex'));
+      if (url.pathname.startsWith('/v1/auth/wallet/')) {
+        if (!walletAuth) throw new MeshError('AUTH_UNAVAILABLE', 'Wallet authentication is not configured.');
+        if (!origin || !allowedOrigins.has(origin)) throw new MeshError('ORIGIN_DENIED', 'A permitted browser origin is required.');
+        const walletBearer = /^Bearer ([A-Za-z0-9._~-]{32,4096})$/.exec(request.headers.authorization || '')?.[1] ?? null;
+        if (request.method === 'POST' && url.pathname === '/v1/auth/wallet/challenge') {
+          rateLimit('wallet-auth:' + (request.socket.remoteAddress || 'unknown'));
+          const input = await body(request); keys(input, ['address']);
+          send(200, await walletAuth.createChallenge(input.address, origin)); return;
+        }
+        if (request.method === 'POST' && url.pathname === '/v1/auth/wallet/verify') {
+          rateLimit('wallet-auth:' + (request.socket.remoteAddress || 'unknown'));
+          const input = await body(request); keys(input, ['challengeId', 'signature']);
+          send(200, await walletAuth.verifyChallenge(input.challengeId, input.signature, origin)); return;
+        }
+        if (request.method === 'GET' && url.pathname === '/v1/auth/wallet/session') {
+          const session = await walletAuth.getSession(walletBearer);
+          if (!session) throw new MeshError('UNAUTHORIZED', 'A valid wallet session is required.');
+          send(200, session); return;
+        }
+        if (request.method === 'POST' && url.pathname === '/v1/auth/wallet/logout') {
+          const input = await body(request); keys(input, []);
+          if (!await walletAuth.revokeSession(walletBearer)) throw new MeshError('UNAUTHORIZED', 'A valid wallet session is required.');
+          send(200, { revoked: true }); return;
+        }
+        throw new MeshError('NOT_FOUND', 'Wallet authentication endpoint not found.');
+      }
+      const bearer = /^Bearer ([A-Za-z0-9._~-]{32,4096})$/.exec(request.headers.authorization || '')?.[1] ?? null;
+      const meshToken = bearer && bearer.length <= 256 ? bearer : null;
+      let owner = meshToken && tokenHashes.get(createHash('sha256').update(meshToken).digest('hex'));
+      if (url.pathname.startsWith('/v1/yield/') && !owner) {
+        if (!bearer) throw new MeshError('UNAUTHORIZED', 'A valid access token is required.');
+        if (bearer.startsWith('wsi1_')) {
+          const session = await walletAuth?.getSession(bearer);
+          if (!session) throw new MeshError('UNAUTHORIZED', 'A valid wallet session is required.');
+          owner = session.ownerId;
+        } else {
+          if (typeof verifySupabaseToken !== 'function') throw new MeshError('AUTH_UNAVAILABLE', 'Supabase authentication is not configured.');
+          try {
+            const userId = await verifySupabaseToken(bearer);
+            if (typeof userId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+              throw new MeshError('UNAUTHORIZED', 'A valid Supabase session is required.');
+            }
+            owner = userId;
+          } catch (error) {
+            if (error instanceof MeshError) throw error;
+            if (error?.code === 'SUPABASE_AUTH_RATE_LIMITED') {
+              const limited = new MeshError('RATE_LIMITED', 'Supabase session verification is rate limited. Retry shortly.');
+              limited.retryAfter = Number.isInteger(error.retryAfter) ? error.retryAfter : 60;
+              throw limited;
+            }
+            throw new MeshError('AUTH_UNAVAILABLE', 'User authentication is unavailable.');
+          }
+        }
+      }
       if (!owner) throw new MeshError('UNAUTHORIZED', 'A valid mesh access token is required.');
+      rateLimit(owner);
+      if (url.pathname.startsWith('/v1/yield/')) {
+        if (!yieldService) throw new MeshError('STORAGE_UNAVAILABLE', 'The yield simulation service is not configured.');
+        if (request.method === 'GET' && url.pathname === '/v1/yield/opportunities') {
+          send(200, await yieldService.getOpportunities()); return;
+        }
+        if (request.method === 'POST' && url.pathname === '/v1/yield/simulations') {
+          const input = await body(request); keys(input, ['requestId', 'simulatedAt', 'portfolio', 'policy']);
+          let plan;
+          try { plan = await yieldService.simulate(input); }
+          catch (error) { if (error instanceof MeshError) throw error; throw new MeshError('INVALID_INPUT', 'Simulation request does not match the yield plan contract.'); }
+          send(200, { plan }); return;
+        }
+        throw new MeshError('NOT_FOUND', 'Yield endpoint not found.');
+      }
       if (url.pathname.startsWith('/v1/lending/')) {
         if (!lending) throw new MeshError('STORAGE_UNAVAILABLE', 'The lending service is not configured.');
         if (url.pathname === '/v1/lending/intents') {
@@ -149,6 +238,7 @@ export function createApi({ store, lending = null, tokenHashes, allowedOrigins =
       if (response.headersSent) { response.destroy(); return; }
       const known = error instanceof MeshError && Object.hasOwn(STATUSES, error.code);
       const code = known ? error.code : 'STORAGE_UNAVAILABLE';
+      if (known && code === 'RATE_LIMITED' && Number.isInteger(error.retryAfter)) response.setHeader('Retry-After', String(error.retryAfter));
       if (request.method === 'POST') request.resume();
       // Prepare failures attach already-JSON-safe external RPC exchanges (kamino.mjs). Surface the last few, bounded; never for the unknown-error fallback.
       const evidence = known && Array.isArray(error.evidence?.exchanges) ? { exchanges: error.evidence.exchanges.slice(-EVIDENCE_EXCHANGES) } : null;

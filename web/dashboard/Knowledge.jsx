@@ -8,7 +8,7 @@ const stamp = value => Number.isNaN(Date.parse(value)) ? String(value) : new Dat
 const words = value => String(value).replaceAll('_', ' ');
 const idle = { status: 'idle', value: null, error: '' };
 
-function ConnectGate({ connection }) {
+export function ConnectGate({ connection, purpose = 'knowledge' }) {
   const [value, setValue] = useState(''), [invalid, setInvalid] = useState('');
   function submit(event) {
     event.preventDefault();
@@ -17,7 +17,7 @@ function ConnectGate({ connection }) {
     setInvalid(''); connection.connect(value);
   }
   const message = invalid || connection.connectError;
-  return <section className="panel" id="knowledge-connect"><header className="panel-head"><div><p className="eyebrow">Live mesh / Access</p><h2>Connect to see your evidence.</h2></div><Badge>DISCONNECTED</Badge></header><div className="panel-body"><p className="detail-copy">This view reads your retained graph, analyses and source records from the mesh service at <span className="mono">{API_BASE}</span>. Nothing loads until you connect. The token stays in this tab’s memory only. It is not saved, placed in a URL, or sent anywhere except that service.</p>
+  return <section className="panel" id="knowledge-connect"><header className="panel-head"><div><p className="eyebrow">Live mesh / Access</p><h2>{purpose === 'agent' ? 'Connect to read yield data.' : 'Connect to see your evidence.'}</h2></div><Badge>DISCONNECTED</Badge></header><div className="panel-body"><p className="detail-copy">{purpose === 'agent' ? 'This agent reads provider-indexed USDC yield data from the mesh service at ' : 'This view reads your retained graph, analyses and source records from the mesh service at '}<span className="mono">{API_BASE}</span>. Nothing loads until you connect. The token stays in this tab’s memory only. It is not saved, placed in a URL, or sent anywhere except that service.</p>
     <form onSubmit={submit} noValidate><label className="field" style={{ marginTop: 16 }}><span>Access token</span><input id="knowledge-token" type="password" value={value} onChange={event => setValue(event.target.value)} autoComplete="off" spellCheck="false" aria-invalid={message ? 'true' : undefined} aria-describedby="connect-error" disabled={connection.connecting} /></label><p className="field-error" id="connect-error" role="alert">{message}</p><button className="btn primary" id="connect-submit" data-action="connect" type="submit" disabled={connection.connecting} style={{ marginTop: 16 }}>{connection.connecting ? 'Connecting…' : 'Connect'}</button></form></div></section>;
 }
 function Entity({ node, selected, source, onPath, choose }) {

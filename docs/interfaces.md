@@ -293,3 +293,9 @@ type DashboardResponseExtension = {
 ## Treasury simulation addition, 2026-09-26
 
 [INFERRED, current interface index] Interface `I14` is defined in [the treasury simulation contract](treasury-contract.md). Owner: architect. Provider: `web/treasury/`. Consumers: the local treasury UI and tests. Version 1 is simulation-only and does not change the earlier plugin, stocks engine, or Devnet interfaces.
+
+## Bot wallet authentication API
+
+[VERIFIED, source: `mesh/http.mjs`, `mesh/wallet-auth.mjs`] `POST /v1/auth/wallet/challenge` accepts `{ address }` and returns a challenge ID, message, and expiry. `POST /v1/auth/wallet/verify` accepts `{ challengeId, signature }` and returns a session token, wallet address, owner ID, and expiry. `GET /v1/auth/wallet/session` restores the identity from a bearer token. `POST /v1/auth/wallet/logout` revokes that token.
+
+[VERIFIED, source: `mesh/migrations/0003_wallet_auth.sql`, `mesh/wallet-auth.mjs`] Challenges expire after five minutes and cannot be reused. Sessions last 30 minutes; PostgreSQL stores a SHA-256 token hash. The server derives the owner ID from the wallet address. The signature authorizes login only, not a transaction.

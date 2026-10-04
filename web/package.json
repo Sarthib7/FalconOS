@@ -7,6 +7,8 @@
     "dev": "vite",
     "dev:local": "node local-web.mjs dev",
     "build:site": "vite build",
+    "dev:bot": "vite --config vite.bot.config.js",
+    "build:bot": "vite build --config vite.bot.config.js",
     "preview:local": "node local-web.mjs preview",
     "snapshot": "node snapshot.mjs",
     "build": "npm run build:site",
