@@ -4,9 +4,10 @@ import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { execFile, spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { join } from 'node:path';
+import { makeTempDir } from './temp-dir.ts';
 import { createScan } from '../stablecoins/scan.ts';
 import { demoCycles as makeDemoCycles } from '../src/demo.ts';
 import { fixtureAgent, type AgentRequest } from '../src/agent.ts';
@@ -74,7 +75,7 @@ async function runPluginProcess(dataDirectory: string, value: unknown, timeoutMs
 }
 
 async function makeData(t: {after: (callback: () => void | Promise<void>) => void}): Promise<string> {
-  const data = await mkdtemp('/private/tmp/falconos-plugin-test-');
+  const data = await makeTempDir('falconos-plugin-test-');
   t.after(() => rm(data, {recursive: true, force: true}));
   await mkdir(join(data, 'runs'), {recursive: true});
   await copyFile(evidenceFixture, join(data, 'runs', 'agent-evidence.json'));

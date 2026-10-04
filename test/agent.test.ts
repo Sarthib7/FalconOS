@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { makeTempDir } from './temp-dir.ts';
 import {
   MAX_THESIS_BYTES,
   buildAgentRequest,
@@ -18,7 +19,7 @@ const fixtureHash = createHash('sha256').update(fixtureBytes).digest('hex');
 const fixedNow = new Date('2026-09-05T13:59:00.000Z');
 
 async function makeBundleDirectory(t: {after: (callback: () => void | Promise<void>) => void}) {
-  const directory = await mkdtemp('/private/tmp/falconos-agent-test-');
+  const directory = await makeTempDir('falconos-agent-test-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   await mkdir(join(directory, 'runs'), {recursive: true});
   await copyFile(fixture, join(directory, 'runs', 'agent-evidence.json'));
@@ -260,7 +261,7 @@ test('P1-T07: symlinked evidence is rejected at the bundle root', async t => {
 });
 
 test('P1-T07: symlinked data-directory ancestors are rejected', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-agent-root-');
+  const directory = await makeTempDir('falconos-agent-root-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   const realRoot = join(directory, 'real');
   const linkedRoot = join(directory, 'linked');
