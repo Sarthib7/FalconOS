@@ -2,6 +2,22 @@
 
 [VERIFIED, repository inspection, 2026-09-27] Start with [current status](../status.md), this component map, and the contract for the component you will change. [SPEC.md](../SPEC.md) remains the specification. This map describes existing code and records known documentation drift. It does not replace product contracts or authorize a release.
 
+## Folder guide
+
+[VERIFIED, directory listing, branch `docs/repo-map-20261005`] The [repository map](../README.md#repository-map) lists every top-level folder. Inside `docs/`:
+
+| Path | Contents |
+| --- | --- |
+| Contract files at this level | [Interfaces](interfaces.md), [knowledge mesh](knowledge-mesh.md), [treasury contract](treasury-contract.md), [decision graph](decision-graph.md), [Control Centre](control-centre.md), [landing email](landing-email.md), [agent contract](agent-contract.md), [Supabase setup](supabase-setup.md), [website release](website-release.md), [decisions](decisions.md). |
+| [`adrs/`](adrs/) | Architecture decision records 0001 to 0004, indexed [below](#architecture-decision-records). |
+| [`verification/`](verification/) | Dated verification records. Each `.md` file may have a sibling folder of saved logs and screenshots. |
+| [`handoffs/`](handoffs/) | The September 26 treasury handoff and its patch. |
+| [`pitches/`](pitches/) | Saved visual pitch, its images and PDF, and [review notes](pitches/review.md). |
+| [`superpowers/specs/`](superpowers/specs/) | Earlier design spec ([phase 0 design](superpowers/specs/2026-08-28-falconos-phase-0-design.md)). |
+| [Brand brief](brand-brief.md), [Stocklana submission](stocklana-submission.md) | Brand prompt and hackathon submission text. |
+
+[VERIFIED, source: `web/app/index.html:9`, `web/goal/public/index.html:6`] Route clarification: `/app/` is the browser Devnet terminal ("FalconOS · Devnet Terminal"). `web/goal/` is a separate static vision deck with its own Worker configuration; it is not part of the Vite route set in [`web/vite.config.js`](../web/vite.config.js).
+
 ## Component map
 
 [INFERRED, review ownership] These roles identify the expertise needed for a change. The coordinator assigns a named task owner in [status](../status.md). A review role grants no access to credentials, capital, or deployment.

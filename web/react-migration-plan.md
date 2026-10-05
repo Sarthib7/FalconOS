@@ -1,5 +1,7 @@
 # Frontend migration plan
 
+[VERIFIED, sources: `README.md`, `vite.config.js`] Historical plan. The current site has React/Vite landing and dashboard routes. See [current source layout](README.md#source-layout).
+
 ## Decision
 
 [DECIDED, user instruction, 2026-09-17] Migrate the web surface to React first. Keep Vite as the build tool during the first migration. Revisit Next.js after the React migration proves the route, data, and deployment boundaries.
