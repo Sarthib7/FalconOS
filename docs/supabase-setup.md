@@ -4,6 +4,8 @@
 
 [VERIFIED, hosted application, 2026-09-27] The user approved the reviewed setup. Supabase returned `{"success":true}` and recorded migration `20260927114601`, named `falcon_mesh_initial_private`. The hosted catalog and permission comparison passed `21/21`. All five tables contain zero rows. The role remains `NOLOGIN`. See the [hosted verification](verification/2026-09-27-supabase.md#hosted-application-after-approval). This supersedes the earlier unapplied candidate state.
 
+[VERIFIED, read-only Supabase MCP, 2026-09-30] Correction to the earlier `NOLOGIN` status: `SELECT rolcanlogin FROM pg_roles WHERE rolname='falcon_mesh_app'` returned `true`. The `falcon_mesh` schema still reports version 2, and `anon` and `authenticated` lack schema usage. The time and actor of the role change are not determined. This query does not establish a usable application password or runtime connection.
+
 ## Target and scope
 
 [VERIFIED, pre-application MCP result] PostgreSQL returned `17.6`. Before application, the `falcon_mesh` schema and its five expected tables were absent. The [catalog response](verification/2026-09-27-supabase/schema-mcp.json) records the exact queries and results. The [role response](verification/2026-09-27-supabase/roles-watchers-mcp.json) contains `postgres` with `rolcreaterole: true` and no `falcon_mesh_app` role at that time.

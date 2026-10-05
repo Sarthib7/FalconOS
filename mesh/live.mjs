@@ -1,10 +1,13 @@
 import { createHash } from 'node:crypto';
+import { PublicKey } from '@solana/web3.js';
+import { LENDING_CONFIG as LENDING } from './kamino-wire.mjs';
 import { MeshError } from './domain.mjs';
 
-const PROGRAM = 'KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD';
-const GENESIS = 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG';
+const PROGRAM = LENDING.program;
+const GENESIS = LENDING.genesisHash;
 const DOCS = 'kamino-program-docs';
 const RPC = 'solana-devnet-klend';
+const RESERVE = 'solana-devnet-reserve-liquidity';
 const BODY_LIMIT = 40 * 1024;
 const CONTENT_LIMIT = 128 * 1024;
 const TIMEOUT_MS = 5000;
@@ -14,13 +17,26 @@ const ID = /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$/;
 const META_KEYS = ['revisionId', 'sourceKey', 'sourceUrl', 'observedAt', 'capturedAt', 'sha256'];
 const ACCOUNT_ID = `account:devnet:${PROGRAM}`;
 const DOCUMENT_ID = `document:live:${DOCS}`;
+const RESERVE_ACCOUNT_ID = `account:devnet:${LENDING.reserve}`;
+const VAULT_ACCOUNT_ID = `account:devnet:${LENDING.liquidityVault}`;
+const MARKET_AUTHORITY = PublicKey.findProgramAddressSync([Buffer.from('lma'), new PublicKey(LENDING.market).toBuffer()], new PublicKey(PROGRAM))[0].toBase58();
+const RESERVE_DISC = Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]);
+const EXPECTED_KEYS = Object.freeze({
+  market: new PublicKey(LENDING.market).toBuffer(), mint: new PublicKey(LENDING.liquidityMint).toBuffer(),
+  vault: new PublicKey(LENDING.liquidityVault).toBuffer(), receipt: new PublicKey(LENDING.receiptMint).toBuffer(),
+  collateralVault: new PublicKey(LENDING.collateralVault).toBuffer(), tokenProgram: new PublicKey(LENDING.tokenProgram).toBuffer(),
+  marketAuthority: new PublicKey(MARKET_AUTHORITY).toBuffer(),
+});
 const PROTOCOL_ID = 'protocol:live:kamino';
 const observationId = id => `observation:live:${id}`;
+const PROGRAM_EDGES = new Set(['edge:live:documents', 'edge:live:program-claim', 'edge:live:document-observation', 'edge:live:account-observation']);
+const RESERVE_EDGES = new Set(['edge:live:reserve-observation', 'edge:live:reserve-vault', 'edge:live:reserve-program']);
 const STATUSES = ['ok', 'unavailable', 'invalid', 'too_large'];
 
 export const CONNECTORS = Object.freeze([
   Object.freeze({ id: DOCS, label: 'Official Kamino program deployments', sourceUrl: 'https://raw.githubusercontent.com/Kamino-Finance/klend/master/README.md', network: null }),
-  Object.freeze({ id: RPC, label: 'Solana Devnet Kamino program account', sourceUrl: 'https://api.devnet.solana.com', network: 'devnet' }),
+  Object.freeze({ id: RPC, label: 'Solana Devnet Kamino program account', sourceUrl: LENDING.rpcUrl, network: 'devnet' }),
+  Object.freeze({ id: RESERVE, label: 'Devnet USDC reserve liquidity', sourceUrl: LENDING.rpcUrl, network: 'devnet' }),
 ]);
 
 function invalid(message) { throw new MeshError('INVALID_INPUT', message); }
@@ -70,7 +86,9 @@ function request(id, index = 0) {
   if (id === DOCS) return { method: 'GET', bodyBase64: null };
   const body = index === 0
     ? { jsonrpc: '2.0', id: 1, method: 'getGenesisHash' }
-    : { jsonrpc: '2.0', id: 2, method: 'getAccountInfo', params: [PROGRAM, { encoding: 'base64', commitment: 'confirmed' }] };
+    : id === RESERVE
+      ? { jsonrpc: '2.0', id: 2, method: 'getMultipleAccounts', params: [[LENDING.reserve, LENDING.liquidityVault], { encoding: 'base64', commitment: 'confirmed' }] }
+      : { jsonrpc: '2.0', id: 2, method: 'getAccountInfo', params: [PROGRAM, { encoding: 'base64', commitment: 'confirmed' }] };
   return { method: 'POST', bodyBase64: Buffer.from(JSON.stringify(body)).toString('base64') };
 }
 function parseResponse(exchange, id) {
@@ -86,7 +104,78 @@ function transportResult(exchange) {
   return null;
 }
 
+function accountBytes(value, owner, length) {
+  if (!value || value.owner !== owner || value.executable !== false || !Array.isArray(value.data)
+      || value.data.length !== 2 || value.data[1] !== 'base64') throw new Error('Account identity is invalid');
+  const bytes = base64(value.data[0]);
+  if (bytes.length !== length || Object.hasOwn(value, 'space') && value.space !== length) throw new Error('Account layout is invalid');
+  return bytes;
+}
+function sameKey(bytes, offset, key) { return bytes.subarray(offset, offset + 32).equals(key); }
+
+function deriveReserve(exchanges) {
+  let outcome = transportResult(exchanges[0]);
+  let chain = null;
+  let details = { slot: null, availableLiquidityUnits: null, reserveDataSha256: null, vaultDataSha256: null };
+  if (!outcome) {
+    try {
+      if (parseResponse(exchanges[0], 1) !== GENESIS) outcome = { status: 'invalid', reasonCode: 'WRONG_CLUSTER' };
+      else chain = { network: 'devnet', genesisHash: GENESIS, commitment: 'confirmed', slot: null };
+    } catch { outcome = { status: 'invalid', reasonCode: 'INVALID_GENESIS_RESPONSE' }; }
+  }
+  if (outcome) {
+    if (exchanges.length !== 1) invalid('A reserve read cannot follow a failed genesis check.');
+  } else {
+    if (exchanges.length !== 2) invalid('Successful genesis check requires a reserve exchange.');
+    outcome = transportResult(exchanges[1]);
+    if (!outcome) {
+      try {
+        const result = parseResponse(exchanges[1], 2);
+        if (!result || !Number.isSafeInteger(result.context?.slot) || result.context.slot < 1
+            || !Array.isArray(result.value) || result.value.length !== 2) throw new Error('Invalid snapshot');
+        const slot = result.context.slot;
+        chain.slot = String(slot);
+        details.slot = chain.slot;
+        if (result.value.some(value => value === null)) outcome = { status: 'unavailable', reasonCode: 'ACCOUNT_MISSING' };
+        else {
+          const reserve = accountBytes(result.value[0], PROGRAM, 8624);
+          const vault = accountBytes(result.value[1], LENDING.tokenProgram, 165);
+          if (!reserve.subarray(0, 8).equals(RESERVE_DISC) || reserve.readBigUInt64LE(8) !== 1n
+              || reserve.readBigUInt64LE(16) > BigInt(slot) || reserve[24] !== 0 || reserve[4856] !== 0 || reserve[4864] !== 0
+              || !sameKey(reserve, 32, EXPECTED_KEYS.market) || !sameKey(reserve, 128, EXPECTED_KEYS.mint)
+              || !sameKey(reserve, 160, EXPECTED_KEYS.vault) || !sameKey(reserve, 2560, EXPECTED_KEYS.receipt)
+              || !sameKey(reserve, 2600, EXPECTED_KEYS.collateralVault) || !sameKey(reserve, 408, EXPECTED_KEYS.tokenProgram)
+              || reserve.readBigUInt64LE(272) !== BigInt(LENDING.decimals)
+              || !sameKey(vault, 0, EXPECTED_KEYS.mint) || !sameKey(vault, 32, EXPECTED_KEYS.marketAuthority)
+              || vault[108] !== 1) throw new Error('Reserve or vault identity is invalid');
+          details.reserveDataSha256 = hash(reserve);
+          details.vaultDataSha256 = hash(vault);
+          const available = reserve.readBigUInt64LE(224);
+          if (available !== vault.readBigUInt64LE(64)) outcome = { status: 'invalid', reasonCode: 'LIQUIDITY_MISMATCH' };
+          else { details.availableLiquidityUnits = available.toString(); outcome = { status: 'ok', reasonCode: null }; }
+        }
+      } catch {
+        outcome = { status: 'invalid', reasonCode: 'INVALID_RESERVE_RESPONSE' };
+        details = { slot: chain.slot, availableLiquidityUnits: null, reserveDataSha256: null, vaultDataSha256: null };
+      }
+    }
+  }
+  const account = (id, label, address) => ({ id, kind: 'account', label, properties: { network: 'devnet', genesisHash: GENESIS, address } });
+  const nodes = [account(ACCOUNT_ID, 'Kamino program address on Devnet', PROGRAM),
+    account(RESERVE_ACCOUNT_ID, 'Kamino USDC reserve on Devnet', LENDING.reserve),
+    account(VAULT_ACCOUNT_ID, 'Reserve USDC vault on Devnet', LENDING.liquidityVault),
+    { id: observationId(RESERVE), kind: 'observation', label: 'Reserve vault-backed USDC liquidity',
+      properties: { observationType: 'reserve_liquidity', ...outcome, ...details } }];
+  const edges = [
+    { id: 'edge:live:reserve-observation', source: observationId(RESERVE), target: RESERVE_ACCOUNT_ID, relation: 'observes' },
+    { id: 'edge:live:reserve-vault', source: RESERVE_ACCOUNT_ID, target: VAULT_ACCOUNT_ID, relation: 'holds_liquidity_in' },
+    { id: 'edge:live:reserve-program', source: RESERVE_ACCOUNT_ID, target: ACCOUNT_ID, relation: 'owned_by_program' },
+  ];
+  return { ...outcome, chain, nodes, edges };
+}
+
 function derive(id, exchanges) {
+  if (id === RESERVE) return deriveReserve(exchanges);
   let outcome = transportResult(exchanges[0]);
   let chain = null;
   let details = { slot: null, programOwner: null, executable: null, dataSha256: null };
@@ -202,7 +291,7 @@ async function fetchExchange(connector, input, { fetchImpl, now }) {
 export async function captureSource(connectorId, { fetchImpl = globalThis.fetch, now = () => new Date().toISOString() } = {}) {
   const connector = registry(connectorId);
   const exchanges = [await fetchExchange(connector, request(connectorId), { fetchImpl, now })];
-  if (connectorId === RPC && !transportResult(exchanges[0])) {
+  if (connectorId !== DOCS && !transportResult(exchanges[0])) {
     let genesis;
     try { genesis = parseResponse(exchanges[0], 1); } catch {}
     if (genesis === GENESIS) exchanges.push(await fetchExchange(connector, request(connectorId, 1), { fetchImpl, now }));
@@ -345,15 +434,27 @@ function readGraph(graph) {
       if (node.id !== PROTOCOL_ID || properties.protocolId !== 'kamino-lending') invalid('Live protocol identity is invalid.');
     } else if (node.kind === 'account') {
       exact(properties, ['network', 'genesisHash', 'address'], 'Account properties');
-      if (node.id !== ACCOUNT_ID || properties.network !== 'devnet' || properties.genesisHash !== GENESIS || properties.address !== PROGRAM) invalid('Live account identity is invalid.');
+      const address = node.id === ACCOUNT_ID ? PROGRAM : node.id === RESERVE_ACCOUNT_ID ? LENDING.reserve : node.id === VAULT_ACCOUNT_ID ? LENDING.liquidityVault : null;
+      if (!address || properties.network !== 'devnet' || properties.genesisHash !== GENESIS || properties.address !== address) invalid('Live account identity is invalid.');
     } else if (node.kind === 'observation') {
       const docs = node.id === observationId(DOCS);
-      if (!docs && node.id !== observationId(RPC)) invalid('Live observation identity is invalid.');
-      exact(properties, docs ? ['observationType', 'status', 'reasonCode', 'claimsProgram'] : ['observationType', 'status', 'reasonCode', 'slot', 'programOwner', 'executable', 'dataSha256'], 'Observation properties');
-      if (properties.observationType !== (docs ? 'document' : 'program_account') || !STATUSES.includes(properties.status)
+      const reserve = node.id === observationId(RESERVE);
+      if (!docs && !reserve && node.id !== observationId(RPC)) invalid('Live observation identity is invalid.');
+      exact(properties, docs ? ['observationType', 'status', 'reasonCode', 'claimsProgram']
+        : reserve ? ['observationType', 'status', 'reasonCode', 'slot', 'availableLiquidityUnits', 'reserveDataSha256', 'vaultDataSha256']
+          : ['observationType', 'status', 'reasonCode', 'slot', 'programOwner', 'executable', 'dataSha256'], 'Observation properties');
+      if (properties.observationType !== (docs ? 'document' : reserve ? 'reserve_liquidity' : 'program_account') || !STATUSES.includes(properties.status)
           || !(properties.reasonCode === null || safeText(properties.reasonCode, 80))) invalid('Live observation status is invalid.');
       if (docs && typeof properties.claimsProgram !== 'boolean') invalid('Document claim is invalid.');
-      if (!docs && (!(properties.slot === null || typeof properties.slot === 'string' && /^(0|[1-9]\d{0,15})$/.test(properties.slot) && Number.isSafeInteger(Number(properties.slot)))
+      if (reserve) {
+        const amount = properties.availableLiquidityUnits;
+        if (!(properties.slot === null || typeof properties.slot === 'string' && /^[1-9]\d{0,15}$/.test(properties.slot) && Number.isSafeInteger(Number(properties.slot)))
+            || !(amount === null || typeof amount === 'string' && /^(0|[1-9]\d{0,19})$/.test(amount) && BigInt(amount) <= 18446744073709551615n)
+            || !(properties.reserveDataSha256 === null || typeof properties.reserveDataSha256 === 'string' && HASH.test(properties.reserveDataSha256))
+            || !(properties.vaultDataSha256 === null || typeof properties.vaultDataSha256 === 'string' && HASH.test(properties.vaultDataSha256))
+            || properties.status === 'ok' && (amount === null || properties.slot === null || properties.reserveDataSha256 === null || properties.vaultDataSha256 === null)
+            || properties.status !== 'ok' && amount !== null) invalid('Reserve liquidity observation is invalid.');
+      } else if (!docs && (!(properties.slot === null || typeof properties.slot === 'string' && /^(0|[1-9]\d{0,15})$/.test(properties.slot) && Number.isSafeInteger(Number(properties.slot)))
           || !(properties.programOwner === null || publicKey(properties.programOwner)) || !(properties.executable === null || typeof properties.executable === 'boolean')
           || !(properties.dataSha256 === null || typeof properties.dataSha256 === 'string' && HASH.test(properties.dataSha256)))) invalid('Account observation is invalid.');
     } else invalid('Synthetic nodes cannot enter live analysis.');
@@ -363,6 +464,9 @@ function readGraph(graph) {
     ['edge:live:program-claim', [DOCUMENT_ID, ACCOUNT_ID, 'claims_program']],
     ['edge:live:document-observation', [observationId(DOCS), DOCUMENT_ID, 'observes']],
     ['edge:live:account-observation', [observationId(RPC), ACCOUNT_ID, 'observes']],
+    ['edge:live:reserve-observation', [observationId(RESERVE), RESERVE_ACCOUNT_ID, 'observes']],
+    ['edge:live:reserve-vault', [RESERVE_ACCOUNT_ID, VAULT_ACCOUNT_ID, 'holds_liquidity_in']],
+    ['edge:live:reserve-program', [RESERVE_ACCOUNT_ID, ACCOUNT_ID, 'owned_by_program']],
   ]);
   for (const edge of graph.edges) {
     exact(edge, ['id', 'source', 'target', 'relation', 'sourceRevisionIds'], 'Live edge');
@@ -378,6 +482,7 @@ export function analyzeLiveGraph(graph, query, at) {
       || typeof query.observationId !== 'string' || !ID.test(query.observationId)) invalid('Live analysis query is invalid.');
   const maxHops = query.maxHops === undefined ? 3 : query.maxHops;
   if (!Number.isInteger(maxHops) || maxHops < 1 || maxHops > 3) invalid('maxHops must be between 1 and 3.');
+  const reserveQuery = query.observationId === observationId(RESERVE);
   const nodes = new Map(graph.nodes.map(node => [node.id, node]));
   const visitedNodes = new Set();
   const visitedEdges = new Set();
@@ -385,19 +490,23 @@ export function analyzeLiveGraph(graph, query, at) {
   let coverageStatus = 'complete';
   function finish(status, summary) {
     return {
-      schemaVersion: 2, mode: 'live', policyVersion: 'mesh-public-evidence/1', at, graphRevision: graph.revision, observationId: query.observationId,
-      status, summary, totalAffectedUnits: null, availableLiquidityUnits: null, positionResults: [], sourceRevisionIds: [...evidence].sort(),
+      schemaVersion: 2, mode: 'live', policyVersion: reserveQuery ? 'mesh-reserve-liquidity/1' : 'mesh-public-evidence/1', at, graphRevision: graph.revision, observationId: query.observationId,
+      status, summary, totalAffectedUnits: null, availableLiquidityUnits: status === 'OBSERVED' && reserveQuery ? nodes.get(observationId(RESERVE))?.properties.availableLiquidityUnits ?? null : null, positionResults: [], sourceRevisionIds: [...evidence].sort(),
       coverage: { status: coverageStatus, maxHops, nodeLimit: 64, edgeLimit: 128, visitedNodeIds: [...visitedNodes].sort(), visitedEdgeIds: [...visitedEdges].sort() },
     };
   }
   if (graph.coverage.status !== 'complete') { coverageStatus = 'truncated'; return finish('NO_DATA', 'The live graph is incomplete.'); }
-  if (graph.issues.length) { coverageStatus = 'conflicting_evidence'; return finish('NO_DATA', 'Current live captures contain errors or conflicting evidence.'); }
+  if (graph.issues.some(issue => !issue.startsWith(`Current capture ${reserveQuery ? DOCS : RESERVE} failed:`)
+      && !(reserveQuery && issue.startsWith(`Current capture ${RPC} failed:`)))) {
+    coverageStatus = 'conflicting_evidence'; return finish('NO_DATA', 'Current live captures contain errors or conflicting evidence.');
+  }
   if (nodes.get(query.observationId)?.kind !== 'observation') { coverageStatus = 'missing_dependency'; return finish('NO_DATA', 'Select a current live observation.'); }
+  const pathEdges = graph.edges.filter(edge => (reserveQuery ? RESERVE_EDGES : PROGRAM_EDGES).has(edge.id));
   const queue = [[query.observationId, 0]];
   visitedNodes.add(query.observationId);
   for (let cursor = 0; cursor < queue.length; cursor += 1) {
     const [id, hops] = queue[cursor];
-    for (const edge of graph.edges.filter(item => item.source === id || item.target === id)) {
+    for (const edge of pathEdges.filter(item => item.source === id || item.target === id)) {
       const other = edge.source === id ? edge.target : edge.source;
       if (!nodes.has(other)) { coverageStatus = 'missing_dependency'; return finish('NO_DATA', 'A live relationship endpoint is missing.'); }
       if (!visitedNodes.has(other) && hops >= maxHops) { coverageStatus = 'truncated'; continue; }
@@ -406,18 +515,33 @@ export function analyzeLiveGraph(graph, query, at) {
       if (!visitedNodes.has(other)) { visitedNodes.add(other); queue.push([other, hops + 1]); }
     }
   }
-  for (const node of graph.nodes.filter(item => visitedNodes.has(item.id))) node.sourceRevisionIds.forEach(id => evidence.add(id));
-  for (const edge of graph.edges.filter(item => visitedEdges.has(item.id))) edge.sourceRevisionIds.forEach(id => evidence.add(id));
+  const relevantSource = id => {
+    const sourceKey = sources.get(id)?.sourceKey;
+    return reserveQuery ? sourceKey === `live:${RESERVE}` : sourceKey === `live:${DOCS}` || sourceKey === `live:${RPC}`;
+  };
+  for (const node of graph.nodes.filter(item => visitedNodes.has(item.id))) for (const id of node.sourceRevisionIds) if (relevantSource(id)) evidence.add(id);
+  for (const edge of pathEdges.filter(item => visitedEdges.has(item.id))) for (const id of edge.sourceRevisionIds) if (relevantSource(id)) evidence.add(id);
   if (coverageStatus !== 'complete') return finish('NO_DATA', 'The live analysis reached its traversal limit.');
-  if (![DOCUMENT_ID, PROTOCOL_ID, ACCOUNT_ID, observationId(DOCS), observationId(RPC)].every(id => visitedNodes.has(id))
-      || visitedEdges.size !== 4 || !CONNECTORS.every(connector => [...evidence].some(id => sources.get(id).sourceKey === `live:${connector.id}`))) {
-    coverageStatus = 'missing_dependency'; return finish('NO_DATA', 'Both the linked official document and Devnet account capture are required.');
+  const requiredNodes = reserveQuery ? [observationId(RESERVE), RESERVE_ACCOUNT_ID, VAULT_ACCOUNT_ID, ACCOUNT_ID]
+    : [DOCUMENT_ID, PROTOCOL_ID, ACCOUNT_ID, observationId(DOCS), observationId(RPC)];
+  if (!requiredNodes.every(id => visitedNodes.has(id)) || visitedEdges.size !== (reserveQuery ? 3 : 4)
+      || (reserveQuery ? ![...evidence].some(id => sources.get(id).sourceKey === `live:${RESERVE}`)
+        : ![DOCS, RPC].every(connector => [...evidence].some(id => sources.get(id).sourceKey === `live:${connector}`)))) {
+    coverageStatus = 'missing_dependency'; return finish('NO_DATA', reserveQuery ? 'The reserve and its vault capture are required.' : 'Both the linked official document and Devnet account capture are required.');
   }
   for (const id of evidence) {
     const source = sources.get(id);
     const age = now - time(source.observedAt);
     if (age < 0 || time(source.capturedAt) > now) return finish('NO_DATA', 'Live evidence is from after the analysis time.');
     if (age > 300000) return finish('NO_DATA', 'Live evidence is older than 300 seconds.');
+  }
+  if (reserveQuery) {
+    const liquidity = nodes.get(observationId(RESERVE)).properties;
+    if (liquidity.status !== 'ok' || liquidity.reasonCode !== null || liquidity.slot === null
+        || liquidity.availableLiquidityUnits === null || liquidity.reserveDataSha256 === null || liquidity.vaultDataSha256 === null) {
+      return finish('NO_DATA', 'The reserve or vault liquidity evidence is unavailable.');
+    }
+    return finish('OBSERVED', `The reserve and USDC vault agree on ${liquidity.availableLiquidityUnits} unborrowed base units at Devnet slot ${liquidity.slot}. This is not freely withdrawable liquidity or execution approval.`);
   }
   const document = nodes.get(observationId(DOCS)).properties;
   const account = nodes.get(observationId(RPC)).properties;

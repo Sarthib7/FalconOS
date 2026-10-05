@@ -1,15 +1,25 @@
 import { makeDemoDocuments } from '../../mesh/fixtures.mjs';
 import { mountLendingTerminal } from './terminal.mjs';
+import { clearWalletSession, restoreWalletSession as restoreBotWalletSession } from '../bot/auth.mjs';
 
 const $ = (id) => document.getElementById(id);
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const API_BASE = (import.meta.env?.VITE_MESH_API_URL || 'http://127.0.0.1:8791').replace(/\/$/, '');
+function assertSafeApiBase() {
+  const endpoint = new URL(API_BASE);
+  if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash
+    || (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname)))) {
+    throw new Error('The configured API address must use HTTPS, or HTTP on loopback for local development.');
+  }
+}
 const KINDS = { synthetic: ['observation', 'reserve', 'position', 'protocol', 'asset'], live: ['observation', 'document', 'account', 'protocol'] };
-const KIND_LABELS = { observation: 'Observation', reserve: 'Reserve', position: 'Position', protocol: 'Protocol', asset: 'Asset', document: 'Document', account: 'Program account' };
-const RELATIONS = { observes: 'observes', supplied_to: 'supplied to', operated_by: 'operated by', denominated_in: 'denominated in', documents: 'documents', claims_program: 'claims program' };
+const KIND_LABELS = { observation: 'Observation', reserve: 'Reserve', position: 'Position', protocol: 'Protocol', asset: 'Asset', document: 'Document', account: 'Devnet account' };
+const RELATIONS = { observes: 'observes', supplied_to: 'supplied to', operated_by: 'operated by', denominated_in: 'denominated in', documents: 'documents', claims_program: 'claims program', holds_liquidity_in: 'holds liquidity in', owned_by_program: 'owned by program' };
+const PROGRAM_POLICY = 'mesh-public-evidence/1';
+const RESERVE_POLICY = 'mesh-reserve-liquidity/1';
 let token = '';
 let sessionGeneration = 0;
-let mode = 'synthetic';
+let mode = 'live';
 let connectors = [];
 let captureResult = null;
 let connected = false;
@@ -37,6 +47,17 @@ function units(value) {
   const amount = BigInt(value);
   const fraction = String(amount % 1000000n).padStart(6, '0').replace(/0+$/, '');
   return `${amount / 1000000n}${fraction ? `.${fraction}` : ''} USDC`;
+}
+function baseUnits(value) {
+  if (value === null || value === undefined) return 'Not determined';
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) return 'Invalid amount';
+  return `${value} base units`;
+}
+function isReserveObservation(item) { return item?.kind === 'observation' && item.properties.observationType === 'reserve_liquidity'; }
+function reserveObservation(graph, id) { const item = graph?.nodes.find((value) => value.id === id); return isReserveObservation(item) ? item : null; }
+function reserveRows(item) {
+  const value = item.properties;
+  return [['Slot', value.slot ?? 'Not returned'], ['Vault-backed book liquidity', baseUnits(value.availableLiquidityUnits)], ['Meaning', 'Unborrowed book liquidity held in the reserve vault. Not freely withdrawable; not approval.'], ['Reserve data SHA-256', value.reserveDataSha256 ?? 'Not returned'], ['Vault data SHA-256', value.vaultDataSha256 ?? 'Not returned']];
 }
 function shownGraph() { return record?.graph ?? currentGraph; }
 function currentReady() { return currentVerified && currentGraph?.mode === mode; }
@@ -90,10 +111,18 @@ function acceptRecord(value) {
   const analysis = value?.analysis;
   const live = value.graph.mode === 'live';
   if (!analysis || analysis.mode !== value.graph.mode || !((live ? ['OBSERVED', 'NO_DATA'] : ['READY', 'BLOCKED', 'NO_DATA']).includes(analysis.status))
-    || analysis.policyVersion !== (live ? 'mesh-public-evidence/1' : 'mesh-liquidity/1')
+    || ![PROGRAM_POLICY, RESERVE_POLICY].includes(analysis.policyVersion) && live || (!live && analysis.policyVersion !== 'mesh-liquidity/1')
     || (!live && !Array.isArray(analysis.positionResults)) || !Array.isArray(analysis.sourceRevisionIds)
     || analysis.graphRevision !== value.graph.revision || !analysis.coverage || !Number.isFinite(Date.parse(analysis.at))) {
     throw new Error('The saved analysis does not match its graph.');
+  }
+  if (analysis.policyVersion === RESERVE_POLICY) {
+    const observation = reserveObservation(value.graph, analysis.observationId);
+    if (!observation || analysis.totalAffectedUnits !== null || !Array.isArray(analysis.positionResults) || analysis.positionResults.length !== 0
+      || !(analysis.availableLiquidityUnits === null || typeof analysis.availableLiquidityUnits === 'string' && /^\d+$/.test(analysis.availableLiquidityUnits))
+      || analysis.status === 'OBSERVED' && (analysis.availableLiquidityUnits === null || analysis.availableLiquidityUnits !== observation.properties.availableLiquidityUnits)) {
+      throw new Error('The saved reserve analysis does not match its observation.');
+    }
   }
   const nodes = new Set(value.graph.nodes.map((item) => item.id));
   const edges = new Set(value.graph.edges.map((item) => item.id));
@@ -151,13 +180,13 @@ function controls() {
   $('mesh-mode').disabled = busy || !connected;
   document.querySelectorAll('[data-scenario]').forEach((button) => { button.disabled = busy || !connected || !currentReady() || mode !== 'synthetic'; });
   document.querySelectorAll('[data-connector-id]').forEach((button) => { button.disabled = busy || !connected || !currentReady() || mode !== 'live'; });
-  $('observation-id').disabled = busy || !currentReady();
+  $('observation-id').disabled = busy || !currentReady() || !$('observation-id').options.length;
   $('max-hops').disabled = busy || !currentReady();
   $('run-analysis').disabled = busy || !connected || !currentReady() || !$('observation-id').value;
   document.querySelectorAll('[data-source-id], [data-record-id]').forEach((button) => { button.disabled = busy || !connected; });
 }
 
-async function action(work) {
+async function action(work, focusGraph = false) {
   if (busy) return;
   const trigger = document.activeElement;
   const focus = trigger?.id ? { id: trigger.id } : trigger?.dataset.sourceId ? { sourceId: trigger.dataset.sourceId } : trigger?.dataset.recordId ? { recordId: trigger.dataset.recordId } : trigger?.dataset.connectorId ? { connectorId: trigger.dataset.connectorId } : null;
@@ -170,9 +199,17 @@ async function action(work) {
     lastRequestFailed = false;
     render();
   } catch (error) {
+    const unauthorized = error instanceof Error && error.message.startsWith('UNAUTHORIZED:');
     currentVerified = false;
     lastRequestFailed = true;
-    if (!connected) token = '';
+    if (unauthorized) {
+      if (token.startsWith('wsi1_')) clearWalletSession();
+      sessionGeneration += 1;
+      token = ''; connected = false; currentGraph = null; record = null; history = []; connectors = [];
+      text('connection-status', 'Session expired, revoked, or invalid. Sign in again to reload this workspace.');
+    } else if (!connected) {
+      token = '';
+    }
     text('mesh-error', error instanceof Error ? error.message : 'The request failed.');
     $('mesh-error').hidden = false;
     render();
@@ -180,7 +217,8 @@ async function action(work) {
     busy = false;
     controls();
     const target = focus?.id ? $(focus.id) : focus?.sourceId ? [...document.querySelectorAll('[data-source-id]')].find((button) => button.dataset.sourceId === focus.sourceId) : focus?.recordId ? [...document.querySelectorAll('[data-record-id]')].find((button) => button.dataset.recordId === focus.recordId) : focus?.connectorId ? [...document.querySelectorAll('[data-connector-id]')].find((button) => button.dataset.connectorId === focus.connectorId) : null;
-    if (target && !target.disabled) target.focus({ preventScroll: true });
+    if (focusGraph && connected && currentGraph?.nodes.length) { $('mesh-title').focus({ preventScroll: true }); $('mesh-title').scrollIntoView({ block: 'start' }); }
+    else if (target && !target.disabled) target.focus({ preventScroll: true });
   }
 }
 
@@ -216,7 +254,8 @@ function renderGraph() {
   $('mesh-canvas').style.setProperty('--canvas-height', `${height}px`);
   $('mesh-connections').setAttribute('viewBox', `0 0 1000 ${height}`);
   $('empty-graph').hidden = graph.nodes.length > 0;
-  $('mesh-canvas').hidden = graph.nodes.length === 0;
+  document.querySelector('.graph-panel > .section-copy').hidden = graph.nodes.length === 0;
+  $('mesh-canvas').dataset.empty = String(graph.nodes.length === 0);
   $('mesh-nodes').replaceChildren(...graph.nodes.map((item) => {
     const button = element('button', 'mesh-node');
     const position = positions.get(item.id);
@@ -229,7 +268,7 @@ function renderGraph() {
     button.style.top = `${position.y}px`;
     button.append(element('span', 'node-kind', KIND_LABELS[item.kind]), element('strong', '', item.label));
     if (item.kind === 'position') button.append(element('span', 'node-value', units(item.properties.amountUnits)));
-    if (item.kind === 'observation') button.append(element('span', 'node-value', graph.mode === 'live' ? `Capture: ${item.properties.status}` : item.properties.status === 'ok' ? units(item.properties.availableLiquidityUnits) : 'Unavailable'));
+    if (item.kind === 'observation') button.append(element('span', 'node-value', graph.mode === 'live' ? isReserveObservation(item) && item.properties.status === 'ok' ? baseUnits(item.properties.availableLiquidityUnits) : `Capture: ${item.properties.status}` : item.properties.status === 'ok' ? units(item.properties.availableLiquidityUnits) : 'Unavailable'));
     if (item.kind === 'account') button.append(element('span', 'node-value', item.properties.network));
     if (highlighted.nodes.has(item.id)) button.append(element('span', 'path-marker', 'Analysis path'));
     button.addEventListener('click', () => selectNode(item.id));
@@ -256,8 +295,8 @@ function renderGraph() {
     paths.push(path);
   }
   $('mesh-paths').replaceChildren(...paths);
-  text('graph-coverage', `Projection: ${graph.coverage.status}`);
-  $('graph-coverage').dataset.status = graph.coverage.status === 'complete' ? graph.mode === 'live' ? 'OBSERVED' : 'READY' : 'NO_DATA';
+  text('graph-coverage', graph.nodes.length ? `Projection: ${graph.coverage.status}` : 'No sources yet');
+  $('graph-coverage').dataset.status = !graph.nodes.length ? 'NO_DATA' : graph.coverage.status === 'complete' ? graph.mode === 'live' ? 'OBSERVED' : 'READY' : 'NO_DATA';
   $('graph-issues').hidden = graph.issues.length === 0;
   $('graph-issue-list').replaceChildren(...graph.issues.map((issue) => element('li', '', issue)));
   $('relationship-list').replaceChildren(...graph.edges.map((edge) => {
@@ -388,8 +427,9 @@ function renderInspector() {
     rows.push(['Evidence status', item.properties.status]);
     if (graph.mode === 'synthetic') rows.push(['Available liquidity', units(item.properties.availableLiquidityUnits)]);
     else {
-      rows.push(['Observation type', item.properties.observationType === 'document' ? 'Document claim' : 'Program account'], ['Capture reason', item.properties.reasonCode ?? 'None']);
+      rows.push(['Observation type', { document: 'Document claim', program_account: 'Program account', reserve_liquidity: 'Reserve liquidity' }[item.properties.observationType] ?? item.properties.observationType], ['Capture reason', item.properties.reasonCode ?? 'None']);
       if (item.properties.observationType === 'document') rows.push(['Claims this program', item.properties.claimsProgram ? 'Yes' : 'No']);
+      else if (isReserveObservation(item)) rows.push(...reserveRows(item));
       else rows.push(['Slot', item.properties.slot ?? 'Not returned'], ['Program owner', item.properties.programOwner ?? 'Not returned'], ['Executable', item.properties.executable === null ? 'Not returned' : item.properties.executable ? 'Yes' : 'No'], ['Account data SHA-256', item.properties.dataSha256 ?? 'Not returned']);
     }
   }
@@ -432,11 +472,15 @@ function renderAnalysis() {
   const analysis = record?.analysis;
   const live = mode === 'live';
   text('analysis-context', analysis ? lastRequestFailed ? 'SAVED RESULT / LAST REQUEST FAILED' : 'SAVED ANALYSIS / ORIGINAL EVIDENCE' : 'NO ANALYSIS FOR THIS SNAPSHOT');
-  text('analysis-title', analysis ? { READY: 'Combined exit is covered.', BLOCKED: 'Combined exit is blocked.', NO_DATA: 'Evidence is incomplete.', OBSERVED: 'Public evidence is connected.' }[analysis.status] : 'An answer with a path.');
+  text('analysis-title', analysis ? { READY: 'Combined exit is covered.', BLOCKED: 'Combined exit is blocked.', NO_DATA: analysis.policyVersion === RESERVE_POLICY ? 'Reserve evidence is incomplete.' : 'Evidence is incomplete.', OBSERVED: analysis.policyVersion === RESERVE_POLICY ? 'Vault-backed reserve liquidity is observed.' : 'Public evidence is connected.' }[analysis.status] : 'An answer with a path.');
   text('analysis-status', analysis?.status ?? 'Awaiting analysis');
   $('analysis-status').dataset.status = analysis?.status ?? '';
   text('analysis-summary', analysis?.summary ?? 'Run an analysis to inspect the service’s result and its evidence.');
-  facts($('analysis-facts'), analysis ? live ? [['Visited entities', String(analysis.coverage.visitedNodeIds.length)], ['Visited relationships', String(analysis.coverage.visitedEdgeIds.length)], ['Source revisions', String(analysis.sourceRevisionIds.length)]] : [['Connected positions', String(analysis.positionResults.length)], ['Combined exit', units(analysis.totalAffectedUnits)], ['Available liquidity', units(analysis.availableLiquidityUnits)]] : []);
+  const reserve = analysis?.policyVersion === RESERVE_POLICY;
+  facts($('analysis-facts'), analysis ? live ? [...reserve ? [['Vault-backed book liquidity', baseUnits(analysis.availableLiquidityUnits)]] : [], ['Visited entities', String(analysis.coverage.visitedNodeIds.length)], ['Visited relationships', String(analysis.coverage.visitedEdgeIds.length)], ['Source revisions', String(analysis.sourceRevisionIds.length)]] : [['Connected positions', String(analysis.positionResults.length)], ['Combined exit', units(analysis.totalAffectedUnits)], ['Available liquidity', units(analysis.availableLiquidityUnits)]] : []);
+  const observation = reserve ? reserveObservation(record.graph, analysis.observationId) : null;
+  $('analysis-evidence').hidden = !observation;
+  facts($('analysis-evidence'), observation ? reserveRows(observation) : []);
   text('analysis-coverage', analysis ? `Coverage: ${analysis.coverage.status}. Traversal: at most ${analysis.coverage.maxHops} hops, ${analysis.coverage.nodeLimit} nodes, and ${analysis.coverage.edgeLimit} edges.` : 'Coverage will appear with the analysis.');
   $('position-results').replaceChildren(...(analysis?.positionResults ?? []).map((result) => {
     const button = element('button', 'position-result');
@@ -455,7 +499,9 @@ function renderAnalysis() {
     return button;
   }));
   text('analysis-record', analysis ? `Saved ${stamp(record.createdAt)} · ${analysis.policyVersion} · Record ${record.id}` : '');
-  text('analysis-limit', live ? 'OBSERVED means the linked document and account evidence passed this evidence check. It does not prove lending usability or authorize a transaction. Account ownership is program ownership, not wallet ownership.' : 'READY describes this synthetic combined-exit calculation. It does not predict a live fill or authorize movement.');
+  text('analysis-limit', !live ? 'READY describes this synthetic combined-exit calculation. It does not predict a live fill or authorize movement.' : analysis?.policyVersion === RESERVE_POLICY
+    ? 'OBSERVED means one confirmed Devnet snapshot matched the pinned reserve and its liquidity vault. The amount is vault-backed unborrowed book liquidity. It is not freely withdrawable and is not approval for any transaction. It does not show live positions or exits, and program evidence status is separate.'
+    : 'OBSERVED means the linked document and account evidence passed this evidence check. It does not prove lending usability or authorize a transaction. Account ownership is program ownership, not wallet ownership.');
 }
 
 function renderSources() {
@@ -499,14 +545,15 @@ function renderMode() {
   const live = mode === 'live';
   $('mesh-mode').value = mode;
   text('mode-symbol', live ? 'L' : 'S');
-  $('mode-note').replaceChildren(element('strong', '', live ? 'Public documents and Devnet account evidence. ' : 'Synthetic USDC and source documents. '), document.createTextNode(live ? 'Capture the registered sources, then inspect the linked evidence. This view does not move funds.' : 'This mode uses a fixed liquidity analysis. It does not contact a live provider or move funds.'));
-  text('mode-context', live ? 'Live captures use fixed sources. Synthetic scenarios stay in their own graph.' : 'Scenario documents and public captures stay in separate graphs.');
+  $('mode-note').replaceChildren(element('strong', '', live ? 'Public documents and Devnet account evidence. ' : 'Synthetic USDC and source documents. '), document.createTextNode(live ? 'Capture the registered sources, then inspect the linked evidence. Program evidence and Devnet reserve liquidity are separate. This view does not move funds.' : 'This mode uses a fixed liquidity analysis. It does not contact a live provider or move funds.'));
+  text('mode-context', live ? 'Live captures use three fixed sources. Synthetic scenarios stay in their own graph.' : 'Scenario documents and public captures stay in separate graphs.');
   $('synthetic-controls').hidden = live;
+  $('live-decision-link').hidden = !live;
   $('live-connectors').hidden = !live;
-  text('analysis-controls-title', live ? 'Do the public sources support this program?' : 'Can the connected positions exit?');
-  text('analysis-controls-copy', live ? 'The service follows the document claim to the program account and its Devnet observation. Both sources must support the result.' : 'The service follows the observation through its reserve. It compares liquidity with the combined position amount.');
-  text('observation-label', live ? 'Public evidence observation' : 'Liquidity observation');
-  text('empty-graph', live ? 'No live captures are loaded. Capture the registered sources above to begin.' : 'No source documents are loaded. Open the synthetic scenario controls to begin.');
+  text('observation-label', live ? 'Live observation' : 'Liquidity observation');
+  text('empty-graph-copy', live ? 'Capture a fixed source to build this graph. Program and reserve observations are separate. Synthetic evidence has its own mode.' : 'Choose a synthetic scenario to save fixture sources and inspect a liquidity observation.');
+  text('empty-graph-action', live ? 'Review live sources' : 'Choose a scenario');
+  if (!live && !currentGraph?.nodes.length) $('scenario-controls').open = true;
   if (!live) return;
   $('connector-list').replaceChildren(...connectors.map((connector) => {
     const item = element('li');
@@ -546,7 +593,23 @@ function renderMode() {
   }
 }
 
+function renderAnalysisControls() {
+  const selected = currentGraph?.mode === mode ? currentGraph.nodes.find((item) => item.id === $('observation-id').value) : null;
+  if (mode !== 'live') {
+    text('analysis-controls-title', 'Can the connected positions exit?');
+    text('analysis-controls-copy', 'The service follows the observation through its reserve. It compares liquidity with the combined position amount.');
+  } else if (isReserveObservation(selected)) {
+    text('analysis-controls-title', 'What book liquidity does the reserve hold?');
+    text('analysis-controls-copy', 'The service follows the reserve observation to the pinned reserve, its liquidity vault, and the program that owns the reserve. The amount is vault-backed unborrowed book liquidity, not a withdrawable amount or an approval.');
+  } else {
+    text('analysis-controls-title', 'Do the public sources support this program?');
+    text('analysis-controls-copy', 'The service follows the document claim to the program account and its Devnet observation. The document and account captures must both support the result. Reserve liquidity is analyzed separately.');
+  }
+}
+
 function render() {
+  document.body.dataset.connected = String(connected);
+  text('connection-title', connected ? 'Workspace connected.' : 'Connect to Falcon.');
   $('mesh-workspace').hidden = !connected || !currentGraph;
   renderMode();
   text('connection-status', connected ? lastRequestFailed ? 'Connected. Last request failed. Refresh before analyzing current sources.' : 'Connected. Sources and analyses are stored by the service.' : 'Disconnected. Connect to load your workspace.');
@@ -560,7 +623,8 @@ function render() {
     const observations = currentGraph.mode === mode ? currentGraph.nodes.filter((item) => item.kind === 'observation') : [];
     $('observation-id').replaceChildren(...observations.map((item) => { const option = element('option', '', item.label); option.value = item.id; return option; }));
     if (observations.some((item) => item.id === oldObservation)) $('observation-id').value = oldObservation;
-    text('analysis-control-note', !currentReady() ? 'Refresh the current sources before running an analysis or saving another source.' : observations.length ? 'This request uses current source heads. Selecting history does not change the analysis request.' : mode === 'live' ? 'Capture the registered sources to add public evidence observations.' : 'Load a synthetic scenario to add a liquidity observation.');
+    text('analysis-control-note', !currentReady() ? 'Refresh the current sources before running an analysis or saving another source.' : observations.length ? 'This request uses current source heads. Only captured observations can be analyzed. Selecting history does not change the analysis request.' : mode === 'live' ? 'Capture a live source to add an observation. Nothing is captured automatically.' : 'Choose a synthetic scenario to add a liquidity observation.');
+    renderAnalysisControls();
     renderGraph(); renderInspector(); renderAnalysis(); renderSources(); renderHistory();
   }
   controls();
@@ -575,36 +639,38 @@ $('connect-form').addEventListener('submit', (event) => {
   $('access-token').value = '';
   if (!token) return;
   void action(async () => {
-    const endpoint = new URL(API_BASE);
-    if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash
-      || (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname)))) {
-      throw new Error('The configured API address must use HTTPS, or HTTP on loopback for local development.');
-    }
+    assertSafeApiBase();
     await loadCurrent();
     connected = true;
-    text('mesh-message', 'Workspace loaded. Choose a source or run an analysis.');
-  });
+    text('mesh-message', 'Workspace loaded with operator token. Inspect the graph or analyze an observation.');
+  }, true);
 });
 $('disconnect').addEventListener('click', () => {
   if (busy) return;
   sessionGeneration += 1;
   token = ''; connected = false; currentGraph = null; currentVerified = false; record = null; history = [];
-  mode = 'synthetic'; connectors = []; captureResult = null;
+  mode = 'live'; connectors = []; captureResult = null;
   selectedNodeId = null; selectedPositionId = null; lastRequestFailed = false; clearSource();
   $('mesh-error').hidden = true;
   $('access-token').value = '';
-  text('mesh-message', 'Disconnected. The service keeps saved sources and analyses.');
+  text('mesh-message', 'Disconnected from this graph view. Sign out from the bot page to revoke the wallet session.');
   terminal.reset();
   render(); $('access-token').focus();
 });
 $('refresh-mesh').addEventListener('click', () => action(async () => { await loadCurrent(); text('mesh-message', 'Current source snapshot loaded. Saved analyses remain in history.'); }));
+$('empty-graph-action').addEventListener('click', () => {
+  const target = mode === 'live' ? $('live-connectors') : $('synthetic-controls');
+  if (mode === 'synthetic') $('scenario-controls').open = true;
+  target.scrollIntoView({ block: 'start' });
+  target.querySelector('button:not(:disabled), summary')?.focus({ preventScroll: true });
+});
 $('mesh-mode').addEventListener('change', (event) => {
   const nextMode = event.target.value;
   $('mesh-mode').value = mode;
   if (!connected || busy || !['synthetic', 'live'].includes(nextMode) || nextMode === mode) return;
   void action(async () => {
     await loadCurrent(nextMode);
-    text('mesh-message', nextMode === 'live' ? 'Live source snapshot loaded. Capture the registered sources to retain public evidence.' : 'Synthetic source snapshot loaded. Choose a scenario or inspect saved evidence.');
+    text('mesh-message', nextMode === 'live' ? 'Live source snapshot loaded. Capture a registered source to retain evidence. Nothing is captured automatically.' : 'Synthetic source snapshot loaded. Choose a scenario or inspect saved evidence.');
   });
 });
 document.querySelectorAll('[data-scenario]').forEach((button) => button.addEventListener('click', () => action(async () => {
@@ -615,9 +681,10 @@ document.querySelectorAll('[data-scenario]').forEach((button) => button.addEvent
   await loadCurrent();
   text('mesh-message', 'Synthetic source revisions saved. Run an analysis to inspect their effect.');
 })));
+$('observation-id').addEventListener('change', renderAnalysisControls);
 $('analysis-form').addEventListener('submit', (event) => {
   event.preventDefault();
-  if (!connected || !currentReady() || busy || !$('observation-id').value) return;
+  if (!connected || !currentReady() || busy || !$('observation-id').value || !currentGraph.nodes.some((item) => item.kind === 'observation' && item.id === $('observation-id').value)) return;
   const query = { requestId: crypto.randomUUID(), observationId: $('observation-id').value, maxHops: Number($('max-hops').value) };
   void action(async () => {
     const response = await api(mode === 'live' ? '/v1/analyses/live' : '/v1/analyses', query);
@@ -633,3 +700,27 @@ window.addEventListener('pagehide', () => { sessionGeneration += 1; token = ''; 
 text('api-location', `Service: ${API_BASE}`);
 const terminal = mountLendingTerminal({ api, getAnalysis: () => lastRequestFailed ? null : record, isConnected: () => connected });
 render();
+
+async function restoreSignedInWorkspace() {
+  if (connected || busy) return;
+  void action(async () => {
+    assertSafeApiBase();
+    let session;
+    try {
+      session = await restoreBotWalletSession();
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('UNAUTHORIZED:')) clearWalletSession();
+      throw error;
+    }
+    if (!session) {
+      text('connection-status', 'Sign in on this bot site in this tab, or use an operator token.');
+      return;
+    }
+    token = session.token;
+    await loadCurrent();
+    connected = true;
+    text('connection-status', 'Wallet session connected: ' + session.walletAddress + '.');
+    text('mesh-message', 'Wallet session restored. DevNet test actions still need a separate wallet signature.');
+  }, true);
+}
+void restoreSignedInWorkspace();

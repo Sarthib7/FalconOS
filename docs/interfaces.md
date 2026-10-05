@@ -290,6 +290,23 @@ type DashboardResponseExtension = {
 [BOUNDARY, strategy status, 2026-09-24] The production app has no connection to the localhost-only council API. The research templates remain reference-only, and the current council is advisory-only. A Devnet swap quote is not a stock strategy signal. The app must show those states as unavailable until a production data and strategy API exists.
 
 [VERIFIED, correction, source read 2026-09-24] The preceding provider assignment is superseded. Production `/app/` imports `web/app/devnet-execution.mjs`, which fixes RPC calls to `DEVNET_RPC` from `web/app/data.mjs`. The local `/copilot/` page continues to use `web/copilot/execution.mjs`. The production build check must confirm that Surfpool and Jupiter endpoint strings are absent from the app bundle.
+## Falcon bot wallet authentication: 2026-10-03
+
+[VERIFIED, user choice] Bot access uses Phantom Wallet Standard message signing. The signed message authenticates the wallet but does not authorize a transaction. The bot no longer uses Supabase email Auth; existing Supabase JWT and static mesh-token clients remain supported.
+
+Interface ID: BOT-WALLET-AUTH-1
+Owner: coordinator
+Provider: mesh HTTP service
+Consumers: web/bot
+Status: Complete
+Challenge expires within 5 minutes and can be consumed once. Session expires within 30 minutes. Postgres stores the challenge and only the SHA-256 hash of the random session token. The bot stores the opaque token in sessionStorage.
+Request or input: All endpoints require an allowed browser Origin. POST /v1/auth/wallet/challenge accepts {address}; POST /v1/auth/wallet/verify accepts {challengeId, signature} and requires the same Origin. GET /v1/auth/wallet/session and POST /v1/auth/wallet/logout require Bearer sessionToken.
+Response or output: Challenge returns challengeId, server-generated SIWS message, and expiresAt. Verification returns opaque sessionToken, walletAddress, server-derived ownerId, and expiresAt. Session lookup returns the verified identity; logout returns revocation status.
+Errors: invalid challenge ID, expired or replayed challenge, or invalid signature returns UNAUTHORIZED; malformed request fields return INVALID_INPUT; disallowed origin returns ORIGIN_DENIED; challenge limits return RATE_LIMITED; Postgres failure returns STORAGE_UNAVAILABLE.
+Events: Wallet Standard connect and solana:signMessage on any Solana chain. The message states that it is not a transaction and spends no fees. No balance read, transaction signing, order, or fund movement.
+Compatibility rule: Bot wallets authenticate only through the signed challenge. Supabase JWT and configured mesh-token credentials remain valid for existing mesh clients. The bot cannot submit an owner field.
+Verification: [VERIFIED, local runs] From mesh/, full schema initialization printed `Falcon mesh schema version 3 created from the complete local history.` The command `FALCON_MESH_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55447/falcon_mesh_test_final npm test` printed `tests 149, pass 149, fail 0`. From web/, `npm test` printed `tests 207, pass 207, fail 0`; bot build output ended `✓ built in 36.73s`. At `http://127.0.0.1:5194/`, the browser found 0 email inputs, received `readyz 200 {"status":"ready"}`, and reported 0 axe violations, 34 passes, 1 incomplete, and 375/375 CSS pixels at mobile width. A generated Ed25519 test key completed challenge, verify, session restore, and account-change logout through Wallet Standard. The logout returned HTTP 200 and cleared sessionStorage; no yield request was made. No actual Phantom extension, user wallet, transaction, or remote migration was used.
+
 ## Treasury simulation addition, 2026-09-26
 
 [INFERRED, current interface index] Interface `I14` is defined in [the treasury simulation contract](treasury-contract.md). Owner: architect. Provider: `web/treasury/`. Consumers: the local treasury UI and tests. Version 1 is simulation-only and does not change the earlier plugin, stocks engine, or Devnet interfaces.

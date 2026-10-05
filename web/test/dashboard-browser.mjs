@@ -6,24 +6,29 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { appendEvent, createRun, formatUsdc, replayRun } from '../treasury/domain.mjs';
+import { Keypair } from '@solana/web3.js';
+import { captureSource, projectLiveGraph, analyzeLiveGraph } from '../../mesh/live.mjs';
+import { evaluateReserveScenario } from '../../mesh/scenario.mjs';
+import { createKaminoBrowserFixture } from '../../mesh/test/support/kamino-fixtures.mjs';
+import { simulateAllocation } from '../../mesh/yield-domain.mjs';
 
 // Every browser profile, storage record and source action is disposable.
 // The treasury is synthetic. Knowledge API responses are injected at the network layer for the default mesh origin.
 // Only fixture tokens are used. No wallet, real service or external HTTP is used.
 const root = resolve(process.env.FALCON_DASHBOARD_WEB_ROOT || fileURLToPath(new URL('../dist/', import.meta.url)));
 const sourceRoot = process.env.FALCON_DASHBOARD_SOURCE;
-if (!sourceRoot) throw new Error('Set FALCON_DASHBOARD_SOURCE to the OpenDesign project data root before running the dashboard browser harness.');
+if (!sourceRoot && !process.argv.includes('--case=agent')) throw new Error('Set FALCON_DASHBOARD_SOURCE to the OpenDesign project data root before running the dashboard browser harness.');
 const evidenceRoot = process.env.FALCON_DASHBOARD_EVIDENCE || '/private/tmp/falcon-dashboard-source-r9g2sbv8';
 await mkdir(evidenceRoot, { recursive: true });
 const artifactDir = await mkdtemp(`${evidenceRoot}/browser-`);
 const sourceOnly = process.argv.includes('--source-only');
 const sourceRegressions = process.argv.includes('--source-regressions');
 const targetCase = process.argv.find(argument => argument.startsWith('--case='))?.slice('--case='.length);
-if (targetCase && !['legacy', 'clipboard', 'fonts'].includes(targetCase)) throw Error('Unknown dashboard browser case.');
+if (targetCase && !['agent', 'legacy', 'clipboard', 'fonts'].includes(targetCase)) throw Error('Unknown dashboard browser case.');
 const KEY = 'falconos-control-centre-preview-v1';
 const SENTINELS = { 'falcon.treasury.simulation.v1': 'existing-treasury-record-marker', 'falconos-workspace-v1': 'existing-advisory-record-marker' };
 const SOURCE_FILES = ['falconos-workspace.html', 'falconos-advisory-workspace.html', 'falconos-knowledge.html', 'falconos-capital.html'];
-const VIEWS = { overview: 'Control Centre', decisions: 'Decision desk', knowledge: 'Knowledge mesh', connections: 'Connections' };
+const VIEWS = { overview: 'Control Centre', decisions: 'Decision desk', operate: 'Live decision graph', knowledge: 'Knowledge mesh', connections: 'Connections', agent: 'Yield Agent' };
 const checks = [], exceptions = [], remoteRequests = [], localRequests = [], localResponses = [], downloads = [];
 const pending = new Map();
 let server, chrome, origin, activePage, sourceData;
@@ -36,13 +41,23 @@ const prettyUnits = value => {
 };
 const apiOrigin = 'http://127.0.0.1:8791';
 const MESH_TOKEN = 'dashboard-test-token-0123456789abcdef', BAD_TOKEN = 'x'.repeat(40);
-const CONNECTORS = [{ id: 'kamino-program-docs', label: 'Official Kamino program deployments', sourceUrl: 'https://raw.githubusercontent.com/Kamino-Finance/klend/master/README.md', network: null }, { id: 'solana-devnet-klend', label: 'Solana Devnet Kamino program account', sourceUrl: 'https://api.devnet.solana.com', network: 'devnet' }];
+const CONNECTORS = [{ id: 'kamino-program-docs', label: 'Official Kamino program deployments', sourceUrl: 'https://raw.githubusercontent.com/Kamino-Finance/klend/master/README.md', network: null }, { id: 'solana-devnet-klend', label: 'Solana Devnet Kamino program account', sourceUrl: 'https://api.devnet.solana.com', network: 'devnet' }, { id: 'solana-devnet-reserve-liquidity', label: 'Devnet USDC reserve liquidity', sourceUrl: 'https://api.devnet.solana.com', network: 'devnet' }];
 let readyMode = 'ready', connectorsFail = false, connectorObservations = false;
 const ANALYSIS_IDS = ['3f1c2a9e-0b7d-4c55-9a51-6d0e8f2b7a01', '8a4d6e21-5c93-4f0a-b1e7-2c9d3a6f5b02'];
 const LIVE_CONTENT = '# klend readme fixture\n';
 const LIVE_SOURCE = { revisionId: 'c0ffee00-1111-4222-8333-444455556666', sourceKey: 'kamino/readme', sourceUrl: 'https://github.com/Kamino-Finance/klend/blob/master/README.md', observedAt: '2026-09-28T09:00:00.000Z', capturedAt: '2026-09-28T09:00:05.000Z', sha256: hash(LIVE_CONTENT) };
 const meshRequests = [];
+const yieldSimulationRequests = [];
+const YIELD_RETRIEVED_AT = '2026-10-03T12:00:00.000Z';
+const YIELD_OPPORTUNITIES = [
+  { provider: 'defillama', project: 'kamino-lend', protocolName: 'Kamino Lend', poolId: 'pool-kamino', chain: 'Solana', symbol: 'USDC', baseApyBps: 500, apyRewardBps: null, reportedApyBps: 500, tvlUsdCents: '100000000', retrievedAt: YIELD_RETRIEVED_AT, providerAsOf: null },
+  { provider: 'defillama', project: 'save', protocolName: 'Save', poolId: 'pool-save', chain: 'Solana', symbol: 'USDC', baseApyBps: 300, apyRewardBps: null, reportedApyBps: 300, tvlUsdCents: '50000000', retrievedAt: YIELD_RETRIEVED_AT, providerAsOf: null },
+];
+const YIELD_CATALOG = { status: 'READY', provider: 'defillama', retrievedAt: YIELD_RETRIEVED_AT, providerAsOf: null, executionReady: false, coverage: { indexedPoolRows: 2, solanaLendingProjects: 2, eligibleOpportunities: 2, excludedCounts: {}, catalogCompleteness: 'PROVIDER_INDEXED_ONLY' }, opportunities: YIELD_OPPORTUNITIES };
+const YIELD_SOURCE_SNAPSHOT = { provider: 'defillama', retrievedAt: YIELD_RETRIEVED_AT, providerAsOf: null, coverage: YIELD_CATALOG.coverage };
 let meshMode = 'populated';
+let operateGraph = null, operateSource = null, operateAnalysis = null, operateAt = null, failDecisionOnce = false, failCaptureOnce = false;
+const operateDecisions = new Map(), operateRequests = [], operateSources = new Map(), captureRequests = [];
 const nodeIn = (id, kind, label, properties = {}) => ({ id, kind, label, properties, sourceRevisionIds: [LIVE_SOURCE.revisionId] });
 const edgeIn = (id, source, target, relation) => ({ id, source, target, relation, sourceRevisionIds: [LIVE_SOURCE.revisionId] });
 const emptyGraph = mode => ({ schemaVersion: 1, mode, revision: hash(`empty-${mode}`), asOf: '2026-09-28T09:00:00.000Z', nodes: [], edges: [], sources: [], issues: [], coverage: { status: 'complete', nodeLimit: 256, edgeLimit: 512, sourceLimit: 32 } });
@@ -60,26 +75,81 @@ function meshRoute(path, authorized) {
   if (path === '/readyz') return readyMode === 'ready' ? [200, { status: 'ready' }] : meshError(503, 'STORAGE_UNAVAILABLE', 'The evidence store is unavailable.');
   if (!authorized) return meshError(401, 'UNAUTHORIZED', 'Missing or invalid bearer token.');
   const fixture = meshFixture(), empty = meshMode === 'empty';
+  if (path === '/v1/yield/opportunities') return [200, YIELD_CATALOG];
   if (path === '/v1/graph') return [200, { graph: empty ? emptyGraph('synthetic') : fixture.synthetic }];
   if (path === '/v1/connectors') return connectorsFail ? meshError(500, 'STORE_UNAVAILABLE', 'The connector registry is unavailable.') : [200, { connectors: CONNECTORS }];
-  if (path === '/v1/graph/live') return meshMode === 'error' ? meshError(500, 'STORE_UNAVAILABLE', 'The evidence store is unavailable.') : [200, { graph: empty ? emptyGraph('live') : connectorObservations ? { ...fixture.liveGraph, nodes: [...fixture.liveGraph.nodes, nodeIn('observation:live:kamino-program-docs', 'observation', 'Official document capture', { observationType: 'document', status: 'ok', reasonCode: null, claimsProgram: true }), nodeIn('observation:live:solana-devnet-klend', 'observation', 'Devnet program account capture', { observationType: 'program_account', status: 'unavailable', reasonCode: 'ACCOUNT_MISSING' })] } : fixture.liveGraph }];
-  if (path === '/v1/analyses') return [200, { records: empty ? [] : fixture.records.map(({ id, createdAt, analysis }) => ({ id, createdAt, analysis })), limit: 20 }];
+  if (path === '/v1/graph/live') return meshMode === 'error' ? meshError(500, 'STORE_UNAVAILABLE', 'The evidence store is unavailable.') : [200, { graph: meshMode === 'operate' ? operateGraph : empty ? emptyGraph('live') : connectorObservations ? { ...fixture.liveGraph, nodes: [...fixture.liveGraph.nodes, nodeIn('observation:live:kamino-program-docs', 'observation', 'Official document capture', { observationType: 'document', status: 'ok', reasonCode: null, claimsProgram: true }), nodeIn('observation:live:solana-devnet-klend', 'observation', 'Devnet program account capture', { observationType: 'program_account', status: 'unavailable', reasonCode: 'ACCOUNT_MISSING' }), nodeIn('observation:live:solana-devnet-reserve-liquidity', 'observation', 'Devnet USDC reserve liquidity capture', { observationType: 'reserve_liquidity', status: 'ok', reasonCode: null })] } : fixture.liveGraph }];
+  if (path === '/v1/decisions') return [200, { records: [...operateDecisions.values()].map(({ id, createdAt, analysis }) => ({ id, createdAt, analysis })).reverse().slice(0, 20), limit: 20 }];
+  if (path === '/v1/analyses') return [200, { records: meshMode === 'operate' ? [{ id: operateAnalysis.id, createdAt: operateAnalysis.createdAt, analysis: operateAnalysis.analysis }] : empty ? [] : fixture.records.map(({ id, createdAt, analysis }) => ({ id, createdAt, analysis })), limit: 20 }];
+  const decision = path.match(/^\/v1\/decisions\/([a-f0-9-]{36})$/i);
+  if (decision) return operateDecisions.has(decision[1]) ? [200, { record: operateDecisions.get(decision[1]) }] : meshError(404, 'NOT_FOUND', 'Decision not found.');
   const analysis = path.match(/^\/v1\/analyses\/([a-f0-9-]{36})$/i);
   if (analysis) {
-    const record = fixture.records.find(item => item.id === analysis[1]);
-    return record && !(meshMode === 'error' && record.id === ANALYSIS_IDS[1]) ? [200, { record: { ...record, requestId: randomUUID() } }] : meshError(404, 'NOT_FOUND', 'The analysis was not found.');
+    const record = meshMode === 'operate' ? operateAnalysis?.id === analysis[1] ? operateAnalysis : null : fixture.records.find(item => item.id === analysis[1]);
+    return record && !(meshMode === 'error' && record.id === ANALYSIS_IDS[1]) ? [200, { record: meshMode === 'operate' ? record : { ...record, requestId: randomUUID() } }] : meshError(404, 'NOT_FOUND', 'The analysis was not found.');
   }
   const source = path.match(/^\/v1\/sources\/([a-f0-9-]{36})$/i);
-  if (source) return fixture.sources.has(source[1]) && meshMode !== 'error' ? [200, { source: fixture.sources.get(source[1]) }] : meshError(404, 'NOT_FOUND', 'The source revision was not found.');
+  if (source) return (fixture.sources.has(source[1]) || operateSources.has(source[1])) && meshMode !== 'error' ? [200, { source: fixture.sources.get(source[1]) ?? operateSources.get(source[1]) }] : meshError(404, 'NOT_FOUND', 'The source revision was not found.');
   return meshError(404, 'NOT_FOUND', 'Unknown route.');
 }
+function decisionRoute(request, authorized) {
+  if (!authorized) return meshError(401, 'UNAUTHORIZED', 'Missing or invalid bearer token.');
+  let input;
+  try { input = JSON.parse(request.postData); } catch { return meshError(400, 'INVALID_INPUT', 'Scenario JSON is invalid.'); }
+  if (!input || Object.keys(input).length !== 2 || typeof input.requestId !== 'string' || !input.scenario) return meshError(400, 'INVALID_INPUT', 'Decision request fields are invalid.');
+  operateRequests.push({ requestId: input.requestId, scenario: input.scenario });
+  if (failDecisionOnce) { failDecisionOnce = false; return meshError(503, 'STORAGE_UNAVAILABLE', 'Controlled ambiguous save failure.'); }
+  const prior = [...operateDecisions.values()].find(record => record.requestId === input.requestId);
+  if (prior) return ['proposedUnits', 'maxProposedUnits', 'minBookLiquidityUnits', 'maxObservationAgeSeconds'].every(key => prior.analysis.scenario[key] === input.scenario[key]) ? [200, { record: prior }] : meshError(409, 'CONFLICT', 'Decision request changed.');
+  let analysis;
+  try { analysis = evaluateReserveScenario(operateGraph, input.scenario, operateAt); }
+  catch { return meshError(400, 'INVALID_INPUT', 'Scenario input is invalid.'); }
+  const record = { id: randomUUID(), requestId: input.requestId, createdAt: operateAt, graph: operateGraph, analysis };
+  operateDecisions.set(record.id, record);
+  return [200, { record }];
+}
+function yieldSimulationRoute(request, authorized) {
+  if (!authorized) return meshError(401, 'UNAUTHORIZED', 'Missing or invalid bearer token.');
+  let input;
+  try { input = JSON.parse(request.postData); } catch { return meshError(400, 'INVALID_INPUT', 'Simulation JSON is invalid.'); }
+  if (!input || Object.keys(input).length !== 4 || !['requestId', 'simulatedAt', 'portfolio', 'policy'].every(key => Object.hasOwn(input, key))) return meshError(400, 'INVALID_INPUT', 'Simulation request fields are invalid.');
+  yieldSimulationRequests.push(input);
+  try { return [200, { plan: simulateAllocation({ ...input, opportunities: YIELD_OPPORTUNITIES, sourceSnapshot: YIELD_SOURCE_SNAPSHOT }) }]; }
+  catch { return meshError(400, 'INVALID_INPUT', 'Simulation request does not match the allocation contract.'); }
+}
+async function captureRoute(request, authorized) {
+  if (!authorized) return meshError(401, 'UNAUTHORIZED', 'Missing or invalid bearer token.');
+  let input;
+  try { input = JSON.parse(request.postData); } catch { return meshError(400, 'INVALID_INPUT', 'Capture JSON is invalid.'); }
+  captureRequests.push(input);
+  if (failCaptureOnce) { failCaptureOnce = false; return meshError(409, 'CONFLICT', 'Source head changed. Refresh before capturing it.'); }
+  if (Object.keys(input).length !== 3 || input.connectorId !== 'solana-devnet-reserve-liquidity' || input.expectedRevisionId !== operateSource.revisionId || !/^[a-f0-9-]{36}$/.test(input.requestId)) return meshError(409, 'CONFLICT', 'Capture request does not match the current source.');
+  operateAt = new Date().toISOString();
+  const wallet = Keypair.generate().publicKey.toBase58();
+  const content = await captureSource(input.connectorId, { fetchImpl: createKaminoBrowserFixture(wallet, () => operateAt).publicFetch, now: () => operateAt });
+  const document = JSON.parse(content);
+  operateSource = { revisionId: input.requestId, sourceKey: document.sourceKey, sourceUrl: document.sourceUrl, observedAt: document.observedAt, capturedAt: operateAt, sha256: hash(content), content };
+  operateSources.set(operateSource.revisionId, operateSource);
+  operateGraph = projectLiveGraph([operateSource], operateAt);
+  const { content: retainedContent, ...metadata } = operateSource;
+  return [200, { source: metadata }];
+}
+
 async function fulfillMesh(message) {
   const { request, requestId } = message.params;
   const url = new URL(request.url), headers = [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: origin }, { name: 'Access-Control-Allow-Headers', value: 'authorization, accept, content-type' }, { name: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' }];
   if (request.method === 'OPTIONS') return call('Fetch.fulfillRequest', { requestId, responseCode: 204, responseHeaders: headers }, message.sessionId);
   if (url.pathname === '/readyz' && readyMode === 'unreachable') { meshRequests.push({ method: request.method, path: url.pathname, hasQuery: Boolean(url.search), authorization: undefined, status: 0 }); return call('Fetch.failRequest', { requestId, errorReason: 'ConnectionRefused' }, message.sessionId); }
   const authorization = Object.entries(request.headers).find(([name]) => name.toLowerCase() === 'authorization')?.[1];
-  const [status, body] = request.method === 'GET' ? meshRoute(url.pathname, authorization === `Bearer ${MESH_TOKEN}`) : meshError(405, 'METHOD_NOT_ALLOWED', 'Read-only fixture.');
+  const [status, body] = request.method === 'GET'
+    ? meshRoute(url.pathname, authorization === 'Bearer ' + MESH_TOKEN)
+    : request.method === 'POST' && url.pathname === '/v1/decisions/reserve'
+      ? decisionRoute(request, authorization === 'Bearer ' + MESH_TOKEN)
+      : request.method === 'POST' && url.pathname === '/v1/yield/simulations'
+        ? yieldSimulationRoute(request, authorization === 'Bearer ' + MESH_TOKEN)
+        : request.method === 'POST' && url.pathname === '/v1/captures'
+          ? await captureRoute(request, authorization === 'Bearer ' + MESH_TOKEN)
+          : meshError(405, 'METHOD_NOT_ALLOWED', 'Read-only fixture.');
   meshRequests.push({ method: request.method, path: url.pathname, hasQuery: Boolean(url.search), authorization, status });
   return call('Fetch.fulfillRequest', { requestId, responseCode: status, responseHeaders: headers, body: Buffer.from(JSON.stringify(body)).toString('base64') }, message.sessionId);
 }
@@ -196,6 +266,7 @@ async function snapshots(p, prefix) {
   for (const width of [1440, 320]) {
     await p.send('Emulation.setDeviceMetricsOverride', { width, height: width === 320 ? 844 : 1080, deviceScaleFactor: 1, mobile: width === 320 });
     for (const view of Object.keys(VIEWS)) {
+      if (prefix === 'source' && ['operate', 'agent'].includes(view)) continue;
       await route(p, view); await p.evaluate('scrollTo(0,0)');
       check(`V107: ${prefix} ${view} fits ${width}px`, await p.evaluate('document.documentElement.scrollWidth <= innerWidth'));
       await screenshot(p, `${prefix}-${view}-${width}`, true);
@@ -285,12 +356,17 @@ async function legacyReferences() {
 }
 
 try {
-  const html = await readFile(`${sourceRoot}/falconos-workspace.html`, 'utf8');
-  sourceData = JSON.parse(html.match(/<script id="cc-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+  const portedData = JSON.parse(await readFile(new URL('../dashboard/data.json', import.meta.url), 'utf8'));
+  if (!sourceRoot && targetCase === 'agent') sourceData = portedData;
+  else {
+    const html = await readFile(`${sourceRoot}/falconos-workspace.html`, 'utf8');
+    const embedded = html.match(/<script id="cc-data" type="application\/json">([\s\S]*?)<\/script>/);
+    if (!embedded) throw new Error('OpenDesign workspace source has no cc-data fixture.');
+    sourceData = JSON.parse(embedded[1]);
+  }
   if (!sourceOnly && !sourceRegressions) {
     await readFile(`${root}/dashboard/index.html`);
-    const portedData = JSON.parse(await readFile(new URL('../dashboard/data.json', import.meta.url), 'utf8'));
-    check('V109: ported fixtures equal the exact parsed OpenDesign payload', JSON.stringify(portedData) === JSON.stringify(sourceData));
+    if (sourceRoot) check('V109: ported fixtures equal the exact parsed OpenDesign payload', JSON.stringify(portedData) === JSON.stringify(sourceData));
   }
   server = createServer(async (request, response) => {
     try {
@@ -329,12 +405,15 @@ try {
     await verifyFonts(activePage, 'source'); await snapshots(activePage, 'source'); await legacyReferences();
   } else if (targetCase === 'legacy') {
     await legacyCase();
+  } else if (targetCase === 'agent') {
+    await agentCases();
   } else if (targetCase) {
     activePage = await page();
     if (targetCase === 'fonts') await verifyFonts(activePage, 'react');
     else await staleClipboard(activePage);
   } else {
     await runReact();
+    await agentCases();
   }
   check('V111: instrumented pages attempted no external HTTP requests', remoteRequests.length === 0, remoteRequests);
   check('V107: browser has no uncaught runtime exceptions', exceptions.length === 0, exceptions);
@@ -356,6 +435,9 @@ async function runReact() {
   await verifyFonts(p, 'react');
   check('V107/V108: default Hold sample is read-only and leaves existing records intact', await p.evaluate('document.querySelector("[data-sample=hold]").getAttribute("aria-pressed") === "true"') && await saved(p) === null && await p.evaluate(`Object.entries(${JSON.stringify(SENTINELS)}).every(([key,value])=>localStorage.getItem(key)===value)`));
   await snapshots(p, 'react');
+  const yieldRequestsBeforeAgent = meshRequests.filter(request => request.path.startsWith('/v1/yield/')).length;
+  await route(p, 'agent');
+  check('I18: the disconnected Agent view stays gated and does not fetch or create local simulation state', await p.evaluate('document.querySelector("#page-title").textContent === "Yield Agent" && document.querySelector("#knowledge-connect h2").textContent === "Connect to read yield data." && document.getElementById("sample-bar").hidden && localStorage.getItem("falconos.yield.agent.simulation.v1") === null') && meshRequests.filter(request => request.path.startsWith('/v1/yield/')).length === yieldRequestsBeforeAgent);
   await p.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1080, deviceScaleFactor: 1, mobile: false });
   for (const name of ['supply', 'hold', 'redeem', 'blocked', 'stale']) {
     const view = replayRun(sourceData.samples[name]);
@@ -463,6 +545,8 @@ async function runReact() {
   await legacyReferences();
   check('V111: dashboard made no same-origin backend, wallet, or provider requests', localRequests.every(request => request.method === 'GET' && !request.path.startsWith('/v1/') && !request.path.startsWith('/api/')));
   check('V111: every authenticated mesh request was a read-only GET with the bearer token and no query string', meshRequests.some(request => request.path !== '/readyz') && meshRequests.filter(request => request.path !== '/readyz').every(request => request.method === 'GET' && !request.hasQuery && (request.authorization === `Bearer ${MESH_TOKEN}` || request.authorization === `Bearer ${BAD_TOKEN}`)));
+  await operateCases(p);
+  check('V114: only explicit decision and capture actions wrote to the authenticated mesh fixture', operateRequests.length === 3 && captureRequests.length === 2 && meshRequests.filter(request => request.method === 'POST').every(request => ['/v1/decisions/reserve', '/v1/captures'].includes(request.path) && request.authorization === 'Bearer ' + MESH_TOKEN && !request.hasQuery));
   check('CONN: /readyz was the only unauthenticated mesh request and carried no credentials or query', meshRequests.filter(request => request.authorization === undefined).every(request => request.path === '/readyz' && request.method === 'GET' && !request.hasQuery));
   await writeFile(`${artifactDir}/ui-copy.txt`, await p.evaluate('document.body.innerText'));
 }
@@ -576,31 +660,122 @@ async function liveConnectionsCases() {
   await route(p, 'connections');
   check('CONN1: /readyz health shows READY without a token and is the only request made', await health() === 'READY' && seen('GET', '/readyz') && meshRequests.every(request => request.path === '/readyz' && request.authorization === undefined && request.status === 200));
   const gated = await badges('.connection-row > .badge');
-  check('CONN2: without a token the connectors read CONNECT TO VIEW, keep the boundary copy and fetch no authenticated endpoint', JSON.stringify(gated.slice(1)) === JSON.stringify(['DISCONNECTED', 'CONNECT TO VIEW', 'CONNECT TO VIEW', 'NOT CONNECTED']) && await p.evaluate('document.getElementById("view").textContent.includes("A registered source connector for the official program deployment README.") && !document.querySelector("[data-connector]") && !document.getElementById("connectors-loading")') && !meshRequests.some(request => request.path.startsWith('/v1/')));
+  check('CONN2: without a token the connectors read CONNECT TO VIEW, keep the boundary copy and fetch no authenticated endpoint', JSON.stringify(gated.slice(1)) === JSON.stringify(['DISCONNECTED', 'CONNECT TO VIEW', 'CONNECT TO VIEW', 'CONNECT TO VIEW', 'NOT CONNECTED']) && await p.evaluate('document.getElementById("view").textContent.includes("A registered source connector for the official program deployment README.") && !document.querySelector("[data-connector]") && !document.getElementById("connectors-loading")') && !meshRequests.some(request => request.path.startsWith('/v1/')));
   await route(p, 'knowledge'); await connectMesh(p); await route(p, 'connections'); await settled();
   check('CONN3: connected, the registry rows render from the real /v1/connectors response with source and network', JSON.stringify(await texts(p, '[data-connector] h3')) === JSON.stringify(CONNECTORS.map(connector => connector.label)) && JSON.stringify(await p.evaluate('[...document.querySelectorAll("[data-connector]")].map(row => row.dataset.connector)')) === JSON.stringify(CONNECTORS.map(connector => connector.id)) && await p.evaluate(`[...document.querySelectorAll('[data-connector] a.btn')].map(link => link.getAttribute('href')).join() === ${JSON.stringify(CONNECTORS.map(connector => connector.sourceUrl).join())} && document.querySelector('[data-connector="solana-devnet-klend"]').textContent.includes('devnet') && document.querySelector('[data-connector="kamino-program-docs"]').textContent.includes('None (document source)')`) && seen('GET', '/v1/connectors') && meshRequests.filter(request => request.path.startsWith('/v1/')).every(request => request.authorization === `Bearer ${MESH_TOKEN}` && request.status === 200));
-  check('CONN4: each connector badge is derived from its live observation node, not a hardcoded status', JSON.stringify(await badges('[data-connector] > .badge')) === JSON.stringify(['OBSERVED', 'UNAVAILABLE']) && await p.evaluate('document.querySelector("[data-connector=\\"solana-devnet-klend\\"]").textContent.includes("ACCOUNT_MISSING") && !document.getElementById("view").textContent.includes("NOT CAPTURED")') && seen('GET', '/v1/graph/live'));
-  check('CONN5: the wallet row keeps its boundary badge and follows the connector rows as 05, with no fake live status', await p.evaluate('(() => { const rows = [...document.querySelectorAll(".connection-row")]; const last = rows.at(-1); return last.querySelector(".badge").textContent === "NOT CONNECTED" && last.querySelector(".connection-symbol").textContent === "05" && rows[0].querySelector(".connection-symbol").textContent === "01" && !rows[0].querySelector(".badge").textContent.includes("OBSERVED"); })()'));
+  check('CONN4: each connector badge is derived from its live observation node, not a hardcoded status', JSON.stringify(await badges('[data-connector] > .badge')) === JSON.stringify(['OBSERVED', 'UNAVAILABLE', 'OBSERVED']) && await p.evaluate('document.querySelector("[data-connector=\\"solana-devnet-klend\\"]").textContent.includes("ACCOUNT_MISSING") && !document.getElementById("view").textContent.includes("NOT CAPTURED")') && seen('GET', '/v1/graph/live'));
+  check('CONN5: the wallet row keeps its boundary badge and follows the connector rows as 06, with no fake live status', await p.evaluate('(() => { const rows = [...document.querySelectorAll(".connection-row")]; const last = rows.at(-1); return last.querySelector(".badge").textContent === "NOT CONNECTED" && last.querySelector(".connection-symbol").textContent === "06" && rows[0].querySelector(".connection-symbol").textContent === "01" && !rows[0].querySelector(".badge").textContent.includes("OBSERVED"); })()'));
   connectorObservations = false; await revisit(); await settled();
-  check('CONN6: a connector with no live observation node reads NO DATA', JSON.stringify(await badges('[data-connector] > .badge')) === JSON.stringify(['NO DATA', 'NO DATA']));
+  check('CONN6: a connector with no live observation node reads NO DATA', JSON.stringify(await badges('[data-connector] > .badge')) === JSON.stringify(['NO DATA', 'NO DATA', 'NO DATA']));
   readyMode = 'unavailable'; await revisit(); await settled();
-  check('CONN7: a 503 from /readyz reads UNAVAILABLE while connected data still renders', await health() === 'UNAVAILABLE' && await p.evaluate('document.querySelectorAll("[data-connector]").length') === 2 && await p.evaluate('document.querySelector("#mesh-health .badge").classList.contains("warn")'));
+  check('CONN7: a 503 from /readyz reads UNAVAILABLE while connected data still renders', await health() === 'UNAVAILABLE' && await p.evaluate('document.querySelectorAll("[data-connector]").length') === 3 && await p.evaluate('document.querySelector("#mesh-health .badge").classList.contains("warn")'));
   readyMode = 'unreachable'; await revisit(); await settled();
   check('CONN8: a refused /readyz connection reads UNREACHABLE', await health() === 'UNREACHABLE');
   readyMode = 'ready'; connectorsFail = true; await revisit(); await settled();
   check('CONN9: a failed /v1/connectors surfaces the API error, renders no connector rows and shows no fake status', await p.evaluate('document.getElementById("connectors-error").textContent.includes("STORE_UNAVAILABLE: The connector registry is unavailable.") && document.getElementById("connectors-error").getAttribute("role") === "alert" && !document.querySelector("[data-connector]") && !document.getElementById("view").textContent.includes("NOT CAPTURED")') && await health() === 'READY');
   connectorsFail = false; meshMode = 'error'; await revisit(); await settled();
-  check('CONN10: a failed /v1/graph/live keeps the registry but marks every status UNKNOWN and surfaces the error', JSON.stringify(await badges('[data-connector] > .badge')) === JSON.stringify(['UNKNOWN', 'UNKNOWN']) && await p.evaluate('document.getElementById("graph-error").textContent.includes("STORE_UNAVAILABLE: The evidence store is unavailable.")'));
+  check('CONN10: a failed /v1/graph/live keeps the registry but marks every status UNKNOWN and surfaces the error', JSON.stringify(await badges('[data-connector] > .badge')) === JSON.stringify(['UNKNOWN', 'UNKNOWN', 'UNKNOWN']) && await p.evaluate('document.getElementById("graph-error").textContent.includes("STORE_UNAVAILABLE: The evidence store is unavailable.")'));
   meshMode = 'populated'; connectorObservations = true;
   await route(p, 'knowledge'); await p.click('[data-action="disconnect"]'); await p.wait('Boolean(document.getElementById("knowledge-connect"))');
   const before = meshRequests.filter(request => request.path.startsWith('/v1/')).length;
   await route(p, 'connections'); await health();
-  check('CONN11: after Disconnect the connectors return to CONNECT TO VIEW and no authenticated request is made', JSON.stringify((await badges('.connection-row > .badge')).slice(1)) === JSON.stringify(['DISCONNECTED', 'CONNECT TO VIEW', 'CONNECT TO VIEW', 'NOT CONNECTED']) && !(await p.evaluate('Boolean(document.querySelector("[data-connector]"))')) && meshRequests.filter(request => request.path.startsWith('/v1/')).length === before);
+  check('CONN11: after Disconnect the connectors return to CONNECT TO VIEW and no authenticated request is made', JSON.stringify((await badges('.connection-row > .badge')).slice(1)) === JSON.stringify(['DISCONNECTED', 'CONNECT TO VIEW', 'CONNECT TO VIEW', 'CONNECT TO VIEW', 'NOT CONNECTED']) && !(await p.evaluate('Boolean(document.querySelector("[data-connector]"))')) && meshRequests.filter(request => request.path.startsWith('/v1/')).length === before);
   await screenshot(p, 'connections-live');
   await p.close();
   connectorObservations = false; readyMode = 'ready';
 }
 
+async function operateCases(p) {
+  operateAt = new Date().toISOString();
+  const wallet = Keypair.generate().publicKey.toBase58();
+  const content = await captureSource('solana-devnet-reserve-liquidity', { fetchImpl: createKaminoBrowserFixture(wallet, () => operateAt).publicFetch, now: () => operateAt });
+  const document = JSON.parse(content);
+  operateSource = { revisionId: randomUUID(), sourceKey: document.sourceKey, sourceUrl: document.sourceUrl, observedAt: document.observedAt, capturedAt: operateAt, sha256: hash(content), content };
+  operateSources.set(operateSource.revisionId, operateSource);
+  operateGraph = projectLiveGraph([operateSource], operateAt);
+  operateAnalysis = { id: randomUUID(), requestId: randomUUID(), createdAt: operateAt, graph: operateGraph, analysis: analyzeLiveGraph(operateGraph, { observationId: 'observation:live:solana-devnet-reserve-liquidity', maxHops: 3 }, operateAt) };
+  meshMode = 'operate';
+  await route(p, 'operate');
+  check('V114: disconnected Operate accepts a token directly without loading evidence first', await p.evaluate('Boolean(document.querySelector("#knowledge-connect #knowledge-token")) && document.querySelector("#knowledge-connect h2").textContent.includes("live decision graph") && !document.getElementById("operate-evidence")'));
+  await field(p, '#knowledge-token', MESH_TOKEN); await p.click('#connect-submit');
+  await p.wait('document.getElementById("operate-evidence")?.textContent.includes("252.145908") && Boolean(document.getElementById("operate-history-empty"))');
+  check('V114: direct Operate connection keeps the token out of URLs and browser storage', await p.evaluate('!location.href.includes("dashboard-test-token") && Object.values(localStorage).every(value => !value.includes("dashboard-test-token")) && Object.values(sessionStorage).every(value => !value.includes("dashboard-test-token"))'));
+  await route(p, 'knowledge'); await connectMesh(p);
+  await field(p, '#mesh-mode', 'live');
+  await p.wait('document.getElementById("graph-nodes")?.textContent.includes("Book USDC")');
+  check('V113: Knowledge labels the live reserve amount as book liquidity, not withdrawable funds', await p.evaluate('document.getElementById("graph-nodes").textContent.includes("not withdrawable")'));
+  await p.click('#analysis-history [data-analysis="' + operateAnalysis.id + '"]');
+  await p.wait('document.getElementById("analysis-detail")?.dataset.analysisId === "' + operateAnalysis.id + '"');
+  check('V113: retained reserve analysis preserves the book-only meaning', await p.evaluate('document.getElementById("analysis-detail").textContent.includes("Reserve book liquidity") && document.getElementById("analysis-detail").textContent.includes("not withdrawable")'));
+  await route(p, 'operate');
+  await p.wait('document.getElementById("operate-evidence")?.textContent.includes("252.145908") && Boolean(document.getElementById("operate-history-empty"))');
+  check('V114: live reserve evidence is distinct from owner-entered inputs and no wallet is read', await p.evaluate('document.getElementById("operate-evidence").textContent.includes("not withdrawable") && document.getElementById("operate-scenario").textContent.includes("owner entered") && !document.getElementById("sample-bar").offsetParent && document.querySelector(".mode-tag").textContent.includes("LIVE DEVNET")'));
+
+  await field(p, '#op-proposed', '0'); await p.click('#operate-submit');
+  check('V114: invalid owner input stops before any decision POST', await p.evaluate('document.getElementById("op-proposed").getAttribute("aria-invalid") === "true"') && operateRequests.length === 0);
+  await field(p, '#op-proposed', '1'); await field(p, '#op-max', '2'); await field(p, '#op-floor', '200'); await field(p, '#op-age', '300');
+  failDecisionOnce = true;
+  await p.click('#operate-submit');
+  await p.wait('Boolean(document.getElementById("operate-submit-error"))');
+  check('V114: failed save keeps the owner inputs for an explicit retry', await p.evaluate('document.getElementById("op-proposed").value === "1" && document.getElementById("operate-submit-error").textContent.includes("STORAGE_UNAVAILABLE")') && operateRequests.length === 1);
+  await p.click('#operate-submit');
+  await p.wait('Boolean(document.getElementById("operate-result").dataset.decisionId) && document.getElementById("operate-history").textContent.includes("REVIEW")');
+  const first = [...operateDecisions.values()][0];
+  check('V114: retry uses one request ID and saves an evidence-linked REVIEW decision', operateRequests.length === 2 && operateRequests[0].requestId === operateRequests[1].requestId && operateDecisions.size === 1 && first.analysis.status === 'REVIEW' && first.analysis.executionReady === false && await p.evaluate('document.querySelectorAll(".op-node").length >= 9 && document.getElementById("operate-result").textContent.includes("Owner entered") && document.getElementById("operate-result").textContent.includes("Not execution-ready")'));
+  check('V114: saved decision graph is visible before its detailed facts', await p.evaluate('document.querySelector(".op-graph").getBoundingClientRect().top < innerHeight && document.querySelector(".op-graph").getBoundingClientRect().top < document.querySelector(".op-columns").getBoundingClientRect().top'));
+  await p.click('.op-node[data-origin="OBSERVED"]');
+  check('V114: selecting a live graph node exposes its origin and cited checks', await p.evaluate('document.querySelector(".op-detail").textContent.includes("retained live capture") && document.querySelector(".op-detail").textContent.includes("Cited by check")'));
+  await field(p, '#op-floor', '300'); await p.click('#operate-submit');
+  await p.wait('document.querySelectorAll(".op-history").length === 2 && document.getElementById("operate-result").textContent.includes("BLOCKED")');
+  check('V114: a stricter owner floor blocks without any execution claim', [...operateDecisions.values()].some(record => record.analysis.status === 'BLOCKED') && await p.evaluate('document.getElementById("operate-result").textContent.includes("owner floor")'));
+  await p.click('.op-history[data-decision-id="' + first.id + '"]');
+  await p.wait('document.getElementById("operate-result").dataset.decisionId === "' + first.id + '" && document.getElementById("operate-result").textContent.includes("Historical snapshot")');
+  check('V114: saved history retains its original graph and owner inputs', await p.evaluate('document.getElementById("operate-result").textContent.includes("252.145908") && document.getElementById("operate-result").textContent.includes("Proposed position")'));
+  const previousHead = operateSource.revisionId, previousGraph = operateGraph.revision, decisionCount = operateDecisions.size;
+  check('V114: reading Operate does not start a reserve capture', captureRequests.length === 0);
+  failCaptureOnce = true;
+  await p.click('#operate-capture');
+  await p.wait('document.getElementById("operate-capture-status")?.textContent.includes("CONFLICT")');
+  check('V114: failed capture leaves the saved decision and loaded graph intact', captureRequests.length === 1 && operateGraph.revision === previousGraph && operateDecisions.size === decisionCount && await p.evaluate('document.getElementById("operate-result").textContent.includes("252.145908")'));
+  await p.click('#operate-refresh'); await p.wait('document.getElementById("operate-evidence")?.getAttribute("aria-busy") === "false"');
+  await p.click('#operate-capture');
+  await p.wait('document.getElementById("operate-capture-status")?.textContent.includes("Reserve capture saved") && document.getElementById("operate-currency")?.textContent.includes("loaded graph has changed")');
+  check('V114: explicit capture advances the source head without changing historical decisions', captureRequests.length === 2 && captureRequests.every(request => request.connectorId === 'solana-devnet-reserve-liquidity' && request.expectedRevisionId === previousHead) && captureRequests[0].requestId !== captureRequests[1].requestId && operateGraph.revision !== previousGraph && operateSources.has(previousHead) && operateDecisions.size === decisionCount && first.graph.revision === previousGraph && await p.evaluate('document.getElementById("operate-result").textContent.includes("Historical snapshot") && document.getElementById("operate-result").textContent.includes("252.145908")'));
+  await p.send('Emulation.setDeviceMetricsOverride', { width: 320, height: 844, deviceScaleFactor: 1, mobile: true });
+  check('V114: the full decision graph fits a 320px viewport', await p.evaluate('document.documentElement.scrollWidth <= innerWidth && document.querySelectorAll(".op-node").length >= 9'));
+  await screenshot(p, 'operate-live-320');
+  await p.evaluate('document.querySelector(".op-graph").scrollIntoView({block:"start"})'); await screenshot(p, 'operate-graph-320');
+  await p.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1080, deviceScaleFactor: 1, mobile: false });
+  await screenshot(p, 'operate-live-1440');
+  check('V114: all decision graph lanes fit the desktop viewport', await p.evaluate('(() => { const flow=document.querySelector(".op-flow"), result=document.querySelector(".op-node[data-origin=DERIVED]"); return flow.scrollWidth <= flow.clientWidth && result.getBoundingClientRect().right <= flow.getBoundingClientRect().right; })()'));
+  await p.evaluate('document.querySelector(".op-graph").scrollIntoView({block:"start"})'); await screenshot(p, 'operate-graph-1440');
+  const latest = [...operateDecisions.values()].at(-1);
+  await route(p, 'knowledge'); await route(p, 'operate');
+  await p.wait('document.getElementById("operate-result")?.dataset.decisionId === "' + latest.id + '"');
+  check('V114: returning to Operate opens the newest immutable decision graph without another POST', await p.evaluate('document.getElementById("operate-result").textContent.includes("Historical snapshot") && document.querySelectorAll(".op-node").length >= 9 && document.getElementById("operate-result").textContent.includes("BLOCKED") && document.querySelector(".op-graph").getBoundingClientRect().top < innerHeight') && operateRequests.length === 3);
+  meshMode = 'populated';
+}
+async function agentCases() {
+  const p = await page({ isolated: true }); activePage = p;
+  await route(p, 'agent');
+  await field(p, '#knowledge-token', MESH_TOKEN); await p.click('#connect-submit');
+  await p.wait('document.querySelector(".agent-opportunity")?.textContent.includes("Kamino Lend")');
+  const catalogReads = meshRequests.filter(request => request.method === 'GET' && request.path === '/v1/yield/opportunities');
+  check('I18: connected Agent shows provider data and labels source time as unavailable', catalogReads.length === 1 && catalogReads[0].status === 200 && catalogReads[0].authorization === `Bearer ${MESH_TOKEN}` && await p.evaluate('document.querySelector(".agent-data-stamp").textContent.includes("Market time Unavailable") && document.querySelector(".agent-opportunity").textContent.includes("5.00%")'));
+  await p.click('#agent-create'); await p.wait('Boolean(document.querySelector(".agent-stats"))');
+  await field(p, '#agent-request', 'simulate allocation'); await p.click('#agent-send');
+  await p.wait('JSON.parse(localStorage.getItem("falconos.yield.agent.simulation.v1")).revision === 1 && document.querySelectorAll(".agent-flow").length === 2');
+  const savedText = await p.evaluate('localStorage.getItem("falconos.yield.agent.simulation.v1")');
+  const saved = JSON.parse(savedText), request = yieldSimulationRequests.at(-1), plan = saved.receipts.at(-1);
+  check('I18: chat sends a typed portfolio and policy request, then stores a simulation-only Cash Trace', Object.keys(request).sort().join(',') === 'policy,portfolio,requestId,simulatedAt' && request.portfolio.totalUnits === '1000000000' && request.portfolio.reserveUnits === '100000000' && plan.status === 'SIMULATED' && plan.executionReady === false && plan.costs.status === 'UNKNOWN' && saved.portfolio.totalUnits === '1000000000' && saved.portfolio.reserveUnits === '100000000' && saved.portfolio.positions.length === 2 && saved.portfolio.idleUnits === '0' && await p.evaluate('document.querySelectorAll(".agent-flow").length === 2 && document.querySelector(".agent-flow").textContent.includes("Solana") && document.querySelector(".agent-flow").textContent.includes("Retrieved") && document.querySelector(".agent-flow").textContent.includes("Costs UNKNOWN") && document.querySelector(".agent-flow").textContent.includes("maximum venue share")'));
+  const simulationCalls = yieldSimulationRequests.length;
+  await field(p, '#agent-request', 'send funds'); await p.click('#agent-send');
+  await p.wait('document.querySelector(".agent-messages").textContent.includes("I did not run that request.")');
+  check('I18: unsupported chat instructions leave the local ledger unchanged and make no simulation call', await p.evaluate('localStorage.getItem("falconos.yield.agent.simulation.v1")') === savedText && yieldSimulationRequests.length === simulationCalls);
+  await p.click('.agent-connect-actions button'); await p.wait('Boolean(document.getElementById("knowledge-connect"))');
+  check('I18: disconnect returns to the gate and keeps the token out of browser storage and URLs', await p.evaluate(`Boolean(document.getElementById('knowledge-connect')) && !location.href.includes(${JSON.stringify(MESH_TOKEN)}) && Object.values(localStorage).every(value => !value.includes(${JSON.stringify(MESH_TOKEN)})) && Object.values(sessionStorage).every(value => !value.includes(${JSON.stringify(MESH_TOKEN)}))`));
+  await p.close();
+}
 async function staleClipboard(p) {
   for (const outcome of ['resolve', 'reject']) {
     await route(p, 'decisions');

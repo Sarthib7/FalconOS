@@ -10,7 +10,7 @@
     "start": "node server.mjs",
     "dev:local": "node local.mjs",
     "init-db": "node init-db.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test --test-concurrency=2 test/*.test.mjs"
   },
   "dependencies": {
     "@solana/web3.js": "1.98.4",

@@ -1,13 +1,22 @@
 # SPEC
 
 ## §G GOAL
-Build inbound read-only FalconOS plugin CLI + truthful local council website → external Client Agent gets validated advice while retaining decision/execution authority.
+Build FalconOS as a chat-first, Solana-first USDC yield agent and plug-in: discover provider-indexed opportunities, apply a deterministic user policy, and show replayable simulated fund flows; no live fund movement in MVP.
 
 [VERIFIED, user direction, 2026-09-26] Add accepted Stage 01 treasury MVP through local simulation first. [INFERRED, active slice] Owner mandate → decision graph → checked simulated settlement → browser-local replay. Existing modules retain their current boundaries.
 
 [VERIFIED, user direction, 2026-09-27] Finish graph product, hosting design, and review flow before Devnet execution. [INFERRED, active slice] Versioned synthetic decision records and evidence inspection. Define the later real-fund test after Devnet.
 
+[VERIFIED, user choices, 2026-10-01] One-week internal paper peg pilot plus one separate owner-signed Devnet test swap. [INFERRED] Solana USDC/USDT is a research candidate, not a user-selected pair or proven venue. Stocks and perps follow the pilot. A hedge fund remains a proposed business destination, not current capital authority.
+[VERIFIED, user choice, 2026-10-02] Pause prior one-week peg pilot. I17 and T49-T54 describe a retained proposal, not the current build queue. Investment-service options remain research; none replaces the MVP yet.
+
 ## §C CONSTRAINTS
+- [VERIFIED, user choice, 2026-10-03] Pause peg I17 and T49-T54. This choice supersedes the 2026-10-02 statement that no replacement MVP was authorized.
+- [SUPERSEDED, user choice, 2026-10-03] New MVP is a simulation-only Solana USDC yield agent; no wallet action, real funds, or live signing.
+- [VERIFIED, user choice, 2026-10-04] MVP keeps deterministic simulation and permits one manual, owner-signed Kamino USDC supply/redemption test path on Solana Devnet, capped at 1 Devnet USDC. Each transaction needs an explicit wallet signature and confirmed receipt reconciliation. No mainnet, real funds, pooled client capital, automatic signing, or live rebalancing.
+- [VERIFIED, user choices, 2026-10-01] Internal paper peg loop plus one separately owner-approved Devnet test swap through existing I13 terminal. No outside deposits, fund offering, pooled money, client mandate, borrowed principal, flash loan, mainnet trading, or automatic signing. Council, plugin, mesh peg decision, and treasury simulation keep their current authority.
+- [INFERRED, scoped route] Start with one Solana USDC/USDT route, subject to verified token identity and usable live quote plus independent USD reference sources. USDC/EURC remains EUR/USD FX research, never a USD depeg signal. A quoted round trip is not issuer redemption or executed arbitrage.
+- [INFERRED, safety] Model protected USDC treasury and separate paper strategy budget. Neither is spendable by the desk. Stablecoin denomination does not guarantee stable value; issuer, redemption, liquidity, and depeg risks remain visible.
 - [VERIFIED, user direction, 2026-09-27] Build connected MVP locally before hosting: connectors -> knowledge mesh -> terminal analysis -> Devnet execution and recorded outcome. Personal Railway workspace selected for later hosting. [INFERRED, first foundation] I15 durable mesh; synthetic fixtures prove storage and traversal before live connectors. Existing I14 remains separate.
 - [INFERRED, 2026-09-26 addition] `web/treasury/` isolated simulation under I14; no wallet, signing, chain/model/provider requests, real funds, yield claims, or hidden background operation. Public static hosting is a later release action; each browser retains separate history.
 - FalconOS role: investment firm intake, research, deterministic policy, advisory result. External agents remain callers.
@@ -30,6 +39,15 @@ Build inbound read-only FalconOS plugin CLI + truthful local council website →
 - `engine/` Rust crate is the stocks live dashboard (⊥ root plugin zero-dep graph): read-only live GET/RPC from configured providers, basket snapshot, stocks council, terminal render, and local `127.0.0.1` `/advice` plus `/graph`. ⊥ execution, custody, wallet, signer, order submission. `graph --out` writes one operator-named local JSON file. Secrets via env only, never committed. Deleted `dash/` Node package ⊥ current surface.
 - `web/copilot/` is a local DEV-only client action demo. Surfpool uses Jupiter V1 mainnet routes and the user-hosted local RPC at `http://127.0.0.1:18488`. Devnet uses Raydium's Devnet quote/build API and accepts only a single route through the configured CPMM pool. Each route refreshes its selected cluster's blockhash, simulates, and sends only to that cluster after an explicit wallet click. This does not change the engine, plugin, or production boundary.
 
+- [VERIFIED, user direction, 2026-10-03] Solana first. Multi-chain remains the product direction; EVM adapters follow the Solana-first slice.
+- [SUPERSEDED, user choice, 2026-10-03] Earlier MVP boundary forbade all wallet signing, including login messages.
+- [SUPERSEDED, user choice, 2026-10-03] Bot may request one SIWS-style Phantom message signature for login only. No transaction signature, real balance mutation, deposits, or live rebalancing.
+- [VERIFIED, user choice, 2026-10-04] Bot message signing proves wallet ownership for login only; it does not authorize a transaction. The separate Mesh terminal may request explicit wallet transaction signatures only for the manual DevNet test path above.
+- [INFERRED, MVP boundary] Chat and external agent clients send typed discover, simulate, or explain intents. Deterministic policy is the only authority for allocation plans. Free text alone cannot mutate state.
+- [INFERRED, source integrity] Display provider source, retrieval time, reported APY, and eligibility reasons. No guaranteed-yield or executable-liquidity claim from an APY catalog. Unknown data remains unknown; no synthetic yield values in the dashboard.
+- [VERIFIED, user choice, 2026-10-03] Yield concentration groups by provider project/protocol slug, not individual pool ID. `maxVenues` counts distinct project slugs.
+- [SUPERSEDED, user direction, 2026-10-03] The bot was first gated by Supabase Auth. The later wallet-signature choice replaces that bot login; Supabase remains the database and legacy session provider. Cloudflare remains user-managed.
+- [VERIFIED, user choice, 2026-10-03] Falcon bot uses Phantom signature login. The signature proves wallet ownership only; it does not authorize transactions or fund movement.
 ## §I INTERFACES
 
 ### I1. Inbound command
@@ -241,7 +259,6 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 ### I14. Treasury simulation
 
 - [INFERRED, 2026-09-27 amendment] [Decision graph contract](docs/decision-graph.md) governs schema 2 records, rule checks, legacy compatibility, and UI evidence links. Schema 1 remains readable. Pin `treasury-rules/1`; no live provider or execution integration.
-- [INFERRED, 2026-09-29 amendment] Treasury runs MAY persist server-side per owner via §I17. Server owns clock, event id, and per-owner `requestId` idempotency. Balances & mandate stay operator-supplied synthetic USDC; `mode: simulation` retained; ⊥ wallet, provider, model, chain call, custody, or real-capital claim. `decide`/`replayRun` remain the single canonical engine, server-authoritative for a persisted run.
 
 - [INFERRED, contract] [Treasury contract](docs/treasury-contract.md) fixes version 1 Run, Event, View, Graph, Decision, Entry, and store exports. Coordinator owns interface changes.
 - [INFERRED, surface] `web/treasury/` static Vite entry. Pure `domain.mjs`, guarded browser-local `store.mjs`, UI `app.mjs`. `createRun`, `appendEvent`, `replayRun`, `buildGraph`, `decide`, `formatUsdc` exported by domain.
@@ -249,39 +266,55 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - [INFERRED, authority] Owner creates fixed mandate and investment budget. Agent cycle may supply, hold, or redeem only delegated balances. Owner may permanently revoke or request explicit redemption. Real account authority is outside this simulation.
 - [INFERRED, persistence] One versioned `localStorage` record under Web Lock `falcon.treasury.simulation.v1`. Reload, validate, replay, revision-check, apply, persist, then render success. No silent reset or truncation.
 - [INFERRED, verification] `node --test web/test/treasury-*.test.mjs`; `npm --prefix web test`; Vite build; browser setup → supply → blocked exit → owner redemption → reload/export. Negative checks must demonstrate graph/authority guards reject unsafe actions.
+- [VERIFIED, scope separation, 2026-10-03] I14 remains the schema-2 single-position local simulator and replay path. I18 defines the new multi-venue agentic simulation; prior I14 records remain readable.
 
 ### I15. Persistent knowledge mesh
 
 - [INFERRED, contract] [Knowledge mesh](docs/knowledge-mesh.md) owns source revision, graph, analysis, HTTP and store schemas. Isolated `mesh/` Node service plus Postgres; new viewer under `web/mesh/`. Current foundation is synthetic and deterministic. Live connector and terminal integration follow before MVP completion.
 - [INFERRED, verification] `npm --prefix mesh test`; real disposable Postgres integration tests; authenticated HTTP checks; standalone viewer build and browser checks. No hosted schema change or deployment in this local build.
+- [VERIFIED, user-confirmed, 2026-09-30] `POST /v1/decisions/reserve` accepts an owner-entered proposed position and mandate. Server binds a read-only policy decision to the current validated Devnet reserve graph and saves it under the authenticated owner. `GET /v1/decisions` and `GET /v1/decisions/:id` expose only that owner's immutable decisions. No new schema, wallet holding claim, or trade authority.
 
 ### I16. React Control Centre
 
 - [INFERRED, contract] [Control Centre](docs/control-centre.md) defines `/dashboard/`, four hash views, retained samples, isolated browser persistence, canonical treasury rules and explicit links to live tools. Original OpenDesign files and existing application routes remain available.
-- [INFERRED, 2026-09-29 amendment] Knowledge & Connections views read live mesh evidence over §I15 (graph, analyses, sources, connectors, `/readyz`). Bearer token in tab memory only, ⊥ persisted; no authenticated request before connect; disconnect clears token. Retained samples remain fallback/demo. Empty owner → empty state, not error. Treasury persistence unchanged (§I14).
+- [VERIFIED, user-confirmed, 2026-09-30] Add `/dashboard/#operate` as a fifth React view. Keep four OpenDesign views and their synthetic treasury graph unchanged. Operate reads live mesh evidence and saved decisions, accepts explicit owner-entered scenario fields, and shows one provenance-labelled evidence-to-check-to-decision graph. Token stays in memory; wallet signing remains in the separate terminal.
 - [INFERRED, verification] Focused fixture/storage tests, complete web suite, Vite site build, source/React browser comparison, saved workflow and failure checks. No hosted schema, wallet transaction or deployment in this design port.
+- [VERIFIED, user direction, 2026-10-03] Add /dashboard/#agent as the primary view. Chat occupies the main workspace; a compact rail shows the simulated portfolio, policy, provider status, and pending flow. Preserve existing evidence/detail views.
 
-### I17. Treasury runs API
+### I17. Internal peg strategy pilot
 
-- [INFERRED, 2026-09-29] Owner-scoped treasury runs on the §I15 mesh service. Same auth: `Authorization: Bearer <token>`, SHA-256 → owner. Additive Postgres table `falcon_mesh.treasury_runs`; schema-version marker unchanged.
-- `POST /v1/treasury/runs` body `{requestId, setup}` → `{run, view}`. Create one run from operator setup (mandate, initial balances).
-- `GET /v1/treasury/runs` → `{records, limit: 20}`. Owner runs, newest first, no full journal.
-- `GET /v1/treasury/runs/:uuid` → `{run, view}`. Full journal + server replay projection.
-- `POST /v1/treasury/runs/:uuid/events` body `{requestId, type ∈ {observe,cycle,revoke,owner_redeem}, ...payload}` → `{run, view, entry}`. Server appends via `appendEvent` with server clock + generated event id; `requestId` idempotent per owner.
-- `POST /v1/treasury/runs/:uuid/preview` body `{observation}` → `{graph, decision}`. `decide(buildGraph(state))` only; ⊥ persistence/side-effect.
-- Errors reuse §I15 envelope `{error:{code,message}}`. `mode: simulation`; operator-supplied balances; ⊥ chain/wallet.
-- [INFERRED, surface] Shared engine `mesh/treasury-domain.mjs` (moved from `web/treasury/domain.mjs`; web imports it back). Store `mesh/treasury-store.mjs`; routes in `mesh/http.mjs`; wiring in `mesh/server.mjs`.
-- [INFERRED, verification] `npm --prefix mesh test`; disposable Postgres integration; authenticated HTTP checks; `/readyz` green across additive migration.
+- [VERIFIED, user choices, 2026-10-01] Internal operator-only paper capture and one separate owner-signed Devnet mechanics proof. Existing USDC/EURC scanner remains FX research.
+- [INFERRED, candidate route] Solana USDC/USDT for paper research only, pending source, mint, and venue verification. This pair and chain were not selected by the user.
+- [INFERRED, execution owner] Existing web/app/ Devnet terminal builds, simulates, and requests explicit wallet approval for one test swap. It cannot accept peg REVIEW as signing authority.
+- [INFERRED, input] Owner-entered paper notional and protected USDC reserve; bounded live quote for USDC → USDT and exact first-leg output → USDC; independent timestamped USD reference for peg status; venue fees, network/priority costs, route impact, and restoration or redemption cost when applicable. Unknown costs stay unknown, never zero by default.
+- [INFERRED, output] Retained source IDs, raw response bytes/hashes, chain and mint IDs, quote times, integer-unit amounts, cost breakdown, reference and route type, protected reserve, paper balance transitions, invalidations, and NO_DATA/BLOCKED/REVIEW. REVIEW is a paper estimate only; executionReady: false always. Existing gated React review path renders server-derived decisions, not client price math. Historical replay bears historical labels.
+- [INFERRED, scope] Peg assessment stays read-only and never authorizes a trade. The required single owner-signed Devnet test swap uses the existing web/app/ terminal only after separate exact approval; it cannot claim peg profit, spend the protected treasury, or handle client funds. No flash loan, lending borrow, redemption API, mint/burn, bridge, mainnet trade, or fund accounting. Later atomic loan proof needs its own loss model and release decision. Later fund needs jurisdiction, entity, custody, and legal review.
 
-### I18. Advisory capital plan & Devnet-analog execution
+### I18. Solana yield agent simulation
 
-- [INFERRED, 2026-09-29] Owner/provider: `web/app/`; consumer: signed-in user + connected Devnet wallet. Extends §I13/V76.
-- Input: engine §I11 `GET /advice` PUBLISHED basket (legs: asset_id, underlying, target_weight_bps) + a user capital amount in Devnet USDC.
-- Plan (advisory): per-leg `allocationUsdc = floor(capital × target_weight_bps / 10000)` integer USDC base units; user-EDITABLE (adjust or remove legs; Σ allocations ≤ capital; explicit residual). `mode: 'devnet-analog'`; each council symbol maps to a configured Devnet-tradable analog mint, labelled a Devnet stand-in, not the real mainnet asset. Plan carries no executionReady/authority.
-- Execution: each plan leg executes as a §V76 Raydium Devnet swap (USDC → analog mint) through the wallet-owned terminal; the human signs every leg; per-leg V76 route/pool validation; outcomes persist in the `web/app/` order journal (§I13 state).
-- ⊥ mainnet, custody, pooled funds, autonomous/batch signing, real pre-IPO asset claim, or executionReady true.
-- [INFERRED, verification] `npm --prefix web test` sizing/edit unit tests; automated Devnet e2e with a funded keypair (confirmed signature + reconciled token deltas + persisted journal); one manual real-wallet sign-off session.
+- [VERIFIED, user direction, 2026-10-03] Lulo-like USDC yield manager with one Customer Agent, Solana-first discovery, deterministic allocation, and visible simulated fund flows. Lulo is a product reference, not an MVP dependency.
+- [VERIFIED, direct GET, 2026-10-03] GET https://yields.llama.fi/pools and GET https://api.llama.fi/protocols each returned HTTP 200. Snapshot output: 16,978 yield rows, 31 Solana protocols with category Lending, 48 Solana Lending rows matching native-USDC mint and valid APY/TVL, 42 with stablecoin=true, exposure=single, ilRisk=no, and outlier=false. This is a DeFiLlama-indexed snapshot, not all Solana venues or executable capacity. Per-pool source measurement time was not present in returned fields; retrievedAt is not providerAsOf.
+- [INFERRED, provider boundary] Mesh fetches these read-only endpoints only on user request. Normalize provider, project, pool ID, Solana chain, native USDC mint, base APY, reward APY, TVL, exposure, IL/outlier flags, retrievedAt, and optional providerAsOf. Missing or invalid fields make an item ineligible or REVIEW.
+- [INFERRED, API] GET /v1/yield/opportunities returns the normalized catalog and coverage summary. POST /v1/yield/simulations accepts requestId, user-entered simulated portfolio, reserve, maxVenueConcentrationBps, and a typed action. It returns PlanReceipt with status, candidate IDs, before/after positions, simulated flows, source evidence, reasons, and executionReady=false. The React dashboard and external agent clients use this same service.
+- [INFERRED, allocator] Rank eligible Solana USDC lending pools by baseApyBps descending, then TVL descending, then poolId ascending. Select the highest-ranked pool per project slug; `maxVenues` counts distinct project slugs, and each project's target is capped by floor(budget * maxVenueConcentrationBps / 10000). Use exact integer USDC units. Never treat TVL as withdrawable liquidity. Unknown route costs stay unknown; simulation does not claim net yield.
+- [INFERRED, chat] MVP chat maps supported user messages to typed discover, simulate, and explain intents. Responses come from the deterministic engine and include source evidence. No external model provider is configured or called in this slice. External model agents may call the same typed API.
+- [INFERRED, UI] Show a compact portfolio rail and a source-to-destination Cash Trace. Each step names source, destination, chain, asset, amount, observed rate, retrievedAt, unknown costs, and policy status. Distinguish simulated balances from real wallet balances.
+- [INFERRED, persistence] Store simulation snapshots and receipts locally with versioned replay. Provider reads happen only on user request; no background polling.
+### I19. Falcon hackathon site
 
+- [VERIFIED, user direction, 2026-10-03] Separate landing page and app at `bot.falconos.markets`; existing FalconOS site and `/dashboard/` remain separate.
+- [SUPERSEDED, user choice, 2026-10-03] Earlier bot Supabase login requirement was replaced by Phantom signature login; the bot no longer uses magic links.
+- [VERIFIED, user choice, 2026-10-04] The bot subdomain serves the bot at `/` and the graph/DevNet terminal at same-origin `/mesh/`; the existing `falconos.markets` site and `/dashboard/` remain separate.
+- [SUPERSEDED, user choice, 2026-10-03] Bot users sign a non-transaction Phantom Wallet Standard message. Mesh verifies the proof and derives owner from the wallet address. No balance reads or transaction signing.
+- [VERIFIED, user choice, 2026-10-04] Bot message signing proves wallet ownership for login only. The same-origin Mesh terminal may read DevNet account data and request a separate explicit transaction signature only for the manual DevNet test path above.
+- [VERIFIED, user direction, 2026-10-03] Falcon greets users with an investment-planning prompt and accepts requests through a chat composer.
+- [INFERRED, MVP contract] Reuse I18 typed discover, simulate, and explain actions; unsupported or ambiguous text cannot change state. No model provider or free-form investment authority added.
+- [INFERRED, auth contract] POST /v1/auth/wallet/challenge stores a one-time challenge in falcon_mesh.wallet_auth_sessions, bound to candidate address and configured origin. POST /v1/auth/wallet/verify consumes it after Ed25519 verification, stores only a hashed opaque session token, and returns the verified wallet owner. Yield routes accept this wallet session or legacy Supabase tokens; no caller-supplied owner.
+- [VERIFIED, official Supabase docs](https://supabase.com/docs/reference/javascript/auth-getclaims) state getClaims() verifies JWT through JWKS; symmetric signing keys or missing WebCrypto use Auth-server verification. Current project signing-key mode remains unverified.
+- [VERIFIED, source: mesh/auth.mjs] Mesh caches verified subject by token hash until JWT exp; uncached checks default to 30 per 300 seconds per process; Auth 429 maps to RATE_LIMITED.
+- [SUPERSEDED, user choice, 2026-10-03] Simulation records remain browser-local and user-scoped by wallet owner; wallet message signatures authorize identity only. No live funds or transaction actions.
+- [VERIFIED, user choice, 2026-10-04] Bot chat simulation records remain browser-local and owner-scoped. The same-origin Mesh terminal uses the wallet session for owner-scoped evidence and permits only the manual DevNet test path above; it does not authorize real funds or automatic execution.
+- [VERIFIED, operational boundary] Code and local verification only; domain binding, Cloudflare configuration, and deployment remain user-managed.
 ## §V INVARIANTS
 
 V1: ∀ plugin process → read exactly one bounded (≤8 MiB) JSON object from stdin, emit exactly one bounded (≤64 KiB) JSON response line to stdout, diagnostics ⊥ stdout
@@ -428,12 +461,12 @@ V74: ∀ Solana `getTokenSupply.decimals` → validate its integer range before 
 V75: ∀ Devnet copilot swap → configured pool exists on Devnet and is Raydium CPMM; Raydium quote route has exactly one leg through that pool; quote input/output mints, direction, and amount match the request; transaction build returns exactly one unsigned transaction from that quote; mismatch, missing route, or multiple transactions → stop before wallet signing
 
 V76: ∀ production `/app/` Devnet swap → route has 1-4 legs; every ordered Raydium leg matches adjacent mints and its live pool account owner, state layout, and mint pair; route starts/ends at requested mints, contains no repeated pool, and quote amount matches request; build exactly one unsigned transaction from that quote; any mismatch → stop before wallet signing
-V77: [INFERRED; 2026-09-29 amended] ∀ treasury record/view/outcome → explicit `mode: simulation`; synthetic/operator-supplied observations & balances; zero simulated interest/fees; no wallet/provider/model/chain call, custody, or real-capital claim. Server-persisted runs (§I17) allowed: server owns clock/event-id/`requestId` idempotency; `decide`/`replayRun` stay canonical. Existing V11,V51,V64,V65 advisory boundaries unchanged outside I14.
+V77: [INFERRED] ∀ treasury record/view/outcome → explicit `mode: simulation`; synthetic observations; zero simulated interest/fees; no wallet/provider/model/chain call or real capital claim. Existing V11,V51,V64,V65 advisory boundaries remain unchanged outside I14.
 V78: [INFERRED] ∀ treasury money → exact decimal ingress ≤6 fractional digits, integer units ≤u64; `reserve + investmentCap ≤ total`; conservation holds across every event; agent cannot debit reserve or undelegated cash.
 V79: [INFERRED] ∀ treasury agent decision → `decide(graph)` reads only validated typed graph nodes and required edges; missing dependency → blocked action; pre-action graph, decision, and outcome reproducible from journal.
 V80: [INFERRED] ∀ treasury supply → fresh available evidence, permitted mandate, liquid venue, positive delegated idle, position after action ≤cap; revoked mandate blocks every agent movement; owner redemption is explicit separate command.
 V81: [INFERRED] ∀ missing/unavailable/future/stale observation → `NO_DATA`; insufficient full-redemption liquidity → `BLOCKED`, prior position preserved; successful redemption credits delegated idle only.
-V82: [INFERRED; 2026-09-29 scoped] ∀ browser treasury mutation → exclusive Web Lock, fresh validated replay, expected revision match, one successful storage write before success; corrupt/unavailable/full storage or unsupported locks → visible error, no false success or replacement. Server-persisted mutations (§I17) governed by §V114 idempotency plus a per-run atomic write (row lock or optimistic revision) so concurrent distinct events cannot lose updates.
+V82: [INFERRED] ∀ treasury mutation → exclusive Web Lock, fresh validated replay, expected revision match, one successful storage write before success; corrupt/unavailable/full storage or unsupported locks → visible error, no false success or replacement.
 V83: [INFERRED] ∀ treasury event → exact schema, UUID, monotonic UTC time, at most 200 retained events; duplicate identical ID is idempotent; conflicting ID reuse rejected; reload reproduces state/decisions; no silent journal truncation.
 V84: [INFERRED] ∀ treasury UI → clear simulation labels, visible evidence age/errors/outcomes, keyboard controls and responsive layout; agent loop starts only on user action, stops on error/revocation/page close, stays stopped after reload; export contains validated replayable history.
 V85: [INFERRED] ∀ treasury setup submission → capture form values before disabling inputs; a valid visible mandate creates the same persisted mandate; rejected submission preserves the form for correction.
@@ -447,30 +480,57 @@ V92: [INFERRED] ∀ mesh read/write/traversal → owner derived from verified se
 V93: [INFERRED] ∀ mesh analysis → typed relationship traversal before calculation; recorded ordered paths and supporting revisions; missing/conflicting/stale/future/unavailable evidence or reached traversal bound → NO_DATA; combined position exit uses exact integer sums.
 V94: [INFERRED] ∀ saved mesh analysis → one consistent current-head snapshot plus exact graph, policy and result; immutable across later source changes; repeated request returns original result, conflicting reuse rejected.
 V95: [INFERRED] ∀ mesh HTTP mutation → validated bounded body, authenticated owner, commit before success; failures visible; secrets and SQL details absent from errors/logs; no automatic schema change at startup.
-V96: [INFERRED] ∀ mesh viewer → server-derived analysis, source and path inspection, historical cutoff, explicit coverage and fixture labels; keyboard/mobile controls; token retained only in memory; failed fetch cannot show previous result as current; responses from an earlier credential generation cannot enter the current session.
+V96: [INFERRED] ∀ mesh viewer → server-derived analysis, source and path inspection, historical cutoff, explicit coverage and fixture labels; keyboard/mobile controls; a manually entered operator token is retained only in memory; the same-origin bot wallet session may be read from the tab-scoped sessionStorage key in V144, never copied into a URL or localStorage; failed fetch cannot show a previous result as current; responses from an earlier credential generation cannot enter the current session.
 V97: [INFERRED] ∀ mesh MVP completion claim → distinguish fixture foundation, live connectors, terminal integration, Devnet lending proof, and hosting; existing Raydium swap does not prove treasury lending supply/redemption.
 V98: [INFERRED] ∀ source label or URL → well-formed Unicode without control characters before persistence; accepted source text must round-trip through Postgres text and JSONB snapshots.
 V99: [INFERRED] ∀ live capture → server-owned fixed connector, retained complete response bytes and verified hashes, explicit network/genesis/slot; caller-authored live evidence and synthetic replacement of live heads rejected; failed current capture cannot reuse old success.
-V100: [INFERRED] ∀ live public analysis → live source partition, linked document and observed account evidence, freshness and coverage checks; OBSERVED never means lending approval; mixed synthetic/live evidence rejected; idempotency includes mode.
+V100: [VERIFIED, user-confirmed, 2026-09-30] ∀ `mesh-public-evidence/1` live analysis → validated live partition, linked official document + Devnet program account, fresh complete paths; optional reserve source leaves 2-source result unchanged; synthetic/live mixing ⊥; `OBSERVED` ≠ lending approval; idempotency includes mode.
 V101: [INFERRED] ∀ Devnet lending intent → current live analysis plus coherent verified-network account capture and exact-message simulation; first submission rechecks original analysis freshness and source heads under the owner lock; fixed reserve/mints/ABI, sole wallet signer, no extra instructions or lookup tables; estimates distinguish maximum supply input from observed transfer and provide no claimed minimum-output guarantee; prepared facts identify their retained analysis.
 V102: [INFERRED] ∀ lending submission → valid wallet signature over exact retained intent before durable registration; register signature and signed bytes before broadcast; one owner cannot register one signature under two intents; explicit retries broadcast only identical validated bytes while the blockhash remains valid; uncertain sends remain pending, or unverified when expired and absent; confirmed receipt requires exact transaction and reconciled transaction-local token deltas; events and owner scope survive reload.
 V103: [INFERRED] ∀ browser wallet → Wallet Standard capability discovery, explicit selected account on Devnet, account/capability change invalidates pending signing; token/key storage absent; unsupported signing capability shown without silent broadcast fallback.
 V104: [INFERRED] ∀ React landing port → preserve the active OpenDesign falconos-landing.html design, assets, synthetic scenarios, graph inspection, export and reduced motion; existing preview routes remain available; product readiness claims reflect measured progress.
 V105: [INFERRED] ∀ landing email submission → bounded validated request, durable address capture before success, visible backend errors, input retained for retry; email delivery claims require provider evidence and must distinguish registration from sending; development servers cannot serve local databases, salts or operator tokens.
 V106: [INFERRED] ∀ confirmation email → validated sender address, durable outbox enqueued atomically with registration, one stable provider idempotency key, bounded fixed-provider request, retained acceptance ID before accepted claim; retry ambiguity outside provider idempotency window requires review; missing delivery configuration never becomes a sent claim.
-V107: [INFERRED] ∀ dashboard view → React renders active OpenDesign layout, assets and interactions at `/dashboard/`; preserve overview/decisions/knowledge/connections hashes, keyboard/mobile controls and reduced motion; all four font faces load their matching source assets; source originals remain unchanged.
+V107: [VERIFIED, user-confirmed, 2026-09-30] ∀ dashboard view → preserve four original OpenDesign hashes, layout, assets, keyboard/mobile controls, reduced motion and four font faces; additive `#operate` renders live evidence-to-decision trace without relabelling synthetic Decisions or disclosing token; source originals unchanged.
 V108: [INFERRED] ∀ dashboard persistence → fixed preview namespace for both storage and locks; treasury default key unchanged; corrupt state, failed writes or stale revisions cannot replace saved history; samples cause no writes; reload leaves loop stopped.
 V109: [INFERRED] ∀ dashboard decision → canonical treasury rules and exact integer balances; retained source samples and knowledge analyses match canonical replay/projection at saved cutoff; source display preserves exact retained text.
 V110: [INFERRED] ∀ current dashboard preview → evidence age refreshes decision validity; historical selection stays pinned to its original graph and cutoff; bounded loop stops on hidden page, unmount, storage change, error, revocation or ten saved cycles; Stop stays available during a pending cycle and cancels its queued storage lock; a synchronous commit already entered remains recorded.
 V111: [INFERRED] ∀ dashboard export or connection claim → describes actual record fields and connection state; sample analysis cannot claim service capture or execution authority; source content treated as data; dialogs close and restore focus without stale event races; delayed clipboard results apply only to their original open export.
 V112: [INFERRED] ∀ rejected mesh POST while client remains connected → complete typed HTTP error; drain unread input without retaining it; oversized fixed-length or chunked body never reaches storage; existing request timeout remains bounded.
-V113: [INFERRED] ∀ Control Centre live read (§I16) → bearer token in tab memory only, ⊥ persisted (⊥ localStorage/sessionStorage/URL); no authenticated /v1/* request before successful connect; disconnect clears token & halts authed requests; absent token → connect prompt; empty owner graph → empty state ≠ error; API failure → typed error surfaced, prior view unchanged.
-V114: [INFERRED] ∀ /v1/treasury/* → owner from token hash (§I15); run & event owner-scoped; event `requestId` idempotent per owner; conflicting `requestId` reuse rejected; server clock monotonic UTC; ≤200 events per run; unknown run/owner → NOT_FOUND; concurrent distinct events on one run serialize via a per-run row lock (`SELECT ... FOR UPDATE`) or optimistic revision check so no lost update or false success occurs.
-V115: [INFERRED] ∀ POST /v1/treasury/runs/:id/preview → `decide(buildGraph(state))` only; ⊥ persistence, ⊥ event append, ⊥ side-effect; equal input → equal decision.
-V116: [INFERRED] ∀ treasury_runs migration → additive DDL only; schema-version marker unchanged; existing columns/tables neither dropped nor renamed; `/readyz` (`store.ready()`) stays 200 across the deploy so the Railway healthcheck never restarts the live service.
-V117: [INFERRED] ∀ advisory capital plan (§I18) → per-leg `allocationUsdc = floor(capital × target_weight_bps / 10000)` integer USDC base units; editable (adjust/remove) with Σ allocations ≤ capital and explicit residual; `mode: 'devnet-analog'`; every leg labelled a Devnet stand-in for the real mainnet asset; plan carries no executionReady or execution authority.
-V118: [INFERRED] ∀ plan leg execution (§I18) → reuses §V76 Devnet route/pool validation for one USDC→analog swap; human signs each leg; ⊥ autonomous or batch signing; one confirmed on-chain signature per executed leg reconciled to transaction-local token deltas; persisted in the `web/app/` order journal; failure leaves the prior journal intact.
-V119: [INFERRED] ∀ engine §I11 `GET /advice` PUBLISHED → includes basket legs (asset_id, underlying, target_weight_bps summing to 10000); `execution_ready` false; BLOCKED/NO_DATA responses carry empty legs.
+V113: [VERIFIED, user-confirmed, 2026-09-30] ∀ `mesh-reserve-liquidity/1` → fixed Devnet reserve + USDC vault; verified genesis, one confirmed `getMultipleAccounts` slot, retained exact bytes + hashes, pinned owner/layout/mint/authority/state checks, reserve `total_available_amount` = vault amount; missing/mismatch/stale/future/failed evidence → `NO_DATA` + null amount, ⊥ old-success fallback; `OBSERVED` records exact unborrowed book units + source/slot/path, ≠ freely withdrawable funds, exit estimate, or transaction approval; lending terminal accepts only `mesh-public-evidence/1`.
+V114: [VERIFIED, user-confirmed, 2026-09-30] ∀ `mesh-reserve-scenario/1` → exact owner-entered proposed/max/floor/age inputs, canonical u64 + age 1..300; server rechecks current reserve graph and source age under owner lock; missing/stale/future → saved `NO_DATA`, owner cap or book floor breached → `BLOCKED`, else `REVIEW` only; graph nodes and ordered checks bind observed source IDs, owner input and result origins; retry same request preserves original record, changed input conflicts; decision records owner-scoped and hidden from program analysis/lending reads; ⊥ wallet holding, withdrawability, automatic signing or execution authority.
+V115: [INFERRED] ∀ peg capture → Solana cluster, canonical mint/decimals, source identity, raw bytes/hash, provider and local receipt times retained; missing, future, stale, mismatched, or failed source → NO_DATA, never prior success. USDC/EURC FX evidence ⊥ USD peg signal.
+V116: [INFERRED] ∀ peg status → independent USD reference with known time and method; missing or conflicting reference → NO_DATA for depeg signal; unknown issuer redemption access → no executable peg-arbitrage claim. Same-asset quote cycle alone ≠ peg restoration or riskless arbitrage.
+V117: [INFERRED] ∀ paper route → exact integer first-leg output feeds second-leg input; quote gross = final USDC units minus initial USDC units. Disclose venue fee/price impact already embedded in quote; subtract only extra network/priority, setup, and applicable restoration costs with verified currency conversion, never count a cost twice. Unknown required cost → NO_DATA; estimated net ≤0 → BLOCKED; positive estimate → REVIEW only, never fill/profit claim.
+V118: [INFERRED] ∀ quote pair → label sequential, never synchronized fill; both source ages ≤10 seconds at assessment and within selected quote validity; later confirmation expiry → NO_DATA. Paper outcome and historical replay identify their source and cutoff.
+V119: [INFERRED] ∀ paper transition → protected treasury remains unchanged, paper budget and positions reconcile in integer units, rejected/unknown decisions cause no debit; failed save never shows success; no wallet, signer, swap, loan, or outside capital access.
+V120: [INFERRED] ∀ peg review display/export → retained evidence, cost components, risk reason, no-trade state, and executionReady false visible; absence of verified route/reference prevents profitable-arbitrage claim; existing gated dashboard remains inaccessible to visitors.
+V121: [INFERRED] ∀ minimum Devnet proof → one owner-entered test amount, verified Devnet mints/pool and wallet account, existing I13 quote/build guards, exact-message simulation with err null, then separate explicit wallet approval. Peg REVIEW never triggers signing or changes test order. No flash loan, automatic send, or mainnet RPC.
+V122: [INFERRED] ∀ Devnet proof outcome → retained signature, confirmed or finalized status, and reconciled before/after token balances for same signer and cluster; unknown, failed, or unreconciled send cannot show success or be blindly retried. Devnet test token result ≠ USD peg profit or live strategy fill.
+V123: ∀ yield API response → exact schema validation; unknown fields ignored only when safe, missing required fields → ineligible or NO_DATA
+V124: ∀ opportunity eligible → Solana chain, native USDC mint, Lending category, stablecoin=true, exposure=single, ilRisk=no, outlier=false, positive TVL, finite base APY
+V125: ∀ ranked candidate → baseApyBps normalized deterministically; stable ordering by base APY desc, TVL desc, poolId asc
+V126: ∀ simulated portfolio → totalUnits = reserveUnits + undelegatedUnits + idleUnits + sum(positionUnits); exact integer-unit arithmetic
+V127: ∀ allocation plan → user reserve and maxVenueConcentrationBps hold per provider project; missing limits or infeasible plan → REVIEW; remainder stays idle
+V128: ∀ PlanReceipt → policy snapshot, source and destination, amount, before/after balances, source IDs, retrieval time, reported rates, unknown costs, and executionReady=false
+V129: ∀ chat/external-agent request → typed discover/simulate/explain intent; invalid or ambiguous text causes no state change
+V130: ∀ provider failure, invalid schema, or missing required opportunity data → NO_DATA or REVIEW; prior simulation remains intact
+V131: ∀ yield provider call → user-triggered read-only request; no hidden background polling
+V132: ∀ MVP operation → wallet may sign a non-transaction login message only; transaction signatures, submission, orders, and real-fund mutation ⊥ allowed
+V133: ∀ PlanReceipt allocation → units is a canonical unsigned base-unit string; before/after positions and Cash Trace read the same allocation units, while flows use amountUnits
+V134: ∀ unauthenticated bot session → landing and Phantom login only; composer and agent data require server-verified wallet session
+V135: ∀ yield request → server verifies wallet session or legacy Supabase JWT; owner derives from verified wallet address or verified sub; caller-supplied owner and user metadata ⊥ authorization
+V136: ∀ user-scoped local simulation → one server-verified identity cannot load another identity's records; bot key uses wallet-derived owner; logout clears active session state
+V137: ∀ chat input → only I18 typed intents mutate simulation; unsupported or ambiguous text causes no state change
+V138: ∀ bot login → Phantom may sign only the non-transaction authentication message; transaction signing, balance reads, submission, orders, and real-fund mutation ⊥ allowed
+V139: ∀ Supabase yield token → verified issuer, signature, audience, role, subject, and expiry; owner derives from sub, never metadata; verified token cache expires no later than JWT exp; uncached verification is bounded before Auth lookup; Auth 429 remains RATE_LIMITED
+V140: ∀ yield allocation → maxVenues counts distinct provider project slugs; select at most the highest-ranked pool per project; each project's target ≤ floor(budget × maxVenueConcentrationBps / 10000)
+V141: ∀ bot wallet login → require a registered Wallet Standard Solana account with solana:signMessage; bot allows any Solana chain; wallet connect alone ⊥ authentication; changed account clears pending sign-in
+V142: ∀ Phantom Wallet Standard account shown → address Base58-decodes to exactly 32 bytes and account.chains contains solana:*; otherwise reject
+V143: ∀ bot wallet challenge → server binds one challenge to candidate address and configured origin; challenge expiry ≤5 minutes; valid Ed25519 proof consumes it once; invalid, expired, wrong-origin, or replayed proof → no session
+V144: ∀ bot wallet session → opaque random token maps server-side to wallet-derived owner; store only token hash in Postgres and token in sessionStorage; session expires ≤30 minutes; logout revokes token; caller-supplied owner ⊥ authority
+V145: [INFERRED] ∀ wallet-session DevNet lending request → derive owner from current server-verified session; requested wallet equals session's verified wallet address; prepared intent, transaction signer and receipt stay bound to that wallet and owner; mismatch, revocation or expiry rejects before mutation or broadcast.
+
 
 ## §T TASKS
 
@@ -512,30 +572,44 @@ T33|~|finish production `/app/` wallet-owned Devnet terminal with multi-hop Rayd
 T34|x|save accepted pitch; index treasury product/architecture, ADRs, contract, cloud path, implementation plan, and current-state correction|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
 T35|x|build local treasury vertical slice: owner setup → graph-first simulated supply/hold/redeem → persisted replay → interactive UI|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
 T36|x|verify treasury invariants, failure preservation, negative controls, full web suite, static build, and browser workflow|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
-T37|.|prove one exact Kamino USDC supply/redemption path on selected test environment; verify reserve settings, receipt ownership, rounding, and confirmed balances|I14,V78,V81
+T37|~|prove one exact Kamino USDC supply/redemption path on Devnet; verify reserve settings, receipt ownership, rounding, and confirmed balances|I14,V78,V81,V101,V102,V145
 T38|.|prepare shareable HTTPS simulation release; verify browser storage isolation, mobile flow, and deployment target before user-authorized publication|I14,V77,V82,V84
 T39|.|specify and prove restricted agent authority, durable server reconciliation, and funded launch prerequisites before automatic real execution|I14,V78,V80,V81
 T40|~|publish treasury documentation and four independently verified feature slices as small draft PRs, based on fresh remote main and excluding unrelated worktree changes|I14,V77,V82,V84,V85,V86
 T41|x|finish browser graph prototype: pinned policy, saved records, evidence-linked checks, readable inspector, custom synthetic evidence, legacy replay, Pages candidate|I14,V77,V78,V81,V82,V87,V88,V89,V90
 T42|x|build persistent mesh vertical slice: retained sources, typed multi-hop analysis, Postgres history, authenticated API, viewer and local verification|I15,V91,V92,V93,V94,V95,V96,V97
-T43|~|connect approved live sources and terminal to mesh; prove one owner-approved Devnet lending path and persist confirmed outcomes before hosting|I15,V91,V92,V93,V94,V95,V96,V97,V99,V100
+T43|~|connect approved live sources and terminal to mesh; prove one owner-approved Devnet lending path and persist confirmed outcomes before hosting|I15,V91,V92,V93,V94,V95,V96,V97,V99,V100,V113
 T44|x|port active OpenDesign treasury landing to runnable React, preserve design and interactions, verify desktop/mobile/reduced-motion flows|V104
 T45|~|connect landing signup to durable local/Pages storage and configurable idempotent confirmation email; verify registration and distinguish provider acceptance from inbox delivery|V105,V106
 T46|x|port active OpenDesign Control Centre to React; preserve four views and isolated saved simulation; verify source parity, current/history semantics, storage failures and browser flows|I16,V107,V108,V109,V110,V111
 
 T47|x|publish new landing and Control Centre on the existing Pages site from a clean scoped checkout; preserve hosted signup and verify public routes and assets|I16,V104,V107,V111
-T48|x|wire dashboard Knowledge view to live §I15 mesh graph/analyses/sources behind in-memory token gate|I16,V113
-T49|x|wire dashboard Connections view to live connectors, `/readyz` health and live capture status|I16,V113
-T50|.|add §I17 treasury runs API: additive `treasury_runs` migration, shared `mesh/treasury-domain.mjs`, `treasury-store.mjs`, runs/events/preview routes|I14,I17,V77,V114,V115,V116
-T51|.|wire dashboard Decisions view to server-persisted treasury runs (§I17)|I16,I17,V114
-T52|.|wire dashboard Overview view to server treasury run projection (§I17)|I16,I17,V114
-T53|.|deploy live Control Centre build (`VITE_MESH_API_URL`) and verify end-to-end vs falcon-mesh production|I16,I17,V113,V114
-T54|x|extend engine GET /advice PUBLISHED to include basket legs (asset_id, underlying, target_weight_bps); execution_ready false; empty legs on BLOCKED/NO_DATA|I11,I18,V119
-T55|x|add advisory capital-plan sizing module (capital × weight-bps -> per-leg USDC, editable, residual, devnet-analog mapping)|I18,V117
-T56|x|wire web/app/ Strategy panel to engine /advice; render decision + editable sized plan|I13,I18,V117
-T57|x|execute one plan leg on Devnet from web/app/ via V76 swap (human-signed, persisted)|I13,I18,V76,V118
-T58|x|automated Devnet e2e: funded keypair drives data->decision->plan->execute->confirm; assert signature + deltas + persisted|I18,V118
-T59|.|manual real-wallet sign-off session; capture confirmed signatures + screenshots|I18,V118
+
+T48|x|add owner-entered live Devnet reserve scenario decision graph in React Operate, immutable mesh API history and local verification; keep synthetic treasury and wallet terminal separate|I15,I16,V113,V114
+T49|.|verify one Solana USD-stable route, canonical mints, quote source, independent USD reference, source age and availability; reject FX as peg evidence|I17,V115,V116,V118
+T50|.|capture exact sequential two-leg quotes and raw evidence; calculate integer-unit gross/net with explicit known costs and unknown-cost NO_DATA|I17,V115,V117,V118
+T51|.|connect peg risk and paper treasury decision: protected reserve, no-trade reasons, blocked/no-data handling, retained paper outcomes and replay|I17,V116,V117,V119
+T52|.|show one sourced decision and history in gated React review; display provenance, costs, paper labels and executionReady false|I17,V118,V120
+T53|.|exercise live-read paper path and stale/missing/adverse cases; verify replay, no-capital boundary, browser review, and honest negative-result demo|I17,V115,V116,V117,V118,V119,V120
+T54|.|verify one real Devnet pool, test mints, owner wallet and test amount; reuse I13 to simulate exact swap; request separate approval before owner signs/sends; retain signature and reconcile confirmed before/after balances; no peg-profit claim|I13,I17,V76,V121,V122
+T55|x|implement read-only Solana yield catalog adapter and source validation|I18,V123,V124,V130,V131
+T56|x|normalize native-USDC lending pools and expose provider coverage gaps|I18,V123,V124
+T57|x|implement deterministic multi-venue allocator and replayable PlanReceipt|I18,V125-V128
+T58|x|add typed discover/simulate/explain API for dashboard and external agents|I18,V129,V132
+T59|x|build chat-first dashboard, compact portfolio rail, and visible Cash Trace|I16,I18,V128
+T60|x|test provider failures, filtering, ranking ties, caps, conservation, and blocked intents|V123-V132
+T61|x|run local dashboard browser smoke and inspect simulated source-to-destination flow|I16,I18
+T62|x|build standalone bot landing and app at `bot.falconos.markets`; keep existing `falconos.markets` routes unchanged; gate Falcon composer behind Supabase Auth|I19,V134,V138
+T63|x|verify Supabase JWT claims server-side for yield routes; derive owner from verified subject; cache only until exp, bound uncached Auth checks, preserve legacy routes|I19,V135,V139
+T64|x|connect Falcon chat to I18 typed intents and user-scoped local simulation; reject unsupported text without state change|I18,I19,V136,V137
+T65|x|test login gate, session expiry, owner isolation, Auth throttling, chat intent failures, simulation replay, browser flow, and standalone site build; no deployment|I19,V123-V139
+T66|x|group yield concentration and venue count by provider project slug; select one highest-ranked pool per project; add regression coverage|I18,V140
+T67|x|historical: add connect-only Phantom control after Supabase Auth; superseded by T68 wallet signature login|I19,V141,V142
+T68|x|replace bot email gate with server-verified Phantom signature login; derive wallet owner; retain legacy Supabase mesh sessions; no transactions|I19,V134,V135,V138,V143,V144
+T69|x|add Postgres-backed one-time wallet challenge/session table; extend complete local schema history and restricted role grants; do not apply remotely|I19,V143,V144
+T70|x|test challenge replay/origin/expiry/signature, wallet owner isolation, legacy Supabase clients, browser sign-in, builds and docs; no real signing or deployment|I19,V134-V144
+T71|~|serve the wallet-gated bot at `bot.falconos.markets/` and graph/DevNet terminal at same-origin `/mesh/`; preserve main-site routes; build and verify local routes without DNS or deployment|I15,I19,V96,V143,V144,V145
+T72|~|authorize wallet sessions for owner-scoped mesh graph, capture, analysis, and lending routes; bind every lending wallet to the session wallet; preserve legacy tokens; test cross-owner, mismatch, expiry, revocation, and transaction intent boundaries|I15,I19,V92,V95,V101,V102,V103,V145
 
 ## §B BUGS
 
@@ -623,4 +697,12 @@ B80|2026-09-27|[VERIFIED, source inspection: `App.jsx` cancels timers only; `Dec
 B81|2026-09-27|[VERIFIED, web suite `tests 158`, `pass 157`, `fail 1`; isolated polling test also returned `pending` after 304ms] a success fixture required two polls within 100ms of wall time|one-time test correction: use a controlled clock for the polling outcome assertions; production deadlines stay unchanged
 B82|2026-09-27|[REPORTED, UI build review: CSS retained `[EMBEDDED_ASSET]` from a sanitized reading copy] source font hashes were correct but CSS did not reference those assets|V107; bind four font faces to the retained TTF files and assert their loaded browser status
 B83|2026-09-27|[VERIFIED, pre-commit mesh suite: `tests 97`, `pass 95`, `fail 2`, oversized HTTP upload returned `ECONNRESET`; REPORTED, focused probe: 4 resets in 20 uploads] forced connection close races a client still uploading rejected input|V112; drain unread input and preserve the typed error response
+B84|2026-10-03|[VERIFIED, targeted V124 test] yield normalizer emitted rewardApyBps while allocation contract expects apyRewardBps, hiding the reward component|V125
+B85|2026-10-03|[VERIFIED, targeted V126 test] allocation entries exposed amountUnits while portfolio consumers read units, so proposed positions were unreadable|V133; keep allocation units and flow amountUnits distinct and verify receipt conservation
+B86|2026-10-03|[VERIFIED, targeted V127 test] conservation rejection text did not match the invariant wording used by the test|V127; report a clear portfolio conservation error
+B87|2026-10-03|[VERIFIED, axe-core 4.13.0: 2 violations, `landmark-one-main` + `region`] bot chat root lacked `main`; heading sat outside landmark|V50
+B88|2026-10-03|[VERIFIED, local browser smoke: forged future localStorage session displayed composer with zero `/auth/v1/user` requests] UI trusted session shape, not Auth-verified identity|V134; verify token via Supabase Auth before mounting chat
+B89|2026-10-03|[VERIFIED, scoped security scan secscan_01a103243c5d777b902836ed86ca0e72] Supabase yield auth called remote verification before any bound; bad tokens could cause repeated Auth lookups; Auth 429 mapped to 401|V139; cache verified claims until exp, bound uncached checks, preserve 429
+B90|2026-10-03|[VERIFIED, `mesh/yield-domain.mjs:91`: `candidates.slice(0, maxVenues)` counted pool rows] same project could consume multiple concentration caps and venue slots|V140; count distinct project slugs and cap each project target
+B91|2026-10-03|[VERIFIED, local reproduction: connectPhantomWallet returned 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'] character and length checks accepted a Base58 string that does not decode to a 32-byte key|V142; reject addresses unless Base58 decoding yields exactly 32 bytes
 B92|2026-10-05|[VERIFIED, V103 regression] unchanged account snapshot cleared pending sign-in and rejected signature|V103; retain selection while selected account and signing capability still match

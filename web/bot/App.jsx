@@ -172,7 +172,7 @@ export default function App() {
 
   if (authReady && session?.token) {
     return <div className="bot-chat-app">
-      <header className="bot-chat-topbar"><Brand compact /><div className="bot-chat-topbar-actions"><span className="bot-session-label">PRIVATE WORKSPACE</span><PhantomWalletConnect wallets={walletState.wallets} current={walletState.current} session={session} error={authError} /></div></header>
+      <header className="bot-chat-topbar"><Brand compact /><div className="bot-chat-topbar-actions"><a className="bot-mesh-link" href="/mesh/">Knowledge mesh <span aria-hidden="true">→</span></a><span className="bot-session-label">PRIVATE WORKSPACE</span><PhantomWalletConnect wallets={walletState.wallets} current={walletState.current} session={session} error={authError} /></div></header>
       <Agent api={api} connection={{ connected: true, disconnect: signOut }} ownerId={session.ownerId} chatOnly />
     </div>;
   }
@@ -203,9 +203,9 @@ export default function App() {
         </div>
       </section>
       <section id="safety" className="bot-trust-strip" aria-label="Agent limits">
-        <span>Provider-indexed data</span><span>Deterministic policy</span><span>Browser-local receipts</span><span>No signing or fund movement</span>
+        <span>Provider-indexed data</span><span>Deterministic policy</span><span>Browser-local receipts</span><span>Chat does not sign transactions</span>
       </section>
     </main>
-    <footer className="bot-footer"><Brand compact /><p>Falcon reports sources and limits. Yield is not guaranteed. Simulations do not move funds.</p></footer>
+    <footer className="bot-footer"><Brand compact /><p>Falcon reports sources and limits. Yield is not guaranteed. Chat simulations do not move funds. The separate mesh terminal supports only explicit DevNet test transactions.</p></footer>
   </div>;
 }

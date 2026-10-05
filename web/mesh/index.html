@@ -14,69 +14,40 @@
   <div class="shell">
     <header class="masthead">
       <a class="brand" href="./" aria-label="Falcon knowledge mesh"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 6h26L18 16l-5 11-2-12z" fill="currentColor"/></svg>FALCON</a>
-      <span class="badge">Knowledge mesh / Foundation</span>
+      <nav class="mesh-nav"><a href="https://falconos.markets/dashboard/#operate">Dashboard</a><span class="badge">Knowledge mesh / Foundation</span></nav>
     </header>
     <main id="main">
       <section class="hero">
         <div><p class="eyebrow">CONNECTED KNOWLEDGE</p><h1>Follow the evidence.<br><em>See what depends on it.</em></h1></div>
         <p>Explore connected sources. Trace an analysis to the exact relationships and source revisions it used.</p>
       </section>
-      <div class="fixture-note"><span id="mode-symbol" aria-hidden="true">S</span><p id="mode-note"><strong>Synthetic USDC and source documents.</strong> This mode uses a fixed liquidity analysis. It does not contact a live provider or move funds.</p></div>
+      <div class="fixture-note"><span id="mode-symbol" aria-hidden="true">L</span><p id="mode-note"><strong>Public documents and Devnet account evidence.</strong> The graph is read-only. The separate terminal below supports manual Devnet test transactions after explicit wallet approval.</p></div>
 
       <section class="panel connection-panel" aria-labelledby="connection-title">
-        <div><p class="eyebrow">YOUR SAVED WORKSPACE</p><h2 id="connection-title">Connect to Falcon.</h2><p id="api-location" class="small-note"></p><p class="small-note">The service stores sources and analyses. The access token stays in memory until you disconnect or close this page.</p></div>
+        <div><p class="eyebrow">YOUR SAVED WORKSPACE</p><h2 id="connection-title">Connect to Falcon.</h2><p id="api-location" class="small-note"></p><p class="small-note">Wallet sessions stay in this tab's sessionStorage. The operator-token fallback stays in memory only.</p></div>
         <form id="connect-form">
-          <label for="access-token">Access token<input id="access-token" name="token" type="password" required autocomplete="off" spellcheck="false" maxlength="512"></label>
-          <div class="button-row"><button id="connect" class="button primary" type="submit">Connect</button><button id="disconnect" class="button" type="button" hidden>Disconnect</button></div>
+          <label for="access-token">Operator token (fallback)<input id="access-token" name="token" type="password" required autocomplete="off" spellcheck="false" maxlength="512"></label>
+          <div class="button-row"><button id="connect" class="button primary" type="submit">Connect</button><button id="disconnect" class="button" type="button" hidden>Disconnect view</button></div>
         </form>
-        <p id="connection-status" class="connection-status" role="status">Disconnected. Connect to load your workspace.</p>
+        <p id="connection-status" class="connection-status" role="status">Sign in on this site in this tab, or connect with an operator token.</p>
       </section>
       <div id="mesh-error" class="error-message" role="alert" hidden></div>
       <p id="mesh-message" class="action-message" role="status" aria-live="polite"></p>
 
       <div id="mesh-workspace" hidden>
-        <div class="mode-controls"><label for="mesh-mode">Evidence mode<select id="mesh-mode"><option value="synthetic">Synthetic scenarios</option><option value="live">Live sources</option></select></label><p id="mode-context" class="small-note">Scenario documents and public captures stay in separate graphs.</p></div>
+        <div class="mode-controls"><label for="mesh-mode">Evidence mode<select id="mesh-mode"><option value="live">Live sources</option><option value="synthetic">Synthetic scenarios</option></select></label><p id="mode-context" class="small-note">Live captures use fixed sources. Synthetic scenarios stay in their own graph.</p></div>
         <section class="workspace-bar" aria-label="Loaded graph snapshot">
           <div><span id="snapshot-context" class="badge">Current source snapshot</span><p id="snapshot-time" class="small-note"></p></div>
           <dl class="graph-counts"><div><dt>Entities</dt><dd id="node-count">0</dd></div><div><dt>Relationships</dt><dd id="edge-count">0</dd></div><div><dt>Sources</dt><dd id="source-count">0</dd></div></dl>
           <button id="refresh-mesh" class="button" type="button">Refresh current sources</button>
         </section>
 
-        <section id="synthetic-controls" class="panel scenario-panel" aria-labelledby="scenario-title">
-          <details id="scenario-controls">
-            <summary id="scenario-title">Load a synthetic scenario</summary>
-            <p class="section-copy">Each choice saves new source revisions. Two positions share one reserve. A third position uses a separate reserve.</p>
-            <div class="scenario-buttons" role="group" aria-label="Save synthetic source documents">
-              <button id="scenario-liquid" type="button" data-scenario="liquid"><strong>Liquid reserve</strong><span>Cover the combined exit</span></button>
-              <button id="scenario-illiquid" type="button" data-scenario="illiquid"><strong>Low liquidity</strong><span>Test a blocked exit</span></button>
-              <button id="scenario-stale" type="button" data-scenario="stale"><strong>Stale evidence</strong><span>Exceed the freshness limit</span></button>
-              <button id="scenario-missing" type="button" data-scenario="missing"><strong>Missing relationship</strong><span>Remove an observation link</span></button>
-            </div>
-          </details>
-        </section>
-
-        <section id="live-connectors" class="panel connector-panel" aria-labelledby="connectors-title" hidden>
-          <p class="eyebrow">PUBLIC EVIDENCE / FIXED SOURCES</p><h2 id="connectors-title">Capture a source.</h2>
-          <p class="section-copy">The service reads the registered protocol document or Devnet account. Each capture saves a revision, including failed reads.</p>
-          <ul id="connector-list" class="connector-list"></ul><p id="capture-result" class="capture-result" role="status" aria-live="polite" hidden></p>
-        </section>
-
-        <section class="panel analysis-controls" aria-labelledby="analysis-controls-title">
-          <div><p class="eyebrow">ONE QUESTION / CURRENT SOURCES</p><h2 id="analysis-controls-title">Can the connected positions exit?</h2><p id="analysis-controls-copy" class="section-copy">The service follows the observation through its reserve. It compares liquidity with the combined position amount.</p></div>
-          <form id="analysis-form">
-            <label for="observation-id"><span id="observation-label">Liquidity observation</span><select id="observation-id" name="observationId" required></select></label>
-            <label for="max-hops">Traversal depth<select id="max-hops" name="maxHops"><option value="3">3 hops</option><option value="2">2 hops</option><option value="1">1 hop</option></select></label>
-            <button id="run-analysis" class="button primary" type="submit">Analyze current sources <span aria-hidden="true">→</span></button>
-          </form>
-          <p id="analysis-control-note" class="small-note">Load source documents before running an analysis.</p>
-        </section>
-
         <div class="mesh-layout">
           <section class="panel graph-panel" aria-labelledby="mesh-title">
-            <div class="section-heading"><div><p class="eyebrow">THE RELATIONSHIP MAP</p><h2 id="mesh-title">Knowledge mesh.</h2></div><span id="graph-coverage" class="badge"></span></div>
+            <div class="section-heading"><div><p class="eyebrow">THE RELATIONSHIP MAP</p><h2 id="mesh-title" tabindex="-1">Knowledge mesh.</h2></div><span id="graph-coverage" class="badge"></span></div>
             <p class="section-copy">Select an entity to inspect its relationships. Analysis paths mark exact returned entities and edges.</p>
-            <p id="empty-graph" class="empty-state" hidden>No source documents are loaded. Open the synthetic scenario controls to begin.</p>
             <div id="mesh-canvas" class="mesh-canvas">
+              <div id="empty-graph" class="graph-empty" hidden><h3>No evidence graph yet.</h3><p id="empty-graph-copy">Capture the registered public sources to build this graph.</p><button id="empty-graph-action" class="button primary" type="button">Review live sources</button></div>
               <svg id="mesh-connections" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="mesh-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 8 4 0 8z" fill="currentColor"/></marker></defs><g id="mesh-paths"></g></svg>
               <div id="mesh-nodes" class="mesh-nodes" role="group" aria-label="Knowledge entities"></div>
             </div>
@@ -87,19 +58,54 @@
             <p id="graph-revision" class="record-id"></p>
           </section>
 
+          <div class="mesh-side">
+            <section id="live-connectors" class="panel connector-panel" aria-labelledby="connectors-title">
+              <h2 id="connectors-title">Live sources.</h2>
+              <p class="section-copy">Capture the three fixed public sources to build this graph. The document and program account prove a program observation. The reserve capture reads one Devnet reserve and its liquidity vault. Each capture saves its response or failure, and nothing is captured automatically.</p>
+              <ul id="connector-list" class="connector-list"></ul><p id="capture-result" class="capture-result" role="status" aria-live="polite" hidden></p>
+            </section>
+            <section id="synthetic-controls" class="panel scenario-panel" aria-labelledby="scenario-title" hidden>
+              <details id="scenario-controls">
+                <summary id="scenario-title">Load a synthetic liquidity scenario</summary>
+                <p class="section-copy">These fixture sources are separate from live evidence. Two positions share one reserve; a third uses another reserve.</p>
+                <div class="scenario-buttons" role="group" aria-label="Save synthetic source documents">
+                  <button id="scenario-liquid" type="button" data-scenario="liquid"><strong>Liquid reserve</strong><span>Cover the combined exit</span></button>
+                  <button id="scenario-illiquid" type="button" data-scenario="illiquid"><strong>Low liquidity</strong><span>Test a blocked exit</span></button>
+                  <button id="scenario-stale" type="button" data-scenario="stale"><strong>Stale evidence</strong><span>Exceed the freshness limit</span></button>
+                  <button id="scenario-missing" type="button" data-scenario="missing"><strong>Missing relationship</strong><span>Remove an observation link</span></button>
+                </div>
+              </details>
+            </section>
           <aside class="panel inspector-panel" aria-labelledby="entity-title">
             <p id="inspector-context" class="eyebrow">SELECTED ENTITY</p><h2 id="entity-title">Select an entity.</h2><span id="entity-kind" class="badge" hidden></span><p id="entity-id" class="record-id"></p><dl id="entity-facts" class="facts"></dl>
             <div id="entity-connections-panel" hidden><h3>Connected relationships</h3><ul id="entity-connections" class="entity-connections"></ul></div>
             <div id="entity-sources-panel" hidden><h3>Supporting source revisions</h3><ul id="entity-sources" class="source-links"></ul></div>
             <section id="source-inspector" class="source-inspector" aria-labelledby="source-title" hidden><p class="eyebrow">RETAINED EVIDENCE</p><h3 id="source-title"></h3><dl id="source-facts" class="facts"></dl><dl id="source-capture-facts" class="facts" hidden></dl><p id="source-loading" class="small-note"></p><div id="source-exchanges" hidden></div><details id="source-content-details" hidden><summary>Read source content</summary><pre id="source-content"></pre></details></section>
           </aside>
+          </div>
         </div>
+
+        <section class="panel analysis-controls" aria-labelledby="analysis-controls-title">
+          <div><h2 id="analysis-controls-title">Do the public sources support this program?</h2><p id="analysis-controls-copy" class="section-copy">The service follows the document claim to the program account and its Devnet observation. Both sources must support the result.</p></div>
+          <form id="analysis-form">
+            <label for="observation-id"><span id="observation-label">Public evidence observation</span><select id="observation-id" name="observationId" required></select></label>
+            <label for="max-hops">Traversal depth<select id="max-hops" name="maxHops"><option value="3">3 hops</option><option value="2">2 hops</option><option value="1">1 hop</option></select></label>
+            <button id="run-analysis" class="button primary" type="submit">Analyze current sources <span aria-hidden="true">→</span></button>
+          </form>
+          <p id="analysis-control-note" class="small-note">Capture a live source before analyzing it.</p>
+        </section>
 
         <section class="panel analysis-panel" aria-labelledby="analysis-title">
           <div class="section-heading"><div><p id="analysis-context" class="eyebrow">NO ANALYSIS SELECTED</p><h2 id="analysis-title">An answer with a path.</h2></div><span id="analysis-status" class="badge">Awaiting analysis</span></div>
           <p id="analysis-summary" class="section-copy">Run an analysis to inspect the service's result and its evidence.</p>
-          <dl id="analysis-facts" class="analysis-facts"></dl><p id="analysis-coverage" class="coverage-note"></p><div id="position-results" class="position-results"></div>
+          <dl id="analysis-facts" class="analysis-facts"></dl><dl id="analysis-evidence" class="facts" hidden></dl><p id="analysis-coverage" class="coverage-note"></p><div id="position-results" class="position-results"></div>
           <p id="analysis-limit" class="small-note">READY describes this synthetic combined-exit calculation. It does not predict a live fill or authorize movement.</p><p id="analysis-record" class="record-id"></p>
+        </section>
+
+        <section id="live-decision-link" class="panel" aria-labelledby="live-decision-title">
+          <h2 id="live-decision-title">Continue the evidence into a decision.</h2>
+          <p class="section-copy">The React workspace binds this live reserve capture to your proposed position and mandate. It saves an advisory graph, not a trade. Connect again there; the access token is never passed in this link.</p>
+          <a class="button primary" href="/dashboard/#operate">Open live decision graph</a>
         </section>
 
         <section class="panel lending-terminal" id="lending-terminal" aria-labelledby="lending-title">
