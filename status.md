@@ -305,7 +305,7 @@
 
 [REPORTED, current team roles, 2026-09-05] Root only orchestrates and reports. GPT-5.6 Luna agents implement and measure. The executing agent owns the provenance of each local command or probe. Synthetic fixtures and test doubles are labeled separately from live evidence.
 
-[REPORTED, root process-monitoring observation, 2026-09-05] A macOS `pgrep -fl` check exposed an inherited credential in an npm process argument. Root stopped process inspection and instructed credential rotation. The credential value and raw listing are not recorded. The scoped lesson is in [memory/process-monitoring.md](memory/process-monitoring.md).
+[REPORTED, root process-monitoring observation, 2026-09-05] A macOS `pgrep -fl` check exposed an inherited credential in an npm process argument. Root stopped process inspection and instructed credential rotation. The credential value and raw listing are not recorded. The scoped lesson is in [docs/archive/memory/process-monitoring.md](docs/archive/memory/process-monitoring.md).
 
 [VERIFIED, current acceptance state, 2026-09-05] CHK-05, CHK-06, and CHK-07 have scoped evidence. CHK-08 automated signal and export checks pass for all four signal and path combinations, while Obsidian desktop inspection remains open. CHK-09 is complete under the approved escalated ten-cycle watch. The historical `use_default` failure remains separate, and its context difference remains not determined. CP1A remains open for the desktop item.
 

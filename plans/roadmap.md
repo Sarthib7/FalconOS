@@ -91,7 +91,7 @@
 
 [INFERRED, release choice] The smallest complete demo is P1, P2, and P5. Cut unverified strategy breadth first. Preserve failure handling, evidence, and accurate labels. A live trade is optional for this demo and cannot be invented for presentation.
 
-[VERIFIED, earlier research record] The [event draft](../.superstack/falconos-dual-hackathon-draft.md) contains previously reviewed event dates and requirements. [INFERRED] H-T01 must recheck official rules before scheduling submission. This plan sets no new verified deadline and performs no registration, token launch, or publication.
+[VERIFIED, earlier research record] The [event draft](../docs/archive/superstack/falconos-dual-hackathon-draft.md) contains previously reviewed event dates and requirements. [INFERRED] H-T01 must recheck official rules before scheduling submission. This plan sets no new verified deadline and performs no registration, token launch, or publication.
 
 ## Least confident decisions
 
