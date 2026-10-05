@@ -41,6 +41,7 @@ test('V114/V92: owner-entered reserve decisions keep original evidence, isolate 
   assert.equal(record.analysis.executionReady, false);
   assert.deepEqual(record.analysis.sourceRevisionIds, [capture.revisionId]);
   assert.equal(record.analysis.availableLiquidityUnits, '252145908');
+  assert.deepEqual(record.analysis.checks.map(item => [item.id, item.status]), [['evidence', 'PASS'], ['freshness', 'PASS'], ['owner_cap', 'PASS'], ['book_floor', 'PASS'], ['proposal_vs_book', 'PASS']]);
   assert.equal(record.analysis.scenario.provenance, 'OWNER_ENTERED');
   assert.ok(record.analysis.decisionGraph.edges.every(edge => record.analysis.decisionGraph.nodes.some(node => node.id === edge.source) && record.analysis.decisionGraph.nodes.some(node => node.id === edge.target)));
 
