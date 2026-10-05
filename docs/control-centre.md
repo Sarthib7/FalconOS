@@ -26,6 +26,9 @@
 
 [INFERRED, service boundary] Dashboard knowledge remains a labelled sample. Connections states remain disconnected until a service is actually connected. Add explicit navigation to `/mesh/` and its lending panel for existing service and wallet work. Dashboard sample actions neither request tokens nor sign or broadcast transactions. This port adds no backend or database schema.
 
+[VERIFIED, user direction, 2026-09-30] The four original OpenDesign views remain unchanged. A fifth React hash view, `#operate`, reads the live mesh and saves an owner-entered reserve scenario decision through the backend. It does not use the synthetic treasury rules or browser-local sample store. Its source, mandate, proposed position, checks and result have distinct provenance. It can save only `REVIEW`, `BLOCKED` or `NO_DATA`; it has no wallet signer or trade action. The existing backend schema is unchanged.
+[VERIFIED, source: `web/dashboard/Operate.jsx`, `web/test/dashboard-browser.mjs`] Operate opens the newest saved decision on return and places its provenance graph before detailed facts and checks. The graph remains an immutable historical snapshot, even when the loaded source revision matches. The backend decides; the React component never computes a trade or treats owner-entered position amounts as holdings.
+
 ## Ownership and verification
 
 | Task | Owner | Files and verification |

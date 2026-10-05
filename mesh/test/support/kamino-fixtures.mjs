@@ -32,6 +32,13 @@ export function createKaminoBrowserFixture(wallet, now = () => new Date().toISOS
       assert.equal(url, C.rpcUrl);
       const request = JSON.parse(options.body);
       if (request.method === 'getGenesisHash') return response(request, C.genesisHash);
+      if (request.method === 'getMultipleAccounts') {
+        // Controlled replay of checked-in public accounts. It is coherent by construction, not proof of an atomic historical snapshot.
+        const [addresses, options] = request.params;
+        assert.deepEqual([...addresses].sort(), [C.reserve, C.liquidityVault].sort());
+        assert.equal(options.encoding, 'base64'); assert.equal(options.commitment, 'confirmed');
+        return response(request, { context: { slot: fixture.slot }, value: addresses.map(id => fixture.accounts[id]) });
+      }
       assert.equal(request.method, 'getAccountInfo');
       assert.equal(request.params[0], C.program);
       return response(request, { context: { slot: fixture.slot }, value: fixture.accounts[C.program] });

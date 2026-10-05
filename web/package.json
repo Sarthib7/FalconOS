@@ -9,25 +9,27 @@
     "build:site": "vite build",
     "dev:bot": "vite --config vite.bot.config.js",
     "build:bot": "vite build --config vite.bot.config.js",
+    "dev:mvp": "vite --config vite.mvp.config.js",
+    "build:mvp": "vite build --config vite.mvp.config.js",
     "preview:local": "node local-web.mjs preview",
     "snapshot": "node snapshot.mjs",
     "build": "npm run build:site",
     "build:treasury": "vite build --config vite.treasury.config.js",
     "build:mesh": "vite build --config vite.mesh.config.js",
+    "pretest": "npm run build:mvp",
     "test": "node --test test/*.test.mjs",
     "test:browser": "node test/treasury-browser.mjs && node test/dashboard-browser.mjs",
     "test:dashboard": "node --test test/dashboard.test.mjs",
     "test:dashboard:browser": "node test/dashboard-browser.mjs",
-    "test:devnet-e2e": "node test/devnet-e2e.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
     "vite": "^8.3.0"
   },
   "dependencies": {
+    "@solana/web3.js": "1.98.4",
     "@wallet-standard/app": "1.1.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "@solana/web3.js": "1.98.4"
+    "react-dom": "19.3.0"
   }
 }

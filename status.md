@@ -1,4 +1,70 @@
 # Status
+## Falcon bot MVP: 2026-10-03
+[VERIFIED, correction] The first heading used 2026-10-04. The date command returned 2026-10-03, so task IDs below use the corrected date.
+
+- [SUPERSEDED, earlier user choice] The first bot scope required Supabase magic-link login and optional Phantom address display. The later wallet-signature choice replaced it.
+[VERIFIED, user choice, 2026-10-03] Bot access uses a server-verified Phantom message signature. The wallet address determines the owner. The message cannot authorize a transaction or fund movement. Keep existing Supabase JWT and static mesh-token clients.
+
+[SUPERSEDED, prior local test] The connect-only helper test returned tests 5, pass 5, fail 0 before the bot login cutover. It does not verify the current server-authenticated flow.
+[VERIFIED, scope correction] T67 connect-only work is historical. T68-T70 cover wallet-signature login and Postgres sessions. Production origin, TLS, host, and remote migration remain unverified.
+[VERIFIED, regression] Before the V142 fix, node --test --test-name-pattern=V142 test/bot-wallet.test.mjs failed with 'Missing expected rejection'. After the fix, node --test test/bot-wallet.test.mjs returned tests 6, pass 6, fail 0.
+
+[SUPERSEDED, prior web suite] The earlier web suite returned tests 206, pass 206, fail 0 before wallet-signature login. Current results appear below.
+
+[SUPERSEDED, prior local browser smoke] The earlier mock Auth and connect-only flow had no real account or Phantom extension. Current wallet-auth browser results appear below.
+
+[REPORTED, independent MVP review] Production Mesh origin allowlist, TLS, host, and Supabase legacy JWT configuration remain unverified. Cloudflare remains user-managed. No deployment or DNS change occurred.
+[VERIFIED, prior process record] The previous `falcon-bot-local-auth` service exited with code 143. It had Supabase client configuration in process environment only. It made no Supabase request before user action, and no sign-in link was sent.
+
+[SUPERSEDED, prior UI] The former email form could send a real sign-in email. No email action was performed. Supabase redirect settings do not apply to the current bot login.
+[REPORTED, user] The former email form showed 'Could not send a sign-in link. Check your email and try again.' The cause remains unknown. The assistant did not retry it. This bot email path is superseded.
+[VERIFIED, disposable database] `FALCON_MESH_ALLOW_SCHEMA_SETUP=1 DATABASE_URL=postgresql://postgres@127.0.0.1:55447/falcon_mesh_test_final npm run init-db` printed 'Falcon mesh schema version 3 created from the complete local history.' The reviewed permission candidate ran on a separate local database; `SET ROLE falcon_mesh_app` completed challenge/session INSERT, SELECT, UPDATE, and DELETE. No remote migration ran.
+[VERIFIED, local tests and build] From `web/`, `npm test` printed tests 207, pass 207, fail 0; `npm run build:bot` ended `✓ built in 36.73s`. From `mesh/`, with the disposable v3 database, `npm test` printed tests 149, pass 149, fail 0.
+[VERIFIED, negative auth-guard tests] In web/, disabling the wallet-address match made `node --test --test-name-pattern='V144: wallet sign-in rejects' test/bot-auth.test.mjs` fail with 'Missing expected rejection'. In mesh/, bypassing Ed25519 verification made `FALCON_MESH_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55447/falcon_mesh_negative node --test test/wallet-auth.test.mjs` fail with `200 !== 401`. Both guards were restored before the passing results above.
+[VERIFIED, unauthenticated browser smoke] At `http://127.0.0.1:5194/`, the landing page had 0 email inputs and no wallet-auth request before user action. Mesh `/readyz` returned HTTP 200 with `{"status":"ready"}`. Axe 4.13.0 reported 0 violations, 34 passes, and 1 incomplete. At 375 CSS pixels, scrollWidth was 375.
+[VERIFIED, generated-wallet browser flow] A disposable Ed25519 key registered through Wallet Standard completed challenge, verify, and session restore. The app made no yield request. An account-change event revoked the session with HTTP 200, cleared sessionStorage, and returned to the login gate. Axe reported 0 violations, 36 passes, and 1 incomplete. No Phantom extension, user key, or transaction was used.
+[VERIFIED, local preview] Vite serves `http://127.0.0.1:5194/`; Mesh serves `http://127.0.0.1:8791/`; both use a disposable local PostgreSQL 17 instance on port 55447. No Cloudflare, DNS, remote database, or deployment change occurred.
+## Private PMF review
+
+[VERIFIED, guide read](https://pmf-gtm-takeaway.vercel.app/) The guide revisits “Customer”, “Alternative”, “Offer”, and “Channel”, then separates “Commitment”, “Actual use”, “Repeated choice”, and “Economics”. It says its sample prices and responses “are made up to show the method”. They are not Falcon evidence.
+[VERIFIED, local browser] Falcon’s landing page says “Meet Falcon, your Solana yield agent” and presents “Discover”, “Set limits”, and “Simulate”. The current copy does not name a buyer or payer.
+[NOT DETERMINED] Falcon’s target customer, current alternative, willingness to pay, acquisition channel, repeat use, and delivery cost. The test suite and browser smoke prove software behavior, not customer demand.
+[INFERRED, next test] Ask a Solana USDC lender about their last lending choice. Observe one research task without coaching. If Falcon helps, ask if they will return for the next decision. Record actions or commitments, not praise.
+[VERIFIED, user choice] Keep this review private. No Falcon details went to the external site. No user feedback form or analytics were added.
+
+## CI automation
+[VERIFIED, workflow source] `.github/workflows/ci.yml` runs on push, pull request, and manual dispatch. It runs the five repository scopes, initializes schema version 3 on disposable PostgreSQL, checks restricted-role DML, builds the Mesh image, smoke-checks health endpoints, and builds four web targets. It has no deploy step.
+[VERIFIED, local full verify] With `DATABASE_URL=postgresql://postgres@127.0.0.1:55447/falcon_mesh_test_final` and the same `FALCON_MESH_TEST_DATABASE_URL`, `npm run verify` returned exit code 0. `/tmp/falcon-ci-verify.log:628-634` printed `repository: PASS`, `advisory: PASS`, `web: PASS`, `mesh: PASS`, and `engine: PASS`.
+[VERIFIED, local web builds] From the repository root, `npm --prefix web run build:site`, `build:treasury`, and `build:mesh` ended `✓ built in 265ms`, `42ms`, and `92ms`. From `web/`, `npm run build:bot` ended `✓ built in 36.73s`.
+[VERIFIED, disposable container smoke] Mesh initialization printed `Falcon mesh schema version 3 created from the complete local history.` The container returned `{"status":"alive"}` from `/healthz` and `{"status":"ready"}` from `/readyz`.
+[VERIFIED, role gate] The positive challenge/session DML smoke passed. An injected UPDATE grant made the negative gate print `ERROR: unexpected Mesh UPDATE grant` and exit 3. Rollback left `falcon_mesh_app` without UPDATE privilege.
+[VERIFIED, workflow syntax] Ruby parsed `.github/workflows/ci.yml`. `actionlint` was not installed.
+[VERIFIED, global rule] `~/.agents/AGENTS.md:131` already contained the CI-first rule. No duplicate rule was added.
+[VERIFIED, scope boundary] No GitHub Actions run occurred for this work because no push occurred. No deployment, remote migration, or Cloudflare change occurred.
+[VERIFIED, container build output] `docker build --file mesh/Dockerfile --tag falcon-mesh:ci mesh` passed and reported four moderate npm audit vulnerabilities in Mesh production dependencies. No dependency change was made for that report.
+| Task | Owner | Status | File scope / exit criterion |
+| --- | --- | --- | --- |
+| BOT-WALLET-2026-10-03-01 | coordinator | Completed, historical | Earlier connect-only control and address validation. Superseded by the server-verified wallet login task below. |
+| BOT-WALLET-REVIEW-2026-10-03-01 | wallet reviewer | Completed | Read-only Wallet Standard review; found malformed address acceptance, reproduced and fixed under B91/V142. |
+| BOT-WALLET-AUTH-2026-10-03-01 | auth reviewer | Completed | Read-only Auth boundary review; reported no bypass finding and confirmed wallet address stays out of mesh identity. |
+| BOT-MVP-SCOPE-2026-10-03-01 | product reviewer | Completed | Read-only I18/I19 and T55-T67 audit; reported production Auth and Cloudflare settings as unverified. |
+| BOT-SIWS-2026-10-03-01 | coordinator | Completed | SIWS-style challenge, server verification, Postgres session, bot gate, local browser smoke, and no remote migration/deployment. |
+| BOT-SIWS-DESIGN-2026-10-03-01 | wallet proof reviewer | Completed | Existing SIWS helper verifies only in the browser and defaults to Devnet. Server challenge and proof verification required; retain existing app default. |
+| BOT-SIWS-MESH-2026-10-03-01 | mesh auth reviewer | Completed | Mesh verifies static mesh tokens first and Supabase JWTs for yield routes. Add wallet sessions as a separate credential; preserve both legacy paths. |
+| BOT-SIWS-THREAT-2026-10-03-01 | security reviewer | Completed | Client-generated proof permits replay until expiry. Use server-issued, one-time Postgres challenge; pin configured origin; derive owner from verified key; no transaction signing. |
+| BOT-WALLET-FE-2026-10-03-01 | coordinator | Completed | Replaced the email gate with Phantom message signing; session token in sessionStorage; wallet-derived owner key; web tests and bot build pass. |
+| BOT-WALLET-BE-2026-10-03-01 | coordinator | Completed | Added origin-bound one-time challenges, hashed Postgres sessions, wallet auth routes, and preserved legacy credentials; v3 history and permission candidate tested locally only. |
+| BOT-WALLET-INTEGRATE-2026-10-03-01 | coordinator | Completed | Web 207/207, Mesh 149/149, bot build, generated-wallet browser flow, v3 disposable PostgreSQL, and restricted-role DML verified. No actual Phantom extension, transaction, remote migration, deployment, or push. |
+
+
+## Investment-service pitch review: 2026-10-02
+
+[VERIFIED, user direction] Explore investment-operator software rather than payment operations. The user requested one HTML page pitching three ideas, then a documentation update and stop. [Pitch](docs/pitches/investment-services.html) is research only. No MVP replacement was chosen.
+
+[VERIFIED, browser check] The standalone page rendered at 1280px desktop and 375px mobile widths. Section links reached their headings and neither viewport overflowed horizontally. Axe found zero confirmed violations and one incomplete color-contrast audit; the prose detector found zero issues. No network service, financial transaction, deployment, or application test was run for this static page.
+
+[INFERRED, next decision] Confirm a reachable budget owner and a paid-pilot case before replacing the active peg scope in SPEC.md or the roadmap. No source implementation, wallet flow, database, or hosted service was changed for the pitch.
+[VERIFIED, user choice and correction, 2026-10-02] After the earlier research note, the user approved pausing the peg pilot. SPEC §G/§C and the roadmap now record that pause; T49-T54 remain historical proposals. The preceding phrase "active peg scope" is no longer current. No new MVP, customer, paid pilot, transaction, or release is established.
 
 ## Backend and repository review: 2026-09-27
 
@@ -105,6 +171,13 @@
 [VERIFIED, current preview] `http://127.0.0.1:4183/` and `/mesh/` returned `200`. API `http://127.0.0.1:8791/readyz` returned `200 {"status":"ready"}`. The operator token is in ignored `mesh/.local/operator-token`; it was not placed in a URL or artifact. [Run instructions](mesh/README.md) explain both launchers.
 
 [INFERRED, next action] Review the local landing and mesh. Actual inbox delivery needs sender credentials and an approved recipient. User-wallet supply and redemption remain separate proofs. The retained npm audit has four moderate package advisories that need review before a hosted release.
+
+[VERIFIED, 2026-09-30, local SSD] The mesh captured the pinned Devnet reserve and vault in one confirmed snapshot at slot `505879289`. Both accounts reported `251546084` USDC base units of unborrowed book liquidity at `2026-09-30T10:53:15.476Z`; this is not freely withdrawable. The user approved an owner-entered test scenario: proposed `1` USDC, maximum `2` USDC, book floor `200` USDC and maximum age `300` seconds. The local API saved decision `1cc55839-b0b5-45d8-ac52-5b7bda1801c8` as `REVIEW`, with four passing checks, 11 provenance-labelled nodes, 17 relationships and `executionReady:false`. The React `#operate` view loaded this retained record. No wallet holding, signature, broadcast, Supabase write or deployment occurred.
+[VERIFIED, retained local capture] Source revision `fbd5ffe4-bfd8-4805-a641-a61573c554d6`; RPC response SHA-256 `6efd7abd4b51cd8ad3e5b7eda1b55b72b4c866f0f41464f59cf8a6bf112019bf`. Decoded retained bytes returned `reserve: '251546084'`, `vault: '251546084'`, `slot: 505879289`. This one historical slot does not establish current liquidity after its cutoff.
+
+[VERIFIED, focused local checks] `npm --prefix mesh test` returned `tests 128`, `pass 128`, `fail 0`. `npm --prefix web test` returned `tests 187`, `pass 187`, `fail 0`. The controlled dashboard browser returned `passed:132`, `total:132`, with no real provider or wallet call. The actual connected Operate page showed `REVIEW`, four checks and 11 graph nodes; axe-core reported zero confirmed violations and one incomplete rule. This does not close the owner-wallet supply/redemption proof in T43.
+[VERIFIED, later local browser check] The controlled dashboard browser returned `passed:134`, `total:134` after the newest saved decision began opening automatically on Operate. A separate mesh browser run returned `passed:97`, `total:97` after populated graphs began scrolling into view on Connect. Both checks use controlled data; neither proves a new signed Devnet transaction.
+[VERIFIED, final local browser check] The dashboard browser returned `passed:136`, `total:136` after Operate placed its full graph before the detailed facts and Knowledge stopped calling reserve book liquidity withdrawable. The browser fixture used controlled reserve bytes and no real wallet action.
 
 ## Active decision graph work: 2026-09-27
 

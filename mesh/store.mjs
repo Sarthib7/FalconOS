@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { MeshError, validateSource, projectGraph, analyzeGraph } from './domain.mjs';
 import { CONNECTORS, captureSource as captureLiveSource, validateLiveSource, projectLiveGraph, analyzeLiveGraph } from './live.mjs';
+import { RESERVE_DECISION_MARKER, parseScenario, evaluateReserveScenario } from './scenario.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$/;
@@ -193,6 +194,7 @@ export function createStore(pool, { capture = captureLiveSource, now = () => new
       const requestId = uuid(query.requestId);
       const maxHops = query.maxHops === undefined ? 3 : query.maxHops;
       if (typeof query.observationId !== 'string' || !ID.test(query.observationId)) invalid('Observation ID is invalid.');
+      if (query.observationId === RESERVE_DECISION_MARKER) invalid('Decision marker is not a source observation.');
       if (!Number.isInteger(maxHops) || maxHops < 1 || maxHops > 3) invalid('maxHops must be between 1 and 3.');
       return transaction(owner, true, async client => {
         const existing = await client.query('SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND request_id = $2', [owner, requestId]);
@@ -216,15 +218,55 @@ export function createStore(pool, { capture = captureLiveSource, now = () => new
       });
     },
 
+    async createDecision(owner, input, at) {
+      ownerId(owner); timestamp(at);
+      exactKeys(input, ['requestId', 'scenario']);
+      const requestId = uuid(input.requestId);
+      const scenario = parseScenario(input.scenario);
+      return transaction(owner, false, async client => {
+        const existing = await client.query('SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND request_id = $2', [owner, requestId]);
+        if (existing.rows.length) {
+          const saved = existing.rows[0];
+          if (saved.observation_id !== RESERVE_DECISION_MARKER
+              || !Object.keys(scenario).every(key => saved.analysis?.scenario?.[key] === scenario[key])) {
+            throw new MeshError('CONFLICT', 'Decision request ID already has different arguments.');
+          }
+          return record(saved);
+        }
+        const revisions = selectedSources(await currentSources(client, owner), 'live');
+        const graph = projectLiveGraph(revisions, at);
+        const analysis = evaluateReserveScenario(graph, scenario, at);
+        const saved = await client.query(`
+          INSERT INTO falcon_mesh.analyses (owner_id, id, request_id, created_at, observation_id, max_hops, graph, analysis)
+          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb)
+          ON CONFLICT (owner_id, request_id) DO NOTHING RETURNING *`,
+        [owner, randomUUID(), requestId, at, RESERVE_DECISION_MARKER, 3, JSON.stringify(graph), JSON.stringify(analysis)]);
+        if (!saved.rows.length) throw new MeshError('CONFLICT', 'Decision request changed. Retry with the same request ID.');
+        return record(saved.rows[0]);
+      });
+    },
+
     async getAnalysis(owner, id) {
       ownerId(owner);
-      const result = await pool.query('SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2', [owner, uuid(id)]);
+      const result = await pool.query('SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2 AND observation_id <> $3', [owner, uuid(id), RESERVE_DECISION_MARKER]);
       return result.rows.length ? record(result.rows[0]) : null;
     },
 
     async listAnalyses(owner) {
       ownerId(owner);
-      const result = await pool.query('SELECT id, created_at, analysis FROM falcon_mesh.analyses WHERE owner_id = $1 ORDER BY created_at DESC, id DESC LIMIT 20', [owner]);
+      const result = await pool.query('SELECT id, created_at, analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND observation_id <> $2 ORDER BY created_at DESC, id DESC LIMIT 20', [owner, RESERVE_DECISION_MARKER]);
+      return result.rows.map(row => ({ id: row.id, createdAt: new Date(row.created_at).toISOString(), analysis: row.analysis }));
+    },
+
+    async getDecision(owner, id) {
+      ownerId(owner);
+      const result = await pool.query('SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2 AND observation_id = $3', [owner, uuid(id), RESERVE_DECISION_MARKER]);
+      return result.rows.length ? record(result.rows[0]) : null;
+    },
+
+    async listDecisions(owner) {
+      ownerId(owner);
+      const result = await pool.query('SELECT id, created_at, analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND observation_id = $2 ORDER BY created_at DESC, id DESC LIMIT 20', [owner, RESERVE_DECISION_MARKER]);
       return result.rows.map(row => ({ id: row.id, createdAt: new Date(row.created_at).toISOString(), analysis: row.analysis }));
     },
 

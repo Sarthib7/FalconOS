@@ -146,30 +146,34 @@ export function createApi({
       }
       const bearer = /^Bearer ([A-Za-z0-9._~-]{32,4096})$/.exec(request.headers.authorization || '')?.[1] ?? null;
       const meshToken = bearer && bearer.length <= 256 ? bearer : null;
-      let owner = meshToken && tokenHashes.get(createHash('sha256').update(meshToken).digest('hex'));
+      const meshOwner = meshToken && tokenHashes.get(createHash('sha256').update(meshToken).digest('hex'));
+      let owner = meshOwner;
+      let walletSession = null;
+      // Wallet-session auth for owner-scoped endpoints
+      if (!owner && bearer?.startsWith('wsi1_')) {
+        if (!walletAuth) throw new MeshError('AUTH_UNAVAILABLE', 'Wallet authentication is not configured.');
+        walletSession = await walletAuth.getSession(bearer);
+        if (!walletSession) throw new MeshError('UNAUTHORIZED', 'A valid wallet session is required.');
+        owner = walletSession.ownerId;
+      }
+      // Supabase JWT auth for yield routes only
       if (url.pathname.startsWith('/v1/yield/') && !owner) {
         if (!bearer) throw new MeshError('UNAUTHORIZED', 'A valid access token is required.');
-        if (bearer.startsWith('wsi1_')) {
-          const session = await walletAuth?.getSession(bearer);
-          if (!session) throw new MeshError('UNAUTHORIZED', 'A valid wallet session is required.');
-          owner = session.ownerId;
-        } else {
-          if (typeof verifySupabaseToken !== 'function') throw new MeshError('AUTH_UNAVAILABLE', 'Supabase authentication is not configured.');
-          try {
-            const userId = await verifySupabaseToken(bearer);
-            if (typeof userId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
-              throw new MeshError('UNAUTHORIZED', 'A valid Supabase session is required.');
-            }
-            owner = userId;
-          } catch (error) {
-            if (error instanceof MeshError) throw error;
-            if (error?.code === 'SUPABASE_AUTH_RATE_LIMITED') {
-              const limited = new MeshError('RATE_LIMITED', 'Supabase session verification is rate limited. Retry shortly.');
-              limited.retryAfter = Number.isInteger(error.retryAfter) ? error.retryAfter : 60;
-              throw limited;
-            }
-            throw new MeshError('AUTH_UNAVAILABLE', 'User authentication is unavailable.');
+        if (typeof verifySupabaseToken !== 'function') throw new MeshError('AUTH_UNAVAILABLE', 'Supabase authentication is not configured.');
+        try {
+          const userId = await verifySupabaseToken(bearer);
+          if (typeof userId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+            throw new MeshError('UNAUTHORIZED', 'A valid Supabase session is required.');
           }
+          owner = userId;
+        } catch (error) {
+          if (error instanceof MeshError) throw error;
+          if (error?.code === 'SUPABASE_AUTH_RATE_LIMITED') {
+            const limited = new MeshError('RATE_LIMITED', 'Supabase session verification is rate limited. Retry shortly.');
+            limited.retryAfter = Number.isInteger(error.retryAfter) ? error.retryAfter : 60;
+            throw limited;
+          }
+          throw new MeshError('AUTH_UNAVAILABLE', 'User authentication is unavailable.');
         }
       }
       if (!owner) throw new MeshError('UNAUTHORIZED', 'A valid mesh access token is required.');
@@ -194,6 +198,10 @@ export function createApi({
           if (request.method === 'GET') { send(200, { records: await lending.list(owner), limit: 20 }); return; }
           if (request.method === 'POST') {
             const input = await body(request); keys(input, ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits']);
+            // For lending prepare, require wallet === session.walletAddress when using wallet-session auth
+            if (walletSession && input.wallet !== walletSession.walletAddress) {
+              throw new MeshError('UNAUTHORIZED', 'Lending wallet must match the authenticated session wallet.');
+            }
             send(200, { record: await lending.prepare(owner, input) }); return;
           }
         }
@@ -227,6 +235,19 @@ export function createApi({
       if (request.method === 'GET' && url.pathname === '/v1/analyses') {
         send(200, { records: await store.listAnalyses(owner), limit: 20 }); return;
       }
+      if (request.method === 'POST' && url.pathname === '/v1/decisions/reserve') {
+        const input = await body(request); keys(input, ['requestId', 'scenario']);
+        send(200, { record: await store.createDecision(owner, input, now()) }); return;
+      }
+      if (request.method === 'GET' && url.pathname === '/v1/decisions') {
+        send(200, { records: await store.listDecisions(owner), limit: 20 }); return;
+      }
+      const decision = /^\/v1\/decisions\/([a-f0-9-]{36})$/i.exec(url.pathname);
+      if (request.method === 'GET' && decision) {
+        const record = await store.getDecision(owner, decision[1]);
+        if (!record) throw new MeshError('NOT_FOUND', 'Decision record not found.');
+        send(200, { record }); return;
+      }
       const resource = /^\/v1\/(sources|analyses)\/([a-f0-9-]{36})$/i.exec(url.pathname);
       if (request.method === 'GET' && resource) {
         const result = resource[1] === 'sources' ? await store.getSource(owner, resource[2]) : await store.getAnalysis(owner, resource[2]);
@@ -240,6 +261,7 @@ export function createApi({
       const code = known ? error.code : 'STORAGE_UNAVAILABLE';
       if (known && code === 'RATE_LIMITED' && Number.isInteger(error.retryAfter)) response.setHeader('Retry-After', String(error.retryAfter));
       if (request.method === 'POST') request.resume();
+      if (known && code === 'RATE_LIMITED' && Number.isInteger(error.retryAfter)) response.setHeader('Retry-After', String(error.retryAfter));
       // Prepare failures attach already-JSON-safe external RPC exchanges (kamino.mjs). Surface the last few, bounded; never for the unknown-error fallback.
       const evidence = known && Array.isArray(error.evidence?.exchanges) ? { exchanges: error.evidence.exchanges.slice(-EVIDENCE_EXCHANGES) } : null;
       send(STATUSES[code], { error: { code, message: known ? error.message : 'Mesh storage could not complete the request.', ...(evidence && { evidence }) } });

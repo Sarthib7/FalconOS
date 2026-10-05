@@ -91,8 +91,8 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
     $('lending-disconnect').disabled = busy || !selected;
     $('lending-wallet-status').textContent = selected ? `${selected.walletName}: ${selected.address}` : 'Connect a wallet that supports Devnet transaction signing.';
     const analysis = getAnalysis();
-    const eligible = analysis?.analysis.mode === 'live' && analysis.analysis.status === 'OBSERVED';
-    $('lending-analysis-link').textContent = eligible ? `Selected live analysis: ${analysis.id}` : 'Capture both live sources and select an OBSERVED analysis above.';
+    const eligible = analysis?.analysis.mode === 'live' && analysis.analysis.status === 'OBSERVED' && analysis.analysis.policyVersion === 'mesh-public-evidence/1';
+    $('lending-analysis-link').textContent = eligible ? `Selected program-evidence analysis: ${analysis.id}` : 'Capture the official document and Devnet program account, then select their OBSERVED analysis. Reserve liquidity alone does not authorize preparation.';
     $('lending-prepare').disabled = busy || !connected || !selected || !eligible;
     $('lending-action').disabled = busy; $('lending-amount').disabled = busy;
     $('lending-amount-label').textContent = $('lending-action').value === 'supply' ? 'Supply amount (Devnet USDC, maximum 1)' : 'Receipt tokens to redeem (integer base units)';
@@ -191,7 +191,7 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
     void run(async () => {
       const generation = accountGeneration;
       const selected = wallet.current(); const analysis = getAnalysis();
-      if (!isConnected() || !selected || analysis?.analysis.mode !== 'live' || analysis.analysis.status !== 'OBSERVED') throw new Error('Select a live analysis and connect a wallet first.');
+      if (!isConnected() || !selected || analysis?.analysis.mode !== 'live' || analysis.analysis.status !== 'OBSERVED' || analysis.analysis.policyVersion !== 'mesh-public-evidence/1') throw new Error('Select a program-evidence OBSERVED analysis and connect a wallet first.');
       const request = { analysisId: analysis.id, wallet: selected.address, action, inputBaseUnits: inputUnits(action, value) };
       const identity = JSON.stringify(request);
       if (prepareRetry?.identity !== identity) prepareRetry = { identity, requestId: crypto.randomUUID() };

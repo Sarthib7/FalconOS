@@ -25,6 +25,31 @@ npm --prefix web run preview:local
 
 [INFERRED, verification commands] Run `npm run verify:web` from the repository root for web tests and the in-memory release build. `npm run verify:release:web -- --root <checkout>` checks a different source checkout. The build permits only the two declared browser-safe mesh modules outside `web/`; dashboard Node tests also need `mesh/domain.mjs`. The check does not create `dist` or compile the Pages Function. Build the artifact separately before `node web/test/landing-browser.mjs`. That browser script uses temporary SQLite and provider fixtures. The `/mesh/` route also needs the [mesh API](../mesh/README.md).
 
+## Falcon bot site
+
+[INFERRED, local build target] `web/bot/` is a separate React landing and authenticated chat app. It builds to `web/dist-bot/`; the standard FalconOS site build and `/dashboard/` route stay unchanged.
+[VERIFIED, source and local tests] Bot access uses Phantom Wallet Standard message signing. The Mesh API verifies the origin-bound challenge and derives the owner from the signed wallet address. The bot stores an opaque session token in sessionStorage. It does not read balances or submit transactions.
+
+Run the standalone app locally or build its Pages artifact:
+
+```bash
+npm --prefix web run dev:bot
+npm --prefix web run build:bot
+```
+
+[SUPERSEDED, deployment choice, 2026-10-04] `build:bot` remains a bot-only artifact at `dist-bot/`; do not use it for the unified `bot.falconos.markets` site. Use the `build:mvp` target below for the bot root and same-origin `/mesh/` route.
+[VERIFIED, official Supabase reference](https://supabase.com/docs/reference/javascript/auth-getclaims) says getClaims verifies JWTs with JWKS where available and falls back to Auth for symmetric keys. [VERIFIED, source: mesh/auth.mjs] Mesh caches a verified subject by token hash until exp and limits uncached checks to 30 per 300-second process window; verification throttling returns HTTP 429.
+
+## Unified bot and Mesh MVP
+
+[INFERRED, local build target] Run `npm --prefix web run build:mvp` to build the bot at `/` and the source graph and DevNet terminal at `/mesh/` into `web/dist-mvp/`. The standard `falconos.markets` build and routes remain unchanged.
+
+[INFERRED, deployment configuration] The separate Pages project for `bot.falconos.markets` must build this artifact with `VITE_MESH_API_URL` set to the HTTPS Mesh API origin. The Mesh service must allow the exact browser origin `https://bot.falconos.markets` in `FALCON_MESH_ORIGINS`. These settings do not configure DNS or deploy the site.
+
+[VERIFIED, source: `web/bot/auth.mjs`, `web/mesh/app.mjs`] The same-tab wallet login session is restored by `/mesh/`; operator tokens remain a manual fallback in memory. The bot chat remains simulation-only. Only the separate terminal requests an explicit DevNet transaction signature.
+
+[VERIFIED, source: `mesh/README.md`] The Mesh API needs PostgreSQL schema version 3. Migration `0003_wallet_auth.sql` remains a local candidate until the remote database is checked and migration approval is granted.
+
 ## Cloudflare Pages settings
 
 This is an isolated Vite static site. No Wrangler configuration is required for a Pages dashboard deployment.
