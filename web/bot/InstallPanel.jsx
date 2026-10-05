@@ -1,9 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { installCommands, resolveInstallConfig } from './install-commands.mjs';
+import { installCommands, resolveSkillConfig } from './install-commands.mjs';
 
 const TABS = [
-  { id: 'agent', label: 'Agent' },
   { id: 'human', label: 'Human' },
+  { id: 'agent', label: 'Agent' },
 ];
 
 async function copyText(text) {
@@ -29,7 +29,7 @@ async function copyText(text) {
   return ok;
 }
 
-function CommandBlock({ label, copyLabel, command, note, wrap = false }) {
+function AgentCommand({ command }) {
   const [status, setStatus] = useState('');
   const timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -39,21 +39,22 @@ function CommandBlock({ label, copyLabel, command, note, wrap = false }) {
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setStatus(''), 4000);
   }
-  return <div className="bot-install-block">
-    <div className="bot-install-block-head">
-      <h3>{label}</h3>
-      <button className="btn subtle bot-install-copy" type="button" onClick={() => void copy()} aria-label={copyLabel}>Copy</button>
+  return (
+    <div className="bot-install-block bot-install-block-compact">
+      <div className="bot-install-block-head">
+        <pre className="bot-install-code" tabIndex={0}><code>{command}</code></pre>
+        <button className="btn subtle bot-install-copy" type="button" onClick={() => void copy()} aria-label="Copy agent command">Copy</button>
+      </div>
+      <p className="bot-install-status" role="status" aria-live="polite">{status}</p>
     </div>
-    <pre className={`bot-install-code${wrap ? ' bot-install-code-wrap' : ''}`} tabIndex={0}><code>{command}</code></pre>
-    {note && <p className="bot-install-note">{note}</p>}
-    <p className="bot-install-status" role="status" aria-live="polite">{status}</p>
-  </div>;
+  );
 }
 
-export default function InstallPanel({ mcpUrl, skillUrl, isProd }) {
-  const config = useMemo(() => resolveInstallConfig({ mcpUrl, skillUrl, isProd }), [mcpUrl, skillUrl, isProd]);
+// tab and onTabChange are controlled by the parent so the nav Log-in link can
+// force-switch to Human from outside without touching internal state.
+export default function InstallPanel({ skillUrl, isProd, children, tab, onTabChange }) {
+  const config = useMemo(() => resolveSkillConfig({ skillUrl, isProd }), [skillUrl, isProd]);
   const commands = useMemo(() => installCommands(config), [config]);
-  const [tab, setTab] = useState('agent');
   const tabRefs = useRef({});
   const base = useId();
   const ids = (id) => ({ tab: `${base}-tab-${id}`, panel: `${base}-panel-${id}` });
@@ -67,42 +68,57 @@ export default function InstallPanel({ mcpUrl, skillUrl, isProd }) {
     else if (event.key === 'End') next = TABS.length - 1;
     if (next < 0) return;
     event.preventDefault();
-    setTab(TABS[next].id);
+    onTabChange(TABS[next].id);
     tabRefs.current[TABS[next].id]?.focus();
   }
 
-  const unconfigured = config.state === 'unconfigured';
-  const notice = config.notice && <p className={`bot-install-notice${unconfigured ? ' bot-install-notice-off' : ''}`}>{config.notice}</p>;
+  const isAgent = tab === 'agent';
 
-  return <section id="install" className="bot-install" aria-labelledby="bot-install-title">
-    <p className="bot-section-kicker">Bring your own agent</p>
-    <h2 id="bot-install-title">Add Falcon to your agent</h2>
-    <div className="bot-install-tabs" role="tablist" aria-label="Install method" onKeyDown={onKeyDown}>
-      {TABS.map((item) => <button
-        key={item.id}
-        ref={(node) => { tabRefs.current[item.id] = node; }}
-        id={ids(item.id).tab}
-        className="bot-install-tab"
-        type="button"
-        role="tab"
-        aria-selected={tab === item.id}
-        aria-controls={ids(item.id).panel}
-        tabIndex={tab === item.id ? 0 : -1}
-        onClick={() => setTab(item.id)}
-      >{item.label}</button>)}
-    </div>
+  return (
+    <section id="install" className={`bot-install${isAgent ? ' bot-install--agent' : ''}`} aria-labelledby="bot-install-title">
+      <div className="bot-install-header">
+        <h2 id="bot-install-title">Get started</h2>
+        <div className="bot-install-tabs" role="tablist" aria-label="Access method" onKeyDown={onKeyDown}>
+          {TABS.map((item) => (
+            <button
+              key={item.id}
+              ref={(node) => { tabRefs.current[item.id] = node; }}
+              id={ids(item.id).tab}
+              className="bot-install-tab"
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              aria-controls={ids(item.id).panel}
+              tabIndex={tab === item.id ? 0 : -1}
+              onClick={() => onTabChange(item.id)}
+            >{item.label}</button>
+          ))}
+        </div>
+      </div>
 
-    <div id={ids('agent').panel} className="bot-install-panel" role="tabpanel" aria-labelledby={ids('agent').tab} tabIndex={0} hidden={tab !== 'agent'}>
-      {notice}
-      {commands.agent.command && <CommandBlock label="Run this in your agent" copyLabel="Copy agent command" command={commands.agent.command} note="Run this in your agent. It prints the Falcon skill; follow it to install the Falcon MCP plugin." />}
-      {commands.agent.prompt && <CommandBlock label="Or paste this instead" copyLabel="Copy agent prompt" command={commands.agent.prompt} wrap />}
-      <p className="bot-install-honest">Your agent signs with its own wallet. FalconOS never holds your keys and never sends your transaction.</p>
-    </div>
+      <div
+        id={ids('human').panel}
+        className="bot-install-panel"
+        role="tabpanel"
+        aria-labelledby={ids('human').tab}
+        tabIndex={0}
+        hidden={tab !== 'human'}
+      >
+        {children}
+      </div>
 
-    <div id={ids('human').panel} className="bot-install-panel" role="tabpanel" aria-labelledby={ids('human').tab} tabIndex={0} hidden={tab !== 'human'}>
-      <p className="bot-install-lead">Add the Falcon MCP server yourself. Devnet only.</p>
-      {notice}
-      {commands.human.map((item) => <CommandBlock key={item.id} label={item.label} copyLabel={`Copy ${item.label} command`} command={item.command} note={item.note} />)}
-    </div>
-  </section>;
+      <div
+        id={ids('agent').panel}
+        className="bot-install-panel bot-install-panel--agent"
+        role="tabpanel"
+        aria-labelledby={ids('agent').tab}
+        tabIndex={0}
+        hidden={tab !== 'agent'}
+      >
+        {commands.agent.command
+          ? <AgentCommand command={commands.agent.command} />
+          : <p className="bot-install-notice bot-install-notice-off">Skill endpoint not available.</p>}
+      </div>
+    </section>
+  );
 }

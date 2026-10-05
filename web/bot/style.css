@@ -9,10 +9,10 @@ html{scroll-behavior:smooth;scroll-padding-top:90px}body{background:var(--bg);co
 .bot-chat-topbar-actions{display:flex;align-items:center;gap:14px}.bot-wallet-control{display:flex;align-items:center;gap:8px}.bot-wallet-address{color:var(--muted);font:12px var(--mono);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bot-wallet-error{color:var(--red);font-size:12px;max-width:220px}@media(max-width:640px){.bot-chat-topbar-actions{gap:8px}.bot-session-label{display:none}.bot-wallet-address{font-size:10px;max-width:90px}.bot-wallet-error{max-width:150px}}
 .bot-wallet-login{width:min(100%,420px);flex-direction:column;align-items:stretch;gap:12px}.bot-wallet-login .btn{width:100%;min-height:48px}.bot-wallet-disclaimer{margin:0;color:var(--muted);font-size:12px;line-height:1.5}.bot-wallet-error{margin:0;}
 .bot-mesh-link{color:var(--fg);font-size:12px;text-decoration:none;transition:color .2s}.bot-mesh-link:hover{color:var(--green)}.bot-mesh-link span{font-size:10px;margin-left:2px}@media(max-width:640px){.bot-mesh-link{font-size:11px}}
-.bot-install{width:min(680px,calc(100% - 40px));margin:64px auto 0;min-width:0}.bot-install h2{margin:8px 0 18px;text-align:center;font:500 20px/1.3 var(--body);letter-spacing:-.02em}
-.bot-install-tabs{display:flex;gap:4px;width:max-content;max-width:100%;margin:0 auto 14px;padding:4px;border:1px solid var(--border);border-radius:99px;background:var(--deep)}
-.bot-install-tab{min-height:44px;min-width:88px;padding:8px 20px;border:1px solid transparent;border-radius:99px;background:transparent;color:var(--muted);font-size:13px;font-weight:500}.bot-install-tab[aria-selected=true]{background:var(--surface);border-color:var(--border);color:var(--fg)}.bot-install-tab:hover{color:var(--fg)}
-.bot-install-panel{min-width:0;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}.bot-install-panel[hidden]{display:none}
+.bot-install{width:min(520px,calc(100% - 40px));margin:32px auto 0;min-width:0}.bot-install h2{margin:6px 0 14px;text-align:center;font:500 18px/1.3 var(--body);letter-spacing:-.02em}
+.bot-install-tabs{display:flex;gap:3px;width:max-content;max-width:100%;margin:0 auto 10px;padding:3px;border:1px solid var(--border);border-radius:99px;background:var(--deep)}
+.bot-install-tab{min-height:34px;min-width:76px;padding:5px 16px;border:1px solid transparent;border-radius:99px;background:transparent;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:color .15s}.bot-install-tab[aria-selected=true]{background:var(--surface);border-color:var(--border);color:var(--fg)}.bot-install-tab:hover{color:var(--fg)}.bot-install-tab:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.bot-install-panel{min-width:0;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}.bot-install-panel[hidden]{display:none}
 .bot-install-lead{margin:0 0 12px;color:var(--fg);font-size:14px;line-height:1.5}
 .bot-install-block+.bot-install-block{margin-top:4px}.bot-install-block-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.bot-install-block-head h3{margin:0;font:500 13px/1.4 var(--body);color:var(--muted)}
 .bot-install .bot-install-copy.btn{width:auto;min-width:72px;border-color:var(--border);color:var(--fg)}
@@ -21,5 +21,6 @@ html{scroll-behavior:smooth;scroll-padding-top:90px}body{background:var(--bg);co
 .bot-install-status{min-height:18px;margin:6px 0 0;color:var(--green);font-size:12px}
 .bot-install-notice{margin:0 0 12px;padding:10px 12px;border:1px solid #5a4a30;border-radius:10px;color:var(--amber);font-size:13px;line-height:1.5}.bot-install-notice-off{margin-bottom:0}
 .bot-install-honest{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
-@media(max-width:640px){.bot-install{margin-top:48px}.bot-install-panel{padding:14px}.bot-install-tabs{width:100%}.bot-install-tab{flex:1}}
+.bot-install--agent{width:min(480px,calc(100% - 40px))}.bot-install-panel--agent{padding:10px 14px}.bot-install-panel--agent .bot-install-code{white-space:nowrap;margin:0;padding:9px 12px;line-height:1.5}.bot-install-panel--agent .bot-install-block-head{margin-bottom:8px}
+@media(max-width:640px){.bot-install{margin-top:32px}.bot-install--agent{width:calc(100% - 28px)}.bot-install-panel{padding:12px}.bot-install-panel--agent{padding:8px 12px}.bot-install-panel--agent .bot-install-code{white-space:pre-wrap;overflow-wrap:anywhere}.bot-install-tabs{width:100%}.bot-install-tab{flex:1;min-width:0;padding:5px 12px}}
 .bot-site{overflow:clip}

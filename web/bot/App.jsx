@@ -24,6 +24,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authPending, setAuthPending] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [installTab, setInstallTab] = useState('human');
   const [injectedPhantom, setInjectedPhantom] = useState(null);
   const sessionRef = useRef(null);
   const selectedAddressRef = useRef(null);
@@ -184,16 +185,17 @@ export default function App() {
   return <div className="bot-site">
     <header className="bot-nav">
       <Brand />
-      <nav aria-label="Site navigation"><a href="#how-it-works">How it works</a><a href="#safety">Safety</a><a className="bot-nav-login" href="#sign-in">Log in <span aria-hidden="true">↗</span></a></nav>
+      <nav aria-label="Site navigation"><a href="#how-it-works">How it works</a><a href="#safety">Safety</a><a className="bot-nav-login" href="#install" onClick={() => setInstallTab('human')}>Log in <span aria-hidden="true">↗</span></a></nav>
     </header>
     <main>
+      <InstallPanel skillUrl={import.meta.env.VITE_FALCON_SKILL_URL} isProd={import.meta.env.PROD} tab={installTab} onTabChange={setInstallTab}>
+        <PhantomWalletConnect wallets={walletState.wallets} current={walletState.current} injected={injectedPhantom} pending={authPending} error={authError} onSignIn={signIn} onInjectedSignIn={signInInjected} onSignOut={signOut} />
+      </InstallPanel>
       <section className="bot-hero" aria-labelledby="bot-title">
         <div className="bot-hero-badge"><span className="bot-pulse" aria-hidden="true"></span> SOLANA USDC · SIMULATION ONLY</div>
         <FalconMark />
         <h1 id="bot-title">Meet Falcon, your<br />Solana yield agent.</h1>
         <p className="bot-hero-copy">Find provider-indexed lending opportunities. Set your own limits. Review every simulated allocation before you decide.</p>
-        <div id="sign-in"><PhantomWalletConnect wallets={walletState.wallets} current={walletState.current} injected={injectedPhantom} pending={authPending} error={authError} onSignIn={signIn} onInjectedSignIn={signInInjected} onSignOut={signOut} /></div>
-
       </section>
       <section id="how-it-works" className="bot-capabilities" aria-label="Falcon capabilities">
         <p className="bot-section-kicker">One clear path from source to simulation</p>
@@ -203,7 +205,6 @@ export default function App() {
           <article><span className="bot-capability-icon" aria-hidden="true">↗</span><h2>Simulate</h2><p>Review proposed allocations and their source evidence.</p></article>
         </div>
       </section>
-      <InstallPanel mcpUrl={import.meta.env.VITE_FALCON_MCP_URL} skillUrl={import.meta.env.VITE_FALCON_SKILL_URL} isProd={import.meta.env.PROD} />
       <section id="safety" className="bot-trust-strip" aria-label="Agent limits">
         <span>Provider-indexed data</span><span>Deterministic policy</span><span>Browser-local receipts</span><span>Chat does not sign transactions</span>
       </section>

@@ -1,8 +1,24 @@
 // Shared client for the falcon-mesh API. The token is supplied per call and is never stored here.
-export const API_BASE = (import.meta.env?.VITE_MESH_API_URL || 'http://127.0.0.1:8791').replace(/\/$/, '');
+
+// Resolve the API base URL from a Vite-style env object.
+// Returns null when running in a production build without VITE_MESH_API_URL configured —
+// the module still loads (so the page renders), and meshRequest throws the clear message at
+// call-time where the existing sign-in error UI can display it.
+export function resolveApiBase(env = (typeof import.meta !== 'undefined' ? import.meta.env : undefined) ?? {}) {
+  const configured = env.VITE_MESH_API_URL;
+  if (!configured && env.PROD) return null; // unconfigured production — callers will surface a clear error
+  return (configured || 'http://127.0.0.1:8791').replace(/\/$/, '');
+}
+
+export const API_BASE = resolveApiBase();
 export const TOKEN_PATTERN = /^[A-Za-z0-9._~-]{32,256}$/;
 
 export async function meshRequest(token, path, body) {
+  if (!API_BASE) throw new Error(
+    'VITE_MESH_API_URL is not set. ' +
+    'Set it to the deployed Mesh API HTTPS base URL. ' +
+    'FALCON_MESH_ORIGINS must include this site origin.'
+  );
   let response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -19,6 +35,7 @@ export async function meshRequest(token, path, body) {
 
 // Unauthenticated service health. Never throws; ok is true only for HTTP 200 with {status:'ready'}.
 export async function meshReady() {
+  if (!API_BASE) return { ok: false, status: 'unconfigured' };
   let response;
   try { response = await fetch(`${API_BASE}/readyz`, { method: 'GET', credentials: 'omit', redirect: 'error', headers: { accept: 'application/json' }, signal: AbortSignal.timeout(8000) }); } catch { return { ok: false, status: 'unreachable' }; }
   let payload;

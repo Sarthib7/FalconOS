@@ -17,7 +17,8 @@ FALCON_MESH_ALLOW_SCHEMA_SETUP=1 npm --prefix mesh run init-db
 npm --prefix mesh run dev:local
 ```
 
-[VERIFIED, source: `local.mjs`] The local launcher binds the API to `127.0.0.1:8791`. It saves a generated token in `mesh/.local/operator-token`. The file is excluded from Git. The browser keeps this token in memory. Reloading requires another connection.
+[VERIFIED, source: `local.mjs`] The local launcher binds the API to `127.0.0.1:8791`. It saves a generated token in `mesh/.local/operator-token`. The file is excluded from Git. The browser keeps this token in memory. Reloading requires another connection. `FALCON_MESH_ORIGINS` includes the local bot origin `http://127.0.0.1:5194` for Phantom message sign-in.
+
 
 [INFERRED, second terminal] Start the React site, then open `http://127.0.0.1:4183/mesh/`.
 
