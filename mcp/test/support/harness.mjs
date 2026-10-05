@@ -10,6 +10,7 @@ export const SESSION = 'wsi1_Zk3Q9xLmN2pR7vTbY1cDfGh4JkLmNoPqRsTuVwXyZ0';
 export const IDS = {
   challenge: '11111111-1111-4111-8111-111111111111',
   analysis: '22222222-2222-4222-8222-222222222222',
+  reserveAnalysis: '66666666-6666-4666-8666-666666666666',
   decision: '33333333-3333-4333-8333-333333333333',
   intent: '44444444-4444-4444-8444-444444444444',
   head: '55555555-5555-4555-8555-555555555555',
@@ -33,7 +34,9 @@ function defaults(call) {
     'GET /v1/yield/opportunities': () => json({ status: 'READY', provider: 'defillama', opportunities: [{ poolId: 'p1', apy: 4.2 }] }),
     'GET /v1/graph/live': () => json({ graph: { sources: [{ revisionId: IDS.head, sourceKey: 'live:kamino-program-docs' }] } }),
     'POST /v1/captures': () => json({ source: { revisionId: call.body.requestId, sourceKey: `live:${call.body.connectorId}`, capturedAt: `2026-10-05T10:00:0${call.body.connectorId.length % 9}.000Z` } }),
-    'POST /v1/analyses/live': () => json({ record: { id: IDS.analysis, graph: { nodes: [{ id: RESERVE, properties: { status: 'ok', slot: 123, availableLiquidityUnits: '5000000' } }] }, analysis: { status: 'OBSERVED', summary: 'Evidence observed.', observationId: PROGRAM } } }),
+    'POST /v1/analyses/live': (c) => c.body?.observationId === RESERVE
+      ? json({ record: { id: IDS.reserveAnalysis, analysis: { status: 'OBSERVED', summary: 'Reserve observed.' } } })
+      : json({ record: { id: IDS.analysis, graph: { nodes: [{ id: RESERVE, properties: { status: 'ok', slot: 123, availableLiquidityUnits: '5000000' } }] }, analysis: { status: 'OBSERVED', summary: 'Evidence observed.', observationId: PROGRAM } } }),
     'POST /v1/decisions/reserve': () => json({ record: { id: IDS.decision, analysis: { status: 'REVIEW', summary: 'Review the supply.', checks: [{ id: 'liquidity', status: 'PASS' }], expiresAt: '2026-10-05T10:05:00.000Z', limits: ['Not approval.'] } } }),
     'POST /v1/lending/intents': () => json({ record: { id, intent: { transactionBase64: UNSIGNED_TX, messageSha256: 'ab'.repeat(32) } } }),
     [`POST /v1/lending/intents/${id}/submit`]: () => json({ event: event('SUBMITTED', { signature: 'txsig', transactionSha256: 'cd'.repeat(32), transactionBase64: SIGNED_TX }) }),

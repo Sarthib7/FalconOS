@@ -123,22 +123,24 @@ test('full journey returns the contract output shapes', () => withStack({}, asyn
   const refresh = body(await call('falcon_refresh_evidence', { session: SESSION }));
   assert.equal(refresh.analysisId, IDS.analysis);
   assert.equal(refresh.status, 'OBSERVED');
+  assert.equal(refresh.reserveStatus, 'OBSERVED');
   assert.deepEqual(refresh.reserve, { availableLiquidityUnits: '5000000', availableLiquidityUsdc: '5', slot: 123 });
   assert.match(refresh.capturedAt, /^2026-10-05T10:00:0\d\.000Z$/);
   const captures = mesh.calls.filter(item => item.path === '/v1/captures');
   assert.deepEqual(captures.map(item => item.body.connectorId), ['kamino-program-docs', 'solana-devnet-klend', 'solana-devnet-reserve-liquidity']);
   assert.deepEqual(captures.map(item => item.body.expectedRevisionId), [IDS.head, null, null]);
   for (const item of captures) assert.match(item.body.requestId, /^[a-f0-9-]{36}$/);
-  const analysis = mesh.calls.find(item => item.path === '/v1/analyses/live');
-  assert.deepEqual({ ...analysis.body, requestId: undefined }, { requestId: undefined, observationId: 'observation:live:solana-devnet-klend', maxHops: 3 });
-
+  const [programAnalysis, reserveAnalysis] = mesh.calls.filter(item => item.path === '/v1/analyses/live');
+  assert.deepEqual({ ...programAnalysis.body, requestId: undefined }, { requestId: undefined, observationId: 'observation:live:solana-devnet-klend', maxHops: 3 });
+  assert.equal(reserveAnalysis.body.observationId, 'observation:live:solana-devnet-reserve-liquidity');
   const decision = body(await call('falcon_reserve_decision', { session: SESSION, proposedUsdc: '0.5', maxUsdc: '1', minBookLiquidityUsdc: '2.25', maxEvidenceAgeSeconds: 120 }));
   assert.equal(decision.decisionId, IDS.decision);
   assert.equal(decision.status, 'REVIEW');
+  assert.equal(decision.proposedUsdc, '0.5');
+  assert.equal(decision.maxUsdc, '1');
   assert.match(decision.next, /may be prepared/);
   const decisionCall = mesh.calls.find(item => item.path === '/v1/decisions/reserve');
   assert.deepEqual(decisionCall.body.scenario, { proposedUnits: '500000', maxProposedUnits: '1000000', minBookLiquidityUnits: '2250000', maxObservationAgeSeconds: 120 });
-
   const prepared = body(await call('falcon_prepare_transaction', prepareArgs));
   assert.deepEqual(Object.keys(prepared), ['intentId', 'action', 'amountUsdc', 'wallet', 'unsignedTransactionBase64', 'messageSha256', 'expiresInSeconds', 'decisionId', 'summary', 'next']);
   assert.equal(prepared.intentId, IDS.intent);
@@ -197,7 +199,7 @@ test('(f) prepare_transaction rejects supply without decisionId and redeem with 
   const { decisionId, ...withoutDecision } = prepareArgs;
   const supply = await call('falcon_prepare_transaction', withoutDecision);
   assert.equal(supply.isError, true);
-  assert.match(supply.content[0].text, /decisionId is required for supply/);
+  assert.match(supply.content[0].text, /Supply needs a decisionId from a REVIEW result of falcon_reserve_decision/);
   const redeem = await call('falcon_prepare_transaction', { ...prepareArgs, action: 'redeem' });
   assert.equal(redeem.isError, true);
   assert.match(redeem.content[0].text, /decisionId is not allowed for redeem/);
@@ -335,3 +337,50 @@ test('(j) falcon_connect is limited per wallet and everything shares the global 
     assert.equal(body(limited).code, 'RATE_LIMITED');
   });
 });
+
+test('(c) falcon_connect_verify UNAUTHORIZED adds retry hint without leaking check details', () => withStack({
+  overrides: { 'POST /v1/auth/wallet/verify': () => ({ status: 401, body: { error: { code: 'UNAUTHORIZED', message: 'A valid wallet session is required.' } } }) },
+}, async ({ call }) => {
+  const result = await call('falcon_connect_verify', { challengeId: IDS.challenge, signature: Buffer.alloc(64, 4).toString('base64') });
+  assert.equal(result.isError, true);
+  const output = body(result);
+  assert.equal(output.code, 'UNAUTHORIZED');
+  assert.match(output.message, /Call falcon_connect for a new challenge and sign it again\./);
+}));
+
+test('(b2) falcon_connect_verify UNAUTHORIZED does not bleed into other tools', () => withStack({
+  overrides: { 'GET /v1/decisions': () => ({ status: 401, body: { error: { code: 'UNAUTHORIZED', message: 'A valid wallet session is required.' } } }) },
+}, async ({ call }) => {
+  const result = await call('falcon_activity', { session: SESSION });
+  assert.equal(result.isError, true);
+  const output = body(result);
+  assert.equal(output.code, 'UNAUTHORIZED');
+  assert.equal(output.message.includes('falcon_connect'), false, 'other tools must not add the connect hint');
+}));
+
+test('falcon_refresh_evidence returns NO_DATA when reserve analysis is not OBSERVED', () => withStack({
+  overrides: {
+    'POST /v1/analyses/live': (c) => c.body?.observationId === 'observation:live:solana-devnet-reserve-liquidity'
+      ? ({ status: 200, body: { record: { id: IDS.reserveAnalysis, analysis: { status: 'NO_DATA', summary: 'Reserve evidence not ready.' }, graph: { issues: ['Current capture solana-devnet-reserve-liquidity failed: timeout'] } } } })
+      : ({ status: 200, body: { record: { id: IDS.analysis, graph: { nodes: [{ id: 'observation:live:solana-devnet-reserve-liquidity', properties: { status: 'ok', slot: 123, availableLiquidityUnits: '5000000' } }] }, analysis: { status: 'OBSERVED', summary: 'Evidence observed.' } } } }),
+  },
+}, async ({ call }) => {
+  const refresh = body(await call('falcon_refresh_evidence', { session: SESSION }));
+  assert.equal(refresh.status, 'NO_DATA');
+  assert.equal(refresh.reserveStatus, 'NO_DATA');
+  assert.equal(refresh.analysisId, IDS.analysis, 'analysisId still from program analysis');
+  assert.match(refresh.summary, /solana-devnet-reserve-liquidity/);
+  assert.match(refresh.next, /Wait a few seconds and call falcon_refresh_evidence again\./);
+  assert.ok(!refresh.next.includes('falcon_reserve_decision'), 'must not suggest reserve_decision when not OBSERVED');
+}));
+
+test('usdc schema: malformed input gets format error, not too-large', () => withStack({}, async ({ call }) => {
+  const redeem = { session: SESSION, action: 'redeem', amountUsdc: '1', analysisId: IDS.analysis };
+  for (const badAmount of ['1e3', '0.1234567']) {
+    const result = await call('falcon_prepare_transaction', { ...redeem, amountUsdc: badAmount });
+    assert.equal(result.isError, true, `${badAmount} must be rejected`);
+    const msg = result.content[0].text;
+    assert.ok(!msg.includes('too large'), `${badAmount}: must not say "too large", got: ${msg}`);
+    assert.ok(msg.includes('decimal USDC string'), `${badAmount}: must say format error, got: ${msg}`);
+  }
+}));
