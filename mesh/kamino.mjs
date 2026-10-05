@@ -124,12 +124,13 @@ function decodeSnapshot(result, a, at, action, amount) {
   tokenMint(mintAccount);
   const receiptMintSupply = tokenMint(receiptAccount, a.marketAuthority);
   const vault = tokenAccount(vaultAccount, a.liquidityMint, a.marketAuthority);
-  if (action === 'supply') check(walletLiquidityAccount !== null, 'Wallet has no Devnet USDC token account.');
-  const walletLiquidity = tokenAccount(walletLiquidityAccount, a.liquidityMint, a.wallet, action === 'redeem');
-  const walletReceipt = tokenAccount(walletReceiptAccount, a.receiptMint, a.wallet, action === 'supply');
   check(walletAccount !== null, 'Wallet has no usable Devnet SOL balance.');
   accountBytes(walletAccount, C.systemProgram, 0);
   check(Number.isSafeInteger(walletAccount.lamports) && walletAccount.lamports > 0, 'Wallet has no usable Devnet SOL balance.');
+  if (action === 'supply') check(walletLiquidityAccount !== null, 'Wallet has no Devnet USDC token account.');
+  if (action === 'redeem') check(walletReceiptAccount !== null, 'Wallet has no Kamino receipt tokens to redeem.');
+  const walletLiquidity = tokenAccount(walletLiquidityAccount, a.liquidityMint, a.wallet, action === 'redeem');
+  const walletReceipt = tokenAccount(walletReceiptAccount, a.receiptMint, a.wallet, action === 'supply');
   check((action === 'supply' ? walletLiquidity : walletReceipt) >= amount, 'Wallet token balance is insufficient.');
   const clock = accountBytes(clockAccount, 'Sysvar1111111111111111111111111111111111111', 40);
   const chainTime = clock.readBigInt64LE(32);
