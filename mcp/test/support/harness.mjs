@@ -46,6 +46,16 @@ function defaults(call) {
   };
 }
 
+// Exact body keys the real Mesh demands per route (mesh/http.mjs keys()). Missing or extra keys get its INVALID_INPUT.
+const BODY_KEYS = {
+  'POST /v1/analyses/live': ['requestId', 'observationId', 'maxHops'],
+  'POST /v1/captures': ['requestId', 'connectorId', 'expectedRevisionId'],
+  'POST /v1/auth/wallet/challenge': ['address'],
+  'POST /v1/auth/wallet/verify': ['challengeId', 'signature'],
+};
+const sameKeys = (body, expected) => body && typeof body === 'object' && !Array.isArray(body)
+  && Object.keys(body).length === expected.length && expected.every(key => Object.hasOwn(body, key));
+
 // Fake Mesh. Enforces what the real one enforces for this client: Origin on wallet-auth routes, a Bearer session elsewhere.
 export async function startFakeMesh(overrides = {}) {
   const calls = [];
@@ -65,6 +75,8 @@ export async function startFakeMesh(overrides = {}) {
     if (isAuthRoute && request.headers.origin !== ORIGIN) return send(403, { error: { code: 'ORIGIN_DENIED', message: 'A permitted browser origin is required.' } });
     const needsBearer = !['POST /v1/auth/wallet/challenge', 'POST /v1/auth/wallet/verify'].includes(key);
     if (needsBearer && request.headers.authorization !== `Bearer ${SESSION}`) return send(401, { error: { code: 'UNAUTHORIZED', message: 'A valid wallet session is required.' } });
+    const expectedKeys = BODY_KEYS[key];
+    if (expectedKeys && !sameKeys(body, expectedKeys)) return send(400, { error: { code: 'INVALID_INPUT', message: 'Request fields do not match the endpoint.' } });
     const handler = overrides[key] ?? defaults(call)[key];
     if (!handler) return send(404, { error: { code: 'NOT_FOUND', message: 'Endpoint not found.' } });
     const result = await handler(call);

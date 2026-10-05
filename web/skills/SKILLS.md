@@ -69,9 +69,10 @@ Falcon uses Kamino's KLend program on Solana Devnet. These are the live addresse
 - REVIEW means every check passed and a supply may be prepared, up to the proposed amount, before `expiresAt`. It is not approval to execute and not a prediction of return.
 - BLOCKED means a limit the human set was exceeded. Do not prepare a supply. Say which check failed and why.
 - NO_DATA means evidence is missing or too old. Do not prepare a supply. Refresh evidence and ask again, once.
-- Why supply needs REVIEW and redeem does not. A supply puts funds into a market, so Falcon requires a saved, unexpired REVIEW decision for this owner that covers the amount. A redeem takes funds out. Blocking an exit would trap the human, so redeem is never gated and must not carry a `decisionId`.
+- Why supply needs REVIEW and redeem does not. A supply puts funds into a market, so Falcon requires a saved, unexpired REVIEW decision for this owner that covers the amount. A redeem takes funds out. Blocking an exit would trap the human, so redeem never needs a decision and must not carry a `decisionId`. A redeem still needs a fresh `analysisId` from `falcon_refresh_evidence`, because Falcon builds the transaction from the observed reserve state.
 - Owner caps. The limits in the decision (maximum, book floor, evidence age) come from the human. Do not pick them yourself to make a decision pass.
 - Devnet cap. A supply is capped at 1 USDC (1000000 base units) on Devnet, whatever the decision says.
+- `executionReady` is always `false`. Opportunities and decisions are information, never approval to execute. It does not block anything. Only the human approves a transaction, and only `falcon_prepare_transaction` builds one.
 - What a receipt proves. `falcon_check_receipt` reads Devnet and reports `CONFIRMED`, `PENDING`, `FAILED` or `UNVERIFIED`. `CONFIRMED` means the exact signed transaction landed on Devnet and the token movements match the intent. It does not prove any yield, a future redeem, or anything about mainnet. `UNVERIFIED` after the blockhash expires does not prove the transaction did not run, so check again before you try anything else.
 
 ## Signing order (do not improvise)
@@ -92,7 +93,7 @@ A prepared intent expires after about 120 seconds. Do steps 1 to 4 without long 
 3. `falcon_yield_opportunities` with `{session}`. Returns provider-indexed USDC lending opportunities and a `limits` list. Repeat the limits to the human.
 4. `falcon_refresh_evidence` with `{session}`. Captures the live sources and builds the analysis. Returns `analysisId`, `status`, `capturedAt`, and the reserve liquidity and slot when present.
 5. `falcon_reserve_decision` with `{session, proposedUsdc, maxUsdc, minBookLiquidityUsdc, maxEvidenceAgeSeconds}`. Returns the decision id, status, summary, checks, `expiresAt` and a `next` hint.
-6. `falcon_prepare_transaction` with `{session, action, amountUsdc, analysisId, decisionId}`. For `supply`, `decisionId` is required and comes from step 5. For `redeem`, leave it out. Returns `unsignedTransactionBase64`, `intentId` and `messageSha256`.
+6. `falcon_prepare_transaction` with `{session, action, amountUsdc, analysisId, decisionId}`. Both actions need `analysisId` from step 4. For `supply`, `decisionId` is required and comes from step 5. For `redeem`, skip step 5 and leave `decisionId` out. Returns `unsignedTransactionBase64`, `intentId` and `messageSha256`.
 7. Follow the signing order above, using `falcon_submit_signed` with `{session, intentId, signedTransactionBase64}`, then your own broadcast.
 8. `falcon_check_receipt` with `{session, intentId}`. Returns the reconciled event. Report it as it is, including a pending or failed status.
 9. `falcon_activity` with `{session}`. Returns the trail of decisions, intents and latest event status. Empty arrays mean nothing exists yet.
