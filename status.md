@@ -997,3 +997,7 @@ The demo used synthetic responses. No live API call occurred.
 [NOT DETERMINED] Phantom sign-in against Mesh remains unverified. The Mesh service is stopped. Production has no assigned `VITE_MESH_API_URL`.
 
 [VERIFIED, coordination correction] The first task batch used `/Volumes/Sarthi MAC/FalconOS`, not the assigned isolated worktree. It left uncommitted changes to `web/bot/App.jsx`, `web/bot/InstallPanel.jsx`, `web/bot/install-commands.mjs`, `web/bot/style.css`, `web/test/install-commands.test.mjs`, `web/dashboard/api.mjs`, `mesh/local.mjs`, and `web/test/mesh-api-config.test.mjs`. I have not restored them because the main worktree already had unrelated uncommitted files.
+
+[VERIFIED, local asset route] `curl -fsSL -o /dev/null -w 'HTTP %{http_code}; bytes=%{size_download}' http://127.0.0.1:5194/SKILLS.md` returned `HTTP 200; bytes=11364`. The skill download command in the Agent tab matches this route.
+
+[VERIFIED, desktop browser smoke] At a 1440x900 CSS viewport, the install panel started at y=90 and measured 520px wide. Axe-core 4.13.0 reported 0 violations, 39 passes, and 1 incomplete rule.
