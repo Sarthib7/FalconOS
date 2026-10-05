@@ -68,6 +68,17 @@ test('V103: registry discovery works without window.solana', async () => {
   assert.equal(fixture.calls.connect, 1);
   assert.equal(fixture.calls.broadcast, 0);
 });
+test('message-signing login does not require a disconnect feature', async () => {
+  const fixture = makeWallet();
+  delete fixture.wallet.features['standard:disconnect'];
+  const session = createSignInWalletSession({ registry: makeRegistry(fixture.wallet), requiredChain: null });
+  assert.equal(session.list()[0].available, true);
+  await session.connect(session.list()[0].id);
+  await session.signMessage(Uint8Array.of(4));
+  await session.disconnect();
+  assert.equal(session.current(), null);
+  assert.equal(fixture.calls.disconnect, 0);
+});
 
 test('V103: wallet and account missing solana:signMessage are rejected clearly', async () => {
   const missingWalletFeature = makeWallet();
@@ -88,9 +99,20 @@ test('V103: a non-Devnet account is rejected', async () => {
   const fixture = makeWallet('Mainnet wallet', [account(FIRST, { chains: ['solana:mainnet'] })]);
   const session = createSignInWalletSession({ registry: makeRegistry(fixture.wallet) });
   assert.equal(session.list()[0].available, false);
-  assert.match(session.list()[0].reason, /does not support Solana Devnet/);
-  await assert.rejects(session.connect(session.list()[0].id), /does not support Solana Devnet/);
+  assert.match(session.list()[0].reason, /solana:devnet/);
+  await assert.rejects(session.connect(session.list()[0].id), /solana:devnet/);
   assert.equal(session.current(), null);
+});
+test('V141: bot login accepts any Solana chain when requested', async () => {
+  const mainnetAccount = account(FIRST, { chains: ['solana:mainnet'] });
+  const fixture = makeWallet('Phantom', [mainnetAccount]);
+  fixture.wallet.chains = ['solana:mainnet'];
+  const session = createSignInWalletSession({ registry: makeRegistry(fixture.wallet), requiredChain: null });
+  assert.equal(session.list()[0].available, true);
+  await session.connect(session.list()[0].id);
+  assert.equal(session.current().address, FIRST);
+  assert.deepEqual(await session.signMessage(Uint8Array.of(1)), Uint8Array.of(9, 8, 7));
+  assert.equal(fixture.calls.broadcast, 0);
 });
 
 test('V103: a wallet change event invalidates the current selection and pending signing', async () => {

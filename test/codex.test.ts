@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chmod } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { makeTempDir } from './temp-dir.ts';
 import {
   buildAgentRequest,
   createAgentRun,
@@ -23,7 +24,7 @@ const fixtureHash = createHash('sha256').update(fixtureBytes).digest('hex');
 const fixedNow = new Date('2026-09-05T13:59:00.000Z');
 
 async function makeBundle(t: {after: (callback: () => void | Promise<void>) => void}): Promise<{bundle: AgentBundle; directory: string}> {
-  const directory = await mkdtemp('/private/tmp/falconos-codex-test-');
+  const directory = await makeTempDir('falconos-codex-test-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   await mkdir(join(directory, 'runs'), {recursive: true});
   await copyFile(fixture, join(directory, 'runs', 'agent-evidence.json'));

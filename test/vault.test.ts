@@ -2,16 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, writeFile, mkdir, symlink, rm, readdir, open } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, symlink, rm, readdir, open } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
+import { makeTempDir } from './temp-dir.ts';
 import { createScan } from '../stablecoins/scan.ts';
 import { demoCycles } from '../src/demo.ts';
 import { buildAgentRequest, createAgentRun } from '../src/agent.ts';
 import { exportScan, exportThesis } from '../src/vault.ts';
 
 async function temporary() {
-  return mkdtemp('/private/tmp/falconos-test-');
+  return makeTempDir('falconos-test-');
 }
 
 async function fixtureThesis(directory: string) {

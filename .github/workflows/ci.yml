@@ -1,0 +1,158 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify repository and Mesh container
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      FALCON_MESH_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.12.0
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+            mesh/package-lock.json
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          toolchain: stable
+          rust-src-dir: engine
+
+      - name: Install locked Node dependencies
+        run: |
+          npm ci
+          npm ci --prefix web
+          npm ci --prefix mesh
+
+      - name: Fetch locked Rust dependencies
+        run: cargo fetch --locked --manifest-path engine/Cargo.toml
+
+      - name: Initialize disposable Mesh schema
+        run: npm --prefix mesh run init-db
+        env:
+          FALCON_MESH_ALLOW_SCHEMA_SETUP: "1"
+
+      - name: Apply restricted Mesh role candidate
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN;"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f mesh/deploy/supabase-permissions.sql
+
+      - name: Smoke restricted wallet-auth grants
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          BEGIN;
+          SET ROLE falcon_mesh_app;
+          INSERT INTO falcon_mesh.wallet_auth_challenges
+            (challenge_id, wallet_address, origin, message, created_at, expires_at)
+          VALUES
+            ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', repeat('1', 32), 'https://falcon.example', 'CI grant check', now(), now() + interval '4 minutes');
+          DO $$
+          BEGIN
+            IF (SELECT count(*) FROM falcon_mesh.wallet_auth_challenges WHERE challenge_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 1 THEN
+              RAISE EXCEPTION 'wallet challenge SELECT grant failed';
+            END IF;
+            IF has_table_privilege(current_user, 'falcon_mesh.analyses', 'UPDATE') THEN
+              RAISE EXCEPTION 'unexpected Mesh UPDATE grant';
+            END IF;
+          END
+          $$;
+          DELETE FROM falcon_mesh.wallet_auth_challenges WHERE challenge_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+          INSERT INTO falcon_mesh.wallet_auth_sessions
+            (token_hash, wallet_address, owner_id, created_at, expires_at)
+          VALUES
+            (repeat('a', 64), repeat('1', 32), 'wallet_' || repeat('a', 56), now(), now() + interval '20 minutes');
+          UPDATE falcon_mesh.wallet_auth_sessions SET revoked_at = now() WHERE token_hash = repeat('a', 64);
+          DELETE FROM falcon_mesh.wallet_auth_sessions WHERE token_hash = repeat('a', 64);
+          ROLLBACK;
+          SQL
+
+      - name: Run five-scope repository verification
+        run: npm run verify
+
+      - name: Build Mesh container
+        run: docker build --file mesh/Dockerfile --tag falcon-mesh:ci mesh
+
+      - name: Smoke Mesh container against disposable PostgreSQL
+        run: |
+          set -euo pipefail
+          docker run --rm --detach --network host --name falcon-mesh-ci \
+            --env DATABASE_URL="$DATABASE_URL" \
+            --env FALCON_MESH_TOKEN_HASHES='{"0000000000000000000000000000000000000000000000000000000000000000":"ci_owner"}' \
+            --env FALCON_MESH_ORIGINS='http://127.0.0.1:4183' \
+            falcon-mesh:ci
+          trap 'docker stop falcon-mesh-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8791/readyz >/dev/null; then
+              curl --fail --silent http://127.0.0.1:8791/healthz
+              curl --fail --silent http://127.0.0.1:8791/readyz
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs falcon-mesh-ci
+          exit 1
+
+  web-build:
+    name: Build web targets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.12.0
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            mesh/package-lock.json
+
+      - name: Install locked web and Mesh dependencies
+        run: |
+          npm ci --prefix web
+          npm ci --prefix mesh
+
+      - name: Build production routes
+        run: |
+          npm --prefix web run build:site
+          npm --prefix web run build:bot
+          npm --prefix web run build:treasury
+          npm --prefix web run build:mesh

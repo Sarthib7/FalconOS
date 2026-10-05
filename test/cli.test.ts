@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { copyFile, mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { makeTempDir } from './temp-dir.ts';
 import { fileURLToPath } from 'node:url';
 
 const execute = promisify(execFile);
@@ -255,7 +256,7 @@ async function runRealSignalProcess(mode: 'request' | 'polling', stopSignal: Nod
 }
 
 test('F4/F6: one command produces inspectable evidence and an Obsidian run note', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-cli-test-');
+  const directory = await makeTempDir('falconos-cli-test-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   const {stdout, stderr} = await execute(process.execPath, [cli, 'demo', '--amount', '10', '--data', directory]);
   assert.equal(stderr, '');
@@ -276,7 +277,7 @@ test('F1: reject unsupported commands and unsafe numeric arguments before networ
 });
 
 test('P1-T07: fixture thesis command saves one cited JSON record and linked note', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-cli-thesis-');
+  const directory = await makeTempDir('falconos-cli-thesis-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   await mkdir(join(directory, 'runs'), {recursive: true});
   await copyFile(agentFixture, join(directory, 'runs', 'agent-evidence.json'));
@@ -302,7 +303,7 @@ test('P1-T07: fixture thesis command saves one cited JSON record and linked note
 });
 
 test('P1-T07: normal Codex CLI stays disabled until process controls are verified', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-cli-codex-disabled-');
+  const directory = await makeTempDir('falconos-cli-codex-disabled-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   const result = await execute(process.execPath, [cli, 'thesis',
     '--evidence', 'runs/missing.json', '--evidence-sha256', '0'.repeat(64),
@@ -320,7 +321,7 @@ test('P1-T07: normal Codex CLI stays disabled until process controls are verifie
 });
 
 test('P1-T07: invalid caller hash saves no thesis record or note', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-cli-thesis-hash-');
+  const directory = await makeTempDir('falconos-cli-thesis-hash-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   await mkdir(join(directory, 'runs'), {recursive: true});
   await copyFile(agentFixture, join(directory, 'runs', 'agent-evidence.json'));
@@ -349,7 +350,7 @@ test('CHK-07: bounded exit codes, consecutive incomplete scans, and reset are vi
     {name: 'healthy scan resets failure count', mode: 'reset', args: ['watch', '--amount', '10', '--interval', '60', '--cycles', '6'], exitCode: 0, complete: [false, false, true, false, false, true], saved: 6, requests: 6},
   ];
   for (const expected of cases) {
-    const directory = await mkdtemp('/private/tmp/falconos-cli-contract-');
+    const directory = await makeTempDir('falconos-cli-contract-');
     t.after(() => rm(directory, {recursive: true, force: true}));
     const result = await runHarness(expected.args, expected.mode, directory);
     assert.equal(result.exitCode, expected.exitCode, `${expected.name}: ${result.stderr}`);
@@ -371,7 +372,7 @@ test('CHK-07: bounded exit codes, consecutive incomplete scans, and reset are vi
 });
 
 test('F2: live assessment starts after collection completes', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-cli-clock-');
+  const directory = await makeTempDir('falconos-cli-clock-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   const result = await runHarness(['scan', '--amount', '10'], 'advancing-clock', directory);
   assert.equal(result.exitCode, 0, result.stderr);
@@ -399,7 +400,7 @@ test('CHK-08: cancellation during request or polling sleep preserves records and
     {name: 'polling cancellation', mode: 'cancel-sleep', args: ['watch', '--amount', '10', '--interval', '60', '--cycles', '2'], outputs: 1, saved: 1},
   ];
   for (const expected of cases) {
-    const directory = await mkdtemp('/private/tmp/falconos-cli-cancel-');
+    const directory = await makeTempDir('falconos-cli-cancel-');
     t.after(() => rm(directory, {recursive: true, force: true}));
     const result = await runHarness(expected.args, expected.mode, directory);
     assert.equal(result.exitCode, 0, expected.name);
@@ -411,7 +412,7 @@ test('CHK-08: cancellation during request or polling sleep preserves records and
 });
 
 test('CHK-08: production SIGTERM during a real source request stops before export', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-cli-sigterm-');
+  const directory = await makeTempDir('falconos-cli-sigterm-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   const result = await runRealSignalProcess('request', 'SIGTERM', directory);
   assert.equal(result.exitCode, 0);
@@ -423,7 +424,7 @@ test('CHK-08: production SIGTERM during a real source request stops before expor
 });
 
 test('CHK-08: production SIGINT during a real source request stops before export', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-cli-sigint-request-');
+  const directory = await makeTempDir('falconos-cli-sigint-request-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   const result = await runRealSignalProcess('request', 'SIGINT', directory);
   assert.equal(result.exitCode, 0);
@@ -435,7 +436,7 @@ test('CHK-08: production SIGINT during a real source request stops before export
 });
 
 test('CHK-08: production SIGINT during polling stops after one completed scan', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-cli-sigint-');
+  const directory = await makeTempDir('falconos-cli-sigint-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   const result = await runRealSignalProcess('polling', 'SIGINT', directory);
   assert.equal(result.exitCode, 0);
@@ -448,7 +449,7 @@ test('CHK-08: production SIGINT during polling stops after one completed scan', 
 });
 
 test('CHK-08: production SIGTERM during polling stops after one completed scan', async t => {
-  const directory = await mkdtemp('/private/tmp/falconos-cli-sigterm-polling-');
+  const directory = await makeTempDir('falconos-cli-sigterm-polling-');
   t.after(() => rm(directory, {recursive: true, force: true}));
   const result = await runRealSignalProcess('polling', 'SIGTERM', directory);
   assert.equal(result.exitCode, 0);

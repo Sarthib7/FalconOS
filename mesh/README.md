@@ -1,12 +1,12 @@
 # Local knowledge mesh
 
-[VERIFIED, source: `server.mjs`, `store.mjs`, `http.mjs`] This Node service retains sources and analyses in PostgreSQL. The browser at `/mesh/` shows the evidence graph and a Devnet lending terminal. The server derives the workspace from a hashed access token.
+[VERIFIED, source: `server.mjs`, `http.mjs`, `auth.mjs`, `wallet-auth.mjs`] This Node service retains sources, analyses, and wallet sessions in PostgreSQL. Existing clients can use hashed static tokens or Supabase sessions. The bot owner comes from a server-verified wallet session.
 
-[VERIFIED, source: `package.json`, `schema.sql`, `migrations/0002_lending.sql`] Use Node 24.12 or later and PostgreSQL. The schema has five tables. Startup checks the schema without changing it.
+[VERIFIED, source: `package.json`, `schema.sql`, `migrations/0002_lending.sql`, `migrations/0003_wallet_auth.sql`] Use Node 24.12 or later and PostgreSQL. The schema is version 3. Startup checks it without changing it. Migration 0003 adds wallet challenges and sessions.
 
 ## Run
 
-[INFERRED, fresh local setup] Run these commands from the repository root. Use a new local database. Inspect both SQL files before the explicit initialization command.
+[INFERRED, fresh local setup] Run these commands from the repository root. Use a new local database. Review `schema.sql` and migrations `0002_lending.sql` and `0003_wallet_auth.sql` before explicit initialization.
 
 ```bash
 npm --prefix mesh ci
@@ -29,6 +29,12 @@ pbcopy < mesh/.local/operator-token
 [INFERRED, browser steps] Paste the token into the connection form. Load synthetic evidence to inspect the graph. For live evidence, select live mode, capture both connectors, and run analysis. Connect a Wallet Standard wallet that supports Devnet and versioned transaction signing. Preparation requires the wallet's input token account and enough Devnet SOL. The terminal supports one fixed Kamino reserve and caps supply input at one Devnet USDC.
 
 [VERIFIED, scope: `kamino.mjs`, `web/mesh/wallet.mjs`] Wallet discovery uses capabilities rather than a wallet brand list. A wallet with missing capabilities is rejected. A real wallet supply and redemption round trip remains unverified. The server has no wallet key. Signing and broadcasting require explicit browser actions.
+
+## Bot wallet authentication
+
+[VERIFIED, source: `mesh/http.mjs`, `mesh/wallet-auth.mjs`, `migrations/0003_wallet_auth.sql`] The bot signs an origin-bound server challenge with `solana:signMessage`. The server derives the owner from the wallet address and stores one-time challenges and hashed 30-minute sessions in PostgreSQL. Sign-in does not authorize transactions or move funds.
+
+[VERIFIED, source: `mesh/http.mjs`] The API exposes `POST /v1/auth/wallet/challenge`, `POST /v1/auth/wallet/verify`, `GET /v1/auth/wallet/session`, and `POST /v1/auth/wallet/logout`. Add the bot origin to `FALCON_MESH_ORIGINS`. Static mesh tokens and Supabase session verification remain available for existing clients.
 
 ## Preview and verification
 
