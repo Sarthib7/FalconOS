@@ -315,7 +315,8 @@ test('sign-out wins a pending post-proof legacy connect', async () => {
   dom.window.phantom = null;
 
   const signing = app.signIn();
-  for (let attempt = 0; attempt < 100 && legacyA.calls.connect === 0; attempt += 1) await new Promise((resolve) => setImmediate(resolve));
+  // Wait on a wall-clock deadline, not a tick count: slower CI runners need more ticks before connect() runs.
+  for (const deadline = Date.now() + 2000; legacyA.calls.connect === 0 && Date.now() < deadline;) await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(legacyA.calls.connect, 1);
 
   app.signOut();
