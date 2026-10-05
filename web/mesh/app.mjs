@@ -1,4 +1,5 @@
 import { makeDemoDocuments } from '../../mesh/fixtures.mjs';
+import { mountLendingTerminal } from './terminal.mjs';
 import { clearWalletSession, restoreWalletSession as restoreBotWalletSession } from '../bot/auth.mjs';
 
 const $ = (id) => document.getElementById(id);
