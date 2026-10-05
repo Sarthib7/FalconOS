@@ -1,5 +1,7 @@
 # Web Vision
 
+[VERIFIED, sources: `README.md`, `vite.config.js`] Historical snapshot. Current landing and dashboard are React/Vite routes. See [current source layout](README.md#source-layout).
+
 ## Purpose
 
 [VERIFIED, repository read, 2026-09-16] `web/` is an isolated **Vite static** site. The production landing page is a self-contained dark Liquid Metal `index.html` (SPEC V55): council narrative, interactive Research/Strategy/Risk/Capital tour, and advisory-only copy. A separate `/dash` snapshot page shows illustrative market data; it is not live trading.
