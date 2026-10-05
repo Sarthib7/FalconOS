@@ -8,6 +8,25 @@
 
 [VERIFIED, inspected setup record] Supabase has the reviewed mesh schema, but the application role remains `NOLOGIN`. The Railway API connection is pending. See [runtime prerequisites](docs/supabase-setup.md#runtime-connection). The public mesh page therefore does not establish a hosted backend connection.
 
+### Repository map
+
+[VERIFIED, directory listing and package manifests, branch `docs/repo-map-20261005`] Folders stay where they are. Use this table to find the owner of a change, then open that folder's guide.
+
+| Path | What it holds | Start reading |
+| --- | --- | --- |
+| `src/`, `test/` | TypeScript CLI (`demo`, `scan`, `watch`, `plugin`), advisory plugin, agent validation, Codex adapter, vault export. Root package. | [Interfaces](docs/interfaces.md), [`src/cli.ts`](src/cli.ts) |
+| `stablecoins/`, `perps/`, `stocks/` | Council domain modules for the USDC/EURC scan, perpetuals, and stocks. Each has its own `test/` and `vision.md`. | [Interfaces](docs/interfaces.md) |
+| `engine/` | Rust stocks engine and local HTTP views. | [engine/README.md](engine/README.md) |
+| `mesh/` | Node knowledge-mesh API, PostgreSQL schema and migrations, Railway and Supabase deployment files. Own `package.json` and lockfile. | [mesh/README.md](mesh/README.md), [Knowledge mesh](docs/knowledge-mesh.md) |
+| `web/` | Vite and React site, browser terminals, and the signup Pages Function. Own `package.json` and lockfile. | [web/README.md](web/README.md) |
+| `web/goal/` | Separate static vision deck with its own Cloudflare Worker configuration. It is not a route of the Vite build. | [web/goal/README.md](web/goal/README.md) |
+| `scripts/` | `npm run verify` runner and its tests. Website and mesh release checks are in `web/scripts/` and `mesh/check-release.mjs`. | [Verification commands](docs/README.md#verification-and-release-checks) |
+| `docs/` | Component map, contracts, ADRs, verification records, handoffs, pitches, design specs. | [docs/README.md](docs/README.md) |
+| `plans/` | Roadmap, tasks, checks, treasury MVP plan. | [plans/README.md](plans/README.md) |
+| `SPEC.md`, `status.md`, `CONTEXT.md`, `VISION.md` | Specification; current work and measurements; product context; historical vision. | [Status](status.md), [Context](CONTEXT.md) |
+| `research/`, `memory/`, `.superstack/` | Reference notes on external approaches, recorded lessons, and earlier validation reports. | [research/falconos-synthesis.md](research/falconos-synthesis.md) |
+| `data/` | Output of `demo`, `scan`, and `watch`. The folder is listed in `.gitignore`, but 21 files under `data/graph/` and `data/verification/` are tracked as evidence. | [Verification records](docs/verification/) |
+
 ### Run locally
 
 [VERIFIED, package manifests] Node `>=24.12.0` is required for the complete local setup. Root, web, and mesh have separate lockfiles. [INFERRED, setup commands] Install each package once from the repository root:
@@ -33,6 +52,10 @@ npm --prefix web run dev:local
 | `/treasury/` | Synthetic decision graph, saved decisions, and replay in this browser. |
 | `/mesh/` | Persistent graph and Devnet lending terminal. Requires the separately running [mesh API and PostgreSQL](mesh/README.md#run). |
 | `/app/` | Separate browser wallet sign-in and manual Devnet swap terminal. Wallet approval is required for a transaction. |
+
+[VERIFIED, source: `web/app/index.html:9`, `web/app/index.html:41`, `web/vite.config.js:6`] `/app/` is the browser Devnet terminal (page title "FalconOS · Devnet Terminal"); its quote, simulation, send, and status calls use the Devnet RPC. The production build also includes `/product/`, `/research/`, and `/dash/`. The local development server serves `/dash/` and `/research/` from the localhost research terminal (`web/local-terminal.html`), and `web/copilot/` is not a build input.
+
+[VERIFIED, source: `web/goal/README.md`, `web/goal/wrangler.jsonc`, `web/goal/public/index.html:6`] `web/goal/` is a separate static vision deck titled "FalconOS | We find markets for your capital". Its own Worker configuration names the custom domain `goal.falconos.markets`. Its slides are illustrative, and this checkout contains no record of its deployment state.
 
 [INFERRED, preview commands] Stop the development server before using the same port for a built preview:
 

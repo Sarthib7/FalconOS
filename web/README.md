@@ -38,6 +38,24 @@ This is an isolated Vite static site. No Wrangler configuration is required for 
 
 Because the repository is a monorepo, set the root directory to `web`; the command then runs from that directory and writes the static artifact to `web/dist`.
 
+## Source layout
+
+[VERIFIED, directory listing and `vite.config.js`, branch `docs/repo-map-20261005`] The main build is multi-page. Its eight inputs are `index.html` plus one folder each:
+
+| Route | Source | Note |
+| --- | --- | --- |
+| `/` | `index.html`, `landing/` | React landing and signup form. |
+| `/product/`, `/research/` | `product/`, `research/` | Static pages. |
+| `/dash/` | `dash/` | Dashboard entry. The local dev server serves `local-terminal.html` here instead. |
+| `/dashboard/` | `dashboard/` | React Control Centre; see [dashboard/README.md](dashboard/README.md). |
+| `/treasury/` | `treasury/` | Synthetic decision graph and browser-local history. |
+| `/mesh/` | `mesh/` | Graph viewer and Devnet lending terminal; needs the [mesh API](../mesh/README.md). |
+| `/app/` | `app/` | Browser Devnet terminal: wallet sign-in, Devnet portfolio, manual swap ticket. |
+
+[VERIFIED, directory listing] Other folders are not routes of this build. `functions/` is the signup Pages Function and `migrations/` its D1 schema. `public/` holds static assets and the `design-reference/` HTML copies. `scripts/` holds release checks. `test/` holds web tests and browser harnesses. `copilot/` is a development-only page, absent from the build inputs. `goal/` is the static vision deck below. `vite.mesh.config.js` and `vite.treasury.config.js` build the separate mesh and treasury artifacts.
+
+[VERIFIED, source: `goal/README.md`, `goal/wrangler.jsonc`, `goal/public/index.html:6`] `goal/` is a static single-file vision deck ("FalconOS | We find markets for your capital"). It has its own Cloudflare Worker configuration for `goal.falconos.markets` and is deployed separately with `npx wrangler@latest deploy` from that folder. It does not use the Pages settings above. This checkout has no record of its deployment state.
+
 ## Public pages
 
 [VERIFIED, retained release and source, 2026-09-27] `/treasury/`, `/dashboard/`, and `/mesh/` are included in the published build. This supersedes the earlier pending-publication statement. Treasury and Control Centre use synthetic data and browser storage. The mesh viewer still needs a separately hosted API; a published page does not establish that connection. See [the route map](../docs/README.md) and [graph contract](../docs/decision-graph.md).
