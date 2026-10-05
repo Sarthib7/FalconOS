@@ -57,7 +57,7 @@ test('unset values in a production build are unconfigured', () => {
 test('production has a default skill URL but never a default MCP URL', () => {
   const config = resolveInstallConfig({ mcpUrl: MCP, skillUrl: undefined, isProd: true });
   assert.equal(config.state, 'ready');
-  assert.equal(config.skillUrl, 'https://falconos.markets/SKILLS.md');
+  assert.equal(config.skillUrl, 'https://agents.falconos.markets/SKILLS.md');
   assert.equal(PROD_SKILL_URL, config.skillUrl);
   const none = resolveInstallConfig({ isProd: true });
   assert.equal(none.state, 'unconfigured');
@@ -145,8 +145,8 @@ test('resolveSkillConfig defaults to PROD_SKILL_URL when unset in a prod build',
   const config = resolveSkillConfig({ isProd: true });
   assert.equal(config.state, 'ready');
   assert.equal(config.skillUrl, PROD_SKILL_URL);
-  // Confirm the constant is the root domain, not a hard-coded subdomain.
-  assert.ok(config.skillUrl.startsWith('https://falconos.markets/'), 'PROD_SKILL_URL must use falconos.markets root');
+  // The selected bot entrypoint is the agents subdomain.
+  assert.ok(config.skillUrl.startsWith('https://agents.falconos.markets/'), 'PROD_SKILL_URL must use the selected agents host');
 });
 
 test('resolveSkillConfig defaults to the exact loopback URL in a dev build', () => {

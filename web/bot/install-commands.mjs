@@ -7,7 +7,7 @@ export const DEV_MCP_URL = 'http://127.0.0.1:8792/mcp';
 export const DEV_SKILL_URL = 'http://127.0.0.1:5194/SKILLS.md';
 // PROD_SKILL_URL is the hardcoded fallback only; the authoritative source is the
 // VITE_FALCON_SKILL_URL build variable passed by the app at runtime.
-export const PROD_SKILL_URL = 'https://falconos.markets/SKILLS.md';
+export const PROD_SKILL_URL = 'https://agents.falconos.markets/SKILLS.md';
 export const UNCONFIGURED_NOTICE = 'The plugin server is not deployed yet';
 export const LOCAL_PREVIEW_NOTICE = 'These commands point at a server on your own machine. They only work while you run the Falcon plugin locally.';
 

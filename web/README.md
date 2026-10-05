@@ -125,7 +125,7 @@ After creating the Pages project, open **Pages → the project → Custom domain
 
 [VERIFIED, source: `web/bot/App.jsx`, `web/bot/InstallPanel.jsx`] The signed-out bot page shows a Human/Agent switch after the site navigation and before the hero. Human is selected by default and shows the Phantom wallet sign-in component. Agent shows one copyable skill-download command: `curl -fsSL <skill URL>`.
 
-[VERIFIED, source: `web/scripts/skills-plugin.mjs`, `web/skills/SKILLS.md`] The skill template is emitted as `/SKILLS.md`. Set `VITE_FALCON_SKILL_URL` to the chosen host's `/SKILLS.md` path. Dev defaults to `http://127.0.0.1:5194/SKILLS.md`; production falls back to `https://falconos.markets/SKILLS.md`. Set `VITE_FALCON_MCP_URL` to an HTTPS `/mcp` URL before production so the downloaded skill contains the MCP install instructions.
+[VERIFIED, source: `web/scripts/skills-plugin.mjs`, `web/skills/SKILLS.md`] The skill template is emitted as `/SKILLS.md`. Set `VITE_FALCON_SKILL_URL` to the chosen host's `/SKILLS.md` path. Dev defaults to `http://127.0.0.1:5194/SKILLS.md`; production falls back to `https://agents.falconos.markets/SKILLS.md`. Set `VITE_FALCON_MCP_URL` to an HTTPS `/mcp` URL before production so the downloaded skill contains the MCP install instructions.
 
 [VERIFIED, source: `web/bot/install-commands.mjs`, `web/scripts/skills-plugin.mjs`] A production build without `VITE_FALCON_MCP_URL` keeps the bot page buildable and gives the Agent tab a skill download command. The downloaded skill says the MCP server is not deployed and includes no MCP setup commands.
 
