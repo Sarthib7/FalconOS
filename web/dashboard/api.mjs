@@ -6,8 +6,10 @@
 // call-time where the existing sign-in error UI can display it.
 export function resolveApiBase(env = (typeof import.meta !== 'undefined' ? import.meta.env : undefined) ?? {}) {
   const configured = env.VITE_MESH_API_URL;
-  if (!configured && env.PROD) return null; // unconfigured production — callers will surface a clear error
-  return (configured || 'http://127.0.0.1:8791').replace(/\/$/, '');
+  if (!configured) return env.PROD ? null : 'http://127.0.0.1:8791'; // unconfigured production — callers will surface a clear error
+  // Production sends wallet session tokens to this URL, so it must be HTTPS.
+  if (env.PROD && !configured.startsWith('https://')) return null;
+  return configured.replace(/\/$/, '');
 }
 
 export const API_BASE = resolveApiBase();
@@ -15,7 +17,7 @@ export const TOKEN_PATTERN = /^[A-Za-z0-9._~-]{32,256}$/;
 
 export async function meshRequest(token, path, body) {
   if (!API_BASE) throw new Error(
-    'VITE_MESH_API_URL is not set. ' +
+    'VITE_MESH_API_URL is not set to an HTTPS URL. ' +
     'Set it to the deployed Mesh API HTTPS base URL. ' +
     'FALCON_MESH_ORIGINS must include this site origin.'
   );

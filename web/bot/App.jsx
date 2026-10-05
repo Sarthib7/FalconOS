@@ -185,7 +185,7 @@ export default function App() {
   return <div className="bot-site">
     <header className="bot-nav">
       <Brand />
-      <nav aria-label="Site navigation"><a href="#how-it-works">How it works</a><a href="#safety">Safety</a><a className="bot-nav-login" href="#install" onClick={() => setInstallTab('human')}>Log in <span aria-hidden="true">↗</span></a></nav>
+      <div className="bot-nav-wallet"><PhantomWalletConnect compact wallets={walletState.wallets} current={walletState.current} injected={injectedPhantom} pending={authPending} error={authError} onSignIn={(id) => { setInstallTab('human'); return signIn(id); }} onInjectedSignIn={() => { setInstallTab('human'); return signInInjected(); }} onSignOut={signOut} /></div>
     </header>
     <main>
       <InstallPanel skillUrl={import.meta.env.VITE_FALCON_SKILL_URL} isProd={import.meta.env.PROD} tab={installTab} onTabChange={setInstallTab}>

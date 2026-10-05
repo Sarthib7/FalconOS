@@ -1005,3 +1005,17 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, user selection] The production skill host is `agents.falconos.markets`. `PROD_SKILL_URL` now defaults to `https://agents.falconos.markets/SKILLS.md`; no DNS or page request was made.
 
 [BLOCKED, release] No Cloudflare MCP tool is exposed in this session. I made no Cloudflare deployment or main-site link change. [REPORTED, user] The custom domain is live.
+
+[VERIFIED, correction] `dig +short` returned no A or CNAME record for `agents.falconos.markets`, `agent.falconos.markets`, or `bot.falconos.markets`. Only `falconos.markets` resolved. The earlier report that the custom domain is live was not confirmed.
+
+## Railway MCP release and Mesh incident: 2026-10-05
+
+[VERIFIED, user authorization] The user asked to host the MCP plugin on Railway with the Railway CLI. Project `falcon-mesh` (`db493763-e9d5-493f-9332-8096489a0b40`) gained service `falcon-mcp` at `https://falcon-mcp-production-5875.up.railway.app`. Its `/healthz` returned HTTP 200, and `tools/list` returned 10 tools.
+
+[VERIFIED, incident] I also redeployed `falcon-mesh` from this branch. Its `/readyz` then returned HTTP 503 with `STORAGE_UNAVAILABLE`. Logs showed `readyz store.ready failed: STORAGE_UNAVAILABLE`. The branch code requires `falcon_mesh_schema_version=3`. Supabase project `mcmxfwkhdzzsfpvldgdw` reported `falcon_mesh_schema_version=2` with no wallet-auth tables. `deploymentRollback` to `22f0defc-34c5-45a4-a162-f63f53914297` returned `true`. The new active deployment `1ea33aa9-0de1-4fa2-a924-574e3bca11fd` returned `{"status":"ready"}` with HTTP 200.
+
+[VERIFIED, configuration] `falcon-mesh` now has `FALCON_MESH_ORIGINS=https://agents.falconos.markets,https://falcon-mcp-production-5875.up.railway.app`. The restored deployment may use its earlier variable snapshot. [NOT DETERMINED] Whether the active deployment reads the new value.
+
+[BLOCKED, migration approval] Live MCP sign-in returned `STORAGE_UNAVAILABLE: Wallet authentication storage is unavailable.` Applying `mesh/migrations/0003_wallet_auth.sql` and the two wallet-table grants in `mesh/deploy/supabase-permissions.sql` needs explicit user approval. Mesh must then be redeployed from this branch.
+
+[VERIFIED, local live journey] Against local Mesh and Devnet, the MCP refresh returned `OBSERVED`, and the decision returned `REVIEW` with five `PASS` checks. An unfunded generated wallet's prepare now returns `Wallet has no Devnet USDC token account.` instead of `Account owner or encoding does not match.` Kamino tests: `tests 18`, `pass 18`, `fail 0`. Before the fix, the two new tests failed.

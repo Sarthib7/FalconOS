@@ -39,6 +39,10 @@ test('configured production URL: strips trailing slash', () => {
   );
 });
 
+test('configured production URL: rejects plain http so session tokens never travel in cleartext', () => {
+  assert.equal(resolveApiBase({ PROD: true, VITE_MESH_API_URL: 'http://mesh.falconos.example' }), null);
+});
+
 test('configured dev URL: honours VITE_MESH_API_URL even when not in production', () => {
   assert.equal(
     resolveApiBase({ PROD: false, VITE_MESH_API_URL: 'http://127.0.0.1:9000' }),
