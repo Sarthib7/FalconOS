@@ -1023,3 +1023,15 @@ The demo used synthetic responses. No live API call occurred.
 [BLOCKED, Cloudflare] The user chose to connect Cloudflare MCP and retry. No Cloudflare MCP tool is mounted in this session, so `agents.falconos.markets` is not deployed.
 
 [VERIFIED, local live journey] Against local Mesh and Devnet, the MCP refresh returned `OBSERVED`, and the decision returned `REVIEW` with five `PASS` checks. An unfunded generated wallet's prepare now returns `Wallet has no Devnet USDC token account.` instead of `Account owner or encoding does not match.` Kamino tests: `tests 18`, `pass 18`, `fail 0`. Before the fix, the two new tests failed.
+
+## Custom service domains and agent feedback: 2026-10-06
+
+[VERIFIED, correction] The 2026-10-05 `[BLOCKED, Cloudflare]` entry above is superseded. `agents.falconos.markets` is a proxied CNAME to Pages project `falcon-agents`. `/` and `/SKILLS.md` return HTTP 200.
+
+[VERIFIED, configuration] Railway serves `mcp.falconos.markets` (port 8792) and `api.falconos.markets` (port 8080). Certificates stayed in `CERTIFICATE_STATUS_TYPE_VALIDATING_OWNERSHIP` until `_railway-verify.mcp` and `_railway-verify.api` TXT records existed; the Railway CLI output did not list them. `FALCON_MESH_API_URL=https://api.falconos.markets`, `FALCON_MCP_ORIGIN=https://mcp.falconos.markets`. A live sign-in message names `mcp.falconos.markets`.
+
+[VERIFIED, fresh-agent rounds] Round 2 found `falcon_refresh_evidence` returned `{"code":"INVALID_INPUT","message":"Request fields do not match the endpoint."}` because the reserve analysis call from #39 omitted `maxHops`. #41 fixed it and made the fake Mesh enforce exact body keys. After the #41 deploy (`bdcaca01`), live refresh returned `OBSERVED` with an `analysisId`, the decision returned `REVIEW`, a missing `analysisId` returned `analysisId is required. Get it from falcon_refresh_evidence first.`, and a call after disconnect returned `A valid wallet session is required. Sign in again with falcon_connect, then falcon_connect_verify.` No transaction was signed or broadcast.
+
+[NOT DETERMINED] Round-2 tester reported that `falcon_reserve_decision` returns a decision without the caller passing an `analysisId`, so the caller cannot see which evidence backed it. Not investigated.
+
+[PLANNED, user choice] Keep `falcon-mcp-production-5875.up.railway.app` and `falcon-mesh-production.up.railway.app` until 2026-10-13, then delete both service domains and drop them from `FALCON_MESH_ORIGINS` and `FALCON_MCP_ALLOWED_HOSTS`. No doc or skill links to them.
