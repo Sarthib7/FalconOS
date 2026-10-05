@@ -1,5 +1,9 @@
 # ADR 0006: One customer agent over one decision engine
 
+## Product direction update, 2026-10-05
+
+[VERIFIED, user direction] Keep one shared Decision Engine for both delivery paths. Individuals access lower-cost capabilities through plugins in their existing agent environment. Organizations receive a Falcon-hosted workspace and a dedicated Falcon Agent. The hosted agent may coordinate CFO, budget, compliance workflow, treasury, stocks, and hedging tasks. Customer-specific data and mandates must stay isolated. Exact tenancy and plugin contracts remain design work.
+
 [VERIFIED, user direction, 2026-09-30] Status: Accepted as architecture destination. The customer talks to one agent. Specialists and graphs run in the backend. Other agents use the same engine through a plugin.
 
 ## Context

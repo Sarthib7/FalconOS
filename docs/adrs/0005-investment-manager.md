@@ -1,5 +1,11 @@
 # ADR 0005: FalconOS destination is an investment manager with a deal desk
 
+**Status:** Historical decision, partially superseded by ADRs 0008 and 0009. Investment management remains the product destination. The pooled-capital and custody model below is no longer the default.
+
+## Product direction update, 2026-10-05
+
+[VERIFIED, user direction] The investment-management destination now uses customer-specific Falcon Agents over customer-controlled wallets or accounts. FalconOS manages agent infrastructure and decision graphs. It does not take custody or pool customer capital in this product direction. The 2026-09-30 pooled-capital interpretation below is superseded as the default model. Investment-management capabilities remain a future destination, not a current capability. A separate pooled fund remains unselected. See [ADR 0008](0008-two-tier-agent-platform.md) and [ADR 0009](0009-customer-controlled-assets.md).
+
 [VERIFIED, user choice, 2026-09-30] The user chose the investment-manager operating model, including a deal desk. Status: Accepted as product destination. This does not grant the current codebase custody, pooling, signing, or order authority.
 
 ## Context

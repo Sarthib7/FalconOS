@@ -1,4 +1,6 @@
-# Handoff: FalconOS product destination, 2026-09-30
+# Archived handoff: FalconOS product destination, 2026-09-30
+
+**Status:** Historical. ADRs 0008 and 0009 and the 2026-10-05 product direction supersede this handoff's pooled-capital interpretation. Retained for decision history. Do not use it as current product scope.
 
 [VERIFIED, user stop] The user said write this back and close. No SPEC edit, Devnet work, commit of mesh/dashboard code, deploy, or transaction is authorized by this handoff.
 

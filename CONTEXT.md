@@ -1,6 +1,14 @@
 # FalconOS
 
 
+## Session update: 2026-10-05
+
+[VERIFIED, user direction, 2026-10-05] FalconOS has two delivery paths: a lower-cost plugin for individuals and a Falcon-hosted organization workspace with a dedicated Falcon Agent. Organization agents support CFO, budget, compliance workflow, treasury, stocks, and hedging tasks. Customer assets remain in customer-controlled wallets or accounts. FalconOS runs agent infrastructure and decision graphs; this direction does not pool or custody customer capital.
+
+[NOT DETERMINED] Exact pricing, cloud tenant model, transaction authority, signing and revocation path, and legal requirements. This product direction does not establish current implementation.
+
+See [ADR 0008](docs/adrs/0008-two-tier-agent-platform.md) and [ADR 0009](docs/adrs/0009-customer-controlled-assets.md). The 2026-09-30 pooled-capital interpretation below is historical where it conflicts with this update.
+
 ## Session update: 2026-09-30
 
 [VERIFIED, user direction, 2026-09-30] FalconOS's product destination is an investment manager with a deal desk. One Customer Agent faces the Investor. One Decision Engine runs specialists and graphs behind it. Other agents reach that engine through a plugin that first returns investor-specific guidance. Discovery is global. Investor residence is an eligibility input, not a search bound. See [ADR 0005](docs/adrs/0005-investment-manager.md), [ADR 0006](docs/adrs/0006-one-agent-decision-engine.md), and [ADR 0007](docs/adrs/0007-global-discovery-alerts.md).
@@ -45,6 +53,28 @@ The post-movement record of where funds sit and how to exit.
 
 **Who-Acts**:
 The triple of who holds funds, who executes, and who signs, shown before approval.
+
+### Language added 2026-10-05
+
+**Personal Plugin**:
+A lower-cost Falcon capability accessed through an individual's existing compatible agent environment.
+_Avoid_: personal hosted workspace
+
+**Organization Workspace**:
+A Falcon-hosted account for a company, startup, team, or institution, with its own Falcon Agent and customer-specific state.
+_Avoid_: shared customer account
+
+**Customer-Controlled Account**:
+A wallet or financial account whose assets remain under the customer's control and which the customer connects to FalconOS.
+_Avoid_: Falcon custody
+
+**Falcon Agent**:
+The customer-facing agent for one person or organization. Specialist capabilities and decision graphs run through the shared Decision Engine.
+_Avoid_: a separate reasoning engine per customer
+
+**Agent Mandate**:
+The customer's stated financial goals, limits, and permitted agent actions. Wallet signing and delegated authority remain separate decisions.
+_Avoid_: wallet connection as permission
 
 ## Least confident decisions added 2026-09-30
 

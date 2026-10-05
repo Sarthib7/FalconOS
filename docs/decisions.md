@@ -4,6 +4,8 @@
 
 [VERIFIED, DEC-2026-09-30-01] Owner: coordinator. The user chose investment manager plus deal desk for FalconOS, one Customer Agent over one Decision Engine, a plugin that first returns investor-specific guidance, and global discovery with residency as eligibility. Records: [ADR 0005](adrs/0005-investment-manager.md), [ADR 0006](adrs/0006-one-agent-decision-engine.md), [ADR 0007](adrs/0007-global-discovery-alerts.md). [CONTEXT.md](../CONTEXT.md) session 2026-09-30 holds the glossary additions.
 
+[ARCHIVED, superseded 2026-10-05] The pooled-capital interpretation of this decision is no longer the default product model. FalconOS now has a lower-cost individual plugin path and a hosted organization workspace with customer-controlled accounts. Investment-management capabilities remain the destination. A separate pooled fund is unselected. See [ADR 0008](adrs/0008-two-tier-agent-platform.md) and [ADR 0009](adrs/0009-customer-controlled-assets.md).
+
 [VERIFIED, boundary] This is product destination, not implemented authority. Do not edit SPEC.md except through the `spec` skill. Do not claim current modules custody, pool, sign, or manage customer money.
 
 ### Least confident decisions
