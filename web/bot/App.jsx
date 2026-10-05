@@ -188,15 +188,15 @@ export default function App() {
       <div className="bot-nav-wallet"><PhantomWalletConnect compact wallets={walletState.wallets} current={walletState.current} injected={injectedPhantom} pending={authPending} error={authError} onSignIn={(id) => { setInstallTab('human'); return signIn(id); }} onInjectedSignIn={() => { setInstallTab('human'); return signInInjected(); }} onSignOut={signOut} /></div>
     </header>
     <main>
-      <InstallPanel skillUrl={import.meta.env.VITE_FALCON_SKILL_URL} isProd={import.meta.env.PROD} tab={installTab} onTabChange={setInstallTab}>
-        <PhantomWalletConnect wallets={walletState.wallets} current={walletState.current} injected={injectedPhantom} pending={authPending} error={authError} onSignIn={signIn} onInjectedSignIn={signInInjected} onSignOut={signOut} />
-      </InstallPanel>
       <section className="bot-hero" aria-labelledby="bot-title">
         <div className="bot-hero-badge"><span className="bot-pulse" aria-hidden="true"></span> SOLANA USDC · SIMULATION ONLY</div>
         <FalconMark />
         <h1 id="bot-title">Meet Falcon, your<br />Solana yield agent.</h1>
         <p className="bot-hero-copy">Find provider-indexed lending opportunities. Set your own limits. Review every simulated allocation before you decide.</p>
       </section>
+      <InstallPanel skillUrl={import.meta.env.VITE_FALCON_SKILL_URL} isProd={import.meta.env.PROD} tab={installTab} onTabChange={setInstallTab}>
+        <PhantomWalletConnect wallets={walletState.wallets} current={walletState.current} injected={injectedPhantom} pending={authPending} error={authError} onSignIn={signIn} onInjectedSignIn={signInInjected} onSignOut={signOut} />
+      </InstallPanel>
       <section id="how-it-works" className="bot-capabilities" aria-label="Falcon capabilities">
         <p className="bot-section-kicker">One clear path from source to simulation</p>
         <div className="bot-capability-grid">
