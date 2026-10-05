@@ -46,7 +46,7 @@ npm --prefix web run build:bot
 
 [INFERRED, local build target] Run `npm --prefix web run build:mvp` to build the bot at `/` and the source graph and DevNet terminal at `/mesh/` into `web/dist-mvp/`. The standard `falconos.markets` build and routes remain unchanged.
 
-[INFERRED, deployment configuration] The separate Pages project for `bot.falconos.markets` must build this artifact with `VITE_MESH_API_URL` set to the HTTPS Mesh API origin. The Mesh service must allow the exact browser origin `https://bot.falconos.markets` in `FALCON_MESH_ORIGINS`. These settings do not configure DNS or deploy the site.
+[INFERRED, deployment configuration] The separate Pages project for `agents.falconos.markets` must build this artifact with `VITE_MESH_API_URL` set to the HTTPS Mesh API origin. The Mesh service must allow the exact browser origin `https://agents.falconos.markets` in `FALCON_MESH_ORIGINS`. These settings do not configure DNS or deploy the site.
 
 [VERIFIED, source: `web/bot/auth.mjs`, `web/mesh/app.mjs`] The same-tab wallet login session is restored by `/mesh/`; operator tokens remain a manual fallback in memory. The bot chat remains simulation-only. Only the separate terminal requests an explicit DevNet transaction signature.
 
@@ -73,6 +73,8 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 - `/product/`: firm model, advisory pipeline, and product boundaries.
 - `/research/`: evidence format, research checks, and unresolved proof.
 - `/dash/`: dashboard entry with a link to the Devnet terminal.
+
+  The `/dash/` gate belongs to the `falconos.markets` build only. The `agents.falconos.markets` MVP build (`build:mvp`) serves the bot at `/` and the mesh terminal at `/mesh/`.
 - `/app/`: wallet sign-in, Devnet balances, a saved token list, a manual Raydium route ticket, and browser-local order history.
 
 ## Dashboard access
@@ -85,7 +87,7 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 
 [VERIFIED, official configuration reference] Vite documents [build output and entry options](https://vite.dev/config/build-options.html) and disabling the [public directory](https://vite.dev/config/shared-options.html#publicdir).
 
-The public build includes the landing page, detail pages, the `/dash/` entry, and the `/app/` Devnet terminal. The local Vite server overrides `/dash/` and `/research/` with the localhost research terminal. `/app/` verifies wallet ownership in the browser and saves account preferences and order labels in that browser profile. It has no server session or cross-device sync. Its production trade module uses Solana Devnet and Raydium Devnet only. The stock council feed and historical strategy backtests are not connected to the production app.
+The public build includes the landing page, detail pages, the `/dash/` entry, and the `/app/` Devnet terminal. The local Vite server overrides `/dash/` and `/research/` with the localhost research terminal. `/app/` verifies wallet ownership in the browser and saves account preferences and order labels in that browser profile. It has no server session or cross-device sync. Its production trade module uses Solana Devnet and Raydium Devnet only. The stock council feed and historical strategy backtests are not connected to the production app. The `/dash/` gate belongs to the `falconos.markets` build only. The `agents.falconos.markets` MVP build (`build:mvp`) serves the bot at `/` and the mesh terminal at `/mesh/`.
 
 ## Waitlist pipeline
 
