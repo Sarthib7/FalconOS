@@ -1,0 +1,6 @@
+{
+  "name": "falconos-goal",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public" },
+  "routes": [{ "pattern": "goal.falconos.markets", "custom_domain": true }]
+}
