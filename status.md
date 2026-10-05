@@ -1014,8 +1014,12 @@ The demo used synthetic responses. No live API call occurred.
 
 [VERIFIED, incident] I also redeployed `falcon-mesh` from this branch. Its `/readyz` then returned HTTP 503 with `STORAGE_UNAVAILABLE`. Logs showed `readyz store.ready failed: STORAGE_UNAVAILABLE`. The branch code requires `falcon_mesh_schema_version=3`. Supabase project `mcmxfwkhdzzsfpvldgdw` reported `falcon_mesh_schema_version=2` with no wallet-auth tables. `deploymentRollback` to `22f0defc-34c5-45a4-a162-f63f53914297` returned `true`. The new active deployment `1ea33aa9-0de1-4fa2-a924-574e3bca11fd` returned `{"status":"ready"}` with HTTP 200.
 
-[VERIFIED, configuration] `falcon-mesh` now has `FALCON_MESH_ORIGINS=https://agents.falconos.markets,https://falcon-mcp-production-5875.up.railway.app`. The restored deployment may use its earlier variable snapshot. [NOT DETERMINED] Whether the active deployment reads the new value.
+[VERIFIED, configuration] `falcon-mesh` has `FALCON_MESH_ORIGINS=https://agents.falconos.markets,https://falcon-mcp-production-5875.up.railway.app`. The live MCP sign-in below used the MCP origin and succeeded.
 
-[BLOCKED, migration approval] Live MCP sign-in returned `STORAGE_UNAVAILABLE: Wallet authentication storage is unavailable.` Applying `mesh/migrations/0003_wallet_auth.sql` and the two wallet-table grants in `mesh/deploy/supabase-permissions.sql` needs explicit user approval. Mesh must then be redeployed from this branch.
+[VERIFIED, user approval and application] The user approved migration 0003 and a Mesh redeploy. Supabase `apply_migration` returned `{"success":true}`. A read-only check returned `falcon_mesh_schema_version=3`, `falcon_mesh_app` INSERT on wallet sessions `true`, and `anon` SELECT `false`. Mesh deployment `19953583` reached `SUCCESS`; `/readyz` returned HTTP 200. Mesh returned HTTP 503 during the build window between migration and redeploy.
+
+[VERIFIED, live hosted MCP journey] Against `https://falcon-mcp-production-5875.up.railway.app/mcp`: 10 tools, wallet sign-in succeeded, opportunities `READY`, evidence `OBSERVED`, decision `REVIEW` with five `PASS` checks. The unfunded generated wallet's prepare returned `Wallet has no Devnet USDC token account.` Activity and disconnect succeeded. No transaction was signed or broadcast.
+
+[BLOCKED, Cloudflare] The user chose to connect Cloudflare MCP and retry. No Cloudflare MCP tool is mounted in this session, so `agents.falconos.markets` is not deployed.
 
 [VERIFIED, local live journey] Against local Mesh and Devnet, the MCP refresh returned `OBSERVED`, and the decision returned `REVIEW` with five `PASS` checks. An unfunded generated wallet's prepare now returns `Wallet has no Devnet USDC token account.` instead of `Account owner or encoding does not match.` Kamino tests: `tests 18`, `pass 18`, `fail 0`. Before the fix, the two new tests failed.
