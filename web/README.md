@@ -130,3 +130,16 @@ After creating the Pages project, open **Pages → the project → Custom domain
 [VERIFIED, source: `web/bot/install-commands.mjs`, `web/scripts/skills-plugin.mjs`] A production build without `VITE_FALCON_MCP_URL` keeps the bot page buildable and gives the Agent tab a skill download command. The downloaded skill says the MCP server is not deployed and includes no MCP setup commands.
 
 [VERIFIED, source: `web/dashboard/api.mjs`, `mesh/local.mjs`] Production wallet sign-in also needs `VITE_MESH_API_URL` for a deployed Mesh API. That Mesh service must allow the bot page's exact Origin in `FALCON_MESH_ORIGINS`.
+
+### agents.falconos.markets release settings
+
+[VERIFIED, Railway, 2026-10-05] The MCP server is live at `https://falcon-mcp-production-5875.up.railway.app/mcp`. Mesh is live at `https://falcon-mesh-production.up.railway.app`. Mesh allows the Origin `https://agents.falconos.markets`.
+
+[VERIFIED, local production build] These Cloudflare Pages settings produce a `dist-bot/SKILLS.md` that contains the live MCP install command:
+
+- **Root directory:** `web`
+- **Build command:** `npm run build:bot`
+- **Build output directory:** `dist-bot`
+- **Environment variables:** `VITE_FALCON_MCP_URL=https://falcon-mcp-production-5875.up.railway.app/mcp`, `VITE_FALCON_SKILL_URL=https://agents.falconos.markets/SKILLS.md`, `VITE_MESH_API_URL=https://falcon-mesh-production.up.railway.app`
+
+[NOT DETERMINED] The Pages project and the `agents.falconos.markets` DNS record do not exist yet. `dig +short agents.falconos.markets` returned no record on 2026-10-05.
