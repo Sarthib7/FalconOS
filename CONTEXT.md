@@ -38,11 +38,13 @@
 
 ## Earlier advisory direction and evidence
 
-[VERIFIED, user-confirmed direction, 2026-09-18] FalconOS is the umbrella product. Falcon Investment Council is the current module: agent-first market intelligence and risk advisory, advisory-only and read-only. See "Confirmed domain decisions" below. [SUPERSEDED, 2026-09-20] The original 2026-09-05 framing ("a multichain research and trading layer" with liquidity pooling, arbitrage, sniping, and execution) is historical. Execution-adjacent capabilities belong, if ever, to a separate regulated Falcon entity, not to FalconOS.
+[VERIFIED, user-confirmed direction, 2026-09-18] FalconOS is the umbrella product. Falcon Investment Council is the current module: agent-first market intelligence and risk advisory, advisory-only and read-only. See "Confirmed domain decisions" below. [SUPERSEDED, 2026-09-20] The original 2026-09-05 framing ("a multichain research and trading layer" with liquidity pooling, arbitrage, sniping, and execution) is historical. Execution-adjacent capabilities belong, if ever, to a separate regulated Falcon entity, not to FalconOS. [SUPERSEDED IN PART, 2026-10-04] "read-only" excludes the Devnet signed transaction path added in SPEC §C:16 and §C:45. Advisory-only boundary is retained for mainnet, real funds, and automatic signing.
 
 [VERIFIED, user authorization] The user requested: "ok document and update the plan" and "lets start building". This authorizes the local build. The previous validation verdict remains go validate. Starting the prototype does not establish customer demand.
 
-## Current direction
+## Direction and baseline: 2026-09-05
+
+[HISTORICAL — current test results are in status.md#ci-automation.]
 
 [VERIFIED, prior local implementation check, 2026-09-05] The first slice returned `tests 40`, `pass 40`, `fail 0`, `cancelled 0`, `skipped 0`, and typecheck exited `0`. The registry test matches four historical token metadata entries. Live assessment now starts after collection. Automated stop and export checks pass. The approved escalated ten-scan operating check completed. The historical `use_default` failure remains separate, and its context difference remains not determined. Obsidian desktop rendering remains unverified.
 
@@ -59,11 +61,11 @@
 
 ## Product loop
 
-[INFERRED, plan] Research agents collect selected sources. The Obsidian graph connects evidence, assets, venues, strategies, and outcomes. An existing agent uses that evidence to propose opportunities. Confirmed outcomes return to the graph. [SUPERSEDED, 2026-09-20] The former "later execution" clause is removed; execution is not on the FalconOS path.
+[INFERRED, plan] Research agents collect selected sources. The Obsidian graph connects evidence, assets, venues, strategies, and outcomes. An existing agent uses that evidence to propose opportunities. Confirmed outcomes return to the graph. [SUPERSEDED, 2026-09-20] The former "later execution" clause is removed; execution is not on the FalconOS path. [SUPERSEDED IN PART, 2026-10-04] Devnet signing is now on the path (SPEC §C:16, §C:45). Mainnet, pooled capital, and automatic execution remain excluded.
 
 [INFERRED, MVP boundary] The first usable MVP ends with four results: a Solana and Base collector, one cited thesis from the selected existing agent, one paper-cycle outcome, and one review view that links the candidate, evidence, thesis, and outcome.
 
-[INFERRED, delivery boundary] Broader strategies, a third chain, and automatic note ingestion belong to later slices. Coverage is explicit. A polling process cannot claim to discover every opportunity. [SUPERSEDED, 2026-09-20] Live capital, signing, and investor pooling are not later FalconOS slices; they belong, if ever, to a separate regulated Falcon entity.
+[INFERRED, delivery boundary] Broader strategies, a third chain, and automatic note ingestion belong to later slices. Coverage is explicit. A polling process cannot claim to discover every opportunity. [SUPERSEDED, 2026-09-20] Signing is not a FalconOS slice. [RE-ADDED, 2026-10-04] Owner-signed Devnet transactions are now the MVP path (SPEC §C:16, §C:45). [SUPERSEDED, 2026-09-20] Pooled client capital and mainnet trading remain excluded; they belong, if ever, to a separate regulated Falcon entity.
 
 ## Confirmed domain decisions
 
@@ -218,9 +220,9 @@
 
 ### Dash / Stocklana track
 
-[REPORTED, dash, 2026-09-16] `dash/` is an isolated read-only terminal dashboard (T27 in progress). PreStocks pre-IPO basket (OPENAI + SPACEX mints) uses DEX Screener pool evidence + PreStocks issuer marks. **Scaled-UI normalization shipped locally** (T28, V66): token-2022 multipliers must be applied before comparing pool vs issuer prices; disagreement fails closed to `NO_DATA`.
+[HISTORICAL — root dash/ Node package deleted; engine/ Rust crate is the replacement. T27 was not completed.] [REPORTED, dash, 2026-09-16] `dash/` is an isolated read-only terminal dashboard (T27 in progress). PreStocks pre-IPO basket (OPENAI + SPACEX mints) uses DEX Screener pool evidence + PreStocks issuer marks. **Scaled-UI normalization shipped locally** (T28, V66): token-2022 multipliers must be applied before comparing pool vs issuer prices; disagreement fails closed to `NO_DATA`.
 
-[REPORTED, hackathon, 2026-09-16] **Stocklana** (Solana hackathon) lists **$100K** pre-IPO prize pool; submissions close **2026-09-25**. PreStocks API and mints align with this track; dash smoke is a live keyless proof path, not a submission artifact.
+[REPORTED, hackathon, 2026-09-16] **Stocklana** (Solana hackathon) lists **$100K** pre-IPO prize pool; submissions close **2026-09-25**. PreStocks API and mints align with this track; dash smoke is a live keyless proof path, not a submission artifact. [CLOSED — deadline 2026-09-25 passed; no submission outcome recorded here.]
 
 ### Git boundary
 

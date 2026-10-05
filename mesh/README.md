@@ -49,7 +49,7 @@ pbcopy < mesh/.local/operator-token
 2. [INFERRED, procedure] Prepare a supply of at most one Devnet USDC. Review the action and unsigned simulation, then explicitly sign and send in the browser. Check the saved submission and receipt until the exact transaction is confirmed and its token deltas reconcile. Stop on pending, failed, or unverified status.
 3. [INFERRED, procedure] Prepare redemption against the resulting receipt tokens and repeat the explicit sign, send, and receipt checks. Reload the page and inspect both saved intents, events, signatures, and balance changes. One wallet proves this path only; other wallet brands remain unverified. Inbox delivery and any funded test have separate gates.
 
-## Bot wallet authentication
+## Wallet session API routes
 
 [VERIFIED, source: `mesh/http.mjs`, `mesh/wallet-auth.mjs`, `migrations/0003_wallet_auth.sql`] The bot signs an origin-bound server challenge with `solana:signMessage`. The server derives the owner from the wallet address and stores one-time challenges and hashed 30-minute sessions in PostgreSQL. Sign-in does not authorize transactions or move funds.
 
