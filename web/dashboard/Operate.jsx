@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { connectorObservation } from './api.mjs';
 import { Badge, money } from './ui.jsx';
+import { linkedIntents, usdc } from '../mesh/decision-link.mjs';
 import { ConnectGate } from './Knowledge.jsx';
 
 const OBSERVATION_ID = 'observation:live:solana-devnet-reserve-liquidity';
@@ -144,7 +145,35 @@ function Result({ view, live, focusRef, selected, choose }) {
         <Snapshot graph={graph} heading="Evidence in this snapshot" /></div>
       <p className="label" style={{ marginTop: 24 }}>Checks</p><ul className="op-checks" id="operate-checks">{analysis.checks.length ? analysis.checks.map(check => <li key={check.id}><div className="od-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}><strong>{check.label}</strong><Badge kind={kindOf(check.status)}>{check.status}</Badge></div><p className="small muted">{check.detail}</p>{check.evidenceNodeIds.length > 0 && <p className="small">Evidence: {check.evidenceNodeIds.map(id => analysis.decisionGraph.nodes.some(node => node.id === id) ? <button type="button" className="op-link mono" key={id} onClick={() => choose(id)}>{id}</button> : <span className="mono" key={id}>{id} </span>)}</p>}</li>) : <li className="muted">This decision has no checks.</li>}</ul>
       {analysis.limits.length > 0 && <details className="disclosure" open><summary>What this decision does not do</summary><ul className="op-limits">{analysis.limits.map(item => <li key={item}>{item}</li>)}</ul></details>}
-      <p className="small muted" style={{ marginTop: 16 }}>Not execution-ready. No wallet was read or asked to sign, and no transaction can be created from this record.</p></div></section>;
+      <p className="small muted" style={{ marginTop: 16 }}>Not execution-ready. This page never asks a wallet to sign. A Devnet supply can be prepared from a fresh REVIEW decision in the <a href="/mesh/#lending-terminal">mesh terminal</a>, where you review and sign it yourself. A REVIEW decision does not guarantee withdrawable liquidity.</p></div></section>;
+}
+
+const ACTION_KIND = { CONFIRMED: 'ok', FAILED: 'bad', SUBMITTED: 'info', PENDING: 'warn', UNVERIFIED: 'warn', UNKNOWN: 'warn', PREPARED: '' };
+// Devnet lending intents prepared from one saved decision, read from the owner-scoped lending list. Never invents a row.
+function DecisionActions({ apiRef, decisionId, refresh }) {
+  const [state, setState] = useState({ status: 'loading', rows: [], error: '' }), [again, setAgain] = useState(0);
+  useEffect(() => {
+    let current = true;
+    setState(previous => ({ ...previous, status: 'loading', error: '' }));
+    apiRef.current('/v1/lending/intents').then(payload => {
+      if (!Array.isArray(payload?.records)) throw new Error('The service returned an invalid lending list.');
+      if (current) setState({ status: 'ready', rows: linkedIntents(payload.records, decisionId), error: '' });
+    }).catch(failure => { if (current) setState({ status: 'error', rows: [], error: failure.message }); });
+    return () => { current = false; };
+  }, [apiRef, decisionId, refresh, again]);
+  return <section className="panel" id="operate-actions" aria-labelledby="operate-actions-title" aria-busy={state.status === 'loading'} data-decision-id={decisionId} style={{ marginTop: 24 }}>
+    <header className="panel-head"><div><p className="eyebrow">Decision / intent / receipt</p><h2 id="operate-actions-title">Devnet actions from this decision.</h2></div><Badge kind={state.status === 'error' ? 'warn' : ''}>{state.status === 'ready' ? `${state.rows.length} LINKED` : state.status === 'error' ? 'ERROR' : 'LOADING'}</Badge></header>
+    <div className="panel-body">
+      <p className="detail-copy" style={{ marginTop: 0 }}>Devnet transactions prepared from this saved decision in the mesh terminal. The status is the latest one the service recorded for each. A receipt records what Devnet reported for that transaction. It does not change this decision or its evidence snapshot. Reads your 20 most recent lending intents.</p>
+      {state.status === 'loading' && <div role="status"><div className="loading-line" aria-hidden="true" /><p className="sr-only">Loading Devnet actions for this decision.</p></div>}
+      {state.status === 'error' && <p className="field-error" role="alert" id="operate-actions-error">{state.error}</p>}
+      {state.status === 'ready' && state.rows.length === 0 && <p className="detail-copy" id="operate-actions-empty">No Devnet action has been prepared from this decision.</p>}
+      {state.rows.length > 0 && <ul className="op-actions" id="operate-actions-list">{state.rows.map(row => <li key={row.id} data-intent-id={row.id}>
+        <Badge kind={ACTION_KIND[row.status] ?? ''}>{row.status}</Badge>
+        <span><span className="history-title">{row.action === 'supply' ? `Supply ${usdc(row.inputBaseUnits)} Devnet USDC` : `${row.action} ${row.inputBaseUnits}`}</span><span className="history-time">{stamp(row.createdAt)}</span>{row.signature && <span className="mono small op-signature">Signature {row.signature}</span>}</span>
+      </li>)}</ul>}
+      <div className="od-row" style={{ gap: 8, marginTop: 16 }}><button className="btn" type="button" id="operate-actions-refresh" disabled={state.status === 'loading'} onClick={() => setAgain(value => value + 1)}>Refresh actions</button></div>
+    </div></section>;
 }
 
 export default function Operate({ api, connection }) {
@@ -242,7 +271,7 @@ export default function Operate({ api, connection }) {
           <button className="btn primary" type="submit" id="operate-submit" disabled={sendingNow}>{sendingNow ? 'Saving decision…' : send.status === 'error' ? 'Retry decision' : 'Save review decision'}</button>
           <div role="status" className="sr-only">{sendingNow ? 'Saving the decision.' : ''}</div></form></section>
     </div>
-    <div id="operate-result-slot" style={{ marginTop: 24 }}><Result view={view} live={live} focusRef={resultFocus} selected={selected} choose={setSelected} /></div>
+    <div id="operate-result-slot" style={{ marginTop: 24 }}><Result view={view} live={live} focusRef={resultFocus} selected={selected} choose={setSelected} />{view.status === 'ready' && <DecisionActions key={view.record.id} apiRef={apiRef} decisionId={view.record.id} refresh={refresh} />}</div>
     <section className="panel" id="operate-history" style={{ marginTop: 24 }} aria-busy={history.status === 'loading'}><header className="panel-head"><div><p className="eyebrow">Saved decisions</p><h2>History.</h2></div><Badge>{history.status === 'ready' ? `${history.value.length} SAVED` : history.status === 'error' ? 'ERROR' : 'LOADING'}</Badge></header>
       {history.status === 'loading' && history.value.length === 0 && <div className="panel-body" role="status"><div className="loading-line" aria-hidden="true" /><p className="sr-only">Loading saved decisions.</p></div>}
       {history.status === 'error' && <div className="panel-body"><p className="field-error" role="alert" id="operate-history-error">{history.error}</p></div>}

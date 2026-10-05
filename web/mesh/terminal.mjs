@@ -1,6 +1,7 @@
 import { LENDING_CONFIG, deserializeLendingTransaction, validateLendingTransaction } from '../../mesh/kamino-wire.mjs';
 import { verifySignedTransaction, encodeSignatureBase58 } from '../app/transaction.mjs';
 import { createWalletSession } from './wallet.mjs';
+import { eligibleDecisions, supplyBlockReason, usdc } from './decision-link.mjs';
 
 const $ = id => document.getElementById(id);
 const bytes64 = value => {
@@ -55,6 +56,7 @@ export async function devnetRpc(method, params = [], fetchImpl = fetch) {
 export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = createWalletSession(), rpc = devnetRpc }) {
   let record = null; let events = []; let history = []; let busy = false;
   let prepareRetry = null; let submitRetry = null; let receiptRetry = null;
+  let decisions = { status: 'idle', records: [], error: '' }; let decisionSignature = null;
   let accountGeneration = 0; let lastWallet = null;
   let workspaceGeneration = 0;
   function state() {
@@ -93,7 +95,29 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
     const analysis = getAnalysis();
     const eligible = analysis?.analysis.mode === 'live' && analysis.analysis.status === 'OBSERVED' && analysis.analysis.policyVersion === 'mesh-public-evidence/1';
     $('lending-analysis-link').textContent = eligible ? `Selected program-evidence analysis: ${analysis.id}` : 'Capture the official document and Devnet program account, then select their OBSERVED analysis. Reserve liquidity alone does not authorize preparation.';
-    $('lending-prepare').disabled = busy || !connected || !selected || !eligible;
+    const supplying = $('lending-action').value === 'supply';
+    const options = eligibleDecisions(decisions.records, Date.now());
+    const signature = options.map(option => `${option.id}|${option.label}`).join('\n');
+    if (signature !== decisionSignature) {
+      const previousDecision = $('lending-decision').value;
+      const placeholder = node('option', options.length ? 'Choose a reserve decision' : 'No eligible reserve decision'); placeholder.value = '';
+      $('lending-decision').replaceChildren(placeholder, ...options.map(option => { const choice = node('option', option.label); choice.value = option.id; return choice; }));
+      $('lending-decision').value = options.some(option => option.id === previousDecision) ? previousDecision : '';
+      decisionSignature = signature;
+    }
+    const chosenDecision = options.find(option => option.id === $('lending-decision').value);
+    if (connected && decisions.status === 'idle') void loadDecisions();
+    $('lending-decision-field').style.display = supplying ? '' : 'none'; $('lending-decisions-refresh').style.display = supplying ? '' : 'none';
+    $('lending-decision').disabled = busy || !connected || decisions.status === 'loading';
+    $('lending-decisions-refresh').disabled = busy || !connected || decisions.status === 'loading';
+    $('lending-decision-reason').textContent = !supplying ? ''
+      : !connected ? 'Connect to your workspace to load reserve decisions. Supply needs one.'
+      : decisions.status === 'loading' || decisions.status === 'idle' ? 'Loading reserve decisions.'
+      : decisions.status === 'error' ? `Reserve decisions could not be loaded (${decisions.error}). Supply needs one; use Load reserve decisions to retry.`
+      : !options.length ? supplyBlockReason(options)
+      : !chosenDecision ? 'Choose a reserve decision to enable supply.'
+      : `Supply may not exceed the ${usdc(chosenDecision.proposedUnits)} USDC this decision reviewed. A REVIEW decision does not guarantee withdrawable liquidity.`;
+    $('lending-prepare').disabled = busy || !connected || !selected || !eligible || (supplying && !chosenDecision);
     $('lending-action').disabled = busy; $('lending-amount').disabled = busy;
     $('lending-amount-label').textContent = $('lending-action').value === 'supply' ? 'Supply amount (Devnet USDC, maximum 1)' : 'Receipt tokens to redeem (integer base units)';
     $('lending-intent').hidden = !record;
@@ -108,6 +132,7 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
       $('lending-state').textContent = state(); $('lending-state').dataset.status = state();
       const rows = [
         ['Action', intent.action === 'supply' ? 'Supply Devnet USDC' : 'Redeem receipt tokens'],
+        ...(record.request?.decisionId ? [['Reserve decision', record.request.decisionId]] : []),
         ['Wallet', intent.wallet], ['Network', 'Solana Devnet'], ['Reserve', intent.accounts.reserve],
         ['Requested input', intent.action === 'supply' ? `At most ${units(intent.inputBaseUnits)} Devnet USDC` : `${intent.inputBaseUnits} receipt base units`],
         ['Simulated USDC transfer', `${units(intent.estimatedAmounts.liquidityBaseUnits)} USDC`],
@@ -127,7 +152,8 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
       $('lending-events').replaceChildren(...events.map(event => node('li', `${event.createdAt}: ${event.kind === 'SUBMITTED' ? 'Signature registered before broadcast' : `${event.data.status}: ${event.data.reason}`}`)));
     }
     $('lending-history').replaceChildren(...history.map(item => {
-      const li = node('li', ''); const button = node('button', `${item.request.action} · ${item.status} · ${item.createdAt}`, 'button');
+      const linked = item.request.decisionId ? ` · decision ${String(item.request.decisionId).slice(0, 8)}` : '';
+      const li = node('li', ''); const button = node('button', `${item.request.action} · ${item.status} · ${item.createdAt}${linked}`, 'button');
       button.type = 'button'; button.disabled = busy || !connected; button.dataset.intentId = item.id;
       button.addEventListener('click', () => run(async () => {
         const response = await api(`/v1/lending/intents/${item.id}`);
@@ -136,6 +162,18 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
       }));
       li.append(button); return li;
     }));
+  }
+  async function loadDecisions() {
+    const generation = workspaceGeneration;
+    decisions = { status: 'loading', records: decisions.records, error: '' };
+    try {
+      const payload = await api('/v1/decisions');
+      if (!Array.isArray(payload?.records)) throw new Error('The service returned an invalid decision list.');
+      if (generation === workspaceGeneration) decisions = { status: 'ready', records: payload.records, error: '' };
+    } catch (error) {
+      if (generation === workspaceGeneration) decisions = { status: 'error', records: [], error: error instanceof Error ? error.message : 'request failed' };
+    }
+    if (generation === workspaceGeneration) render();
   }
   async function run(work) {
     if (busy) return; busy = true; render();
@@ -185,6 +223,8 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
   $('lending-connect').addEventListener('click', () => run(async () => { await wallet.connect($('lending-wallet').value); show('Wallet connected. Review a live analysis before preparing a transaction.'); }));
   $('lending-disconnect').addEventListener('click', () => run(() => wallet.disconnect()));
   $('lending-action').addEventListener('change', () => { $('lending-amount').value = $('lending-action').value === 'supply' ? '1' : ''; prepareRetry = null; render(); });
+  $('lending-decision').addEventListener('change', render);
+  $('lending-decisions-refresh').addEventListener('click', () => { if (!busy && isConnected()) { void loadDecisions(); render(); } });
   $('lending-form').addEventListener('submit', event => {
     event.preventDefault();
     const action = $('lending-action').value; const value = $('lending-amount').value.trim();
@@ -192,7 +232,11 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
       const generation = accountGeneration;
       const selected = wallet.current(); const analysis = getAnalysis();
       if (!isConnected() || !selected || analysis?.analysis.mode !== 'live' || analysis.analysis.status !== 'OBSERVED' || analysis.analysis.policyVersion !== 'mesh-public-evidence/1') throw new Error('Select a program-evidence OBSERVED analysis and connect a wallet first.');
-      const request = { analysisId: analysis.id, wallet: selected.address, action, inputBaseUnits: inputUnits(action, value) };
+      const options = eligibleDecisions(decisions.records, Date.now());
+      const decision = action === 'supply' ? options.find(option => option.id === $('lending-decision').value) : null;
+      if (action === 'supply' && !decision) throw new Error(supplyBlockReason(options) || 'Choose a fresh REVIEW reserve decision first.');
+      const request = { analysisId: analysis.id, wallet: selected.address, action, inputBaseUnits: inputUnits(action, value), ...(decision && { decisionId: decision.id }) };
+      if (decision && BigInt(request.inputBaseUnits) > BigInt(decision.proposedUnits)) throw new Error(`The amount exceeds the ${usdc(decision.proposedUnits)} USDC this decision reviewed.`);
       const identity = JSON.stringify(request);
       if (prepareRetry?.identity !== identity) prepareRetry = { identity, requestId: crypto.randomUUID() };
       show('Reading Devnet accounts and simulating the proposed transaction.');
@@ -204,6 +248,7 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
       if (await digest(transaction.message.serialize()) !== intent.messageSha256 || transaction.signatures.some(signature => signature.some(byte => byte !== 0))) throw new Error('Prepared message validation failed.');
       if (generation !== accountGeneration || !isConnected()) throw new Error('The wallet or workspace changed during preparation. Reopen the intent from its workspace history.');
       if (response.record.analysisId !== request.analysisId) throw new Error('The prepared intent refers to a different analysis.');
+      if ((response.record.request?.decisionId ?? null) !== (request.decisionId ?? null)) throw new Error('The prepared intent refers to a different reserve decision.');
       record = response.record; events = []; submitRetry = null; receiptRetry = null;
       prepareRetry = null;
       show('Simulation passed. Review the action, amounts and accounts before signing.');
@@ -254,5 +299,5 @@ export function mountLendingTerminal({ api, getAnalysis, isConnected, wallet = c
     show(`${response.event.data.status}: ${response.event.data.reason}`);
   }));
   $('lending-history-refresh').addEventListener('click', () => run(async () => { history = (await api('/v1/lending/intents')).records; show('Loaded the latest 20 lending intents.'); }));
-  return { render, reset() { record = null; events = []; history = []; prepareRetry = null; submitRetry = null; receiptRetry = null; accountGeneration += 1; workspaceGeneration += 1; show(''); render(); } };
+  return { render, reset() { record = null; events = []; history = []; decisions = { status: 'idle', records: [], error: '' }; prepareRetry = null; submitRetry = null; receiptRetry = null; accountGeneration += 1; workspaceGeneration += 1; show(''); render(); } };
 }
