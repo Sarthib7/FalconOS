@@ -73,9 +73,9 @@
 
 | Earlier statement | Current evidence and remaining correction |
 | --- | --- |
-| SPEC I9/V49 says signup sends and stores nothing; I9 excludes D1. | [VERIFIED] V105/V106 define durable signup and optional delivery. The [hosted proof](verification/2026-09-27-cloudflare-email.md#hosted-registration-and-cleanup) records actual persistence. The older section needs an explicit scope or supersession. Action: spec-skill edit required (see proposals D1, D2, D3 below). |
-| SPEC I9/V55 specifies the earlier static HTML visual treatment. | [VERIFIED] V104/V107 cover the React landing and Control Centre. [Release evidence](verification/2026-09-27-live.md) identifies the new design. The older visual scope remains unresolved in SPEC. Action: spec-skill edit required (see proposals D1, D2, D3 below). |
-| SPEC I7/I8 names `preps/`. | [VERIFIED] Current source and tests are under `perps/`; [interfaces](interfaces.md#falcon-investment-perps-council-first-local-vertical-slice) records the rename. Historical commands remain evidence of their original runs. Action: spec-skill edit required (see proposals D1, D2, D3 below). |
+| SPEC I9/V49 says signup sends and stores nothing; I9 excludes D1. | [VERIFIED] V105/V106 define durable signup and optional delivery. The [hosted proof](verification/2026-09-27-cloudflare-email.md#hosted-registration-and-cleanup) records actual persistence. The older section needs an explicit scope or supersession. [VERIFIED, 2026-10-05] SPEC now carries a dated correction for this item. |
+| SPEC I9/V55 specifies the earlier static HTML visual treatment. | [VERIFIED] V104/V107 cover the React landing and Control Centre. [Release evidence](verification/2026-09-27-live.md) identifies the new design. The older visual scope remains unresolved in SPEC. [VERIFIED, 2026-10-05] SPEC now carries a dated correction for this item. |
+| SPEC I7/I8 names `preps/`. | [VERIFIED] Current source and tests are under `perps/`; [interfaces](interfaces.md#falcon-investment-perps-council-first-local-vertical-slice) records the rename. Historical commands remain evidence of their original runs. [VERIFIED, 2026-10-05] SPEC now carries a dated correction for this item. |
 | SPEC I15 describes only a synthetic foundation. | [VERIFIED] V99-V103 and the [mesh extension contract](knowledge-mesh.md#live-capture-extension) cover live captures and manual Devnet lending. The interface summary needs reconciliation. A user-wallet lending round trip remains unverified. |
 
 ## Earlier treasury entrypoint and evidence
