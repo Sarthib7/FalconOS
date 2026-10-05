@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { falconSkills } from './scripts/skills-plugin.mjs';
 
 // MVP build: wallet-gated bot at `/` and mesh graph/DevNet terminal at `/mesh/`
 // Preserves main site routes; no DNS or deployment in this slice.
@@ -19,7 +20,7 @@ export default defineConfig({
   appType: 'mpa',
   publicDir: false,
   resolve: { dedupe: ['react', 'react-dom', '@solana/web3.js'] },
-  plugins: [rootBotIndex],
+  plugins: [rootBotIndex, falconSkills()],
   server: {
     fs: {
       allow: [fileURLToPath(new URL('./', import.meta.url))],

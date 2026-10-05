@@ -6,6 +6,7 @@ import { clearWalletSession, createWalletSession, restoreWalletSession, revokeWa
 import { createSignInWalletSession } from '../app/wallet-signin.mjs';
 import { createInjectedPhantomSession, detectPhantomProvider } from './phantom-injected.mjs';
 import PhantomWalletConnect from './PhantomWalletConnect.jsx';
+import InstallPanel from './InstallPanel.jsx';
 
 function Brand({ compact = false }) {
   return <a className={`bot-brand${compact ? ' bot-brand-compact' : ''}`} href="/" aria-label="FalconOS home">
@@ -202,6 +203,7 @@ export default function App() {
           <article><span className="bot-capability-icon" aria-hidden="true">↗</span><h2>Simulate</h2><p>Review proposed allocations and their source evidence.</p></article>
         </div>
       </section>
+      <InstallPanel mcpUrl={import.meta.env.VITE_FALCON_MCP_URL} skillUrl={import.meta.env.VITE_FALCON_SKILL_URL} isProd={import.meta.env.PROD} />
       <section id="safety" className="bot-trust-strip" aria-label="Agent limits">
         <span>Provider-indexed data</span><span>Deterministic policy</span><span>Browser-local receipts</span><span>Chat does not sign transactions</span>
       </section>

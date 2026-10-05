@@ -8,6 +8,7 @@ const scopes = {
   advisory: [['npm', 'run', 'typecheck'], ['npm', 'test']],
   web: [['npm', '--prefix', 'web', 'test'], [process.execPath, 'web/scripts/verify-release.mjs']],
   mesh: [[process.execPath, 'mesh/check-release.mjs'], ['npm', '--prefix', 'mesh', 'test']],
+  mcp: [['npm', '--prefix', 'mcp', 'test']],
   engine: [['cargo', 'test', '--offline', '--locked', '--manifest-path', 'engine/Cargo.toml']],
 };
 
