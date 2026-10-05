@@ -7,6 +7,7 @@ import { MeshError } from '../domain.mjs';
 import { captureSource } from '../live.mjs';
 import { createLendingStore } from '../lending-store.mjs';
 import { ADAPTER_VERSION } from '../kamino-wire.mjs';
+import { createKaminoBrowserFixture } from './support/kamino-fixtures.mjs';
 
 const connectionString = process.env.FALCON_MESH_TEST_DATABASE_URL;
 if (!connectionString) throw new Error('FALCON_MESH_TEST_DATABASE_URL must name a disposable Postgres database with the full mesh migration history.');
@@ -20,9 +21,11 @@ const code = expected => error => error?.code === expected;
 const later = seconds => new Date(Date.parse(AT) + seconds * 1000).toISOString();
 const makeOwner = () => `lend_${randomUUID().replaceAll('-', '')}`;
 
-async function publicFetch(_url, init) {
+const reserveFixture = createKaminoBrowserFixture(WALLET, () => AT);
+async function publicFetch(url, init) {
   if (init.method === 'GET') return new Response(`## Deployments\n* Devnet: \`${WALLET}\`\n`);
   const input = JSON.parse(init.body);
+  if (input.method === 'getMultipleAccounts') return reserveFixture.publicFetch(url, init);
   return Response.json({ jsonrpc: '2.0', id: input.id, result: input.method === 'getGenesisHash' ? GENESIS : {
     context: { slot: 123 }, value: { owner: 'BPFLoaderUpgradeab1e11111111111111111111111', executable: true, data: [Buffer.alloc(36, 1).toString('base64'), 'base64'], space: 36 },
   } });
@@ -42,7 +45,11 @@ async function fixture(overrides = {}) {
   for (const connectorId of ['kamino-program-docs', 'solana-devnet-klend']) {
     sources.push(await meshStore.captureSource(owner, { requestId: randomUUID(), connectorId, expectedRevisionId: null }));
   }
+  sources.push(await meshStore.captureSource(owner, { requestId: randomUUID(), connectorId: 'solana-devnet-reserve-liquidity', expectedRevisionId: null }));
   const analysis = await meshStore.createAnalysis(owner, { requestId: randomUUID(), observationId: 'observation:live:solana-devnet-klend', maxHops: 3 }, clock, 'live');
+  // A real REVIEW decision from the evaluator: the proposal is far inside the 252145908-unit fixture book.
+  const decision = await meshStore.createDecision(owner, { requestId: randomUUID(), scenario: { proposedUnits: '5', maxProposedUnits: '10', minBookLiquidityUnits: '1', maxObservationAgeSeconds: 300 } }, clock);
+  assert.equal(decision.analysis.status, 'REVIEW');
   assert.equal(analysis.analysis.status, 'OBSERVED');
   const dependencies = {
     meshStore, now: () => clock,
@@ -59,8 +66,8 @@ async function fixture(overrides = {}) {
     },
   };
   const store = createLendingStore(pool, dependencies);
-  const input = { requestId: randomUUID(), analysisId: analysis.id, wallet: WALLET, action: 'supply', inputBaseUnits: '1' };
-  return { owner, counts, meshStore, sources, analysis, store, input, dependencies, setTime: value => { clock = value; } };
+  const input = { requestId: randomUUID(), analysisId: analysis.id, wallet: WALLET, action: 'supply', inputBaseUnits: '1', decisionId: decision.id };
+  return { owner, counts, meshStore, sources, analysis, decision, store, input, dependencies, setTime: value => { clock = value; } };
 }
 
 before(async () => {
@@ -75,8 +82,8 @@ test('V101: prepared intent retains the exact request and original analysis acro
   const record = await f.store.prepare(f.owner, f.input);
   assert.equal(record.requestId, f.input.requestId);
   assert.equal(record.analysisId, f.analysis.id);
-  assert.deepEqual(record.request, { wallet: WALLET, action: 'supply', inputBaseUnits: '1' });
-  assert.deepEqual(record.intent, intent(record.request));
+  assert.deepEqual(record.request, { wallet: WALLET, action: 'supply', inputBaseUnits: '1', decisionId: f.decision.id });
+  assert.deepEqual(record.intent, intent({ wallet: WALLET, action: 'supply', inputBaseUnits: '1' }));
   assert.equal(record.createdAt, AT);
   const freshPool = new Pool({ connectionString, max: 1, connectionTimeoutMillis: 5000 });
   try { assert.deepEqual(await createLendingStore(freshPool, f.dependencies).get(f.owner, record.id), { record, events: [] }); }
@@ -90,9 +97,13 @@ test('V101: preparation retry returns its original result without fresh evidence
   f.setTime(later(1000));
   assert.deepEqual(await f.store.prepare(f.owner, f.input), first);
   assert.equal(f.counts.prepare, 1);
-  for (const changes of [{ inputBaseUnits: '2' }, { action: 'redeem' }, { analysisId: randomUUID() }]) {
+  for (const changes of [{ inputBaseUnits: '2' }, { analysisId: randomUUID() }]) {
     await assert.rejects(f.store.prepare(f.owner, { ...f.input, ...changes }), code('CONFLICT'));
   }
+  const { decisionId, ...redeem } = f.input;
+  await assert.rejects(f.store.prepare(f.owner, { ...redeem, action: 'redeem' }), code('CONFLICT'));
+  const otherDecision = await f.meshStore.createDecision(f.owner, { requestId: randomUUID(), scenario: { proposedUnits: '5', maxProposedUnits: '10', minBookLiquidityUnits: '1', maxObservationAgeSeconds: 300 } }, AT);
+  await assert.rejects(f.store.prepare(f.owner, { ...f.input, decisionId: otherDecision.id }), code('CONFLICT'));
 });
 
 test('V101: stale or changed live evidence blocks preparation before the adapter runs', async () => {

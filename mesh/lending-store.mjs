@@ -3,12 +3,14 @@ import { PublicKey } from '@solana/web3.js';
 import { MeshError } from './domain.mjs';
 import { analyzeLiveGraph } from './live.mjs';
 import { verifyLendingVersions } from './kamino.mjs';
+import { RESERVE_DECISION_MARKER } from './scenario.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const SIGNATURE = /^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
 const JSON_LIMIT = 1024 * 1024;
 const RECEIPT_STATUSES = ['PENDING', 'FAILED', 'UNVERIFIED', 'CONFIRMED'];
 
+const REQUEST_KEYS = ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits'];
 function fail(code, message) { throw new MeshError(code, message); }
 function ownerId(owner) {
   if (typeof owner !== 'string' || !/^[a-z0-9_-]{1,64}$/.test(owner)) fail('INVALID_INPUT', 'Owner is invalid.');
@@ -49,7 +51,9 @@ function jsonObject(value, limit = JSON_LIMIT) {
   return encoded;
 }
 function requestFields(input) {
-  exact(input, ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits']);
+  // `decisionId` is the only optional key: supply requires it, redeem forbids it (exits are never gated).
+  const hasDecision = Boolean(input) && typeof input === 'object' && Object.hasOwn(input, 'decisionId');
+  exact(input, hasDecision ? [...REQUEST_KEYS, 'decisionId'] : REQUEST_KEYS);
   const requestId = uuid(input.requestId);
   const analysisId = uuid(input.analysisId);
   try {
@@ -59,7 +63,11 @@ function requestFields(input) {
       || !/^[1-9][0-9]{0,19}$/.test(input.inputBaseUnits) || BigInt(input.inputBaseUnits) > 18446744073709551615n) {
     fail('INVALID_INPUT', 'Lending action or positive integer amount is invalid.');
   }
-  return { requestId, analysisId, request: { wallet: input.wallet, action: input.action, inputBaseUnits: input.inputBaseUnits } };
+  if (input.action === 'redeem' && hasDecision) fail('INVALID_INPUT', 'A redeem must not carry a reserve decision.');
+  if (input.action === 'supply' && !hasDecision) fail('INVALID_INPUT', 'A supply requires the ID of a saved reserve decision.');
+  const decisionId = hasDecision ? uuid(input.decisionId) : undefined;
+  const request = { wallet: input.wallet, action: input.action, inputBaseUnits: input.inputBaseUnits };
+  return { requestId, analysisId, decisionId, request, stored: hasDecision ? { ...request, decisionId } : request };
 }
 function storedRecord(row) {
   return { id: row.id, requestId: row.request_id, analysisId: row.analysis_id, createdAt: new Date(row.created_at).toISOString(), request: row.request, intent: row.intent };
@@ -68,7 +76,19 @@ function storedEvent(row) {
   return { id: row.id, requestId: row.request_id, intentId: row.intent_id, createdAt: new Date(row.created_at).toISOString(), kind: row.kind, data: row.data };
 }
 function sameRequest(row, input) {
-  return row.analysis_id === input.analysisId && ['wallet', 'action', 'inputBaseUnits'].every(key => row.request[key] === input.request[key]);
+  return row.analysis_id === input.analysisId && row.request.decisionId === input.decisionId
+    && ['wallet', 'action', 'inputBaseUnits'].every(key => row.request[key] === input.request[key]);
+}
+// Only a saved, live, unexpired REVIEW reserve decision of THIS owner covering the amount can authorize a supply.
+// Missing, foreign, wrong-kind and non-REVIEW decisions share one message so existence is not leaked.
+async function requireDecision(db, owner, input, at) {
+  const result = await db.query('SELECT analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2 AND observation_id = $3', [owner, input.decisionId, RESERVE_DECISION_MARKER]);
+  const decision = result.rows[0]?.analysis;
+  if (decision?.kind !== 'reserve_scenario_decision' || decision.mode !== 'live' || decision.status !== 'REVIEW' || typeof decision.expiresAt !== 'string') {
+    fail('CONFLICT', 'A fresh REVIEW reserve decision for this amount is required.');
+  }
+  if (Date.parse(decision.expiresAt) < Date.parse(at)) fail('CONFLICT', 'The reserve decision has expired. Save a new decision before supplying.');
+  if (BigInt(input.request.inputBaseUnits) > BigInt(decision.scenario.proposedUnits)) fail('CONFLICT', 'The amount exceeds the proposal in the reserve decision. Save a new decision for this amount.');
 }
 function requireAnalysis(record, at) {
   if (!record || record.graph?.mode !== 'live' || record.analysis?.mode !== 'live' || record.analysis.status !== 'OBSERVED'
@@ -152,6 +172,8 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
       if (!analysis) fail('NOT_FOUND', 'Analysis not found.');
       const at = stamp();
       requireAnalysis(analysis, at);
+      // Fail before the adapter spends any RPC; the same rule is enforced again under the owner lock below.
+      if (normalized.decisionId) await requireDecision(pool, owner, normalized, at);
       const current = await meshStore.getGraph(owner, at, 'live');
       if (current.revision !== analysis.graph.revision) fail('CONFLICT', 'Live source heads changed. Refresh and analyze them again.');
       const intent = await prepareLending(normalized.request);
@@ -164,10 +186,11 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
         if (winner) return reuseIntent(winner, normalized);
         const committedAt = stamp();
         await currentUnderLock(client, owner, analysis, committedAt);
+        if (normalized.decisionId) await requireDecision(client, owner, normalized, committedAt);
         const result = await client.query(`
           INSERT INTO falcon_mesh.lending_intents (owner_id, id, request_id, analysis_id, created_at, request, intent)
           VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb) RETURNING *`,
-        [owner, randomUUID(), normalized.requestId, normalized.analysisId, committedAt, jsonObject(normalized.request, 4096), encoded]);
+        [owner, randomUUID(), normalized.requestId, normalized.analysisId, committedAt, jsonObject(normalized.stored, 4096), encoded]);
         return storedRecord(result.rows[0]);
       });
     },

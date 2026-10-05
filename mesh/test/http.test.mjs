@@ -137,6 +137,27 @@ test('B1: lending prepare failure surfaces bounded, sanitized RPC evidence; othe
   assert.equal(fallback.data.error.message, 'Mesh storage could not complete the request.');
   assert.ok(!('evidence' in fallback.data.error), 'the unknown-error fallback must not surface evidence');
 });
+
+test('C2: lending POST forwards an optional decisionId unchanged and still rejects any other extra or missing field', async t => {
+  const seen = [];
+  const lending = { async prepare(_owner, input) { seen.push(input); return { id: 'x' }; } };
+  const server = createApi({ store: {}, lending, tokenHashes: hashes });
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  const post = async body => (await fetch(`http://127.0.0.1:${server.address().port}/v1/lending/intents`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })).status;
+  const base = { requestId: randomUUID(), analysisId: randomUUID(), wallet: 'w', action: 'supply', inputBaseUnits: '1' };
+  const decisionId = randomUUID();
+  assert.equal(await post({ ...base, decisionId }), 200);
+  assert.deepEqual(seen, [{ ...base, decisionId }]);
+  assert.equal(await post(base), 200, 'the route leaves per-action decisionId rules to the lending store');
+  assert.equal(await post({ ...base, decisionId, extra: 1 }), 400);
+  assert.equal(await post({ ...base, extra: 1 }), 400);
+  const { wallet, ...missing } = base;
+  assert.equal(await post({ ...missing, decisionId }), 400);
+  assert.equal(seen.length, 2);
+});
 test('R1: the per-owner rate limit trips independently of other owners and clears on window reset', async t => {
   let currentTime = 1_000_000;
   const clock = () => currentTime;
