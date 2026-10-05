@@ -93,7 +93,10 @@ export function createApi({ store, lending = null, tokenHashes, allowedOrigins =
       if (request.method === 'GET' && url.pathname === '/healthz') { send(200, { status: 'alive' }); return; }
       if (request.method === 'GET' && url.pathname === '/readyz') {
         try { await store.ready(); send(200, { status: 'ready' }); }
-        catch { send(503, { error: { code: 'STORAGE_UNAVAILABLE', message: 'Mesh storage is not ready.' } }); }
+        catch (error) {
+          process.stderr.write(`readyz store.ready failed: ${error?.code || ''} ${error?.message || error}\n`);
+          send(503, { error: { code: 'STORAGE_UNAVAILABLE', message: 'Mesh storage is not ready.' } });
+        }
         return;
       }
       const token = /^Bearer ([A-Za-z0-9._~-]{32,256})$/.exec(request.headers.authorization || '')?.[1];

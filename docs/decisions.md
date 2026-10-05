@@ -8,9 +8,11 @@
 
 [INFERRED, consequence] Browser and store interfaces remain unchanged. The API needs separately configured runtime credentials and a verified TLS connection before hosted use.
 
+[VERIFIED, correction, 2026-09-28] The runtime endpoint and TLS connection are now verified, resolving the least-confident item below. Role `falcon_mesh_app` has LOGIN with a configured password (previously login disabled). The API is deployed on Railway project `falcon-mesh` (personal Hobby workspace), service `falcon-mesh`, connecting to `db.mcmxfwkhdzzsfpvldgdw.supabase.co` over Railway's outbound IPv6 egress with `sslmode=verify-full` and the bundled Supabase Root 2021 CA. `GET https://falcon-mesh-production.up.railway.app/readyz` returned `200 {"status":"ready"}`; `/healthz` returned `200 {"status":"alive"}`. The mesh store-persistence unit tests that require a live database remain DB-gated and unrun locally.
+
 ### Least confident decisions
 
-1. [NOT DETERMINED] The runtime endpoint and connection mode require verification from the chosen API host.
+1. [SUPERSEDED, 2026-09-28] The runtime endpoint and connection mode are verified; see the correction above.
 2. [NOT DETERMINED] Hosted recovery and API operating costs are not established by the schema tests.
 
 ## Local Devnet swap builder

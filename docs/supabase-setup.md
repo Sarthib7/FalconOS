@@ -38,12 +38,14 @@
 
 [INFERRED, deployment choice] Use a direct TLS connection for an IPv6-capable persistent host. Use the session pooler on port 5432 for an IPv4-only host. Copy the exact endpoint from the project's Connect dialog. Supabase documents these [connection choices](https://supabase.com/docs/guides/database/connecting-to-postgres).
 
-[VERIFIED, installed driver review] `pg-connection-string` accepts `sslmode=verify-full` and `sslrootcert`. The runtime needs the correct CA file and a privately configured database password before connection testing. The candidate role stays `NOLOGIN` until that configuration is ready.
+[VERIFIED, installed driver review] `pg-connection-string` accepts `sslmode=verify-full` and `sslrootcert`. The candidate role now has LOGIN with a configured password and a verified connection; see the 2026-09-28 entry below.
 
 [INFERRED, privacy boundary] Keep `falcon_mesh` outside the Data API's exposed schemas. PostgreSQL grants also deny the usual Data API roles access to these objects. Supabase documents custom-schema exposure separately from [schema privileges](https://supabase.com/docs/guides/api/using-custom-schemas). The API remains responsible for separating Falcon owners; the database role is shared by the API.
 
+[VERIFIED, hosted deploy, 2026-09-28] Role `falcon_mesh_app` was granted LOGIN with a configured password via Supabase MCP, superseding the NOLOGIN state recorded above. The API is deployed on Railway project `falcon-mesh` (personal Hobby workspace), connecting to `db.mcmxfwkhdzzsfpvldgdw.supabase.co` over Railway's outbound IPv6 egress with `sslmode=verify-full` against the bundled Supabase Root 2021 CA (`mesh/deploy/prod-ca-2021.crt`, SHA-256 fingerprint `80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA`). `GET https://falcon-mesh-production.up.railway.app/readyz` returned `200 {"status":"ready"}`; `/healthz` returned `200 {"status":"alive"}`. The mesh store-persistence unit tests that require a live database remain DB-gated and unrun locally.
+
 ## Least confident decisions
 
-1. [NOT DETERMINED] The runtime host's usable network path, exact endpoint, and TLS certificate have not been tested.
+1. [SUPERSEDED, 2026-09-28] The runtime host's network path, endpoint, and TLS certificate are verified; see the entry above.
 2. [NOT DETERMINED] PostgREST's external exposed-schema configuration is not established by null database settings. The setup must retain the explicit database permission boundary.
 3. [NOT DETERMINED] A hosted application connection and its effective timeout values require runtime credentials. MCP catalog access does not prove that connection.
