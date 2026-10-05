@@ -34,7 +34,7 @@ test('REPO-VERIFY-1: failed command stops its scope while other scopes continue'
   assert.equal(calls.some(command => command.length === 2 && command[1] === 'test'), false);
   assert.equal(calls.at(-1)[0], 'cargo');
   assert.deepEqual(log.lines.filter(line => /: (PASS|FAIL|BLOCKED)$/.test(line)), [
-    'repository: PASS', 'advisory: FAIL', 'web: PASS', 'mesh: BLOCKED', 'engine: PASS',
+    'repository: PASS', 'advisory: FAIL', 'web: PASS', 'mesh: BLOCKED', 'mcp: PASS', 'engine: PASS',
   ]);
   assert.ok(log.lines.some(line => line.includes('exit code 7')));
 });
@@ -63,7 +63,7 @@ test('REPO-VERIFY-1: successful local scopes accept Unix socket database URLs wi
     },
   });
   assert.equal(code, 0);
-  assert.equal(calls.length, 8);
+  assert.equal(calls.length, 9);
   assert.ok(log.lines.includes('mesh: PASS'));
   assert.equal(log.lines.join('\n').includes(url), false);
   assert.ok(log.lines.some(line => line.includes('Browser checks') && line.includes('were not verified')));

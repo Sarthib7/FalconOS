@@ -959,3 +959,15 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, current progress evidence] `npm --prefix web test` returned `tests 64`, `pass 64`, `fail 0`. The offline Rust demo exited `0` with `advice=PUBLISHED`, `advice=BLOCKED`, and `advice=NO_DATA`. These checks do not establish funded operation. Final review findings and hashes are in `docs/pitches/review.md`.
 
 [INFERRED, next action] Open `docs/pitches/falcon-stages.html` and select Hackathon plan. The proposed sprint and Stage 01 remain design work, not completed financial integrations.
+
+## MCP plugin local integration: 2026-10-05
+
+[VERIFIED, disposable local smoke] `falcon_mesh_mcp_smoke` initialized with `Falcon mesh schema version 3 created from the complete local history.` The MCP client connected to `http://127.0.0.1:8792/mcp` and called the real local Mesh API at `http://127.0.0.1:8791`. Its output was `walletMatches=true`, `sessionIssued=true`, `opportunityStatus=READY`, `decisionStatus=NO_DATA`, `activityRows=1`, and `disconnected=true`. It listed all ten MCP tools. No live evidence capture, Devnet RPC call, transaction signature, transaction broadcast, or confirmed receipt occurred. Positive REVIEW and unsigned transaction preparation remain unverified.
+
+[VERIFIED, local browser smoke] `http://127.0.0.1:5195/dashboard/#operate` showed the new advisory disclaimer after local Mesh access. On a 390 CSS-pixel viewport, axe-core 4.13.0 reported 0 violations, 40 passes, and 1 incomplete rule.
+
+[VERIFIED, correction] The smoke called `falcon_yield_opportunities`. Mesh fetched DeFiLlama pool and protocol data, and the result was `READY`. I did not identify this outbound read before running it. No further external calls were made. The smoke made no evidence-capture, Devnet RPC, transaction-signing, or broadcast call.
+
+[VERIFIED, focused checks] MCP tests returned `tests 45`, `pass 45`, `fail 0`. The focused web tests returned `tests 23`, `pass 23`, `fail 0`. Verify-orchestrator tests returned `tests 6`, `pass 6`, `fail 0`. `build:site`, `build:bot`, and `build:mvp` ended with `✓ built in 237ms`, `78ms`, and `106ms`.
+
+[VERIFIED, mobile regression check] At 390 CSS pixels, the bot page kept `scrollWidth=452` with its install section hidden; this check did not identify the width source. With `overflow:hidden`, clicking the Human tab set `scrollLeft=62`. With the shipped `overflow:clip`, the tab stayed selected and `scrollLeft=0`.

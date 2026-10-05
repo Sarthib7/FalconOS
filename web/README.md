@@ -118,3 +118,11 @@ After creating the Pages project, open **Pages → the project → Custom domain
 [VERIFIED, source: `web/bot/auth.mjs`, `mesh/wallet-auth.mjs`] Phantom signs an origin-bound challenge with `solana:signMessage`. The browser stores the server-issued session token in `sessionStorage`. Sign-in does not sign transactions or move funds. The Agent reads yield data and creates simulation plans only.
 
 [VERIFIED, source: `web/bot/phantom-injected.mjs`, `web/bot/PhantomWalletConnect.jsx`, `web/bot/App.jsx`; local fake-provider browser run: `button=Continue with Phantom`, `connectCalls=0` before click, `connectCalls=1` after click] When Wallet Standard has no available Phantom entry, the bot falls back to Phantom's injected provider. It calls Phantom's `connect()` only after the user clicks `Continue with Phantom`.
+
+## Falcon plugin install panel and SKILLS.md
+
+[VERIFIED, source: `web/bot/InstallPanel.jsx`, `web/bot/install-commands.mjs`, `web/scripts/skills-plugin.mjs`; browser run on `vite.bot.config.js`] The signed-out bot page has an "Add Falcon to your agent" section with an Agent tab (default) and a Human tab. The Agent tab shows `curl -fsSL <skill URL>` and a paste-a-prompt alternative. The Human tab shows `claude mcp add --transport http falconos <MCP URL>` and the JSON config with `"type":"http"`.
+
+[VERIFIED, source: `web/scripts/skills-plugin.mjs`, `web/skills/SKILLS.md`] `web/skills/SKILLS.md` is the single source of the agent skill. The site, bot and MVP builds emit it at `/SKILLS.md`, and the dev servers serve it with `Content-Type: text/markdown; charset=utf-8`. Set `VITE_FALCON_MCP_URL` (an `https://<host>/mcp` URL) and optionally `VITE_FALCON_SKILL_URL` (ends in `/SKILLS.md`; production default `https://falconos.markets/SKILLS.md`) at build time. Dev builds default to `http://127.0.0.1:8792/mcp` and `http://127.0.0.1:5194/SKILLS.md`. Only `https` URLs and loopback `http` URLs are accepted, because the URLs end up in commands people paste into a shell.
+
+[VERIFIED, source: `web/test/skill-asset.test.mjs`] A production build without `VITE_FALCON_MCP_URL` does not fail. The emitted `SKILLS.md` then says the Falcon MCP server is not deployed yet and contains no install commands, and the panel shows "The plugin server is not deployed yet" with no commands.

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createLocalWaitlist } from './waitlist-local.mjs';
+import { falconSkills } from './scripts/skills-plugin.mjs';
 
 // Multi-page build with the React landing page and separate application routes.
 // `/app/` is the wallet-owned Devnet terminal. The local research terminal
@@ -47,7 +48,7 @@ export default defineConfig({
   appType: 'mpa',
   resolve: { dedupe: ['@solana/web3.js'] },
   server: { fs: { deny: ['.env', '.env.*', '*.{crt,pem,key,p12,pfx,cer,der}', '.npmrc', '.yarnrc.yml', '**/.git/**', '**/.local/**'] } },
-  plugins: [localWaitlist(), localTerminalRoutes()],
+  plugins: [localWaitlist(), localTerminalRoutes(), falconSkills()],
   build: {
     rollupOptions: {
       input: {

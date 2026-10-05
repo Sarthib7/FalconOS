@@ -17,6 +17,7 @@
     "verify:advisory": "node scripts/verify.mjs advisory",
     "verify:web": "node scripts/verify.mjs web",
     "verify:mesh": "node scripts/verify.mjs mesh",
+    "verify:mcp": "node scripts/verify.mjs mcp",
     "verify:engine": "node scripts/verify.mjs engine",
     "verify:release:web": "node web/scripts/verify-release.mjs",
     "verify:release:mesh": "node mesh/check-release.mjs",

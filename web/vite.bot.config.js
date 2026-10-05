@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath } from 'node:url';
+import { falconSkills } from './scripts/skills-plugin.mjs';
 
 const root = fileURLToPath(new URL('./bot/', import.meta.url));
 const projectRoot = fileURLToPath(new URL('./', import.meta.url));
@@ -10,6 +11,7 @@ export default defineConfig({
   envDir: projectRoot,
   publicDir: false,
   resolve: { dedupe: ['react', 'react-dom'] },
+  plugins: [falconSkills()],
   server: {
     fs: {
       allow: [projectRoot],
