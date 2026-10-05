@@ -125,6 +125,7 @@ Placeholders are in angle brackets. Never write real keys or tokens into notes o
 - Tool errors are JSON with `code` and `message`. Show the message to the human in plain words.
 - `RATE_LIMITED`: wait for `retryAfterSeconds` or the retry hint, then try once more. Do not loop.
 - `MESH_UNAVAILABLE`: the Falcon backend did not answer. Tell the human, wait, and retry later. Do not invent results.
+- `INVALID_INPUT`: Falcon rejected the request, and the message says why. A wallet balance message (no usable Devnet SOL, no Devnet USDC token account, no receipt tokens) means the wallet needs Devnet SOL for fees and Devnet USDC to supply. Falcon does not fund wallets. Tell the human and stop. For any other `INVALID_INPUT`, fix the named field. Do not retry unchanged.
 - Session expired: a session lives 30 minutes. If a tool says the session is invalid or expired, run the connect flow again from step 1 of the Workflow. Ask the human before signing the new sign-in message.
 - An expired prepared transaction cannot be signed. Prepare a new one after the human agrees.
 
