@@ -174,7 +174,7 @@ Mac or hardware-backed operator host
 
 ### 5.2 Obsidian
 
-- `[VERIFIED]` Obsidian documents local Markdown files, links, properties, search, offline use, Sync, CLI, and Headless Sync. Source claims are recorded in `research/obsidian.md:232-256` and are `[REPORTED]`.
+- `[VERIFIED]` Obsidian documents local Markdown files, links, properties, search, offline use, Sync, CLI, and Headless Sync. Source claims are recorded in `docs/research/obsidian.md:232-256` and are `[REPORTED]`.
 - `[DECIDED]` Falcon uses an ordinary local Obsidian vault without a Sync subscription in Phase 0.
 - `[INFERRED]` Falcon writes sanitized, redacted, human-readable projections into the vault.
 - `[INFERRED]` Human-edited notes enter Falcon only through parsing, schema validation, provenance checks, and fresh-state verification.
@@ -184,8 +184,8 @@ Mac or hardware-backed operator host
 
 ### 5.3 Citadel
 
-- `[REPORTED]` Citadel's reviewed repository presents self-hosted source-linked memory with scoped access, policy-gated promotion, provenance, conflict handling, and audit metadata. Source: `research/citadel.md:239-253`.
-- `[REPORTED]` The reviewed repository describes testing status, external model enrichment, multiple storage profiles, a single-writer embedded graph constraint, and unresolved deployment details. Source: `research/citadel.md:176-202` and `research/citadel.md:278-290`.
+- `[REPORTED]` Citadel's reviewed repository presents self-hosted source-linked memory with scoped access, policy-gated promotion, provenance, conflict handling, and audit metadata. Source: `docs/research/citadel.md:239-253`.
+- `[REPORTED]` The reviewed repository describes testing status, external model enrichment, multiple storage profiles, a single-writer embedded graph constraint, and unresolved deployment details. Source: `docs/research/citadel.md:176-202` and `docs/research/citadel.md:278-290`.
 - `[DECIDED]` Citadel is not a Phase 0 dependency.
 - `[INFERRED]` A later Citadel spike must test local operation, source-linked retrieval, data isolation, concurrency, backup and restore, external model controls, and migration without changing Falcon's authority model.
 - `[INFERRED]` Falcon may adopt Citadel's provenance and promotion patterns without importing its storage or service architecture.

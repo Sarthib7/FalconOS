@@ -92,7 +92,7 @@ cd mesh && FALCON_MESH_TEST_DATABASE_URL=postgresql://... node --test test/walle
 ## Files Created
 - `mesh/test/wallet-session-auth-unit.test.mjs`: Unit tests
 - `mesh/test/wallet-session-http.test.mjs`: Integration tests
-- `mesh/T72-IMPLEMENTATION.md`: This document
+- `docs/mesh-T72-wallet-session.md`: This document
 
 ## Scope
 No schema changes, no migrations, no signing or sending of transactions, no deployment, and no frontend files were part of T72. The integration tests make no public RPC calls (the live-capture fetch is a fixture).

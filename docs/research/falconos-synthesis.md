@@ -3,11 +3,11 @@
 - Date: 2026-09-10
 - Author: Fable 5 synthesis agent (FalconOS session for sarthi)
 - Model: anthropic/claude-fable-5
-- Provenance: This report synthesizes nine research reports under `research/`. Every upstream source claim is [REPORTED] with the report path that carries it. Every applicability judgment is [INFERRED]. [VERIFIED] applies only to commands and file reads this agent performed in this session. No upstream repository was re-read for this synthesis.
+- Provenance: This report synthesizes nine research reports under `docs/research/`. Every upstream source claim is [REPORTED] with the report path that carries it. Every applicability judgment is [INFERRED]. [VERIFIED] applies only to commands and file reads this agent performed in this session. No upstream repository was re-read for this synthesis.
 
 ## Method and reading scope
 
-[VERIFIED] Read in full this session: `research/nautilus-trader.md`, `research/tensortrade.md`, `research/vectorbt.md`, `research/tradingagents.md`, `research/hftbacktest.md`, `research/llm-council.md`, `research/oh-my-pi.md`, `research/12-factor-agents.md`, `research/outreachr.md`, `CONTEXT.md`, `README.md`, `package.json`, `docs/interfaces.md`, `docs/agent-contract.md`, `plans/roadmap.md`, `src/types.ts`, and `status.md` (all 351 lines).
+[VERIFIED] Read in full this session: `docs/research/nautilus-trader.md`, `docs/research/tensortrade.md`, `docs/research/vectorbt.md`, `docs/research/tradingagents.md`, `docs/research/hftbacktest.md`, `docs/research/llm-council.md`, `docs/research/oh-my-pi.md`, `docs/research/12-factor-agents.md`, `docs/research/outreachr.md`, `CONTEXT.md`, `README.md`, `package.json`, `docs/interfaces.md`, `docs/agent-contract.md`, `plans/roadmap.md`, `src/types.ts`, and `status.md` (all 351 lines).
 
 [VERIFIED] Read structurally with selected bodies: `src/scan.ts` (exported functions, lines 1-26 and 91-96 in full), `src/sources.ts` (constants and function inventory), `src/vault.ts` (`writeNew`, `exportScan`), `src/cli.ts` (help text and interface), `src/agent.ts` (types, limits, function inventory), `src/codex.ts` (constants, `processEnvironment`, `promptFor`, `runCodex` bodies).
 
@@ -32,15 +32,15 @@ All rows [REPORTED] from the named report's header block.
 
 | Report path | Source | Studied commit | License | Strongest transfer |
 | --- | --- | --- | --- | --- |
-| `research/nautilus-trader.md` | nautechsystems/nautilus_trader | `96f52ab366932303625f24d4bcbd209bc2e62e6d` | LGPL-3.0 | Evidence classes, dual timestamps, fail-closed risk gate, simulated venue at the executor seam |
-| `research/tensortrade.md` | tensortrade-org/tensortrade | `d58afba23deb1fded39793203b7997c3990bb032` | Apache-2.0 | Conservation-checked transfers, ledger journal, path_id release |
-| `research/vectorbt.md` | polakowo/vectorbt | `34b6d5935e3ea3eccd549e2592bc0f455b8045f5` | Apache-2.0 + Commons Clause | Typed rejection reasons, attempt log split from accepted events |
-| `research/tradingagents.md` | TauricResearch/TradingAgents | `be952b8eccb49720509af544c6675233bc1f10d0` | Apache-2.0 | REVIEW sentinel, typed vendor errors, point-in-time cutoffs, resolvedAt |
-| `research/hftbacktest.md` | nkaz001/hftbacktest | `5f3ec40b2afb764e0fea112f941ed85523ef4e88` | MIT | Two-timestamp invariant, quote-is-not-a-fill, one accounting choke point |
-| `research/llm-council.md` | karpathy/llm-council | `92e1fcc` | none | Fan-out shape, raw-plus-parsed display, host-side aggregation |
-| `research/oh-my-pi.md` | can1357/oh-my-pi | `13a38b12afbe62bb05d30b7edd59a2ded738483a` | MIT | valid/invalid/unavailable result status, approval re-resolution, artifact spill |
-| `research/12-factor-agents.md` | humanlayer/12-factor-agents | `d20c728368bf9c189d6d7aab704744decb6ec0cc` | Apache-2.0 code, CC BY-SA 4.0 content | Event-log state, durable pause before execution, bounded retries |
-| `research/outreachr.md` | lalalune/outreachr | `23b7dcc5f731e3abc47c66dd6c09e69df4427d99` | Apache-2.0 (investor data excluded) | Ambiguity taxonomy, claim-before-dispatch, content-hash approval, hash chain |
+| `docs/research/nautilus-trader.md` | nautechsystems/nautilus_trader | `96f52ab366932303625f24d4bcbd209bc2e62e6d` | LGPL-3.0 | Evidence classes, dual timestamps, fail-closed risk gate, simulated venue at the executor seam |
+| `docs/research/tensortrade.md` | tensortrade-org/tensortrade | `d58afba23deb1fded39793203b7997c3990bb032` | Apache-2.0 | Conservation-checked transfers, ledger journal, path_id release |
+| `docs/research/vectorbt.md` | polakowo/vectorbt | `34b6d5935e3ea3eccd549e2592bc0f455b8045f5` | Apache-2.0 + Commons Clause | Typed rejection reasons, attempt log split from accepted events |
+| `docs/research/tradingagents.md` | TauricResearch/TradingAgents | `be952b8eccb49720509af544c6675233bc1f10d0` | Apache-2.0 | REVIEW sentinel, typed vendor errors, point-in-time cutoffs, resolvedAt |
+| `docs/research/hftbacktest.md` | nkaz001/hftbacktest | `5f3ec40b2afb764e0fea112f941ed85523ef4e88` | MIT | Two-timestamp invariant, quote-is-not-a-fill, one accounting choke point |
+| `docs/research/llm-council.md` | karpathy/llm-council | `92e1fcc` | none | Fan-out shape, raw-plus-parsed display, host-side aggregation |
+| `docs/research/oh-my-pi.md` | can1357/oh-my-pi | `13a38b12afbe62bb05d30b7edd59a2ded738483a` | MIT | valid/invalid/unavailable result status, approval re-resolution, artifact spill |
+| `docs/research/12-factor-agents.md` | humanlayer/12-factor-agents | `d20c728368bf9c189d6d7aab704744decb6ec0cc` | Apache-2.0 code, CC BY-SA 4.0 content | Event-log state, durable pause before execution, bounded retries |
+| `docs/research/outreachr.md` | lalalune/outreachr | `23b7dcc5f731e3abc47c66dd6c09e69df4427d99` | Apache-2.0 (investor data excluded) | Ambiguity taxonomy, claim-before-dispatch, content-hash approval, hash chain |
 
 Convergence count per pattern (reports naming it as a rule or adopt row):
 
@@ -65,16 +65,16 @@ Convergence count per pattern (reports naming it as a rule or adopt row):
 
 Each row names the report that prescribes the pattern and the FalconOS evidence. Do not rebuild these.
 
-- Exact integer money, no floats in core. [REPORTED] nautilus (`research/nautilus-trader.md:48`), vectorbt rule 7, tensortrade rule 6. [VERIFIED] `src/scan.ts:7-24` uses `bigint` with a fixed six-decimal unit.
+- Exact integer money, no floats in core. [REPORTED] nautilus (`docs/research/nautilus-trader.md:48`), vectorbt rule 7, tensortrade rule 6. [VERIFIED] `src/scan.ts:7-24` uses `bigint` with a fixed six-decimal unit.
 - Raw provider payload kept verbatim. [REPORTED] nautilus rule 5. [VERIFIED] `src/types.ts:26` (`raw: unknown` on `Observation`).
 - Failures stay visible; no silent drop. [REPORTED] llm-council rule 3 ("FalconOS `Observation` already does this, keep it"). [VERIFIED] `Observation.error`, F2/F5 in `CONTEXT.md:44,50`.
-- No default action on parse failure. [REPORTED] tradingagents mapping row: "Adopt (already held)" for the REVIEW sentinel (`research/tradingagents.md:125`). [VERIFIED] `docs/agent-contract.md:31`.
+- No default action on parse failure. [REPORTED] tradingagents mapping row: "Adopt (already held)" for the REVIEW sentinel (`docs/research/tradingagents.md:125`). [VERIFIED] `docs/agent-contract.md:31`.
 - Claims separated from execution. [REPORTED] tradingagents concept 5, vectorbt concept 16, hftbacktest mapping row 12. [VERIFIED] `executionReady: false` is a literal type in `src/types.ts:48` and `docs/agent-contract.md:87`.
 - Hash exact bytes before parse. [REPORTED] omp rule 2 notes FalconOS already states this. [VERIFIED] `docs/agent-contract.md:64`.
 - Strict closed schema with exact keys and byte caps. [REPORTED] 12-factor mapping rows 1-4, llm-council rule 21. [VERIFIED] `src/agent.ts:15-18` (`MAX_NOTES`, `MAX_NOTE_BYTES`, `MAX_REQUEST_BYTES`, `MAX_THESIS_BYTES`), `exactKeys` and `responseKeys`.
 - Append-only atomic writes, no overwrite, symlink rejection. [REPORTED] llm-council rule 20 contrasts its own storage with `src/vault.ts` as "strictly stronger". [VERIFIED] `src/vault.ts:23-42` (`O_CREAT | O_EXCL | O_NOFOLLOW`), `safeDirectory`.
 - Evidence and vault separation. [VERIFIED] `src/vault.ts:59-61` rejects nesting either root inside the other.
-- Deterministic identity resolved once. [REPORTED] tradingagents mapping: token registry "already plays this role" (`research/tradingagents.md:129`). [VERIFIED] `src/sources.ts:4-15` pinned addresses with the capture caveat.
+- Deterministic identity resolved once. [REPORTED] tradingagents mapping: token registry "already plays this role" (`docs/research/tradingagents.md:129`). [VERIFIED] `src/sources.ts:4-15` pinned addresses with the capture caveat.
 - Host-side arithmetic, never model arithmetic. [REPORTED] llm-council concept 5. [VERIFIED] `assess` in `src/scan.ts` computes all deltas.
 - Synthetic data labeled. [REPORTED] outreachr section "What is absent": FalconOS labeling called an advantage to keep. [VERIFIED] `mode: 'demo'`, `fixture: boolean`, `syntheticTestDouble` in `docs/interfaces.md:51`.
 - Bounded stop and bounded failure runs. [REPORTED] 12-factor mapping row for factor 9. [VERIFIED] three-consecutive-incomplete stop, exit code contract in `README.md:49-51`.
@@ -86,12 +86,12 @@ Each row names the report that prescribes the pattern and the FalconOS evidence.
 
 Conflicts between sources, resolved:
 
-1. Availability versus integrity. tradingagents retries a failed structured call as free text (`research/tradingagents.md:43`); omp, 12-factor, and the FalconOS contract reject any unvalidated fallback. Resolution: fail closed. The tradingagents report itself lists the fallback under Reject.
-2. Error visibility. 12-factor factor 3 suggests hiding resolved errors from the model context (`research/12-factor-agents.md:29`); F5 requires visible failures. Resolution: the durable record never hides anything; a future model-context projection may compact, the evidence may not.
-3. Retry loops. outreachr retries idempotent reads with backoff (`research/outreachr.md:43`); FalconOS forbids in-scan retries (`docs/interfaces.md:23`). Resolution per the outreachr report's own mapping: adopt the classification fields, keep the no-retry policy.
-4. Tolerance in accounting. tensortrade balances with `np.isclose` (`research/tensortrade.md:59`); vectorbt documents float roundoff that prevents positions from closing. Resolution: exact bigint equality only, as both reports recommend.
-5. Lenient parsing. llm-council falls back to prose-order label extraction (`research/llm-council.md:37`). Resolution: strict rejection for anything execution-adjacent; lenient views only for labeled display.
-6. Model trust. tradingagents warns and continues on unknown models (`research/tradingagents.md:76`); FalconOS gates Codex until controls verify (`status.md:53`). Resolution: fail closed, reject unknown model IDs.
+1. Availability versus integrity. tradingagents retries a failed structured call as free text (`docs/research/tradingagents.md:43`); omp, 12-factor, and the FalconOS contract reject any unvalidated fallback. Resolution: fail closed. The tradingagents report itself lists the fallback under Reject.
+2. Error visibility. 12-factor factor 3 suggests hiding resolved errors from the model context (`docs/research/12-factor-agents.md:29`); F5 requires visible failures. Resolution: the durable record never hides anything; a future model-context projection may compact, the evidence may not.
+3. Retry loops. outreachr retries idempotent reads with backoff (`docs/research/outreachr.md:43`); FalconOS forbids in-scan retries (`docs/interfaces.md:23`). Resolution per the outreachr report's own mapping: adopt the classification fields, keep the no-retry policy.
+4. Tolerance in accounting. tensortrade balances with `np.isclose` (`docs/research/tensortrade.md:59`); vectorbt documents float roundoff that prevents positions from closing. Resolution: exact bigint equality only, as both reports recommend.
+5. Lenient parsing. llm-council falls back to prose-order label extraction (`docs/research/llm-council.md:37`). Resolution: strict rejection for anything execution-adjacent; lenient views only for labeled display.
+6. Model trust. tradingagents warns and continues on unknown models (`docs/research/tradingagents.md:76`); FalconOS gates Codex until controls verify (`status.md:53`). Resolution: fail closed, reject unknown model IDs.
 
 Rejected imports (domain or scale mismatch; the naming report agrees in each case):
 
@@ -132,7 +132,7 @@ Chosen: Approach A for the next code change, with the C6 design captured in sect
 
 ## 6. Recommended minimal vertical slice: typed provider-failure classification
 
-Goal: every failed observation carries a machine-readable failure record, and provider timestamps that postdate local receipt are rejected. [REPORTED] backing: outreachr mapping "record `retryable`, `retryAfterMs` ... on each failed observation so the next scan cycle can pace itself honestly" (`research/outreachr.md:45`); tradingagents rule 7 (typed by required reaction); vectorbt rules 2-3 (closed reason unions, no-action distinct from error); hftbacktest rules 1-3 (venue time at or before local receipt; fail loudly on violations); nautilus rule 12 (evidence classes).
+Goal: every failed observation carries a machine-readable failure record, and provider timestamps that postdate local receipt are rejected. [REPORTED] backing: outreachr mapping "record `retryable`, `retryAfterMs` ... on each failed observation so the next scan cycle can pace itself honestly" (`docs/research/outreachr.md:45`); tradingagents rule 7 (typed by required reaction); vectorbt rules 2-3 (closed reason unions, no-action distinct from error); hftbacktest rules 1-3 (venue time at or before local receipt; fail loudly on violations); nautilus rule 12 (evidence classes).
 
 Files and symbols (all [INFERRED] design; symbol names below are proposals except where marked existing):
 
@@ -144,7 +144,7 @@ Files and symbols (all [INFERRED] design; symbol names below are proposals excep
    - Constraint: the kinds must be derived one-to-one from the branches that already exist in `src/sources.ts` (`DNS_ERROR_CODES`, `CONNECTION_ERROR_CODES`, `TLS_ERROR_CODES`, `transportKind`, timeout, cancellation, `readBody` failures, `normalizeQuote` failures, non-200 status). No new failure class is invented. The only additive capture is `Retry-After` on 429/503 responses, backed by the outreachr report.
 2. `src/sources.ts`
    - Add `classifyFailure(error, httpStatus, headers): ObservationFailure` beside the existing `errorDetails` and `transportKind` helpers. Populate `failure` at every site in `collectCycles` that currently sets `error`. Keep `error` as the human-readable string; the two fields describe one event.
-   - Retryable mapping, descriptive only, no retry executed: dns, connection, timeout, rate_limit, http_server are `retryable: true`; tls, cancelled, http_client, invalid_body, invalid_quote are `retryable: false`. [REPORTED] basis: outreachr read policy retries network errors and 5xx and honors server-directed delays (`research/outreachr.md:37,43`).
+   - Retryable mapping, descriptive only, no retry executed: dns, connection, timeout, rate_limit, http_server are `retryable: true`; tls, cancelled, http_client, invalid_body, invalid_quote are `retryable: false`. [REPORTED] basis: outreachr read policy retries network errors and 5xx and honors server-directed delays (`docs/research/outreachr.md:37,43`).
 3. `src/scan.ts`
    - In the per-leg loop of `assess` (existing, `src/scan.ts:67-90`), reject a leg whose `providerTimestamp` is later than its `receivedAt`. Reuse the existing rejection vocabulary; prefer the existing `STALE_OR_INVALID_OBSERVATION_TIME` code over a new one unless tests show the distinction matters. [REPORTED] basis: hftbacktest rule 2. The implementer must first read the elided loop body; the check may partially exist.
 4. `src/agent.ts`
@@ -152,7 +152,7 @@ Files and symbols (all [INFERRED] design; symbol names below are proposals excep
 5. `src/vault.ts`, `src/cli.ts`: no code change. The scan serializes whole, so evidence and notes carry the new field automatically.
 6. Docs updated in the same change (edit during implementation, not by this synthesis): `docs/interfaces.md` failure rule paragraph, `docs/agent-contract.md` schemaVersion wording, `README.md` interpretation table if reason text changes.
 
-State transitions: none. `Observation` stays a record, not a state machine. The classification is a pure decision table applied once at the provider boundary, matching the nautilus one-boundary conversion rule (`research/nautilus-trader.md:171`).
+State transitions: none. `Observation` stays a record, not a state machine. The classification is a pure decision table applied once at the provider boundary, matching the nautilus one-boundary conversion rule (`docs/research/nautilus-trader.md:171`).
 
 Interfaces: the `Cycle[]` contract between `sources.ts` and `scan.ts` (`docs/interfaces.md:19`) gains one field. The agent request contract gains version 2 acceptance. No consumer loses a field.
 
@@ -171,10 +171,10 @@ Explicitly out of scope for this slice: provider request-id capture (header avai
 
 In order, each gated as noted:
 
-1. Prompt-wrapper contract test (C2). Fixture-test the exact `promptFor` output and the fixed argv for a canned `AgentRequest`; add the outreachr forbidden-token scan over thesis payload values (`send`, `execute`, `dispatch`, `schedule`, `publish`, `delete`) in `validateAgentThesis` (`research/outreachr.md:181`, `research/12-factor-agents.md:141-142`). No approval needed.
+1. Prompt-wrapper contract test (C2). Fixture-test the exact `promptFor` output and the fixed argv for a canned `AgentRequest`; add the outreachr forbidden-token scan over thesis payload values (`send`, `execute`, `dispatch`, `schedule`, `publish`, `delete`) in `validateAgentThesis` (`docs/research/outreachr.md:181`, `docs/research/12-factor-agents.md:141-142`). No approval needed.
 2. Real Codex run (C3). Verify the network boundary with an OS control or local process test (`docs/agent-contract.md:386`), record the live control inventory before the prompt (outreachr rule 21), then run the authorized model call for CHK-10 to CHK-12. Requires explicit user approval for the external call.
-3. Data-root lock and durable pacing (C4). An exclusive lock directory with stale recovery, plus a durable request counter, closing the `README.md:49` gap (`research/outreachr.md:79-82,173-174`).
-4. Hash-chained run records (C5). Each new evidence record names the previous record's SHA-256; verify the chain on startup and before export (`research/outreachr.md:57`).
+3. Data-root lock and durable pacing (C4). An exclusive lock directory with stale recovery, plus a durable request counter, closing the `README.md:49` gap (`docs/research/outreachr.md:79-82,173-174`).
+4. Hash-chained run records (C5). Each new evidence record names the previous record's SHA-256; verify the chain on startup and before export (`docs/research/outreachr.md:57`).
 5. P2 paper ledger (C6), after CP1B and D2. Design fixed by convergence: one cycle ID stamped on every reservation, simulated fill, ledger row, and outcome (tensortrade rules 1-2); one pure accounting transition booking position, balance, and fees (hftbacktest rule 9; vectorbt rule 8); attempt log separate from accepted events (vectorbt rule 4); append-only cycle event log as the only resume state (12-factor rules 7-8); reserve-before-act with ambiguity terminal for automation (outreachr rules 2, 8); fill and cost assumptions stored beside every simulated outcome, which never upgrades a candidate past REVIEW (nautilus rule 18; tensortrade rule 15); `resolvedAt` on outcomes with as-of filtering for any later lesson injection (tradingagents rules 15-16).
 6. Per-venue options record (C7), with P2: fee basis, min and max size, decimals per venue, checked before any simulated fill (tensortrade rule 9; nautilus rule 8).
 7. P3 approval binding (C8): versioned content hash over route, exact amounts, venue, quote evidence hashes, and signer identity; revoke on any policy change; durable pause between proposal and execution; approval as a structured event with approver, decision, comment, timestamp (outreachr rules 4-5; 12-factor rules 9-10; omp rules 9-11).
@@ -182,10 +182,10 @@ In order, each gated as noted:
 
 ## 8. Licensing and provenance constraints
 
-- [REPORTED] nautilus is LGPL-3.0 (`research/nautilus-trader.md:9`). Patterns are free; vendoring code or substantial doc text creates LGPL obligations. Never copy.
-- [REPORTED] vectorbt is Apache-2.0 with the Commons Clause (`research/vectorbt.md:160`). Independent TypeScript implementations of concepts are outside copyright scope. Before any P4 embedding of vectorbt itself in a paid product path, complete a license review and record the verdict (vectorbt rule 22).
-- [REPORTED] llm-council has no license file (`research/llm-council.md:116`). Default copyright applies. No code or prompt text may be ported; clean-room reimplementation only.
-- [REPORTED] 12-factor-agents content is CC BY-SA 4.0 (`research/12-factor-agents.md:127`). Copying its prose into FalconOS docs would carry attribution and share-alike duties. Adopt ideas, write our own words.
+- [REPORTED] nautilus is LGPL-3.0 (`docs/research/nautilus-trader.md:9`). Patterns are free; vendoring code or substantial doc text creates LGPL obligations. Never copy.
+- [REPORTED] vectorbt is Apache-2.0 with the Commons Clause (`docs/research/vectorbt.md:160`). Independent TypeScript implementations of concepts are outside copyright scope. Before any P4 embedding of vectorbt itself in a paid product path, complete a license review and record the verdict (vectorbt rule 22).
+- [REPORTED] llm-council has no license file (`docs/research/llm-council.md:116`). Default copyright applies. No code or prompt text may be ported; clean-room reimplementation only.
+- [REPORTED] 12-factor-agents content is CC BY-SA 4.0 (`docs/research/12-factor-agents.md:127`). Copying its prose into FalconOS docs would carry attribution and share-alike duties. Adopt ideas, write our own words.
 - [REPORTED] tensortrade, tradingagents, and outreachr are Apache-2.0; hftbacktest and oh-my-pi are MIT. Idea reuse carries no obligation. Close translation of code would require attribution; avoid it by re-implementing. outreachr's `resources/` investor data sits outside its Apache grant; never touch it.
 - [INFERRED] Standing rule for every adoption: record the source repo, commit, and report path beside the adopted pattern (12-factor rule 20). This synthesis's matrix in section 2 is that record for the current batch.
 
@@ -203,27 +203,27 @@ In order, each gated as noted:
 
 Deduplicated across the nine reports. Each cites its carrying reports. Applicability is [INFERRED] throughout; the practices are [REPORTED] at the cited paths.
 
-1. Never label a quote, simulation, or reconstruction as a fill; only an external acknowledgement earns outcome words (`research/vectorbt.md:172`; `research/hftbacktest.md:151`; `research/nautilus-trader.md:183`).
-2. Classify every provider failure in a closed union with explicit fields; free-text error strings are for humans only (`research/tradingagents.md:168`; `research/outreachr.md:167`; `research/vectorbt.md:173`).
-3. Require source event time at or before local receipt time; treat violations as clock skew and reject or correct explicitly (`research/hftbacktest.md:147-148`; `research/nautilus-trader.md:168`).
-4. Records are immutable after creation; corrections are new records that name what they supersede (`research/nautilus-trader.md:176`; `research/oh-my-pi.md:151`; `research/vectorbt.md:183`).
-5. A schema, transport, or process failure produces no accepted output; there is no unvalidated fallback path (`research/tradingagents.md:167`; `research/llm-council.md:142`).
-6. Never retry a non-idempotent external write; resolve ambiguity only from the authoritative external record matched on an embedded operation id (`research/outreachr.md:168-170`; `research/nautilus-trader.md:174`).
-7. Cap any automatic retry of one operation at 3, reset on success, then stop and surface (`research/12-factor-agents.md:150`).
-8. Give every multi-leg cycle one ID stamped on every reservation, fill, ledger row, and note, with one release routine for aborts (`research/tensortrade.md:155-156`).
-9. Book every simulated or real economic effect through one accounting function; audit one code path (`research/hftbacktest.md:155`; `research/vectorbt.md:179`).
-10. Accounting equality is exact integer comparison; no epsilon (`research/tensortrade.md:160`).
-11. Store fees signed, with explicit basis and role, in the same rows as principal; a missing cost line keeps net results null (`research/hftbacktest.md:156-157`; `research/tensortrade.md:162`).
-12. Store fill, cost, and latency assumptions beside every simulated outcome; simulations never upgrade a candidate past REVIEW (`research/nautilus-trader.md:183`; `research/tensortrade.md:169`).
-13. Bind approvals to a versioned hash of exact content and context; revoke on any policy change; a mismatch is an error, not a warning (`research/outreachr.md:165-166`).
-14. Insert a durable break between action selection and execution; resume only from persisted state (`research/12-factor-agents.md:147-148`; `research/oh-my-pi.md:160`).
-15. Fail closed on unknown models, invalid config, or an unreachable approver (`research/tradingagents.md:182-183`; `research/oh-my-pi.md:161`).
-16. Keep per-venue capabilities and limits as data, validated before use, never inferred from an endpoint existing (`research/nautilus-trader.md:173`; `research/tensortrade.md:163`).
-17. Record outcome-knowable dates and filter any injected lesson by that date on historical runs (`research/tradingagents.md:176-177`).
-18. Every dispatch on external output handles the unknown branch explicitly; routers map all returns exhaustively (`research/12-factor-agents.md:156`; `research/tradingagents.md:180`).
-19. Enforce pacing, caps, and single-writer access in durable state, not process memory (`research/outreachr.md:173,183`).
-20. Port patterns, never code; record repo, commit, and report path at each adoption (`research/12-factor-agents.md:157` rule 20; section 2 matrix here).
-21. Completion claims quote recorded output; keep counterexamples as permanent fixtures; ban tests that only prove code ran (`research/tensortrade.md:175`; `research/nautilus-trader.md:189`; `research/oh-my-pi.md:172`).
+1. Never label a quote, simulation, or reconstruction as a fill; only an external acknowledgement earns outcome words (`docs/research/vectorbt.md:172`; `docs/research/hftbacktest.md:151`; `docs/research/nautilus-trader.md:183`).
+2. Classify every provider failure in a closed union with explicit fields; free-text error strings are for humans only (`docs/research/tradingagents.md:168`; `docs/research/outreachr.md:167`; `docs/research/vectorbt.md:173`).
+3. Require source event time at or before local receipt time; treat violations as clock skew and reject or correct explicitly (`docs/research/hftbacktest.md:147-148`; `docs/research/nautilus-trader.md:168`).
+4. Records are immutable after creation; corrections are new records that name what they supersede (`docs/research/nautilus-trader.md:176`; `docs/research/oh-my-pi.md:151`; `docs/research/vectorbt.md:183`).
+5. A schema, transport, or process failure produces no accepted output; there is no unvalidated fallback path (`docs/research/tradingagents.md:167`; `docs/research/llm-council.md:142`).
+6. Never retry a non-idempotent external write; resolve ambiguity only from the authoritative external record matched on an embedded operation id (`docs/research/outreachr.md:168-170`; `docs/research/nautilus-trader.md:174`).
+7. Cap any automatic retry of one operation at 3, reset on success, then stop and surface (`docs/research/12-factor-agents.md:150`).
+8. Give every multi-leg cycle one ID stamped on every reservation, fill, ledger row, and note, with one release routine for aborts (`docs/research/tensortrade.md:155-156`).
+9. Book every simulated or real economic effect through one accounting function; audit one code path (`docs/research/hftbacktest.md:155`; `docs/research/vectorbt.md:179`).
+10. Accounting equality is exact integer comparison; no epsilon (`docs/research/tensortrade.md:160`).
+11. Store fees signed, with explicit basis and role, in the same rows as principal; a missing cost line keeps net results null (`docs/research/hftbacktest.md:156-157`; `docs/research/tensortrade.md:162`).
+12. Store fill, cost, and latency assumptions beside every simulated outcome; simulations never upgrade a candidate past REVIEW (`docs/research/nautilus-trader.md:183`; `docs/research/tensortrade.md:169`).
+13. Bind approvals to a versioned hash of exact content and context; revoke on any policy change; a mismatch is an error, not a warning (`docs/research/outreachr.md:165-166`).
+14. Insert a durable break between action selection and execution; resume only from persisted state (`docs/research/12-factor-agents.md:147-148`; `docs/research/oh-my-pi.md:160`).
+15. Fail closed on unknown models, invalid config, or an unreachable approver (`docs/research/tradingagents.md:182-183`; `docs/research/oh-my-pi.md:161`).
+16. Keep per-venue capabilities and limits as data, validated before use, never inferred from an endpoint existing (`docs/research/nautilus-trader.md:173`; `docs/research/tensortrade.md:163`).
+17. Record outcome-knowable dates and filter any injected lesson by that date on historical runs (`docs/research/tradingagents.md:176-177`).
+18. Every dispatch on external output handles the unknown branch explicitly; routers map all returns exhaustively (`docs/research/12-factor-agents.md:156`; `docs/research/tradingagents.md:180`).
+19. Enforce pacing, caps, and single-writer access in durable state, not process memory (`docs/research/outreachr.md:173,183`).
+20. Port patterns, never code; record repo, commit, and report path at each adoption (`docs/research/12-factor-agents.md:157` rule 20; section 2 matrix here).
+21. Completion claims quote recorded output; keep counterexamples as permanent fixtures; ban tests that only prove code ran (`docs/research/tensortrade.md:175`; `docs/research/nautilus-trader.md:189`; `docs/research/oh-my-pi.md:172`).
 
 ## 11. Least confident decisions
 

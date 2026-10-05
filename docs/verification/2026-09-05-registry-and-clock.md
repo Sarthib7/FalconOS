@@ -100,4 +100,4 @@ b1a2b9692a6b06cf16e7177acf382a3a44f2a590e28ac412c08476e283dcf4cd  test/cli.test.
 75928e9cf4c4255bccba7c79dd8235171956f794f94963d008f3be7e3e976691  test/fixtures/public-metadata.json
 ~~~
 
-[INFERRED, spec limit] No `SPEC.md` exists in this repository. The scoped clock invariant and bug trace are recorded in `memory/evidence-files.md` instead.
+[INFERRED, spec limit] No `SPEC.md` exists in this repository. The scoped clock invariant and bug trace are recorded in `docs/archive/memory/evidence-files.md` instead.
