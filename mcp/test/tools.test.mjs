@@ -252,7 +252,7 @@ test('(g) Mesh 409, 401 and 429 map to isError with the Mesh code and retryAfter
 
   const unauthorized = await call('falcon_activity', { session: SESSION });
   assert.equal(unauthorized.isError, true);
-  assert.deepEqual(body(unauthorized), { code: 'UNAUTHORIZED', message: 'A valid wallet session is required.' });
+  assert.deepEqual(body(unauthorized), { code: 'UNAUTHORIZED', message: 'A valid wallet session is required. Sign in again with falcon_connect, then falcon_connect_verify.' });
 
   const limited = await call('falcon_check_receipt', { session: SESSION, intentId: IDS.intent });
   assert.equal(limited.isError, true);
@@ -269,7 +269,7 @@ test('(g) individual 409 and 401 pass through with their own codes', async () =>
   await withStack({}, async ({ call }) => {
     const wrong = await call('falcon_yield_opportunities', { session: 'wsi1_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' });
     assert.equal(wrong.isError, true);
-    assert.deepEqual(body(wrong), { code: 'UNAUTHORIZED', message: 'A valid wallet session is required.' });
+    assert.deepEqual(body(wrong), { code: 'UNAUTHORIZED', message: 'A valid wallet session is required. Sign in again with falcon_connect, then falcon_connect_verify.' });
   });
 });
 
@@ -348,14 +348,21 @@ test('(c) falcon_connect_verify UNAUTHORIZED adds retry hint without leaking che
   assert.match(output.message, /Call falcon_connect for a new challenge and sign it again\./);
 }));
 
-test('(b2) falcon_connect_verify UNAUTHORIZED does not bleed into other tools', () => withStack({
+test('(b2) session tools turn UNAUTHORIZED into a sign-in-again step', () => withStack({
   overrides: { 'GET /v1/decisions': () => ({ status: 401, body: { error: { code: 'UNAUTHORIZED', message: 'A valid wallet session is required.' } } }) },
 }, async ({ call }) => {
   const result = await call('falcon_activity', { session: SESSION });
   assert.equal(result.isError, true);
-  const output = body(result);
-  assert.equal(output.code, 'UNAUTHORIZED');
-  assert.equal(output.message.includes('falcon_connect'), false, 'other tools must not add the connect hint');
+  assert.deepEqual(body(result), { code: 'UNAUTHORIZED', message: 'A valid wallet session is required. Sign in again with falcon_connect, then falcon_connect_verify.' });
+}));
+
+test('a missing analysisId names the tool that returns it, for supply and redeem', () => withStack({}, async ({ call, mesh }) => {
+  for (const args of [{ action: 'supply', decisionId: IDS.decision }, { action: 'redeem' }]) {
+    const result = await call('falcon_prepare_transaction', { session: SESSION, amountUsdc: '0.1', ...args });
+    assert.equal(result.isError, true);
+    assert.match(result.content[0].text, /analysisId is required\. Get it from falcon_refresh_evidence first\./);
+  }
+  assert.equal(mesh.calls.some(c => c.path === '/v1/lending/intents'), false);
 }));
 
 test('falcon_refresh_evidence returns NO_DATA when reserve analysis is not OBSERVED', () => withStack({

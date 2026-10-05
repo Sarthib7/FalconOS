@@ -27,7 +27,9 @@ const WALLET = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 const session = z.string().max(256).regex(SESSION, 'Session must be the token returned by falcon_connect_verify.')
   .describe('Session token returned by falcon_connect_verify.');
-const uuid = (label) => z.string().regex(UUID, `${label} must be a UUID.`);
+// `from` names the tool that returns the id, so a missing id tells the agent which step it skipped.
+const uuid = (label, from) => z.string({ error: issue => (issue.input === undefined && from ? `${label} is required. Get it from ${from} first.` : undefined) })
+  .regex(UUID, `${label} must be a UUID.`);
 const usdc = (label) => z.string().max(40)
   .regex(DECIMAL_USDC, `${label} must be a decimal USDC string with at most 6 decimals, for example "0.5".`)
   .superRefine((v, ctx) => { if (DECIMAL_USDC.test(v) && !isUsdcAmount(v)) ctx.addIssue({ code: 'custom', message: `${label} is too large.` }); })
@@ -103,7 +105,13 @@ export function registerFalconTools(server, { mesh, limiter }) {
           throw new ToolError('RATE_LIMITED', `Rate limit reached. Retry in ${verdict.retryAfterSeconds} seconds.`, verdict.retryAfterSeconds);
         }
         return ok(await handler(args));
-      } catch (error) { return failure(error); }
+      } catch (error) {
+        // A session tool's 401 means the session is missing, expired or revoked: the only fix is a new sign-in.
+        if (rate === bySession && error instanceof ToolError && error.code === 'UNAUTHORIZED') {
+          return failure(new ToolError('UNAUTHORIZED', `${error.message} Sign in again with falcon_connect, then falcon_connect_verify.`));
+        }
+        return failure(error);
+      }
     });
   }
   const bySession = args => ['session', sessionKey(args.session)];
@@ -256,7 +264,7 @@ export function registerFalconTools(server, { mesh, limiter }) {
       session,
       action: z.enum(['supply', 'redeem']),
       amountUsdc: usdc('amountUsdc'),
-      analysisId: uuid('analysisId').describe('analysisId returned by falcon_refresh_evidence.'),
+      analysisId: uuid('analysisId', 'falcon_refresh_evidence').describe('analysisId returned by falcon_refresh_evidence. Required for supply and redeem.'),
       decisionId: uuid('decisionId').optional().describe('Required for supply, forbidden for redeem.'),
     }).superRefine((value, ctx) => {
       if (value.action === 'supply' && value.decisionId === undefined) ctx.addIssue({ code: 'custom', path: ['decisionId'], message: 'Supply needs a decisionId from a REVIEW result of falcon_reserve_decision. Get one first.' });
@@ -285,7 +293,7 @@ export function registerFalconTools(server, { mesh, limiter }) {
     description: 'Register the wallet-signed transaction bytes (base64) with Falcon. Falcon verifies them against the prepared intent. It does NOT broadcast: you send them to Solana Devnet yourself.',
     inputSchema: z.strictObject({
       session,
-      intentId: uuid('intentId').describe('intentId returned by falcon_prepare_transaction.'),
+      intentId: uuid('intentId', 'falcon_prepare_transaction').describe('intentId returned by falcon_prepare_transaction.'),
       signedTransactionBase64: z.string().max(4096).describe('The signed transaction, base64.'),
       requestId: uuid('requestId').optional().describe('Optional idempotency key. Reuse it only to retry the same submission.'),
     }),
@@ -306,7 +314,7 @@ export function registerFalconTools(server, { mesh, limiter }) {
     description: 'Ask Falcon to reconcile the registered transaction against Solana Devnet and record the result.',
     inputSchema: z.strictObject({
       session,
-      intentId: uuid('intentId').describe('intentId returned by falcon_prepare_transaction.'),
+      intentId: uuid('intentId', 'falcon_prepare_transaction').describe('intentId returned by falcon_prepare_transaction.'),
       requestId: uuid('requestId').optional().describe('Optional idempotency key. Reuse it only to retry the same check.'),
     }),
     annotations: WRITE,
