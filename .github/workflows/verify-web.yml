@@ -1,0 +1,43 @@
+name: Verify web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.12.0
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            mesh/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci --prefix web
+
+      - name: Install mesh dependencies used by the web build
+        run: npm ci --prefix mesh
+
+      - name: Run web tests
+        run: npm --prefix web test
+
+      - name: Build the production site
+        run: npm --prefix web run build:site

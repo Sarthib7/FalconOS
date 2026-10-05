@@ -114,7 +114,9 @@ export function createSignInWalletSession({ registry = getWallets() } = {}) {
       if (events?.version === '1.0.0' && typeof events.on === 'function') {
         try {
           const off = events.on('change', (properties) => {
-            if (selected?.wallet === wallet && properties && ['accounts', 'chains', 'features'].some((key) => Object.hasOwn(properties, key))) clear(CHANGED);
+            if (selected?.wallet === wallet && properties
+              && ['accounts', 'chains', 'features'].some((key) => Object.hasOwn(properties, key))
+              && !selectedAccount()) clear(CHANGED);
             emit();
           });
           if (typeof off !== 'function') throw new Error('Missing event cleanup');

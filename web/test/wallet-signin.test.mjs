@@ -104,6 +104,19 @@ test('V103: a wallet change event invalidates the current selection and pending 
   assert.equal(fixture.session.current(), null);
 });
 
+test('V103: a redundant account snapshot does not cancel a valid pending sign-in', async () => {
+  const fixture = await connected();
+  const pending = deferred();
+  const message = Uint8Array.of(1, 2, 3);
+  const signature = Uint8Array.of(4, 5, 6);
+  fixture.onSign(() => pending.promise);
+  const result = fixture.session.signMessage(message);
+  fixture.change({ accounts: [account(FIRST)] });
+  pending.resolve([{ signedMessage: message, signature }]);
+  assert.deepEqual(await result, signature);
+  assert.equal(fixture.session.current()?.address, FIRST);
+});
+
 test('V103: sign-in exposes no broadcast path and never calls one', async () => {
   const fixture = await connected();
   assert.deepEqual(Object.keys(fixture.session).sort(), ['connect', 'current', 'disconnect', 'list', 'signMessage', 'subscribe']);
