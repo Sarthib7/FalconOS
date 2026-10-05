@@ -1,22 +1,19 @@
 # FalconOS
 
-FalconOS is the umbrella product. Its current module, Falcon Investment Council, is agent-first market intelligence and risk advisory. The live MVP is an MCP plugin and a Solana Devnet USDC yield agent. The agent connects to Kamino's KLend program on Devnet, reads reserve data, produces a hashed evidence record, evaluates a supply or redeem proposal against user-defined limits, and returns an unsigned transaction. The user's or agent's own wallet signs and broadcasts. Falcon never holds keys, never broadcasts, and never moves real funds. There is no mainnet deployment and no custody.
+FalconOS is the umbrella product. Its current module, Falcon Investment Council, is agent-first market intelligence and risk advisory. The live MVP is an MCP plugin and a Solana Devnet USDC yield agent. The agent connects to Kamino's KLend program on Devnet, reads reserve data, produces a hashed evidence record, evaluates a supply or redeem proposal against user-defined limits, and returns an unsigned transaction. The user's or agent's own wallet signs and broadcasts. Falcon never holds keys, never broadcasts, and never moves real funds. There is no mainnet deployment and no custody. No signed Devnet transaction has been completed yet: the live end-to-end check verified wallet sign-in, evidence capture, a REVIEW decision, and correct rejection of an unfunded wallet; a signed supply has not been confirmed on chain.
 
 ## Try it
 
-**Agent page:** [https://falcon-agents.pages.dev](https://falcon-agents.pages.dev)
-(custom domain `agents.falconos.markets` is being connected)
+**Agent page:** [https://agents.falconos.markets](https://agents.falconos.markets)
 
 **Download the skill (any agent):**
 ```sh
 curl -fsSL https://agents.falconos.markets/SKILLS.md
-# until the custom domain is connected:
-curl -fsSL https://falcon-agents.pages.dev/SKILLS.md
 ```
 
 **Claude Code:**
 ```sh
-claude mcp add --transport http falconos https://falcon-mcp-production-5875.up.railway.app/mcp
+claude mcp add --transport http falconos https://mcp.falconos.markets/mcp
 ```
 
 **JSON config** (any MCP client that supports Streamable HTTP):
@@ -25,7 +22,7 @@ claude mcp add --transport http falconos https://falcon-mcp-production-5875.up.r
   "mcpServers": {
     "falconos": {
       "type": "http",
-      "url": "https://falcon-mcp-production-5875.up.railway.app/mcp"
+      "url": "https://mcp.falconos.markets/mcp"
     }
   }
 }
@@ -84,8 +81,6 @@ Amounts are decimal USDC strings with at most 6 decimals, for example `"0.5"`. T
 
 - **Devnet only.** No mainnet deployment. No real funds.
 - **No custody.** Falcon never holds keys. The agent signs and broadcasts its own bytes.
-- **No signed Devnet transaction completed yet.** The live end-to-end check verified wallet sign-in, evidence capture, a REVIEW decision with five PASS checks, and correct rejection of an unfunded wallet. A signed supply has not been confirmed on chain.
-- **Custom domain.** `agents.falconos.markets` is being connected. Use [https://falcon-agents.pages.dev](https://falcon-agents.pages.dev) in the meantime.
 - **Sessions expire after 30 minutes.** Call `falcon_disconnect` to revoke early.
 - **Evidence is short-lived.** Captured evidence is usable for about 300 seconds. A prepared transaction expires in about 120 seconds.
 - **Supply cap.** Mesh caps Devnet supply at 1 USDC.

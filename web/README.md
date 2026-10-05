@@ -135,13 +135,13 @@ After creating the Pages project, open **Pages → the project → Custom domain
 
 ### agents.falconos.markets release settings
 
-[VERIFIED, Railway, 2026-10-05] The MCP server is live at `https://falcon-mcp-production-5875.up.railway.app/mcp`. Mesh is live at `https://falcon-mesh-production.up.railway.app`. Mesh allows the Origin `https://agents.falconos.markets`.
+[VERIFIED, Railway, 2026-10-05] The MCP server is live at `https://mcp.falconos.markets/mcp`. Mesh is live at `https://api.falconos.markets`. Mesh allows the Origin `https://agents.falconos.markets`.
 
 [VERIFIED, local production build] These Cloudflare Pages settings produce a `dist-bot/SKILLS.md` that contains the live MCP install command:
 
 - **Root directory:** `web`
 - **Build command:** `npm run build:bot`
 - **Build output directory:** `dist-bot`
-- **Environment variables:** `VITE_FALCON_MCP_URL=https://falcon-mcp-production-5875.up.railway.app/mcp`, `VITE_FALCON_SKILL_URL=https://agents.falconos.markets/SKILLS.md`, `VITE_MESH_API_URL=https://falcon-mesh-production.up.railway.app`
+- **Environment variables:** `VITE_FALCON_MCP_URL=https://mcp.falconos.markets/mcp`, `VITE_FALCON_SKILL_URL=https://agents.falconos.markets/SKILLS.md`, `VITE_MESH_API_URL=https://api.falconos.markets`
 
 [NOT DETERMINED] The Pages project and the `agents.falconos.markets` DNS record do not exist yet. `dig +short agents.falconos.markets` returned no record on 2026-10-05.
