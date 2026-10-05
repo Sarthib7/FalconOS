@@ -186,7 +186,7 @@ Smoke command must print one advisory/error JSON line, create no persistent file
 
 ### I7. Falcon Investment perps council contracts
 
-- `preps/perps.ts` owns distinct perps-only types/validators; legacy `src/plugin.ts` contract unchanged.
+- `perps/perps.ts` owns distinct perps-only types/validators; legacy `src/plugin.ts` contract unchanged. [VERIFIED, correction, 2026-10-05] Folder renamed `preps/` → `perps/` on 2026-09-20.
 - Host-owned versioned registry accepts one exact native SOL-perpetual contract definition per `phoenix` or `hyperliquid`; exact native IDs/values remain injected inputs, not defaults or aliases. Invalid/missing/conflicting critical metadata → `NO_DATA`.
 - `createCanonicalSnapshotBundle` accepts both Phoenix + Hyperliquid registries, both versioned field-precedence policies, both venue capture sets, one capture time/coherence cap, and one provenance; bundle emits immutable combined raw manifest, normalized two-market projection, source decisions, deterministic bytes, and one SHA-256 hash. `createCanonicalSnapshot` remains venue-local assembly only.
 - Secondary field source may replace primary only on typed primary `outage` + prevalidated semantic equivalence; disagreement, critical missing/invalid, stale, future, or coherence breach → `NO_DATA`.
@@ -203,7 +203,7 @@ Smoke command must print one advisory/error JSON line, create no persistent file
 
 ```sh
 npm run typecheck
-node --test preps/test/perps.test.ts
+node --test perps/test/perps.test.ts
 node --test test/plugin.test.ts test/agent.test.ts
 npm test
 ```
@@ -218,6 +218,7 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - Current capability labels: Stablecoins = working local CLI; Perps = tested local preview; Stocks = in development.
 - CTAs: explain system + explore Falcon Skills navigate within page. Waitlist fields preview email + use case + explicit consent; local preview sends/stores nothing and states that no signup occurred.
 - Static Cloudflare Pages deployment at `falconos.markets` allowed; ⊥ production email, D1, Resend, analytics, wallet, signer, transaction construction/submission.
+- [VERIFIED, correction, 2026-10-05] Bullets above predate the live site. Site is React built by Vite. Production signup persists to Cloudflare D1 (V105, V106); Resend delivery optional. ⊥ wallet, signer, transaction construction/submission still holds for this site.
 
 ### I10. Falcon Investment stocks basket council contract
 
@@ -300,11 +301,12 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - [INFERRED, chat] MVP chat maps supported user messages to typed discover, simulate, and explain intents. Responses come from the deterministic engine and include source evidence. No external model provider is configured or called in this slice. External model agents may call the same typed API.
 - [INFERRED, UI] Show a compact portfolio rail and a source-to-destination Cash Trace. Each step names source, destination, chain, asset, amount, observed rate, retrievedAt, unknown costs, and policy status. Distinguish simulated balances from real wallet balances.
 - [INFERRED, persistence] Store simulation snapshots and receipts locally with versioned replay. Provider reads happen only on user request; no background polling.
-### I19. Falcon hackathon site
+### I19. Falcon agent page (`agents.falconos.markets`)
 
 - [VERIFIED, user direction, 2026-10-03] Separate landing page and app at `bot.falconos.markets`; existing FalconOS site and `/dashboard/` remain separate.
 - [SUPERSEDED, user choice, 2026-10-03] Earlier bot Supabase login requirement was replaced by Phantom signature login; the bot no longer uses magic links.
 - [VERIFIED, user choice, 2026-10-04] The bot subdomain serves the bot at `/` and the graph/DevNet terminal at same-origin `/mesh/`; the existing `falconos.markets` site and `/dashboard/` remain separate.
+- [VERIFIED, user choice, 2026-10-05] Agent page domain = `agents.falconos.markets` (Cloudflare Pages project `falcon-agents`); supersedes `bot.falconos.markets` above. Mesh allows origin `https://agents.falconos.markets`.
 - [SUPERSEDED, user choice, 2026-10-03] Bot users sign a non-transaction Phantom Wallet Standard message. Mesh verifies the proof and derives owner from the wallet address. No balance reads or transaction signing.
 - [VERIFIED, user choice, 2026-10-04] Bot message signing proves wallet ownership for login only. The same-origin Mesh terminal may read DevNet account data and request a separate explicit transaction signature only for the manual DevNet test path above.
 - [VERIFIED, user direction, 2026-10-03] Falcon greets users with an investment-planning prompt and accepts requests through a chat composer.
@@ -599,7 +601,7 @@ T58|x|add typed discover/simulate/explain API for dashboard and external agents|
 T59|x|build chat-first dashboard, compact portfolio rail, and visible Cash Trace|I16,I18,V128
 T60|x|test provider failures, filtering, ranking ties, caps, conservation, and blocked intents|V123-V132
 T61|x|run local dashboard browser smoke and inspect simulated source-to-destination flow|I16,I18
-T62|x|build standalone bot landing and app at `bot.falconos.markets`; keep existing `falconos.markets` routes unchanged; gate Falcon composer behind Supabase Auth|I19,V134,V138
+T62|x|build standalone bot landing and app at `bot.falconos.markets` (now `agents.falconos.markets`); keep existing `falconos.markets` routes unchanged; gate Falcon composer behind Supabase Auth [superseded by wallet-signature login]|I19,V134,V138
 T63|x|verify Supabase JWT claims server-side for yield routes; derive owner from verified subject; cache only until exp, bound uncached Auth checks, preserve legacy routes|I19,V135,V139
 T64|x|connect Falcon chat to I18 typed intents and user-scoped local simulation; reject unsupported text without state change|I18,I19,V136,V137
 T65|x|test login gate, session expiry, owner isolation, Auth throttling, chat intent failures, simulation replay, browser flow, and standalone site build; no deployment|I19,V123-V139
@@ -608,7 +610,7 @@ T67|x|historical: add connect-only Phantom control after Supabase Auth; supersed
 T68|x|replace bot email gate with server-verified Phantom signature login; derive wallet owner; retain legacy Supabase mesh sessions; no transactions|I19,V134,V135,V138,V143,V144
 T69|x|add Postgres-backed one-time wallet challenge/session table; extend complete local schema history and restricted role grants; do not apply remotely|I19,V143,V144
 T70|x|test challenge replay/origin/expiry/signature, wallet owner isolation, legacy Supabase clients, browser sign-in, builds and docs; no real signing or deployment|I19,V134-V144
-T71|~|serve the wallet-gated bot at `bot.falconos.markets/` and graph/DevNet terminal at same-origin `/mesh/`; preserve main-site routes; build and verify local routes without DNS or deployment|I15,I19,V96,V143,V144,V145
+T71|~|serve the wallet-gated bot at `agents.falconos.markets/` and graph/DevNet terminal at same-origin `/mesh/`; preserve main-site routes; build and verify local routes without DNS or deployment|I15,I19,V96,V143,V144,V145
 T72|~|authorize wallet sessions for owner-scoped mesh graph, capture, analysis, and lending routes; bind every lending wallet to the session wallet; preserve legacy tokens; test cross-owner, mismatch, expiry, revocation, and transaction intent boundaries|I15,I19,V92,V95,V101,V102,V103,V145
 
 ## §B BUGS
