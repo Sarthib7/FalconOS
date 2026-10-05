@@ -188,7 +188,7 @@ export function registerFalconTools(server, { mesh, limiter }) {
       if (typeof source?.capturedAt === 'string' && (!capturedAt || source.capturedAt > capturedAt)) capturedAt = source.capturedAt;
     }
     const { record } = await mesh.post('/v1/analyses/live', { requestId: mesh.newRequestId(), observationId: PROGRAM_OBSERVATION, maxHops: 3 }, token);
-    const { record: reserveRecord } = await mesh.post('/v1/analyses/live', { requestId: mesh.newRequestId(), observationId: RESERVE_OBSERVATION }, token);
+    const { record: reserveRecord } = await mesh.post('/v1/analyses/live', { requestId: mesh.newRequestId(), observationId: RESERVE_OBSERVATION, maxHops: 3 }, token);
     const reserveNode = Array.isArray(record.graph?.nodes) ? record.graph.nodes.find(node => node.id === RESERVE_OBSERVATION) : null;
     const reserve = reserveNode?.properties;
     const reserveObserved = reserveRecord.analysis?.status === 'OBSERVED';
