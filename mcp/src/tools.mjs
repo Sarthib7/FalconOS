@@ -30,7 +30,7 @@ const session = z.string().max(256).regex(SESSION, 'Session must be the token re
 const uuid = (label) => z.string().regex(UUID, `${label} must be a UUID.`);
 const usdc = (label) => z.string().max(40)
   .regex(DECIMAL_USDC, `${label} must be a decimal USDC string with at most 6 decimals, for example "0.5".`)
-  .refine(isUsdcAmount, `${label} is too large.`)
+  .superRefine((v, ctx) => { if (DECIMAL_USDC.test(v) && !isUsdcAmount(v)) ctx.addIssue({ code: 'custom', message: `${label} is too large.` }); })
   .describe(`${label} as a decimal USDC string, at most 6 decimals, no exponent or sign.`);
 
 const READ = { readOnlyHint: true, openWorldHint: true };
@@ -133,7 +133,15 @@ export function registerFalconTools(server, { mesh, limiter }) {
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     rate: args => ['wallet', `challenge:${args.challengeId.toLowerCase()}`],
   }, async ({ challengeId, signature }) => {
-    const verified = await mesh.post('/v1/auth/wallet/verify', { challengeId, signature: normalizeSignature(signature) });
+    let verified;
+    try {
+      verified = await mesh.post('/v1/auth/wallet/verify', { challengeId, signature: normalizeSignature(signature) });
+    } catch (err) {
+      if (err instanceof ToolError && err.code === 'UNAUTHORIZED') {
+        throw new ToolError('UNAUTHORIZED', `${err.message} Call falcon_connect for a new challenge and sign it again.`);
+      }
+      throw err;
+    }
     return {
       session: verified.sessionToken, walletAddress: verified.walletAddress, expiresAt: verified.expiresAt,
       note: 'Pass this session to the other falcon_ tools. It lasts 30 minutes and anyone holding it can act as this wallet in Falcon on Devnet. Do not share it. Call falcon_disconnect when finished.',
@@ -180,21 +188,30 @@ export function registerFalconTools(server, { mesh, limiter }) {
       if (typeof source?.capturedAt === 'string' && (!capturedAt || source.capturedAt > capturedAt)) capturedAt = source.capturedAt;
     }
     const { record } = await mesh.post('/v1/analyses/live', { requestId: mesh.newRequestId(), observationId: PROGRAM_OBSERVATION, maxHops: 3 }, token);
+    const { record: reserveRecord } = await mesh.post('/v1/analyses/live', { requestId: mesh.newRequestId(), observationId: RESERVE_OBSERVATION }, token);
     const reserveNode = Array.isArray(record.graph?.nodes) ? record.graph.nodes.find(node => node.id === RESERVE_OBSERVATION) : null;
     const reserve = reserveNode?.properties;
-    const observed = record.analysis?.status === 'OBSERVED';
+    const reserveObserved = reserveRecord.analysis?.status === 'OBSERVED';
+    const bothObserved = record.analysis?.status === 'OBSERVED' && reserveObserved;
+    const issues = Array.isArray(reserveRecord.graph?.issues) ? reserveRecord.graph.issues : [];
+    const failedPattern = /^Current capture ([^\s]+) failed:/;
+    const failedCaptures = issues.flatMap(issue => { const m = typeof issue === 'string' ? failedPattern.exec(issue) : null; return m ? [m[1]] : []; });
+    const noDataSummary = failedCaptures.length > 0
+      ? `Reserve evidence capture failed: ${failedCaptures.join(', ')}.`
+      : (reserveRecord.analysis?.summary ?? record.analysis?.summary ?? null);
     return {
       analysisId: record.id,
-      status: record.analysis?.status ?? null,
-      summary: record.analysis?.summary ?? null,
+      status: bothObserved ? (record.analysis?.status ?? 'OBSERVED') : 'NO_DATA',
+      reserveStatus: reserveRecord.analysis?.status ?? null,
+      summary: bothObserved ? (record.analysis?.summary ?? null) : noDataSummary,
       capturedAt,
       ...(reserve?.status === 'ok' && reserve.availableLiquidityUnits != null && reserve.slot != null && {
         reserve: { availableLiquidityUnits: reserve.availableLiquidityUnits, availableLiquidityUsdc: baseUnitsToUsdc(reserve.availableLiquidityUnits), slot: reserve.slot },
       }),
       limits: [...EVIDENCE_LIMITS],
-      next: observed
+      next: bothObserved
         ? 'Evidence is fresh. Call falcon_reserve_decision now, then falcon_prepare_transaction with this analysisId before the evidence goes stale.'
-        : 'Evidence is not usable (NO_DATA). Do not prepare a supply. Tell your human why and retry falcon_refresh_evidence later.',
+        : 'Wait a few seconds and call falcon_refresh_evidence again.',
     };
   });
 
@@ -227,13 +244,14 @@ export function registerFalconTools(server, { mesh, limiter }) {
         : 'Do not prepare a supply. There is not enough usable evidence. Call falcon_refresh_evidence and decide again.';
     return {
       decisionId: record.id, status, summary: analysis.summary ?? null, checks: analysis.checks ?? [], expiresAt: analysis.expiresAt ?? null,
+      proposedUsdc: args.proposedUsdc, maxUsdc: args.maxUsdc,
       limits: Array.isArray(analysis.limits) ? analysis.limits : [], next,
     };
   });
 
   define('falcon_prepare_transaction', {
     title: 'Prepare unsigned Devnet transaction',
-    description: 'Prepare a Devnet supply or redeem as an UNSIGNED transaction for your own wallet to sign. supply requires decisionId from a REVIEW falcon_reserve_decision and at most 1 USDC. redeem must not carry a decisionId. The wallet is the session wallet. The prepared transaction expires in about 120 seconds.',
+    description: 'Prepare a Devnet supply or redeem as an UNSIGNED transaction for your own wallet to sign. Supply needs a decisionId from a REVIEW result of falcon_reserve_decision. Get one first. supply at most 1 USDC. redeem must not carry a decisionId. The wallet is the session wallet. The prepared transaction expires in about 120 seconds.',
     inputSchema: z.strictObject({
       session,
       action: z.enum(['supply', 'redeem']),
@@ -241,7 +259,7 @@ export function registerFalconTools(server, { mesh, limiter }) {
       analysisId: uuid('analysisId').describe('analysisId returned by falcon_refresh_evidence.'),
       decisionId: uuid('decisionId').optional().describe('Required for supply, forbidden for redeem.'),
     }).superRefine((value, ctx) => {
-      if (value.action === 'supply' && value.decisionId === undefined) ctx.addIssue({ code: 'custom', path: ['decisionId'], message: 'decisionId is required for supply.' });
+      if (value.action === 'supply' && value.decisionId === undefined) ctx.addIssue({ code: 'custom', path: ['decisionId'], message: 'Supply needs a decisionId from a REVIEW result of falcon_reserve_decision. Get one first.' });
       if (value.action === 'redeem' && value.decisionId !== undefined) ctx.addIssue({ code: 'custom', path: ['decisionId'], message: 'decisionId is not allowed for redeem.' });
     }),
     annotations: WRITE,
