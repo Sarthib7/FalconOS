@@ -327,3 +327,12 @@ test('null wallet USDC token account on supply fails with exact USDC account mes
     message: 'Wallet has no Devnet USDC token account.',
   });
 });
+
+test('null wallet receipt token account on redeem fails with exact receipt message', async () => {
+  // Index 6 in getMultipleAccounts result = walletReceipt account
+  const mock = capture({ action: 'redeem', snapshotEdit: r => { r.value[6] = null; } });
+  await assert.rejects(prepareLending(mock.input, { fetchImpl: mock.fetchImpl, now }), {
+    code: 'INVALID_INPUT',
+    message: 'Wallet has no Kamino receipt tokens to redeem.',
+  });
+});
