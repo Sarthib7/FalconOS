@@ -1,0 +1,3 @@
+docs/**/*.html linguist-documentation
+web/public/design-reference/** linguist-vendored
+data/** linguist-documentation
