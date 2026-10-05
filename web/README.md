@@ -37,6 +37,8 @@ npm --prefix web run dev:bot
 npm --prefix web run build:bot
 ```
 
+[VERIFIED, source: `web/package.json`, `web/dashboard/api.mjs`, `mesh/local.mjs`] `npm --prefix web run dev:bot` binds to `http://127.0.0.1:5194`. Bot wallet sign-in calls the Mesh API at `http://127.0.0.1:8791`; start Mesh with an initialized local database before signing in. The local Mesh launcher allows the bot's `http://127.0.0.1:5194` Origin.
+
 [SUPERSEDED, deployment choice, 2026-10-04] `build:bot` remains a bot-only artifact at `dist-bot/`; do not use it for the unified `bot.falconos.markets` site. Use the `build:mvp` target below for the bot root and same-origin `/mesh/` route.
 [VERIFIED, official Supabase reference](https://supabase.com/docs/reference/javascript/auth-getclaims) says getClaims verifies JWTs with JWKS where available and falls back to Auth for symmetric keys. [VERIFIED, source: mesh/auth.mjs] Mesh caches a verified subject by token hash until exp and limits uncached checks to 30 per 300-second process window; verification throttling returns HTTP 429.
 
@@ -121,8 +123,10 @@ After creating the Pages project, open **Pages → the project → Custom domain
 
 ## Falcon plugin install panel and SKILLS.md
 
-[VERIFIED, source: `web/bot/InstallPanel.jsx`, `web/bot/install-commands.mjs`, `web/scripts/skills-plugin.mjs`; browser run on `vite.bot.config.js`] The signed-out bot page has an "Add Falcon to your agent" section with an Agent tab (default) and a Human tab. The Agent tab shows `curl -fsSL <skill URL>` and a paste-a-prompt alternative. The Human tab shows `claude mcp add --transport http falconos <MCP URL>` and the JSON config with `"type":"http"`.
+[VERIFIED, source: `web/bot/App.jsx`, `web/bot/InstallPanel.jsx`] The signed-out bot page shows a Human/Agent switch after the site navigation and before the hero. Human is selected by default and shows the Phantom wallet sign-in component. Agent shows one copyable skill-download command: `curl -fsSL <skill URL>`.
 
-[VERIFIED, source: `web/scripts/skills-plugin.mjs`, `web/skills/SKILLS.md`] `web/skills/SKILLS.md` is the single source of the agent skill. The site, bot and MVP builds emit it at `/SKILLS.md`, and the dev servers serve it with `Content-Type: text/markdown; charset=utf-8`. Set `VITE_FALCON_MCP_URL` (an `https://<host>/mcp` URL) and optionally `VITE_FALCON_SKILL_URL` (ends in `/SKILLS.md`; production default `https://falconos.markets/SKILLS.md`) at build time. Dev builds default to `http://127.0.0.1:8792/mcp` and `http://127.0.0.1:5194/SKILLS.md`. Only `https` URLs and loopback `http` URLs are accepted, because the URLs end up in commands people paste into a shell.
+[VERIFIED, source: `web/scripts/skills-plugin.mjs`, `web/skills/SKILLS.md`] The skill template is emitted as `/SKILLS.md`. Set `VITE_FALCON_SKILL_URL` to the chosen host's `/SKILLS.md` path. Dev defaults to `http://127.0.0.1:5194/SKILLS.md`; production falls back to `https://agents.falconos.markets/SKILLS.md`. Set `VITE_FALCON_MCP_URL` to an HTTPS `/mcp` URL before production so the downloaded skill contains the MCP install instructions.
 
-[VERIFIED, source: `web/test/skill-asset.test.mjs`] A production build without `VITE_FALCON_MCP_URL` does not fail. The emitted `SKILLS.md` then says the Falcon MCP server is not deployed yet and contains no install commands, and the panel shows "The plugin server is not deployed yet" with no commands.
+[VERIFIED, source: `web/bot/install-commands.mjs`, `web/scripts/skills-plugin.mjs`] A production build without `VITE_FALCON_MCP_URL` keeps the bot page buildable and gives the Agent tab a skill download command. The downloaded skill says the MCP server is not deployed and includes no MCP setup commands.
+
+[VERIFIED, source: `web/dashboard/api.mjs`, `mesh/local.mjs`] Production wallet sign-in also needs `VITE_MESH_API_URL` for a deployed Mesh API. That Mesh service must allow the bot page's exact Origin in `FALCON_MESH_ORIGINS`.

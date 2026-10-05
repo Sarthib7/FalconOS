@@ -8,10 +8,15 @@ import {
   installCommands,
   renderSkill,
   resolveInstallConfig,
+  resolveSkillConfig,
 } from '../bot/install-commands.mjs';
 
 const MCP = 'https://mcp.falconos.example/mcp';
 const SKILL = 'https://falconos.example/SKILLS.md';
+
+// ---------------------------------------------------------------------------
+// resolveInstallConfig — full two-URL validation (used by renderSkill)
+// ---------------------------------------------------------------------------
 
 test('https URLs are ready with no notice', () => {
   const config = resolveInstallConfig({ mcpUrl: MCP, skillUrl: SKILL, isProd: true });
@@ -52,7 +57,7 @@ test('unset values in a production build are unconfigured', () => {
 test('production has a default skill URL but never a default MCP URL', () => {
   const config = resolveInstallConfig({ mcpUrl: MCP, skillUrl: undefined, isProd: true });
   assert.equal(config.state, 'ready');
-  assert.equal(config.skillUrl, 'https://falconos.markets/SKILLS.md');
+  assert.equal(config.skillUrl, 'https://agents.falconos.markets/SKILLS.md');
   assert.equal(PROD_SKILL_URL, config.skillUrl);
   const none = resolveInstallConfig({ isProd: true });
   assert.equal(none.state, 'unconfigured');
@@ -113,42 +118,106 @@ test('forbidden characters are rejected in the MCP URL and the skill URL', () =>
     const badSkill = bad.replace(/mcp(?=[^/]*$)/, 'SKILLS.md');
     const asSkill = resolveInstallConfig({ mcpUrl: MCP, skillUrl: badSkill, isProd: true });
     assert.equal(asSkill.state, 'unconfigured', `skill: ${name}`);
-    assert.deepEqual(installCommands(asSkill), { human: [], agent: { command: null, prompt: null } }, `skill: ${name}`);
+    assert.deepEqual(installCommands(asSkill), { agent: { command: null } }, `skill: ${name}`);
   }
   // Control: the same shapes without the forbidden character are accepted.
   assert.equal(resolveInstallConfig({ mcpUrl: 'https://mcp.falconos.example/mcp', skillUrl: SKILL, isProd: true }).state, 'ready');
 });
 
-test('exact command strings for the Human and Agent tabs', () => {
-  const config = resolveInstallConfig({ mcpUrl: MCP, skillUrl: SKILL, isProd: true });
-  const { human, agent } = installCommands(config);
-  assert.deepEqual(human.map(({ id, label, command }) => ({ id, label, command })), [
-    { id: 'claude-code', label: 'Claude Code', command: 'claude mcp add --transport http falconos https://mcp.falconos.example/mcp' },
-    { id: 'json-config', label: 'Any MCP client (JSON)', command: '{"mcpServers":{"falconos":{"type":"http","url":"https://mcp.falconos.example/mcp"}}}' },
-  ]);
-  for (const item of human) assert.equal(typeof item.note, 'string');
-  assert.deepEqual(JSON.parse(human[1].command), { mcpServers: { falconos: { type: 'http', url: MCP } } });
-  assert.equal(agent.command, 'curl -fsSL https://falconos.example/SKILLS.md');
-  assert.equal(agent.prompt, 'Install the FalconOS plugin: read https://falconos.example/SKILLS.md and follow its setup steps. Use Solana Devnet only. Ask me before you sign or send anything.');
-});
-
-test('local preview produces the loopback commands', () => {
-  const { human, agent } = installCommands(resolveInstallConfig({ isProd: false }));
-  assert.equal(human[0].command, 'claude mcp add --transport http falconos http://127.0.0.1:8792/mcp');
-  assert.equal(agent.command, 'curl -fsSL http://127.0.0.1:5194/SKILLS.md');
-  assert.equal(agent.prompt, 'Install the FalconOS plugin: read http://127.0.0.1:5194/SKILLS.md and follow its setup steps. Use Solana Devnet only. Ask me before you sign or send anything.');
-});
-
-test('no command is produced when unconfigured', () => {
-  const out = installCommands(resolveInstallConfig({ isProd: true }));
-  assert.deepEqual(out, { human: [], agent: { command: null, prompt: null } });
-  assert.deepEqual(installCommands({ state: 'unconfigured', mcpUrl: MCP, skillUrl: SKILL, notice: '' }), { human: [], agent: { command: null, prompt: null } });
-  assert.deepEqual(installCommands(null), { human: [], agent: { command: null, prompt: null } });
-});
-
 test('a lowercase /skill.md URL is no longer accepted', () => {
   assert.equal(resolveInstallConfig({ mcpUrl: MCP, skillUrl: 'https://falconos.markets/skill.md', isProd: true }).state, 'unconfigured');
 });
+
+// ---------------------------------------------------------------------------
+// resolveSkillConfig — skill-URL-only validation (used by the Agent tab)
+// ---------------------------------------------------------------------------
+
+test('resolveSkillConfig returns ready for a valid https skill URL', () => {
+  assert.deepEqual(resolveSkillConfig({ skillUrl: SKILL, isProd: true }), { state: 'ready', skillUrl: SKILL });
+});
+
+test('resolveSkillConfig returns local-preview for a loopback skill URL', () => {
+  assert.deepEqual(resolveSkillConfig({ skillUrl: DEV_SKILL_URL, isProd: false }), { state: 'local-preview', skillUrl: DEV_SKILL_URL });
+  assert.deepEqual(resolveSkillConfig({ skillUrl: 'http://localhost:5194/SKILLS.md', isProd: false }), { state: 'local-preview', skillUrl: 'http://localhost:5194/SKILLS.md' });
+});
+
+test('resolveSkillConfig defaults to PROD_SKILL_URL when unset in a prod build', () => {
+  const config = resolveSkillConfig({ isProd: true });
+  assert.equal(config.state, 'ready');
+  assert.equal(config.skillUrl, PROD_SKILL_URL);
+  // The selected bot entrypoint is the agents subdomain.
+  assert.ok(config.skillUrl.startsWith('https://agents.falconos.markets/'), 'PROD_SKILL_URL must use the selected agents host');
+});
+
+test('resolveSkillConfig defaults to the exact loopback URL in a dev build', () => {
+  const config = resolveSkillConfig({ isProd: false });
+  assert.equal(config.state, 'local-preview');
+  assert.equal(config.skillUrl, 'http://127.0.0.1:5194/SKILLS.md');
+  assert.equal(DEV_SKILL_URL, 'http://127.0.0.1:5194/SKILLS.md');
+});
+
+test('resolveSkillConfig returns unconfigured for invalid skill URLs', () => {
+  for (const bad of ['not a url', 'http://remotehost.example/SKILLS.md', 'https://example.com/skills.md', 'https://example.com/SKILLS.md/', 'https://example.com/a/../SKILLS.md']) {
+    assert.equal(resolveSkillConfig({ skillUrl: bad, isProd: true }).state, 'unconfigured', bad);
+    assert.equal(resolveSkillConfig({ skillUrl: bad, isProd: true }).skillUrl, null, bad);
+  }
+});
+
+test('resolveSkillConfig rejects remote http (non-loopback) skill URLs', () => {
+  assert.equal(resolveSkillConfig({ skillUrl: 'http://falconos.example/SKILLS.md', isProd: false }).state, 'unconfigured');
+});
+
+test('resolveSkillConfig accepts a supplied https skill URL regardless of isProd', () => {
+  for (const isProd of [true, false]) {
+    assert.equal(resolveSkillConfig({ skillUrl: SKILL, isProd }).state, 'ready');
+    assert.equal(resolveSkillConfig({ skillUrl: SKILL, isProd }).skillUrl, SKILL);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// installCommands — deterministic curl command output
+// ---------------------------------------------------------------------------
+
+test('agent command is curl -fsSL followed by the skill URL', () => {
+  const { agent } = installCommands(resolveSkillConfig({ skillUrl: SKILL, isProd: true }));
+  assert.equal(agent.command, 'curl -fsSL https://falconos.example/SKILLS.md');
+});
+
+test('agent command uses PROD_SKILL_URL when skill URL is unset in a prod build', () => {
+  const { agent } = installCommands(resolveSkillConfig({ isProd: true }));
+  assert.equal(agent.command, `curl -fsSL ${PROD_SKILL_URL}`);
+});
+
+test('agent command uses the exact loopback dev URL when unset in a dev build', () => {
+  const { agent } = installCommands(resolveSkillConfig({ isProd: false }));
+  assert.equal(agent.command, 'curl -fsSL http://127.0.0.1:5194/SKILLS.md');
+});
+
+test('agent command uses a supplied https skill URL verbatim', () => {
+  const custom = 'https://agent.falconos.example/SKILLS.md';
+  const { agent } = installCommands(resolveSkillConfig({ skillUrl: custom, isProd: true }));
+  assert.equal(agent.command, `curl -fsSL ${custom}`);
+});
+
+test('installCommands returns null command when config is unconfigured', () => {
+  const empty = { agent: { command: null } };
+  assert.deepEqual(installCommands(resolveSkillConfig({ skillUrl: 'not a url', isProd: true })), empty);
+  assert.deepEqual(installCommands({ state: 'unconfigured', skillUrl: null }), empty);
+  assert.deepEqual(installCommands(null), empty);
+  assert.deepEqual(installCommands(undefined), empty);
+});
+
+test('installCommands result has no human array and no prompt field', () => {
+  const result = installCommands(resolveSkillConfig({ skillUrl: SKILL, isProd: true }));
+  assert.ok(!('human' in result), 'no human key');
+  assert.ok(!('prompt' in result.agent), 'no prompt key');
+  assert.equal(Object.keys(result).join(','), 'agent');
+  assert.equal(Object.keys(result.agent).join(','), 'command');
+});
+
+// ---------------------------------------------------------------------------
+// renderSkill — template rendering still uses resolveInstallConfig
+// ---------------------------------------------------------------------------
 
 const TEMPLATE = [
   'intro {{FALCON_SKILL_URL}}',

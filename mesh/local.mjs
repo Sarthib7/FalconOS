@@ -16,7 +16,7 @@ process.stdout.write('Local access token is saved in mesh/.local/operator-token.
 const child = spawn(process.execPath, [fileURLToPath(new URL('./server.mjs', import.meta.url))], {
   stdio: 'inherit', env: { ...process.env, FALCON_MESH_HOST: '127.0.0.1',
     FALCON_MESH_TOKEN_HASHES: JSON.stringify({ [hash]: 'local' }),
-    FALCON_MESH_ORIGINS: 'http://127.0.0.1:4183,http://localhost:4183,http://127.0.0.1:5173,http://localhost:5173' },
+    FALCON_MESH_ORIGINS: 'http://127.0.0.1:4183,http://localhost:4183,http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:5194,http://localhost:5194' },
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => child.kill(signal));
 child.once('error', () => { process.stderr.write('Local mesh process could not start.\n'); process.exitCode = 1; });

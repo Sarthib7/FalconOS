@@ -971,3 +971,51 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, focused checks] MCP tests returned `tests 45`, `pass 45`, `fail 0`. The focused web tests returned `tests 23`, `pass 23`, `fail 0`. Verify-orchestrator tests returned `tests 6`, `pass 6`, `fail 0`. `build:site`, `build:bot`, and `build:mvp` ended with `✓ built in 237ms`, `78ms`, and `106ms`.
 
 [VERIFIED, mobile regression check] At 390 CSS pixels, the bot page kept `scrollWidth=452` with its install section hidden; this check did not identify the width source. With `overflow:hidden`, clicking the Human tab set `scrollLeft=62`. With the shipped `overflow:clip`, the tab stayed selected and `scrollLeft=0`.
+
+## Bot install panel revision: 2026-10-05
+
+[VERIFIED, user request] The user reported that the Agent/Human toggle does not work. They asked for Human as the default, wallet connect in Human, and only the `curl -fsSL <SKILLS.md URL>` download command in Agent. They asked to move the toggle higher and make it smaller.
+
+[VERIFIED, implementation] `BOT-INSTALL-BEHAVIOR` now places Human/Agent immediately after navigation, defaults to Human, renders PhantomWalletConnect there, and shows only the copyable skill curl command in Agent. Focused tests and browser smoke passed.
+
+[VERIFIED, implementation] `BOT-INSTALL-COMPACT` narrowed the panel to 520px max width, reduced tab and panel spacing, and wrapped the curl command on mobile.
+
+## Bot wallet sign-in: 2026-10-05
+
+[REPORTED, user] Phantom completes the message signature, then the page says: `The mesh service did not respond. Check the service and its allowed viewer origin, then try again.`
+
+[VERIFIED, source inspection] `web/dashboard/api.mjs` defaults `API_BASE` to `http://127.0.0.1:8791`. `mesh/local.mjs` allows origins on ports 4183 and 5173, but not the bot preview on 5194. The supervised Mesh server failed to start with `ENOSPC: no space left on device`. The user-reported failure was not rerun before the fix.
+
+[VERIFIED, implementation] `BOT-MESH-AUTH` added a production API guard and allowed the local bot origin on port 5194. Focused tests passed.
+
+[VERIFIED, source correction] `web/dashboard/api.mjs` now avoids a localhost fallback in production when `VITE_MESH_API_URL` is missing. It returns an explicit configuration error at request time. `mesh/local.mjs` now allows the bot development origin on port 5194. This supersedes the prior source note above.
+
+[VERIFIED, focused checks] `node --test test/install-commands.test.mjs test/mesh-api-config.test.mjs test/bot-auth.test.mjs test/mvp-routes.test.mjs` returned `tests 37`, `pass 37`, `fail 0`. `npm run build:bot` ended with `✓ built in 121ms`.
+
+[VERIFIED, local browser smoke] At `http://127.0.0.1:5194/` on a 390 CSS-pixel viewport, Human was selected after reload. Agent showed `curl -fsSL http://127.0.0.1:5194/SKILLS.md`; Copy placed that exact command on the clipboard. Clicking the nav Log in link selected Human. Axe-core 4.13.0 reported 0 violations, 39 passes, and 1 incomplete rule.
+
+[NOT DETERMINED] Phantom sign-in against Mesh remains unverified. The Mesh service is stopped. Production has no assigned `VITE_MESH_API_URL`.
+
+[VERIFIED, coordination correction] The first task batch used `/Volumes/Sarthi MAC/FalconOS`, not the assigned isolated worktree. It left uncommitted changes to `web/bot/App.jsx`, `web/bot/InstallPanel.jsx`, `web/bot/install-commands.mjs`, `web/bot/style.css`, `web/test/install-commands.test.mjs`, `web/dashboard/api.mjs`, `mesh/local.mjs`, and `web/test/mesh-api-config.test.mjs`. I have not restored them because the main worktree already had unrelated uncommitted files.
+
+[VERIFIED, local asset route] `curl -fsSL -o /dev/null -w 'HTTP %{http_code}; bytes=%{size_download}' http://127.0.0.1:5194/SKILLS.md` returned `HTTP 200; bytes=11364`. The skill download command in the Agent tab matches this route.
+
+[VERIFIED, desktop browser smoke] At a 1440x900 CSS viewport, the install panel started at y=90 and measured 520px wide. Axe-core 4.13.0 reported 0 violations, 39 passes, and 1 incomplete rule.
+
+[VERIFIED, user selection] The production skill host is `agents.falconos.markets`. `PROD_SKILL_URL` now defaults to `https://agents.falconos.markets/SKILLS.md`; no DNS or page request was made.
+
+[BLOCKED, release] No Cloudflare MCP tool is exposed in this session. I made no Cloudflare deployment or main-site link change. [REPORTED, user] The custom domain is live.
+
+[VERIFIED, correction] `dig +short` returned no A or CNAME record for `agents.falconos.markets`, `agent.falconos.markets`, or `bot.falconos.markets`. Only `falconos.markets` resolved. The earlier report that the custom domain is live was not confirmed.
+
+## Railway MCP release and Mesh incident: 2026-10-05
+
+[VERIFIED, user authorization] The user asked to host the MCP plugin on Railway with the Railway CLI. Project `falcon-mesh` (`db493763-e9d5-493f-9332-8096489a0b40`) gained service `falcon-mcp` at `https://falcon-mcp-production-5875.up.railway.app`. Its `/healthz` returned HTTP 200, and `tools/list` returned 10 tools.
+
+[VERIFIED, incident] I also redeployed `falcon-mesh` from this branch. Its `/readyz` then returned HTTP 503 with `STORAGE_UNAVAILABLE`. Logs showed `readyz store.ready failed: STORAGE_UNAVAILABLE`. The branch code requires `falcon_mesh_schema_version=3`. Supabase project `mcmxfwkhdzzsfpvldgdw` reported `falcon_mesh_schema_version=2` with no wallet-auth tables. `deploymentRollback` to `22f0defc-34c5-45a4-a162-f63f53914297` returned `true`. The new active deployment `1ea33aa9-0de1-4fa2-a924-574e3bca11fd` returned `{"status":"ready"}` with HTTP 200.
+
+[VERIFIED, configuration] `falcon-mesh` now has `FALCON_MESH_ORIGINS=https://agents.falconos.markets,https://falcon-mcp-production-5875.up.railway.app`. The restored deployment may use its earlier variable snapshot. [NOT DETERMINED] Whether the active deployment reads the new value.
+
+[BLOCKED, migration approval] Live MCP sign-in returned `STORAGE_UNAVAILABLE: Wallet authentication storage is unavailable.` Applying `mesh/migrations/0003_wallet_auth.sql` and the two wallet-table grants in `mesh/deploy/supabase-permissions.sql` needs explicit user approval. Mesh must then be redeployed from this branch.
+
+[VERIFIED, local live journey] Against local Mesh and Devnet, the MCP refresh returned `OBSERVED`, and the decision returned `REVIEW` with five `PASS` checks. An unfunded generated wallet's prepare now returns `Wallet has no Devnet USDC token account.` instead of `Account owner or encoding does not match.` Kamino tests: `tests 18`, `pass 18`, `fail 0`. Before the fix, the two new tests failed.

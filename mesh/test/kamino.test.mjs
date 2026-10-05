@@ -309,3 +309,21 @@ test('A1: preparation stamps policy and adapter versions and drift is rejected a
   assert.throws(() => verifyLendingVersions({ ...intent, policyVersion: 'mesh-public-evidence/0' }), { code: 'CONFLICT' });
   assert.throws(() => verifyLendingVersions({ ...intent, adapterVersion: undefined }), { code: 'CONFLICT' });
 });
+
+test('null wallet system account fails with exact SOL balance message', async () => {
+  // Index 7 in getMultipleAccounts result = wallet system account
+  const mock = capture({ snapshotEdit: r => { r.value[7] = null; } });
+  await assert.rejects(prepareLending(mock.input, { fetchImpl: mock.fetchImpl, now }), {
+    code: 'INVALID_INPUT',
+    message: 'Wallet has no usable Devnet SOL balance.',
+  });
+});
+
+test('null wallet USDC token account on supply fails with exact USDC account message', async () => {
+  // Index 5 in getMultipleAccounts result = walletLiquidity account
+  const mock = capture({ snapshotEdit: r => { r.value[5] = null; } });
+  await assert.rejects(prepareLending(mock.input, { fetchImpl: mock.fetchImpl, now }), {
+    code: 'INVALID_INPUT',
+    message: 'Wallet has no Devnet USDC token account.',
+  });
+});

@@ -60,7 +60,7 @@ test('with an MCP URL configured the skill carries the install steps and that UR
   assert.ok(built.includes(`{"mcpServers":{"falconos":{"type":"http","url":"${MCP}"}}}`), 'JSON entry uses the same URL with type http');
   assert.ok(built.includes(`- MCP server URL: ${MCP}`));
   const skillUrl = built.match(/^- This skill: (\S+)$/m)?.[1];
-  assert.equal(skillUrl, 'https://falconos.markets/SKILLS.md', 'production default skill URL');
+  assert.equal(skillUrl, 'https://agents.falconos.markets/SKILLS.md', 'production default skill URL');
   assert.equal(resolveInstallConfig({ mcpUrl: MCP, skillUrl, isProd: true }).state, 'ready');
   assert.ok(!built.includes(NOT_DEPLOYED));
   for (const tool of ['connect', 'connect_verify', 'disconnect', 'yield_opportunities', 'refresh_evidence', 'reserve_decision', 'prepare_transaction', 'submit_signed', 'check_receipt', 'activity']) {

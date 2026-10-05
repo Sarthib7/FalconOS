@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:local": "node local-web.mjs dev",
     "build:site": "vite build",
-    "dev:bot": "vite --config vite.bot.config.js",
+    "dev:bot": "vite --config vite.bot.config.js --host 127.0.0.1 --port 5194 --strictPort",
     "build:bot": "vite build --config vite.bot.config.js",
     "dev:mvp": "vite --config vite.mvp.config.js",
     "build:mvp": "vite build --config vite.mvp.config.js",

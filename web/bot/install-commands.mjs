@@ -5,7 +5,9 @@
 
 export const DEV_MCP_URL = 'http://127.0.0.1:8792/mcp';
 export const DEV_SKILL_URL = 'http://127.0.0.1:5194/SKILLS.md';
-export const PROD_SKILL_URL = 'https://falconos.markets/SKILLS.md';
+// PROD_SKILL_URL is the hardcoded fallback only; the authoritative source is the
+// VITE_FALCON_SKILL_URL build variable passed by the app at runtime.
+export const PROD_SKILL_URL = 'https://agents.falconos.markets/SKILLS.md';
 export const UNCONFIGURED_NOTICE = 'The plugin server is not deployed yet';
 export const LOCAL_PREVIEW_NOTICE = 'These commands point at a server on your own machine. They only work while you run the Falcon plugin locally.';
 
@@ -31,6 +33,7 @@ const unset = (value) => value === undefined || value === null || value === '';
 
 const unconfigured = () => ({ state: 'unconfigured', mcpUrl: null, skillUrl: null, notice: UNCONFIGURED_NOTICE });
 
+// Full config used by renderSkill (requires both MCP and skill URLs).
 export function resolveInstallConfig({ mcpUrl, skillUrl, isProd } = {}) {
   let mcp = mcpUrl;
   let skill = skillUrl;
@@ -42,28 +45,25 @@ export function resolveInstallConfig({ mcpUrl, skillUrl, isProd } = {}) {
   return { state: 'local-preview', mcpUrl: mcp, skillUrl: skill, notice: LOCAL_PREVIEW_NOTICE };
 }
 
+// Skill-only config used by the Agent install tab (no MCP server required).
+// Falls back to DEV_SKILL_URL in dev and PROD_SKILL_URL in prod; the caller is
+// expected to supply VITE_FALCON_SKILL_URL as skillUrl in production builds.
+export function resolveSkillConfig({ skillUrl, isProd } = {}) {
+  let skill = skillUrl;
+  if (unset(skill)) skill = isProd ? PROD_SKILL_URL : DEV_SKILL_URL;
+  const kind = classify(skill, skillPath);
+  if (kind === null) return { state: 'unconfigured', skillUrl: null };
+  return { state: kind === 'loopback-http' ? 'local-preview' : 'ready', skillUrl: skill };
+}
+
+// Returns the single curl command shown in the Agent tab.
 export function installCommands(config) {
-  if (!config || config.state === 'unconfigured' || !config.mcpUrl || !config.skillUrl) {
-    return { human: [], agent: { command: null, prompt: null } };
+  if (!config || config.state === 'unconfigured' || !config.skillUrl) {
+    return { agent: { command: null } };
   }
   return {
-    human: [
-      {
-        id: 'claude-code',
-        label: 'Claude Code',
-        command: `claude mcp add --transport http falconos ${config.mcpUrl}`,
-        note: 'Run this in your terminal. Claude Code adds the server for you.',
-      },
-      {
-        id: 'json-config',
-        label: 'Any MCP client (JSON)',
-        command: `{"mcpServers":{"falconos":{"type":"http","url":"${config.mcpUrl}"}}}`,
-        note: 'Paste into your client\'s MCP config. The type field is required.',
-      },
-    ],
     agent: {
       command: `curl -fsSL ${config.skillUrl}`,
-      prompt: `Install the FalconOS plugin: read ${config.skillUrl} and follow its setup steps. Use Solana Devnet only. Ask me before you sign or send anything.`,
     },
   };
 }
