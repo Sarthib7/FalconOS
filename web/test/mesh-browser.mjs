@@ -262,8 +262,16 @@ async function connectWallet(p) {
   await p.click('lending-connect');
   await p.wait(`document.getElementById('lending-wallet-status').textContent.includes(${JSON.stringify(testWalletAddress)})`);
 }
+let reviewDecision = null;
+async function selectReviewDecision(p) {
+  if (!reviewDecision) return;
+  await p.click('lending-decisions-refresh');
+  await p.wait(`[...document.getElementById('lending-decision').options].some(option => option.value === ${JSON.stringify(reviewDecision.id)})`);
+  await p.evaluate(`document.getElementById('lending-decision').value = ${JSON.stringify(reviewDecision.id)}; document.getElementById('lending-decision').dispatchEvent(new Event('change', {bubbles:true}))`);
+}
 async function prepareIntent(p, amount) {
   const previous = await p.evaluate('document.getElementById("lending-raw").textContent');
+  await selectReviewDecision(p);
   await p.evaluate(`document.getElementById('lending-amount').value = ${JSON.stringify(amount)}`);
   await p.click('lending-prepare');
   await p.wait(`!document.getElementById('lending-history-refresh').disabled && (document.getElementById('lending-message').dataset.error === 'true' || document.getElementById('lending-raw').textContent !== ${JSON.stringify(previous)})`);
@@ -487,9 +495,16 @@ try {
   await p.evaluate('document.getElementById("observation-id").value = "observation:live:solana-devnet-klend"; document.getElementById("observation-id").dispatchEvent(new Event("change", {bubbles:true}))');
   const terminalAnalysis = await analyze(p, 'OBSERVED');
   check('V101: test wallet is discovered by the actual Wallet Standard registry', await p.evaluate('document.getElementById("lending-wallet").textContent.includes("Ephemeral fixture wallet")'));
+  check('MVP: supply is blocked with a visible reason while no REVIEW decision exists', await p.evaluate('document.getElementById("lending-prepare").disabled && document.getElementById("lending-decision-reason").textContent.trim().length > 0'));
+  const ungated = await fetch(`${apiOrigin}/v1/lending/intents`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${credential}` }, body: JSON.stringify({ requestId: randomUUID(), analysisId: terminalAnalysis.id, wallet: testWalletAddress, action: 'supply', inputBaseUnits: '1000000' }) });
+  check('MVP: the API refuses a supply that names no reserve decision', ungated.status === 400, `status ${ungated.status}`);
+  reviewDecision = await store.createDecision(owner, { requestId: randomUUID(), scenario: { proposedUnits: '1000000', maxProposedUnits: '5000000', minBookLiquidityUnits: '1', maxObservationAgeSeconds: 300 } }, new Date().toISOString());
+  check('MVP: the real evaluator returns REVIEW for a proposal within the observed book', reviewDecision.analysis?.status === 'REVIEW', reviewDecision.analysis?.status);
+  await selectReviewDecision(p);
   check('V101: current program-evidence analysis enables preparation for the connected wallet', await p.evaluate('!document.getElementById("lending-prepare").disabled && document.getElementById("lending-analysis-link").textContent.includes("program-evidence")'));
   const firstIntent = await prepareIntent(p, '1');
   check('V101: terminal retains exact analysis, reserve and unsigned message for review', firstIntent.analysisId === terminalAnalysis.id && firstIntent.intent.wallet === testWalletAddress && firstIntent.intent.action === 'supply' && firstIntent.intent.inputBaseUnits === '1000000' && firstIntent.intent.accounts.reserve === LENDING_CONFIG.reserve && await p.evaluate('document.getElementById("lending-facts").textContent.includes("At most 1") && document.getElementById("lending-dependencies").children.length > 0'));
+  check('MVP: the prepared intent is linked to the reviewed decision', firstIntent.request?.decisionId === reviewDecision.id);
   await p.click('lending-sign');
   await p.wait('!document.getElementById("lending-history-refresh").disabled && (document.getElementById("lending-message").textContent.includes("Devnet accepted") || document.getElementById("lending-message").dataset.error === "true")');
   check('V102: real browser signature is durable before the intercepted broadcast', broadcasts.length === 1 && broadcasts[0].intentId === firstIntent.id && await p.evaluate('document.getElementById("lending-state").textContent === "SUBMITTED" && document.getElementById("lending-sign").disabled && window.__meshTestWallet.signCalls === 1'), await p.evaluate('document.getElementById("lending-message").textContent'));
@@ -563,6 +578,7 @@ try {
   await releaseAcrossWorkspace(p, 'saved lending intent', 'response');
 
   await openHistory(p, terminalAnalysis.id);
+  await selectReviewDecision(p);
   await p.evaluate('document.getElementById("lending-amount").value = "0.6"');
   await deferApiResponse(p, '/v1/lending/intents', 'POST', 'json');
   await p.click('lending-prepare');

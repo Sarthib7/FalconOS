@@ -197,7 +197,9 @@ export function createApi({
         if (url.pathname === '/v1/lending/intents') {
           if (request.method === 'GET') { send(200, { records: await lending.list(owner), limit: 20 }); return; }
           if (request.method === 'POST') {
-            const input = await body(request); keys(input, ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits']);
+            const input = await body(request);
+            // decisionId is the only optional key; the lending store requires it for supply and forbids it for redeem.
+            keys(input, ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits', ...(input && typeof input === 'object' && Object.hasOwn(input, 'decisionId') ? ['decisionId'] : [])]);
             // For lending prepare, require wallet === session.walletAddress when using wallet-session auth
             if (walletSession && input.wallet !== walletSession.walletAddress) {
               throw new MeshError('UNAUTHORIZED', 'Lending wallet must match the authenticated session wallet.');

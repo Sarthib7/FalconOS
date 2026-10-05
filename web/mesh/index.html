@@ -120,9 +120,12 @@
           <p class="record-id" id="lending-wallet-status"></p><p class="small-note" id="lending-analysis-link"></p>
           <form id="lending-form" class="lending-form">
             <label for="lending-action">Action<select id="lending-action"><option value="supply">Supply Devnet USDC</option><option value="redeem">Redeem receipt tokens</option></select></label>
+            <label for="lending-decision" id="lending-decision-field">Reserve decision (REVIEW, live, unexpired)<select id="lending-decision" aria-describedby="lending-decision-reason"></select></label>
+            <button type="button" class="button" id="lending-decisions-refresh">Load reserve decisions</button>
             <label for="lending-amount"><span id="lending-amount-label">Supply amount (Devnet USDC, maximum 1)</span><input id="lending-amount" type="text" inputmode="decimal" value="1" required autocomplete="off"></label>
             <button type="submit" class="button primary" id="lending-prepare">Prepare and simulate</button>
           </form>
+          <p class="small-note" id="lending-decision-reason" role="status" aria-live="polite"></p>
           <p id="lending-message" class="action-message" role="status" aria-live="polite"></p>
           <div id="lending-intent" hidden>
             <div class="section-heading"><h3>Prepared transaction</h3><span id="lending-state" class="badge"></span></div>

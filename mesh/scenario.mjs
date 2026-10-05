@@ -75,6 +75,7 @@ export function evaluateReserveScenario(graph, scenario, at) {
 
   const capFail = BigInt(owner.proposedUnits) > BigInt(owner.maxProposedUnits);
   const floorFail = freshness.ok && BigInt(available) < BigInt(owner.minBookLiquidityUnits);
+  const bookFail = freshness.ok && BigInt(owner.proposedUnits) > BigInt(available);
   const skipped = detail => ({ status: 'SKIPPED', detail });
   const checkBodies = {
     evidence: {
@@ -105,16 +106,26 @@ export function evaluateReserveScenario(graph, scenario, at) {
             : `Observed unborrowed book ${available} base units meets the owner floor of ${owner.minBookLiquidityUnits}.`,
         }),
     },
+    proposal_vs_book: {
+      label: 'Proposal against observed book',
+      ...(!freshness.ok ? skipped('Skipped because fresh reserve evidence is unavailable.')
+        : {
+          status: bookFail ? 'BLOCKED' : 'PASS',
+          detail: bookFail
+            ? `Proposed ${owner.proposedUnits} base units exceeds the observed unborrowed book of ${available} base units.`
+            : `Proposed ${owner.proposedUnits} base units is within the observed unborrowed book of ${available} base units.`,
+        }),
+    },
   };
 
-  const status = !evidenceOk || !freshness.ok ? 'NO_DATA' : capFail || floorFail ? 'BLOCKED' : 'REVIEW';
+  const status = !evidenceOk || !freshness.ok ? 'NO_DATA' : capFail || floorFail || bookFail ? 'BLOCKED' : 'REVIEW';
   let summary;
   if (status === 'NO_DATA') {
     summary = `No decision: ${(!evidenceOk ? checkBodies.evidence : checkBodies.freshness).detail} No live reserve evidence was used.`;
   } else if (status === 'BLOCKED') {
-    summary = `Blocked by owner limits: ${[capFail && checkBodies.owner_cap.detail, floorFail && checkBodies.book_floor.detail].filter(Boolean).join(' ')}`;
+    summary = `Blocked by owner limits: ${[capFail && checkBodies.owner_cap.detail, floorFail && checkBodies.book_floor.detail, bookFail && checkBodies.proposal_vs_book.detail].filter(Boolean).join(' ')}`;
   } else {
-    summary = `Owner-entered proposal of ${owner.proposedUnits} base units is within the owner maximum of ${owner.maxProposedUnits}, and the observed unborrowed reserve book of ${available} base units at Devnet slot ${props.slot} meets the owner floor of ${owner.minBookLiquidityUnits}. This is for review only: it is not withdrawable liquidity, a wallet holding, or execution approval.`;
+    summary = `Owner-entered proposal of ${owner.proposedUnits} base units is within the observed unborrowed reserve book of ${available} base units at Devnet slot ${props.slot} and within the owner maximum of ${owner.maxProposedUnits}, and the observed book meets the owner floor of ${owner.minBookLiquidityUnits}. This is for review only: it is not withdrawable liquidity, a wallet holding, or execution approval.`;
   }
 
   // Decision graph: real source path nodes are copied from the visited live graph; nothing is invented when absent.
@@ -164,11 +175,12 @@ export function evaluateReserveScenario(graph, scenario, at) {
     freshness: [...observationIds, mandateId],
     owner_cap: [proposalId, mandateId],
     book_floor: [...observationIds, mandateId],
+    proposal_vs_book: [...observationIds, proposalId],
   };
   const shortOf = id => id === OBSERVATION_ID ? 'observation' : id === proposalId ? 'proposal' : id === mandateId ? 'mandate'
     : Object.entries(pathIds).find(([, value]) => value === id)?.[0];
   const checks = [];
-  for (const id of ['evidence', 'freshness', 'owner_cap', 'book_floor']) {
+  for (const id of ['evidence', 'freshness', 'owner_cap', 'book_floor', 'proposal_vs_book']) {
     const body = checkBodies[id];
     const nodeId = `${M}:check:${id}`;
     checks.push({ id, label: body.label, status: body.status, detail: body.detail, evidenceNodeIds: [...inputs[id]] });
