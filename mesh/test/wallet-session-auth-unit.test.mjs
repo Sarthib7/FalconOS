@@ -9,6 +9,7 @@ const hashes = parseTokenHashes(JSON.stringify({ [digest(token)]: 'test_owner' }
 
 test('T72: wallet-session auth is checked for owner-scoped endpoints', async t => {
   let getSessionCalls = [];
+  let graphOwners = [];
   const mockWalletAuth = {
     async ready() {},
     async getSession(token) {
@@ -16,7 +17,7 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
       if (token === 'wsi1_valid_token_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') {
         return {
           walletAddress: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
-          ownerId: 'w_test_owner_id',
+          ownerId: `wallet_${'a'.repeat(56)}`,
           expiresAt: '2026-09-27T12:30:00.000Z',
         };
       }
@@ -26,7 +27,7 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
 
   const mockStore = {
     async ready() {},
-    async getGraph() { return { nodes: [], edges: [], sources: [], revision: 'test-rev' }; },
+    async getGraph(owner) { graphOwners.push(owner); return { nodes: [], edges: [], sources: [], revision: 'test-rev' }; },
   };
 
   const server = createApi({
@@ -50,25 +51,30 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
 
   await t.test('static mesh token bypasses wallet-session auth', async () => {
     getSessionCalls = [];
+    graphOwners = [];
     const response = await fetch(`${base}/v1/graph`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     assert.equal(response.status, 200);
     assert.equal(getSessionCalls.length, 0, 'getSession should not be called for static tokens');
+    assert.deepEqual(graphOwners, ['test_owner']);
   });
 
   await t.test('valid wsi1 token triggers wallet-session auth', async () => {
     getSessionCalls = [];
+    graphOwners = [];
     const response = await fetch(`${base}/v1/graph`, {
       headers: { Authorization: 'Bearer wsi1_valid_token_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
     });
     assert.equal(response.status, 200);
     assert.equal(getSessionCalls.length, 1);
     assert.equal(getSessionCalls[0], 'wsi1_valid_token_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    assert.deepEqual(graphOwners, [`wallet_${'a'.repeat(56)}`], 'owner comes from the verified session only');
   });
 
   await t.test('invalid wsi1 token is rejected', async () => {
     getSessionCalls = [];
+    graphOwners = [];
     const response = await fetch(`${base}/v1/graph`, {
       headers: { Authorization: 'Bearer wsi1_invalid_token_bbbbbbbbbbbbbbbbbbbbbbbbb' },
     });
@@ -76,6 +82,7 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
     const data = await response.json();
     assert.equal(data.error.code, 'UNAUTHORIZED');
     assert.equal(getSessionCalls.length, 1);
+    assert.deepEqual(graphOwners, [], 'no store access for a rejected session');
   });
 
   await t.test('connectors endpoint accepts wallet-session auth', async () => {
@@ -103,13 +110,14 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
 });
 
 test('T72: lending prepare wallet validation with wallet-session', async t => {
+  const prepareCalls = [];
   const mockWalletAuth = {
     async ready() {},
     async getSession(token) {
       if (token === 'wsi1_wallet1_token_aaaaaaaaaaaaaaaaaaaaaaaaaa') {
         return {
           walletAddress: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
-          ownerId: 'w_owner1',
+          ownerId: `wallet_${'b'.repeat(56)}`,
           expiresAt: '2026-09-27T12:30:00.000Z',
         };
       }
@@ -124,7 +132,8 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
 
   const mockLending = {
     async prepare(owner, input) {
-      // Owner can be either 'w_owner1' (wallet-session) or 'test_owner' (static token)
+      prepareCalls.push({ owner, input });
+      // Owner is `wallet_...` for a wallet session and `test_owner` for the static token.
       return {
         id: 'test-intent-id',
         requestId: input.requestId,
@@ -167,13 +176,15 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
         requestId: '12345678-1234-1234-1234-123456789012',
         analysisId: '87654321-4321-4321-4321-210987654321',
         wallet: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
-        action: 'supply',
+        action: 'redeem',
         inputBaseUnits: '1000000',
       }),
     });
     assert.equal(response.status, 200);
     const data = await response.json();
     assert.ok(data.record);
+    assert.equal(prepareCalls.length, 1);
+    assert.equal(prepareCalls[0].owner, `wallet_${'b'.repeat(56)}`, 'owner is the verified session owner');
   });
 
   await t.test('lending prepare fails when wallet does not match session', async () => {
@@ -187,7 +198,7 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
         requestId: '12345678-1234-1234-1234-123456789013',
         analysisId: '87654321-4321-4321-4321-210987654321',
         wallet: 'J3dxNj7nDRRqRRXuEMynDG57DkZK4jYRuv3Garmb1i99', // Different wallet
-        action: 'supply',
+        action: 'redeem',
         inputBaseUnits: '1000000',
       }),
     });
@@ -195,6 +206,27 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
     const data = await response.json();
     assert.equal(data.error.code, 'UNAUTHORIZED');
     assert.match(data.error.message, /wallet must match/i);
+    assert.equal(prepareCalls.length, 1, 'prepare must not run for a foreign wallet');
+  });
+
+  await t.test('lending prepare rejects a caller-supplied owner field and never reaches prepare', async () => {
+    const response = await fetch(`${base}/v1/lending/intents`, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer wsi1_wallet1_token_aaaaaaaaaaaaaaaaaaaaaaaaaa',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requestId: '12345678-1234-1234-1234-123456789015',
+        analysisId: '87654321-4321-4321-4321-210987654321',
+        wallet: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
+        action: 'redeem',
+        inputBaseUnits: '1000000',
+        ownerId: 'test_owner',
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.equal(prepareCalls.length, 1);
   });
 
   await t.test('lending prepare with static token allows any wallet', async () => {
@@ -208,12 +240,14 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
         requestId: '12345678-1234-1234-1234-123456789014',
         analysisId: '87654321-4321-4321-4321-210987654321',
         wallet: 'J3dxNj7nDRRqRRXuEMynDG57DkZK4jYRuv3Garmb1i99',
-        action: 'supply',
+        action: 'redeem',
         inputBaseUnits: '1000000',
       }),
     });
     assert.equal(response.status, 200);
     const data = await response.json();
     assert.ok(data.record);
+    assert.equal(prepareCalls.length, 2);
+    assert.equal(prepareCalls[1].owner, 'test_owner');
   });
 });
