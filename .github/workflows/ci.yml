@@ -101,6 +101,34 @@ jobs:
             (repeat('a', 64), repeat('1', 32), 'wallet_' || repeat('a', 56), now(), now() + interval '20 minutes');
           UPDATE falcon_mesh.wallet_auth_sessions SET revoked_at = now() WHERE token_hash = repeat('a', 64);
           DELETE FROM falcon_mesh.wallet_auth_sessions WHERE token_hash = repeat('a', 64);
+          INSERT INTO falcon_mesh.oauth_authorization_requests
+            (request_hash, client_id, client_name, redirect_uri, state, code_challenge, resource, scope, created_at, expires_at)
+          VALUES
+            (repeat('b', 64), 'https://client.example/metadata.json', 'CI client', 'https://client.example/callback',
+             'ci-state', repeat('A', 43), 'https://mcp.example.com/mcp', 'falcon', now(), now() + interval '4 minutes');
+          DO $$
+          BEGIN
+            IF (SELECT count(*) FROM falcon_mesh.oauth_authorization_requests WHERE request_hash = repeat('b', 64)) <> 1 THEN
+              RAISE EXCEPTION 'OAuth request SELECT grant failed';
+            END IF;
+          END
+          $$;
+          UPDATE falcon_mesh.oauth_authorization_requests SET consumed_at = now() WHERE request_hash = repeat('b', 64);
+          DELETE FROM falcon_mesh.oauth_authorization_requests WHERE request_hash = repeat('b', 64);
+          INSERT INTO falcon_mesh.oauth_authorization_codes
+            (code_hash, client_id, redirect_uri, code_challenge, resource, scope, owner_id, wallet_address, created_at, expires_at)
+          VALUES
+            (repeat('c', 64), 'https://client.example/metadata.json', 'https://client.example/callback', repeat('A', 43),
+             'https://mcp.example.com/mcp', 'falcon', 'wallet_' || repeat('a', 56), repeat('1', 32), now(), now() + interval '1 minute');
+          DELETE FROM falcon_mesh.oauth_authorization_codes WHERE code_hash = repeat('c', 64);
+          INSERT INTO falcon_mesh.oauth_access_tokens
+            (token_hash, client_id, resource, scope, owner_id, wallet_address, created_at, expires_at)
+          VALUES
+            (repeat('d', 64), 'https://client.example/metadata.json', 'https://mcp.example.com/mcp', 'falcon',
+             'wallet_' || repeat('a', 56), repeat('1', 32), now(), now() + interval '20 minutes');
+          UPDATE falcon_mesh.oauth_access_tokens SET revoked_at = now() WHERE token_hash = repeat('d', 64);
+          DELETE FROM falcon_mesh.oauth_access_tokens WHERE token_hash = repeat('d', 64);
+
           ROLLBACK;
           SQL
 
@@ -117,6 +145,10 @@ jobs:
             --env DATABASE_URL="$DATABASE_URL" \
             --env FALCON_MESH_TOKEN_HASHES='{"0000000000000000000000000000000000000000000000000000000000000000":"ci_owner"}' \
             --env FALCON_MESH_ORIGINS='http://127.0.0.1:4183' \
+            --env FALCON_MCP_OAUTH_ISSUER=http://127.0.0.1:8791 \
+            --env FALCON_MCP_OAUTH_RESOURCE=http://127.0.0.1:8792/mcp \
+            --env FALCON_MCP_OAUTH_APPROVAL_URL=http://127.0.0.1:4183/oauth/approve \
+            --env FALCON_MCP_OAUTH_SERVICE_SECRET=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \
             falcon-mesh:ci
           trap 'docker stop falcon-mesh-ci >/dev/null 2>&1 || true' EXIT
           for attempt in $(seq 1 30); do
@@ -140,6 +172,9 @@ jobs:
             --env FALCON_MCP_ALLOWED_HOSTS=127.0.0.1 \
             --env FALCON_MESH_API_URL=http://127.0.0.1:8791 \
             --env FALCON_MCP_ORIGIN=http://127.0.0.1:4183 \
+            --env FALCON_MCP_OAUTH_ISSUER=http://127.0.0.1:8791 \
+            --env FALCON_MCP_OAUTH_RESOURCE=http://127.0.0.1:8792/mcp \
+            --env FALCON_MCP_OAUTH_SERVICE_SECRET=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \
             falcon-mcp:ci
           trap 'docker stop falcon-mcp-ci >/dev/null 2>&1 || true' EXIT
           for attempt in $(seq 1 30); do

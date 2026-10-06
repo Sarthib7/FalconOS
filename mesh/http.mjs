@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { MeshError } from './domain.mjs';
 import { CONNECTORS } from './live.mjs';
+import { OAuthProtocolError } from './oauth.mjs';
 
 const BODY_LIMIT = 1024 * 1024;
 const EVIDENCE_EXCHANGES = 2;
@@ -65,8 +66,41 @@ async function body(request) {
   } catch { throw new MeshError('INVALID_INPUT', 'Request body must contain valid UTF-8 JSON.'); }
 }
 
+async function formBody(request, allowedKeys) {
+  if (request.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/x-www-form-urlencoded') throw new OAuthProtocolError('invalid_request', 'Content-Type must be application/x-www-form-urlencoded.');
+  if (request.headers['content-encoding'] && request.headers['content-encoding'] !== 'identity') throw new OAuthProtocolError('invalid_request', 'Compressed request bodies are not supported.');
+  const limit = 8 * 1024;
+  if (Number(request.headers['content-length']) > limit) throw new OAuthProtocolError('invalid_request', 'The OAuth form is too large.');
+  const bytes = await new Promise((resolve, reject) => {
+    const chunks = []; let length = 0;
+    const onData = chunk => {
+      length += chunk.length;
+      if (length > limit) { request.removeListener('data', onData); request.resume(); reject(new OAuthProtocolError('invalid_request', 'The OAuth form is too large.')); }
+      else chunks.push(chunk);
+    };
+    request.on('data', onData);
+    request.once('end', () => resolve(Buffer.concat(chunks)));
+    request.once('error', () => reject(new OAuthProtocolError('invalid_request', 'The OAuth form was interrupted.')));
+    request.once('aborted', () => reject(new OAuthProtocolError('invalid_request', 'The OAuth form was interrupted.')));
+  });
+  let text;
+  try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
+  catch { throw new OAuthProtocolError('invalid_request', 'The OAuth form must be valid UTF-8.'); }
+  const values = Object.create(null);
+  for (const [key, value] of new URLSearchParams(text)) {
+    if (!allowedKeys.has(key) || Object.hasOwn(values, key)) throw new OAuthProtocolError('invalid_request', 'The OAuth form contains an unknown or repeated field.');
+    values[key] = value;
+  }
+  return values;
+}
+
+function sendOAuthError(response, error) {
+  response.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', Pragma: 'no-cache', 'X-Content-Type-Options': 'nosniff' });
+  response.end(JSON.stringify({ error: error.code, error_description: error.description }));
+}
+
 export function createApi({
-  store, lending = null, yieldService = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
+  store, lending = null, yieldService = null, walletAuth = null, oauthAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
   rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600, clock = () => Date.now(),
 }) {
   if (!(tokenHashes instanceof Map) || !tokenHashes.size) throw new Error('Mesh authentication is required.');
@@ -93,30 +127,85 @@ export function createApi({
     };
     try {
       const origin = request.headers.origin;
+      const url = new URL(request.url, 'http://mesh.invalid');
+      const authorizationPage = request.method === 'GET' && url.pathname === '/oauth/authorize';
+      const approvalApi = url.pathname.startsWith('/v1/oauth/approval/');
+      if (approvalApi && (!oauthAuth || origin !== oauthAuth.approvalOrigin)) throw new MeshError('ORIGIN_DENIED', 'A permitted approval-page origin is required.');
       if (origin) {
         if (!allowedOrigins.has(origin)) throw new MeshError('ORIGIN_DENIED', 'This browser origin is not allowed.');
-        response.setHeader('Access-Control-Allow-Origin', origin);
-        response.setHeader('Vary', 'Origin');
+        if (url.pathname.startsWith('/v1/')) { response.setHeader('Access-Control-Allow-Origin', origin); response.setHeader('Vary', 'Origin'); }
       }
-      const url = new URL(request.url, 'http://mesh.invalid');
-      if (url.search) throw new MeshError('INVALID_INPUT', 'Query parameters are not supported.');
+      if (url.search && !authorizationPage) throw new MeshError('INVALID_INPUT', 'Query parameters are not supported.');
       if (request.method === 'OPTIONS') {
         if (!origin || !url.pathname.startsWith('/v1/')) throw new MeshError('ORIGIN_DENIED', 'A permitted browser origin is required.');
         const requestedHeaders = (request.headers['access-control-request-headers'] || '').toLowerCase().split(',').map(value => value.trim()).filter(Boolean);
-        if (!['GET', 'POST'].includes(request.headers['access-control-request-method']) || requestedHeaders.some(name => !['authorization', 'content-type'].includes(name))) {
-          throw new MeshError('ORIGIN_DENIED', 'This cross-origin request is not allowed.');
-        }
+        if (!['GET', 'POST'].includes(request.headers['access-control-request-method']) || requestedHeaders.some(name => !['authorization', 'content-type'].includes(name))) throw new MeshError('ORIGIN_DENIED', 'This cross-origin request is not allowed.');
         response.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '300' });
         response.end(); return;
       }
       if (request.method === 'GET' && url.pathname === '/healthz') { send(200, { status: 'alive' }); return; }
       if (request.method === 'GET' && url.pathname === '/readyz') {
-        try { await store.ready(); await walletAuth?.ready(); send(200, { status: 'ready' }); }
+        try { await store.ready(); await walletAuth?.ready(); await oauthAuth?.ready(); send(200, { status: 'ready' }); }
         catch (error) {
           process.stderr.write(`readyz store.ready failed: ${error?.code || error?.name || 'UnknownError'}\n`);
           send(503, { error: { code: 'STORAGE_UNAVAILABLE', message: 'Mesh storage is not ready.' } });
         }
         return;
+      }
+      if (request.method === 'GET' && url.pathname === '/.well-known/oauth-authorization-server') {
+        if (!oauthAuth) throw new MeshError('AUTH_UNAVAILABLE', 'OAuth authorization is not configured.');
+        send(200, oauthAuth.metadata()); return;
+      }
+      if (authorizationPage) {
+        if (!oauthAuth) throw new MeshError('AUTH_UNAVAILABLE', 'OAuth authorization is not configured.');
+        rateLimit('oauth:' + (request.socket.remoteAddress || 'unknown'));
+        try {
+          const grant = await oauthAuth.beginAuthorization(url.searchParams);
+          const target = new URL(oauthAuth.approvalUrl);
+          target.hash = new URLSearchParams({ request: grant.handle }).toString();
+          response.writeHead(302, { Location: target.href, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
+          response.end(); return;
+        } catch (error) {
+          if (error instanceof OAuthProtocolError) { sendOAuthError(response, error); return; }
+          throw error;
+        }
+      }
+      if (request.method === 'POST' && url.pathname === '/oauth/token') {
+        if (!oauthAuth) throw new MeshError('AUTH_UNAVAILABLE', 'OAuth authorization is not configured.');
+        try {
+          const form = await formBody(request, new Set(['grant_type', 'code', 'client_id', 'redirect_uri', 'code_verifier', 'resource']));
+          response.setHeader('Pragma', 'no-cache'); send(200, await oauthAuth.exchangeCode(form)); return;
+        } catch (error) {
+          if (error instanceof OAuthProtocolError) { sendOAuthError(response, error); return; }
+          throw error;
+        }
+      }
+      if (request.method === 'POST' && url.pathname === '/oauth/revoke') {
+        if (!oauthAuth) throw new MeshError('AUTH_UNAVAILABLE', 'OAuth authorization is not configured.');
+        try {
+          const form = await formBody(request, new Set(['token', 'token_type_hint']));
+          if (!form.token || (form.token_type_hint && form.token_type_hint !== 'access_token')) throw new OAuthProtocolError('invalid_request', 'The revocation request is invalid.');
+          await oauthAuth.revoke(form.token); send(200, {}); return;
+        } catch (error) {
+          if (error instanceof OAuthProtocolError) { sendOAuthError(response, error); return; }
+          throw error;
+        }
+      }
+      if (request.method === 'POST' && url.pathname === '/v1/oauth/introspect') {
+        if (origin) throw new MeshError('ORIGIN_DENIED', 'OAuth token verification is a server-to-server route.');
+        if (!oauthAuth || !oauthAuth.matchesServiceSecret(request.headers['x-falcon-mcp-service-token'])) throw new MeshError('UNAUTHORIZED', 'OAuth service authentication is required.');
+        const token = /^Bearer ([A-Za-z0-9._~-]{32,4096})$/.exec(request.headers.authorization || '')?.[1] ?? null;
+        send(200, await oauthAuth.introspect(token)); return;
+      }
+      if (url.pathname.startsWith('/v1/oauth/approval/')) {
+        if (!oauthAuth || request.method !== 'POST') throw new MeshError('NOT_FOUND', 'OAuth approval endpoint not found.');
+        rateLimit('oauth-approval:' + (request.socket.remoteAddress || 'unknown'));
+        const input = await body(request);
+        if (url.pathname === '/v1/oauth/approval/context') { keys(input, ['request']); send(200, await oauthAuth.approvalContext(input.request)); return; }
+        if (url.pathname === '/v1/oauth/approval/challenge') { keys(input, ['request', 'address']); send(200, await oauthAuth.createWalletChallenge(input.request, input.address, origin)); return; }
+        if (url.pathname === '/v1/oauth/approval/approve') { keys(input, ['request', 'challengeId', 'signature']); send(200, await oauthAuth.approve(input.request, input.challengeId, input.signature, origin)); return; }
+        if (url.pathname === '/v1/oauth/approval/deny') { keys(input, ['request']); send(200, await oauthAuth.deny(input.request)); return; }
+        throw new MeshError('NOT_FOUND', 'OAuth approval endpoint not found.');
       }
       if (url.pathname.startsWith('/v1/auth/wallet/')) {
         if (!walletAuth) throw new MeshError('AUTH_UNAVAILABLE', 'Wallet authentication is not configured.');
@@ -149,6 +238,13 @@ export function createApi({
       const meshOwner = meshToken && tokenHashes.get(createHash('sha256').update(meshToken).digest('hex'));
       let owner = meshOwner;
       let walletSession = null;
+      // MCP OAuth tokens require the private service secret before Mesh derives their wallet owner.
+      if (!owner && bearer?.startsWith('fao1_')) {
+        if (!oauthAuth || !oauthAuth.matchesServiceSecret(request.headers['x-falcon-mcp-service-token'])) throw new MeshError('UNAUTHORIZED', 'OAuth service authentication is required.');
+        walletSession = await oauthAuth.getAccessToken(bearer);
+        if (!walletSession) throw new MeshError('UNAUTHORIZED', 'A valid MCP access token is required.');
+        owner = walletSession.ownerId;
+      }
       // Wallet-session auth for owner-scoped endpoints
       if (!owner && bearer?.startsWith('wsi1_')) {
         if (!walletAuth) throw new MeshError('AUTH_UNAVAILABLE', 'Wallet authentication is not configured.');

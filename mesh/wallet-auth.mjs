@@ -89,6 +89,55 @@ export function createWalletAuth(pool, { allowedOrigins = new Set(), clock = () 
   }
   if (!(allowedOrigins instanceof Set)) throw new TypeError('Allowed wallet origins must be a Set.');
 
+  async function verifyWalletChallenge(challengeId, encodedSignature, origin, issueSession) {
+    const safeOrigin = requireOrigin(origin, allowedOrigins);
+    if (typeof challengeId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(challengeId)) throw unauthorized();
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query('BEGIN');
+      const result = await client.query(
+        `SELECT challenge_id, wallet_address, origin, message, expires_at
+         FROM falcon_mesh.wallet_auth_challenges
+         WHERE challenge_id = $1
+         FOR UPDATE`,
+        [challengeId],
+      );
+      const challenge = result.rows[0];
+      const now = clock();
+      if (!challenge || Date.parse(challenge.expires_at) <= now || challenge.origin !== safeOrigin
+        || !verifySignature(challenge.wallet_address, challenge.message, encodedSignature)) throw unauthorized();
+      const createdAt = new Date(now).toISOString();
+      const ownerId = deriveWalletOwnerId(challenge.wallet_address);
+      const deleted = await client.query(
+        `DELETE FROM falcon_mesh.wallet_auth_challenges
+         WHERE challenge_id = $1 AND expires_at > $2
+         RETURNING challenge_id`,
+        [challengeId, createdAt],
+      );
+      if (deleted.rowCount !== 1) throw unauthorized();
+      let session;
+      if (issueSession) {
+        const sessionToken = 'wsi1_' + tokenBytes(32).toString('base64url');
+        if (!SESSION_TOKEN.test(sessionToken)) throw new Error('Invalid session token entropy.');
+        const expiresAt = new Date(now + SESSION_TTL_MS).toISOString();
+        await client.query(
+          `INSERT INTO falcon_mesh.wallet_auth_sessions
+             (token_hash, wallet_address, owner_id, created_at, expires_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [createHash('sha256').update(sessionToken).digest('hex'), challenge.wallet_address, ownerId, createdAt, expiresAt],
+        );
+        session = { sessionToken, walletAddress: challenge.wallet_address, ownerId, expiresAt };
+      } else session = { walletAddress: challenge.wallet_address, ownerId };
+      await client.query('COMMIT');
+      return session;
+    } catch (error) {
+      try { await client?.query('ROLLBACK'); } catch {}
+      if (error instanceof MeshError) throw error;
+      throw storageFailure();
+    } finally { client?.release(); }
+  }
+
   return {
     async ready() {
       try {
@@ -132,59 +181,11 @@ export function createWalletAuth(pool, { allowedOrigins = new Set(), clock = () 
     },
 
     async verifyChallenge(challengeId, encodedSignature, origin) {
-      const safeOrigin = requireOrigin(origin, allowedOrigins);
-      if (typeof challengeId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(challengeId)) {
-        throw unauthorized();
-      }
-      let client;
-      try {
-        client = await pool.connect();
-        await client.query('BEGIN');
-        const result = await client.query(
-          `SELECT challenge_id, wallet_address, origin, message, expires_at
-           FROM falcon_mesh.wallet_auth_challenges
-           WHERE challenge_id = $1
-           FOR UPDATE`,
-          [challengeId],
-        );
-        const challenge = result.rows[0];
-        const now = clock();
-        if (!challenge || Date.parse(challenge.expires_at) <= now
-          || challenge.origin !== safeOrigin
-          || !verifySignature(challenge.wallet_address, challenge.message, encodedSignature)) {
-          await client.query('ROLLBACK');
-          throw unauthorized();
-        }
-        const sessionToken = `wsi1_${tokenBytes(32).toString('base64url')}`;
-        if (!SESSION_TOKEN.test(sessionToken)) throw new Error('Invalid session token entropy.');
-        const createdAt = new Date(now).toISOString();
-        const expiresAt = new Date(now + SESSION_TTL_MS).toISOString();
-        const ownerId = deriveWalletOwnerId(challenge.wallet_address);
-        const deleted = await client.query(
-          `DELETE FROM falcon_mesh.wallet_auth_challenges
-           WHERE challenge_id = $1 AND expires_at > $2
-           RETURNING challenge_id`,
-          [challengeId, createdAt],
-        );
-        if (deleted.rowCount !== 1) {
-          await client.query('ROLLBACK');
-          throw unauthorized();
-        }
-        await client.query(
-          `INSERT INTO falcon_mesh.wallet_auth_sessions
-             (token_hash, wallet_address, owner_id, created_at, expires_at)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [createHash('sha256').update(sessionToken).digest('hex'), challenge.wallet_address, ownerId, createdAt, expiresAt],
-        );
-        await client.query('COMMIT');
-        return { sessionToken, walletAddress: challenge.wallet_address, ownerId, expiresAt };
-      } catch (error) {
-        try { await client?.query('ROLLBACK'); } catch {}
-        if (error instanceof MeshError) throw error;
-        throw storageFailure();
-      } finally {
-        client?.release();
-      }
+      return verifyWalletChallenge(challengeId, encodedSignature, origin, true);
+    },
+
+    async verifyChallengeIdentity(challengeId, encodedSignature, origin) {
+      return verifyWalletChallenge(challengeId, encodedSignature, origin, false);
     },
 
     async getSession(sessionToken) {

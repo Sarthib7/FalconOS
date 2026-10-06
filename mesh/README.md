@@ -2,11 +2,11 @@
 
 [VERIFIED, source: `server.mjs`, `store.mjs`, `http.mjs`, `wallet-auth.mjs`] This Node service retains sources and analyses in PostgreSQL. The browser at `/mesh/` shows the evidence graph and a Devnet lending terminal. The server derives each workspace from a mesh token or verified Supabase subject. Bot yield requests also accept a verified wallet session.
 
-[VERIFIED, source: `package.json`, `schema.sql`, migrations `0002_lending.sql` and `0003_wallet_auth.sql`] Use Node 24.12 or later and PostgreSQL. The current local schema is version 3. Startup checks the schema and does not change it.
+[VERIFIED, source: package.json, schema.sql, migrations 0002_lending.sql, 0003_wallet_auth.sql and 0004_mcp_oauth.sql] Use Node 24.12 or later and PostgreSQL. The current application schema is version 4. Startup checks the schema and does not change it.
 
 ## Run
 
-[INFERRED, fresh local setup] Run these commands from the repository root. Use a new local database. Review `schema.sql`, both migrations, and the permission candidate before explicit initialization.
+[INFERRED, fresh local setup] Run these commands from the repository root. Use a new local database. Review schema.sql, all migrations, and the permission candidate before explicit initialization.
 
 ```bash
 npm --prefix mesh ci
@@ -17,7 +17,7 @@ FALCON_MESH_ALLOW_SCHEMA_SETUP=1 npm --prefix mesh run init-db
 npm --prefix mesh run dev:local
 ```
 
-[VERIFIED, source: `local.mjs`] The local launcher binds the API to `127.0.0.1:8791`. It saves a generated token in `mesh/.local/operator-token`. The file is excluded from Git. The browser keeps this token in memory. Reloading requires another connection. `FALCON_MESH_ORIGINS` includes the local bot origin `http://127.0.0.1:5194` for Phantom message sign-in.
+[VERIFIED, source: local.mjs] The local launcher binds the API to 127.0.0.1:8791. It saves operator-token and oauth-service-token under mesh/.local/ with mode 0600. Both files are excluded from Git. The browser keeps the operator token in memory. FALCON_MESH_ORIGINS includes the local bot origin http://127.0.0.1:5194 for Phantom message sign-in and OAuth approval.
 
 
 [INFERRED, second terminal] Start the React site, then open `http://127.0.0.1:4183/mesh/`.
@@ -36,7 +36,7 @@ pbcopy < mesh/.local/operator-token
 
 [VERIFIED, source and local integration tests] The Mesh API checks the configured Origin, verifies the Ed25519 signature, and deletes the challenge in the same transaction that creates the session. PostgreSQL stores the SHA-256 hash of a random session token. The bot stores the token in `sessionStorage`; it expires after 30 minutes. Logout revokes it. The owner ID comes from the verified wallet address.
 
-[VERIFIED, source: `server.mjs`, `init-db.mjs`, `wallet-auth.mjs`] Wallet login needs schema version 3 and an exact bot origin in `FALCON_MESH_ORIGINS`. `init-db` applies the full local history, including `0003_wallet_auth.sql`. That migration is a local candidate only; it has not been applied remotely. Static mesh tokens and Supabase JWTs remain available to existing clients.
+[VERIFIED, source: server.mjs, init-db.mjs, wallet-auth.mjs] Bot wallet login uses the challenge and session tables introduced in schema version 3. MCP OAuth needs schema version 4 and migration 0004_mcp_oauth.sql. init-db applies the full local history. Service startup only checks the schema version. Static mesh tokens and Supabase JWTs remain available to existing clients.
 
 ## Live decision graph
 
@@ -54,6 +54,16 @@ pbcopy < mesh/.local/operator-token
 [VERIFIED, source: `mesh/http.mjs`, `mesh/wallet-auth.mjs`, `migrations/0003_wallet_auth.sql`] The bot signs an origin-bound server challenge with `solana:signMessage`. The server derives the owner from the wallet address and stores one-time challenges and hashed 30-minute sessions in PostgreSQL. Sign-in does not authorize transactions or move funds.
 
 [VERIFIED, source: `mesh/http.mjs`] The API exposes `POST /v1/auth/wallet/challenge`, `POST /v1/auth/wallet/verify`, `GET /v1/auth/wallet/session`, and `POST /v1/auth/wallet/logout`. Add the bot origin to `FALCON_MESH_ORIGINS`. Static mesh tokens and Supabase session verification remain available for existing clients.
+
+## MCP OAuth
+
+[VERIFIED, source: oauth.mjs, http.mjs, migrations/0004_mcp_oauth.sql] Mesh is the OAuth authorization server for the MCP resource. It validates client metadata and PKCE S256, keeps authorization codes and access tokens as hashes, and issues revocable access tokens for up to 30 minutes. It issues no refresh token.
+[VERIFIED, source: oauth.mjs, wallet-auth.mjs] Approval verifies wallet identity and consumes one authorization request. It does not create a wsi1 wallet session.
+[VERIFIED, source: http.mjs] Public OAuth routes are GET /.well-known/oauth-authorization-server, GET /oauth/authorize, POST /oauth/token, and POST /oauth/revoke. Browser approval uses POST /v1/oauth/approval/context, /challenge, /approve, and /deny. Those routes accept only the configured approval-page Origin. POST /v1/oauth/introspect is server-to-server and requires X-Falcon-MCP-Service-Token.
+
+[VERIFIED, source: SPEC I20, server.mjs] Production OAuth URLs: issuer https://api.falconos.markets, resource https://mcp.falconos.markets/mcp, and approval page https://agents.falconos.markets/oauth/approve. Set these with FALCON_MCP_OAUTH_ISSUER, FALCON_MCP_OAUTH_RESOURCE, and FALCON_MCP_OAUTH_APPROVAL_URL. Set FALCON_MCP_OAUTH_SERVICE_SECRET to the same 32-byte base64url secret used by the MCP server. Add https://agents.falconos.markets to FALCON_MESH_ORIGINS.
+
+[VERIFIED, source: init-db.mjs, store.mjs] Migration 0004_mcp_oauth.sql advances the schema from version 3 to version 4. init-db applies the complete migration history only when FALCON_MESH_ALLOW_SCHEMA_SETUP=1. Service startup checks schema readiness and does not run migrations.
 
 ## Preview and verification
 
