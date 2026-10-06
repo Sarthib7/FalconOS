@@ -2,14 +2,17 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ConfigError, parseConfig } from '../src/config.mjs';
 
-const base = { FALCON_MESH_API_URL: 'https://mesh.internal.example', FALCON_MCP_ORIGIN: 'https://mcp.example.com' };
+const base = { FALCON_MESH_API_URL: 'https://mesh.internal.example', FALCON_MCP_ORIGIN: 'https://mcp.example.com', FALCON_MCP_OAUTH_ISSUER: 'https://mesh.example.com', FALCON_MCP_OAUTH_RESOURCE: 'https://mcp.example.com/mcp', FALCON_MCP_OAUTH_SERVICE_SECRET: 'A'.repeat(43) };
 
-test('defaults are loopback with documented limits', () => {
+test('defaults are loopback with OAuth resource binding and documented limits', () => {
   const config = parseConfig({ ...base });
   assert.equal(config.port, 8792);
   assert.equal(config.host, '127.0.0.1');
-  assert.deepEqual(config.rate, { windowMs: 60000, perSession: 60, perWallet: 10, global: 300 });
+  assert.deepEqual(config.rate, { windowMs: 60000, perToken: 60, global: 300 });
   assert.equal(config.meshUrl, 'https://mesh.internal.example');
+  assert.equal(config.oauthIssuer, 'https://mesh.example.com');
+  assert.equal(config.oauthResource, 'https://mcp.example.com/mcp');
+  assert.equal(config.oauthServiceSecret, 'A'.repeat(43));
 });
 
 test('a non-loopback host without allowed hosts is refused', () => {
@@ -41,9 +44,16 @@ test('MCP origin must be an exact origin and is required', () => {
   }
 });
 
+test('OAuth resource, issuer, and service secret fail closed', () => {
+  assert.throws(() => parseConfig({ ...base, FALCON_MCP_OAUTH_SERVICE_SECRET: undefined }), ConfigError);
+  assert.throws(() => parseConfig({ ...base, FALCON_MCP_OAUTH_ISSUER: 'http://mesh.example.com' }), ConfigError);
+  assert.throws(() => parseConfig({ ...base, FALCON_MCP_OAUTH_RESOURCE: 'https://mcp.example.com/other' }), ConfigError);
+  assert.throws(() => parseConfig({ ...base, FALCON_MCP_OAUTH_RESOURCE: 'http://10.0.0.4/mcp' }), ConfigError);
+});
+
 test('numeric knobs must be positive integers', () => {
-  assert.throws(() => parseConfig({ ...base, FALCON_MCP_RATE_MAX_PER_SESSION: '0' }), ConfigError);
+  assert.throws(() => parseConfig({ ...base, FALCON_MCP_RATE_MAX_PER_TOKEN: '0' }), ConfigError);
   assert.throws(() => parseConfig({ ...base, FALCON_MCP_RATE_MAX_GLOBAL: '1.5' }), ConfigError);
   assert.throws(() => parseConfig({ ...base, PORT: '70000' }), ConfigError);
-  assert.equal(parseConfig({ ...base, FALCON_MCP_RATE_MAX_PER_SESSION: '5' }).rate.perSession, 5);
+  assert.equal(parseConfig({ ...base, FALCON_MCP_RATE_MAX_PER_TOKEN: '5' }).rate.perToken, 5);
 });
