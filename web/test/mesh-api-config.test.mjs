@@ -2,7 +2,7 @@
 // These run with `node --test` and import no browser or Vite globals.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { resolveApiBase } from '../dashboard/api.mjs';
+import { API_BASE, meshRequest, resolveApiBase } from '../dashboard/api.mjs';
 
 test('dev fallback: returns localhost:8791 when VITE_MESH_API_URL is absent and not production', () => {
   assert.equal(resolveApiBase({}), 'http://127.0.0.1:8791');
@@ -48,4 +48,24 @@ test('configured dev URL: honours VITE_MESH_API_URL even when not in production'
     resolveApiBase({ PROD: false, VITE_MESH_API_URL: 'http://127.0.0.1:9000' }),
     'http://127.0.0.1:9000',
   );
+});
+
+test('OAuth approval requests send the request handle without cookies or bearer credentials', async () => {
+  const originalFetch = globalThis.fetch;
+  let call;
+  globalThis.fetch = async (url, options) => {
+    call = { url, options };
+    return { ok: true, status: 200, json: async () => ({ clientName: 'Client' }) };
+  };
+  try {
+    const request = 'far1_' + 'A'.repeat(43);
+    assert.deepEqual(await meshRequest(null, '/v1/oauth/approval/context', { request }), { clientName: 'Client' });
+    assert.equal(call.url, API_BASE + '/v1/oauth/approval/context');
+    assert.equal(call.options.credentials, 'omit');
+    assert.equal(call.options.redirect, 'error');
+    assert.deepEqual(call.options.headers, { accept: 'application/json', 'content-type': 'application/json' });
+    assert.deepEqual(JSON.parse(call.options.body), { request });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
