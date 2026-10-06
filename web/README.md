@@ -25,30 +25,33 @@ npm --prefix web run preview:local
 
 [INFERRED, verification commands] Run `npm run verify:web` from the repository root for web tests and the in-memory release build. `npm run verify:release:web -- --root <checkout>` checks a different source checkout. The build permits only the two declared browser-safe mesh modules outside `web/`; dashboard Node tests also need `mesh/domain.mjs`. The check does not create `dist` or compile the Pages Function. Build the artifact separately before `node web/test/landing-browser.mjs`. That browser script uses temporary SQLite and provider fixtures. The `/mesh/` route also needs the [mesh API](../mesh/README.md).
 
-## Falcon bot site
+## Personal Plugin public origin
 
-[INFERRED, local build target] `web/bot/` is a separate React landing and authenticated chat app. It builds to `web/dist-bot/`; the standard FalconOS site build and `/dashboard/` route stay unchanged.
-[VERIFIED, source and local tests] Bot access uses Phantom Wallet Standard message signing. The Mesh API verifies the origin-bound challenge and derives the owner from the signed wallet address. The bot stores an opaque session token in sessionStorage. It does not read balances or submit transactions.
+[VERIFIED, user direction, 2026-10-06] The public origin for the Personal Plugin is `https://agents.falconos.markets`. That origin is an install page only: SKILLS.md and the MCP add command. This slice has no Phantom login, yield chat, or mesh terminal on this host. `bot.falconos.markets` and `agent.falconos.markets` are historical names. The host is branded Falcon. It is not called Falcon Agent. Falcon Agent stays the customer-facing agent for one person or organization. The web app of yield chat and mesh is paused, closed-beta. The active build is the Personal Plugin. This plugin slice is advisory only: discover, simulate, and explain. It has no signing and no fund movement.
 
-Run the standalone app locally or build its Pages artifact:
+[INFERRED] This README does not claim DNS or a Pages project for `agents.falconos.markets` is live.
+
+The main marketing site remains `https://falconos.markets/`.
+
+## Falcon bot site (paused, closed-beta)
+
+[INFERRED, local build target] `web/bot/` is a separate React landing and authenticated chat app. It builds to `web/dist-bot/`; the standard FalconOS site build and `/dashboard/` route stay unchanged. This app is paused, closed-beta. It is not the public `agents.falconos.markets` origin.
+[VERIFIED, source and local tests] Local bot access uses Phantom Wallet Standard message signing. The Mesh API verifies the origin-bound challenge and derives the owner from the signed wallet address. The bot stores an opaque session token in sessionStorage. It does not read balances or submit transactions.
+
+Run the standalone paused bot app locally:
 
 ```bash
 npm --prefix web run dev:bot
-npm --prefix web run build:bot
 ```
 
-[VERIFIED, source: `web/package.json`, `web/dashboard/api.mjs`, `mesh/local.mjs`] `npm --prefix web run dev:bot` binds to `http://127.0.0.1:5194`. Bot wallet sign-in calls the Mesh API at `http://127.0.0.1:8791`; start Mesh with an initialized local database before signing in. The local Mesh launcher allows the bot's `http://127.0.0.1:5194` Origin.
-
-[SUPERSEDED, deployment choice, 2026-10-04] `build:bot` remains a bot-only artifact at `dist-bot/`; do not use it for the unified `bot.falconos.markets` site. Use the `build:mvp` target below for the bot root and same-origin `/mesh/` route.
+[SUPERSEDED, deployment choice, 2026-10-04, corrected 2026-10-06] `build:bot` remains a bot-only artifact at `dist-bot/`. Do not use it, or `build:mvp`, as the public `agents.falconos.markets` site. That origin is install-only, not a yield chat plus `/mesh/` app.
 [VERIFIED, official Supabase reference](https://supabase.com/docs/reference/javascript/auth-getclaims) says getClaims verifies JWTs with JWKS where available and falls back to Auth for symmetric keys. [VERIFIED, source: mesh/auth.mjs] Mesh caches a verified subject by token hash until exp and limits uncached checks to 30 per 300-second process window; verification throttling returns HTTP 429.
 
-## Unified bot and Mesh MVP
+## Paused yield chat and mesh (local closed-beta)
 
-[INFERRED, local build target] Run `npm --prefix web run build:mvp` to build the bot at `/` and the source graph and DevNet terminal at `/mesh/` into `web/dist-mvp/`. The standard `falconos.markets` build and routes remain unchanged. `npm --prefix web run dev:mvp` and `npm --prefix web run preview:mvp` serve those same local routes. They do not bind DNS or deploy.
+[INFERRED, local paused-app commands] Run `npm --prefix web run build:mvp` to build the paused yield chat at `/` and the source graph and DevNet terminal at `/mesh/` into `web/dist-mvp/`. The standard `falconos.markets` build and routes remain unchanged. `npm --prefix web run dev:mvp` and `npm --prefix web run preview:mvp` serve those same local closed-beta routes. They do not bind DNS, deploy, or define the public install origin.
 
-[INFERRED, deployment configuration] The separate Pages project for `bot.falconos.markets` must build this artifact with `VITE_MESH_API_URL` set to the HTTPS Mesh API origin. The Mesh service must allow the exact browser origin `https://bot.falconos.markets` in `FALCON_MESH_ORIGINS`. These settings do not configure DNS or deploy the site.
-
-[VERIFIED, source: `web/bot/auth.mjs`, `web/mesh/app.mjs`] The same-tab wallet login session is restored by `/mesh/`; operator tokens remain a manual fallback in memory. The bot chat remains simulation-only. Only the separate terminal requests an explicit DevNet transaction signature.
+[VERIFIED, source: `web/bot/auth.mjs`, `web/mesh/app.mjs`] On the local paused app, the same-tab wallet login session is restored by `/mesh/`; operator tokens remain a manual fallback in memory. The bot chat remains simulation-only. Only the separate terminal requests an explicit DevNet transaction signature. The public `agents.falconos.markets` origin does not serve this app.
 
 [VERIFIED, source: `mesh/README.md`] The Mesh API needs PostgreSQL schema version 3. Migration `0003_wallet_auth.sql` remains a local candidate until the remote database is checked and migration approval is granted.
 
@@ -73,8 +76,6 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 - `/product/`: firm model, advisory pipeline, and product boundaries.
 - `/research/`: evidence format, research checks, and unresolved proof.
 - `/dash/`: dashboard entry with a link to the Devnet terminal.
-
-  The `/dash/` gate belongs to the `falconos.markets` build only. The `bot.falconos.markets` MVP build (`build:mvp`) serves the bot at `/` and the mesh terminal at `/mesh/`.
 - `/app/`: wallet sign-in, Devnet balances, a saved token list, a manual Raydium route ticket, and browser-local order history.
 
 ## Dashboard access
@@ -87,7 +88,7 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 
 [VERIFIED, official configuration reference] Vite documents [build output and entry options](https://vite.dev/config/build-options.html) and disabling the [public directory](https://vite.dev/config/shared-options.html#publicdir).
 
-The public build includes the landing page, detail pages, the `/dash/` entry, and the `/app/` Devnet terminal. The local Vite server overrides `/dash/` and `/research/` with the localhost research terminal. `/app/` verifies wallet ownership in the browser and saves account preferences and order labels in that browser profile. It has no server session or cross-device sync. Its production trade module uses Solana Devnet and Raydium Devnet only. The stock council feed and historical strategy backtests are not connected to the production app. The `/dash/` gate belongs to the `falconos.markets` build only. The `bot.falconos.markets` MVP build (`build:mvp`) serves the bot at `/` and the mesh terminal at `/mesh/`.
+The public build includes the landing page, detail pages, the `/dash/` entry, and the `/app/` Devnet terminal. The local Vite server overrides `/dash/` and `/research/` with the localhost research terminal. `/app/` verifies wallet ownership in the browser and saves account preferences and order labels in that browser profile. It has no server session or cross-device sync. Its production trade module uses Solana Devnet and Raydium Devnet only. The stock council feed and historical strategy backtests are not connected to the production app.
 
 ## Waitlist pipeline
 
