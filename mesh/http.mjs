@@ -203,7 +203,8 @@ export function createApi({
         if (url.pathname === '/v1/lending/intents') {
           if (request.method === 'GET') { send(200, { records: await lending.list(owner), limit: 20 }); return; }
           if (request.method === 'POST') {
-            const input = await body(request); keys(input, ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits']);
+            const input = await body(request);
+            keys(input, ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits', ...(input && typeof input === 'object' && Object.hasOwn(input, 'decisionId') ? ['decisionId'] : [])]);
             requireSessionLendingWallet(walletSession, input.wallet);
             send(200, { record: await lending.prepare(owner, input) }); return;
           }
