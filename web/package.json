@@ -11,6 +11,7 @@
     "build:bot": "vite build --config vite.bot.config.js",
     "dev:mvp": "vite --config vite.mvp.config.js",
     "build:mvp": "vite build --config vite.mvp.config.js",
+    "preview:mvp": "vite preview --config vite.mvp.config.js",
     "preview:local": "node local-web.mjs preview",
     "snapshot": "node snapshot.mjs",
     "build": "npm run build:site",
