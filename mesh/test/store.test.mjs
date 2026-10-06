@@ -246,7 +246,7 @@ test('V95: readiness verifies schema version and rejects absent columns without 
   const queries = [];
   const missingColumns = createStore({ query: async sql => {
     queries.push(sql);
-    return { rows: sql.includes('pg_namespace') ? [{ version: 'falcon_mesh_schema_version=3' }] : [] };
+    return { rows: sql.includes('pg_namespace') ? [{ version: 'falcon_mesh_schema_version=4' }] : [] };
   } });
   await assert.rejects(missingColumns.ready(), code('STORAGE_UNAVAILABLE'));
   assert.ok(queries.every(sql => !/\b(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE)\b/.test(sql)));

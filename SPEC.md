@@ -317,6 +317,17 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - [SUPERSEDED, user choice, 2026-10-03] Simulation records remain browser-local and user-scoped by wallet owner; wallet message signatures authorize identity only. No live funds or transaction actions.
 - [VERIFIED, user choice, 2026-10-04] Bot chat simulation records remain browser-local and owner-scoped. The same-origin Mesh terminal uses the wallet session for owner-scoped evidence and permits only the manual DevNet test path above; it does not authorize real funds or automatic execution.
 - [VERIFIED, operational boundary] Code and local verification only; domain binding, Cloudflare configuration, and deployment remain user-managed.
+
+### I20. Hosted Falcon MCP OAuth
+
+- [VERIFIED, user direction, 2026-10-06] Falcon MCP login opens a browser approval page. Human connects Phantom and signs a non-transaction message.
+- [VERIFIED, official MCP authorization spec, 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization) Resource server: https://mcp.falconos.markets/mcp. Issuer: https://api.falconos.markets. Approval UI: https://agents.falconos.markets/oauth/approve.
+- [VERIFIED, official MCP authorization spec, 2026-07-28] MCP endpoint serves RFC 9728 protected-resource metadata and bearer challenge. Authorization uses RFC 8414 metadata, RFC 8707 resource binding, PKCE S256, RFC 9207 issuer response, and Client ID Metadata Documents. No DCR endpoint.
+- [INFERRED, accepted design] Mesh owns OAuth requests, one-time codes, and hashed access tokens. New schema migration advances v3 to v4. OAuth access token expires within 30 minutes; no refresh token.
+- [INFERRED, accepted design] Auth code and access token stay out of model arguments. MCP reads bearer from HTTP header, verifies it with Mesh, then sends it to owner-scoped Mesh routes with a private service secret. Mesh derives owner; caller-supplied owner is not authority.
+- [VERIFIED, source: mesh/wallet-auth.mjs and web/app/wallet-signin.mjs] Reuse origin-bound, one-time Ed25519 signMessage verification. OAuth approval must not mint wallet_auth_sessions. Bot session login stays unchanged.
+- [INFERRED, security boundary] CIMD fetch uses HTTPS, a pinned public destination, no redirects, and bounded size/time. Redirect URI must match client metadata; allow variable port only for loopback native clients.
+- [VERIFIED, user direction] Local code, disposable database, and browser test only. Remote schema migration, secret provisioning, deploy, push, and Railway domain removal need separate approval.
 ## §V INVARIANTS
 
 V1: ∀ plugin process → read exactly one bounded (≤8 MiB) JSON object from stdin, emit exactly one bounded (≤64 KiB) JSON response line to stdout, diagnostics ⊥ stdout
@@ -533,6 +544,15 @@ V143: ∀ bot wallet challenge → server binds one challenge to candidate addre
 V144: ∀ bot wallet session → opaque random token maps server-side to wallet-derived owner; store only token hash in Postgres and token in sessionStorage; session expires ≤30 minutes; logout revokes token; caller-supplied owner ⊥ authority
 V145: [INFERRED] ∀ wallet-session DevNet lending request → derive owner from current server-verified session; requested wallet equals session's verified wallet address; prepared intent, transaction signer and receipt stay bound to that wallet and owner; mismatch, revocation or expiry rejects before mutation or broadcast.
 
+V146: ∀ OAuth authorize request → client metadata valid; redirect_uri matches metadata; state required; code_challenge_method = S256; resource = exact MCP URI; unsupported grant/resource/redirect → no code
+V147: ∀ OAuth approval → one origin-bound signMessage proof consumes one request; no transaction signature and no wsi1 session
+V148: ∀ authorization code → random, hash-only at rest, one use, expiry ≤120 seconds; token issue requires matching client, redirect, resource, and PKCE verifier
+V149: ∀ MCP access token → random, hash-only at rest, audience exact MCP URI, active ≤30 minutes, revocable; wrong audience, expiry, revocation, or missing bearer rejects before tools
+V150: ∀ MCP tool request → bearer only in Authorization header; no session/tool auth arg; Mesh accepts OAuth bearer only with private service secret and derives owner from stored verified token
+V151: ∀ unauthenticated MCP request → 401 includes RFC 9728 resource_metadata challenge; PRM names exact resource and Mesh issuer
+V152: ∀ browser approval API → exact allowlisted Origin; access token appears only in token response and Authorization header, never in URI, model args, logs, or browser storage; authorization code appears only in registered redirect query, one-use, ≤120 seconds; approval handle stays in URL fragment
+V153: ∀ unexpected MCP tool error → structured INTERNAL_ERROR; logs omit exception class, stack and OAuth or transaction secrets
+V154: ∀ loopback redirect_uri → registered host, path and query match; port may vary per RFC 8252 §7.3; all other redirect URIs match exactly
 
 ## §T TASKS
 
@@ -612,6 +632,7 @@ T69|x|add Postgres-backed one-time wallet challenge/session table; extend comple
 T70|x|test challenge replay/origin/expiry/signature, wallet owner isolation, legacy Supabase clients, browser sign-in, builds and docs; no real signing or deployment|I19,V134-V144
 T71|~|serve the wallet-gated bot at `agents.falconos.markets/` and graph/DevNet terminal at same-origin `/mesh/`; preserve main-site routes; build and verify local routes without DNS or deployment|I15,I19,V96,V143,V144,V145
 T72|~|authorize wallet sessions for owner-scoped mesh graph, capture, analysis, and lending routes; bind every lending wallet to the session wallet; preserve legacy tokens; test cross-owner, mismatch, expiry, revocation, and transaction intent boundaries|I15,I19,V92,V95,V101,V102,V103,V145
+T73|~|add Mesh-backed OAuth authorization/code/token/revoke flow, MCP bearer gate and session-free tools, Phantom approval page, v4 migration, focused security tests, docs, disposable PostgreSQL and local browser verification|V132,V138,V141,V143,V144,V145,V146-V154,I19,I20
 
 ## §B BUGS
 
@@ -708,3 +729,5 @@ B89|2026-10-03|[VERIFIED, scoped security scan secscan_01a103243c5d777b902836ed8
 B90|2026-10-03|[VERIFIED, `mesh/yield-domain.mjs:91`: `candidates.slice(0, maxVenues)` counted pool rows] same project could consume multiple concentration caps and venue slots|V140; count distinct project slugs and cap each project target
 B91|2026-10-03|[VERIFIED, local reproduction: connectPhantomWallet returned 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'] character and length checks accepted a Base58 string that does not decode to a 32-byte key|V142; reject addresses unless Base58 decoding yields exactly 32 bytes
 B92|2026-10-05|[VERIFIED, V103 regression] unchanged account snapshot cleared pending sign-in and rejected signature|V103; retain selection while selected account and signing capability still match
+B93|2026-10-06|[VERIFIED, negative test] undefined SignatureError reference escaped generic tool error handling|V153; remove stale type check and use fixed error log
+B94|2026-10-06|[CORRECTED, RFC 8252 §7.3] prior fixed-port rule was wrong; loopback permits any port and PKCE binds code exchange|V154; allow port variation only for matching loopback host/path/query, keep PKCE

@@ -6,6 +6,7 @@ import { prepareLending, verifySignedLending, readLendingReceipt } from './kamin
 import { createWalletAuth } from './wallet-auth.mjs';
 import { createYieldService } from './yield-data.mjs';
 import { createSupabaseSessionVerifier } from './auth.mjs';
+import { createOAuthAuth } from './oauth.mjs';
 
 const tokenHashes = parseTokenHashes(process.env.FALCON_MESH_TOKEN_HASHES);
 const allowedOrigins = parseOrigins(process.env.FALCON_MESH_ORIGINS);
@@ -24,11 +25,18 @@ const store = createStore(pool);
 const lending = createLendingStore(pool, { meshStore: store, prepareLending, verifySignedLending, readLendingReceipt });
 const yieldService = createYieldService();
 const walletAuth = createWalletAuth(pool, { allowedOrigins });
+const oauthAuth = createOAuthAuth(pool, {
+  walletAuth, allowedOrigins,
+  issuer: process.env.FALCON_MCP_OAUTH_ISSUER,
+  resource: process.env.FALCON_MCP_OAUTH_RESOURCE,
+  approvalUrl: process.env.FALCON_MCP_OAUTH_APPROVAL_URL,
+  serviceSecret: process.env.FALCON_MCP_OAUTH_SERVICE_SECRET,
+});
 const verifySupabaseToken = createSupabaseSessionVerifier({
   url: process.env.FALCON_SUPABASE_URL,
   publishableKey: process.env.FALCON_SUPABASE_PUBLISHABLE_KEY,
 });
-const server = createApi({ store, lending, yieldService, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken });
+const server = createApi({ store, lending, yieldService, walletAuth, oauthAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken });
 server.on('error', () => { process.stderr.write('Mesh HTTP service failed to start.\n'); process.exitCode = 1; void pool.end(); });
 server.listen(port, process.env.FALCON_MESH_HOST || '127.0.0.1', () => process.stdout.write(`Falcon mesh listening on port ${port}.\n`));
 let closing = false;

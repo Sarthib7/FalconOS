@@ -6,7 +6,7 @@ import { RESERVE_DECISION_MARKER, parseScenario, evaluateReserveScenario } from 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$/;
 const SOURCE_LIMIT = 32;
-const SCHEMA_VERSION = 'falcon_mesh_schema_version=3';
+const SCHEMA_VERSION = 'falcon_mesh_schema_version=4';
 const COLUMNS = {
   source_revisions: { owner_id: 'text', revision_id: 'uuid', source_key: 'text', source_url: 'text', observed_at: 'timestamptz', captured_at: 'timestamptz', sha256: 'text', content: 'text' },
   source_heads: { owner_id: 'text', source_key: 'text', revision_id: 'uuid' },

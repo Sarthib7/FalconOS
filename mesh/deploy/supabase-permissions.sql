@@ -19,6 +19,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
 TO falcon_mesh_app;
 GRANT UPDATE (revision_id) ON falcon_mesh.source_heads TO falcon_mesh_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON
+  falcon_mesh.oauth_authorization_requests,
+  falcon_mesh.oauth_authorization_codes,
+  falcon_mesh.oauth_access_tokens
+TO falcon_mesh_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON
   falcon_mesh.wallet_auth_challenges,
   falcon_mesh.wallet_auth_sessions
 TO falcon_mesh_app;
