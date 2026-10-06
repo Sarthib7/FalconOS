@@ -1,5 +1,11 @@
 # ADR 0004: Separate public access from server execution
 
+## Product direction update, 2026-10-05
+
+[VERIFIED, user direction] A Falcon-hosted organization workspace is a product destination, not only a public static demo. It serves an organization's dedicated Falcon Agent and decision graphs while customer assets remain in customer-controlled accounts. This updates the earlier assumption that hosting only serves public access to a local simulation.
+
+[NOT DETERMINED] Cloud provider, tenant isolation design, account roles, durable agent state, secrets handling, execution runtime, and pricing. This update does not select or deploy infrastructure. Design and test organization isolation before storing customer-specific financial data or agent state.
+
 [VERIFIED, user request] Date: 2026-09-26. Owner: architect. Status: Planned. The user requested a future cloud path so other people can test the MVP. This request authorizes deployment research. It does not authorize publication.
 
 ## Options

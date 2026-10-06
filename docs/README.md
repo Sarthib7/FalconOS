@@ -2,6 +2,18 @@
 
 [VERIFIED, repository inspection, 2026-09-27] Start with [current status](../status.md), this component map, and the contract for the component you will change. [SPEC.md](../SPEC.md) remains the specification. This map describes existing code and records known documentation drift. It does not replace product contracts or authorize a release.
 
+## Product direction
+
+[VERIFIED, user direction, 2026-10-05] FalconOS has two product paths: lower-cost plugins for individuals and a hosted workspace with a dedicated Falcon Agent for organizations. Customer funds remain in customer-controlled wallets or financial accounts. See the [current vision](../VISION.md) and [two-tier product ADR](adrs/0008-two-tier-agent-platform.md).
+
+[NOT DETERMINED] Exact pricing, hosted account isolation design, wallet signing or delegation, automatic action limits, and legal requirements. Product direction does not prove implementation or launch readiness. See [customer-held assets ADR](adrs/0009-customer-controlled-assets.md).
+
+[REPORTED, Kuro README, fetched 2026-10-05] Kuro describes a personal AI CFO with drop-in agent skills and local or managed-runner modes. Its README describes an embedded wallet per hosted runner, which differs from FalconOS's customer-controlled-wallet direction. This is a product reference, not independent proof of adoption or performance.
+
+[INFERRED, positioning hypothesis] FalconOS should differentiate its hosted organization tier through persistent decision graphs and CFO, budget, compliance-workflow, and treasury operations. Validate this against buyers before claiming market advantage.
+
+[ARCHIVED DRAFTS] [The stages pitch](pitches/falcon-stages.html) and [the peg-to-fund flow](pitches/peg-fund-flow.html) predate the two-tier direction. Do not use either as an external pitch until revised. The peg-to-fund page retains a pooled-fund model.
+
 ## Component map
 
 [INFERRED, review ownership] These roles identify the expertise needed for a change. The coordinator assigns a named task owner in [status](../status.md). A review role grants no access to credentials, capital, or deployment.
@@ -15,6 +27,8 @@
 | Rust stocks engine. Engine implementer; finance reviewer for scaling, evidence, and veto rules. | [VERIFIED] Public market and RPC reads produce an engine snapshot, deterministic council result, graph, and local HTTP views. | [VERIFIED] Output remains advisory-only with `execution_ready: false`. The engine has no wallet signer. Its snapshot type is separate from the TypeScript stocks snapshot. | [VERIFIED] [Engine commands](../engine/src/main.rs#L33), [council](../engine/src/council.rs#L107), [local server](../engine/src/serve.rs#L620), [engine guide](../engine/README.md). |
 
 [VERIFIED, source: `mesh/domain.mjs:194`, `mesh/live.mjs:388`, `mesh/live.mjs:427`] The current mesh analysis is deterministic. Its live result `OBSERVED` links a document claim to an executable Devnet program account. It does not assess lending usability or wallet ownership. General LLM research, semantic retrieval, and automatic financial authority are not established by this result.
+
+[VERIFIED, source: `mesh/scenario.mjs`, `mesh/store.mjs`, `web/dashboard/Operate.jsx`] The additive `#operate` view binds a retained live reserve snapshot to owner-entered scenario limits. It saves `REVIEW`, `BLOCKED` or `NO_DATA` with a provenance-labelled decision graph. The older synthetic treasury Decisions view remains separate, and neither route authorizes a wallet transaction.
 
 [VERIFIED, source: `web/dashboard/App.jsx:3`, `web/dashboard/store.mjs:3`, `web/mesh/wallet.mjs:30`, `web/app/app.mjs:247`] The Control Centre reuses treasury simulation rules with a separate storage key. Its samples are not mesh API results. Wallet Standard discovery belongs to the mesh terminal. The separate `/app/` uses an injected provider and message-signing flow. Browser fixture tests do not prove every wallet works.
 
@@ -108,6 +122,10 @@
 | [0002: Graph and authority](adrs/0002-graph-and-authority.md) | [INFERRED, design] Graph informs decisions; separate guards constrain settlement. |
 | [0003: Replayable local history](adrs/0003-browser-local-history.md) | [INFERRED, design] Validated command log, exact amounts, serialized writes. |
 | [0004: Cloud deployment](adrs/0004-cloud-deployment.md) | [INFERRED, recommendation] Pages for tester access; a service and Postgres for later server work. |
+| [0005: Investment manager destination](adrs/0005-investment-manager.md) | [VERIFIED, user choice, 2026-09-30] FalconOS destination is an investment manager with a deal desk. Current code stays advisory until SPEC and implementation change. |
+| [0006: One agent, one engine](adrs/0006-one-agent-decision-engine.md) | [VERIFIED, user direction] One Customer Agent, one Decision Engine, plugin for other agents. |
+| [0007: Global discovery and alerts](adrs/0007-global-discovery-alerts.md) | [VERIFIED, user direction] Global search, residency as eligibility, verified opt-in alerts. |
+
 
 ## Current state and earlier records
 

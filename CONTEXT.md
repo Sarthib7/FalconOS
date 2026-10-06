@@ -1,5 +1,88 @@
 # FalconOS
 
+
+## Session update: 2026-10-05
+
+[VERIFIED, user direction, 2026-10-05] FalconOS has two delivery paths: a lower-cost plugin for individuals and a Falcon-hosted organization workspace with a dedicated Falcon Agent. Organization agents support CFO, budget, compliance workflow, treasury, stocks, and hedging tasks. Customer assets remain in customer-controlled wallets or accounts. FalconOS runs agent infrastructure and decision graphs; this direction does not pool or custody customer capital.
+
+[NOT DETERMINED] Exact pricing, cloud tenant model, transaction authority, signing and revocation path, and legal requirements. This product direction does not establish current implementation.
+
+See [ADR 0008](docs/adrs/0008-two-tier-agent-platform.md) and [ADR 0009](docs/adrs/0009-customer-controlled-assets.md). The 2026-09-30 pooled-capital interpretation below is historical where it conflicts with this update.
+
+## Session update: 2026-09-30
+
+[VERIFIED, user direction, 2026-09-30] FalconOS's product destination is an investment manager with a deal desk. One Customer Agent faces the Investor. One Decision Engine runs specialists and graphs behind it. Other agents reach that engine through a plugin that first returns investor-specific guidance. Discovery is global. Investor residence is an eligibility input, not a search bound. See [ADR 0005](docs/adrs/0005-investment-manager.md), [ADR 0006](docs/adrs/0006-one-agent-decision-engine.md), and [ADR 0007](docs/adrs/0007-global-discovery-alerts.md).
+
+[VERIFIED, supersession] This destination supersedes the 2026-09-18 statement that FalconOS stays advisory-only forever and that pooled investing, custody, allocation, and execution belong only to a later separate brand. It does not supersede current module contracts. Council, plugin, engine, dashboard, and mesh remain advisory or owner-signed Devnet proofs until SPEC and implementation change.
+
+[VERIFIED, example only] A US Investor considering a German tokenized energy project was an illustration. No such project, return, or venue was verified in this session.
+
+### Language added 2026-09-30
+
+**Investor**:
+A person FalconOS interviews and may later advise, deal for, or manage money for.
+_Avoid_: user, customer as the glossary noun (Customer Agent is the front voice; Client Agent is an external consuming agent)
+
+**Investor Dossier**:
+The persistent structured profile of goals, residence, horizon, loss tolerance, liquidity need, currency, and constraints.
+_Avoid_: KYC dump, chat log as the profile
+
+**Customer Agent**:
+The single investor-facing voice of FalconOS.
+_Avoid_: exposing each Specialist Advisor as a separate chatbot
+
+**Decision Engine**:
+The shared backend that runs specialists, eligibility, graphs, receipts, and traces.
+_Avoid_: a second advisory brain per client
+
+**Lead**:
+An unverified market finding.
+_Avoid_: calling a scrape hit an Opportunity
+
+**Opportunity**:
+A Lead that has verified terms, ownership rights, costs or an explicit unknown, and an exit path.
+
+**Deal Desk**:
+The operating role that sources and arranges investments with issuers or venues.
+
+**Plan Receipt**:
+The pre-movement comparison of feasible routes with stamped fields or explicit unknowns.
+
+**Cash Trace**:
+The post-movement record of where funds sit and how to exit.
+
+**Who-Acts**:
+The triple of who holds funds, who executes, and who signs, shown before approval.
+
+### Language added 2026-10-05
+
+**Personal Plugin**:
+A lower-cost Falcon capability accessed through an individual's existing compatible agent environment.
+_Avoid_: personal hosted workspace
+
+**Organization Workspace**:
+A Falcon-hosted account for a company, startup, team, or institution, with its own Falcon Agent and customer-specific state.
+_Avoid_: shared customer account
+
+**Customer-Controlled Account**:
+A wallet or financial account whose assets remain under the customer's control and which the customer connects to FalconOS.
+_Avoid_: Falcon custody
+
+**Falcon Agent**:
+The customer-facing agent for one person or organization. Specialist capabilities and decision graphs run through the shared Decision Engine.
+_Avoid_: a separate reasoning engine per customer
+
+**Agent Mandate**:
+The customer's stated financial goals, limits, and permitted agent actions. Wallet signing and delegated authority remain separate decisions.
+_Avoid_: wallet connection as permission
+
+## Least confident decisions added 2026-09-30
+
+1. [INFERRED, unresolved] Whether FalconOS may legally manage money, arrange deals, or send opportunity alerts in any jurisdiction. No legal review was done in this session.
+2. [INFERRED, unresolved] Whether pooled capital stays inside FalconOS or still needs a separate entity.
+3. [NOT DETERMINED] The first real Opportunity source. None was verified here.
+4. [INFERRED] Fixed fees and FX will often dominate a $100 example. That is a product constraint, not a measured fee schedule.
+
 ## Repository work: 2026-09-27
 
 [VERIFIED, user choice] The user selected option `1`: retain folders, document current architecture and authority, expose component verification, and check website/API release inputs. The [current map](docs/README.md) is the navigation entry point. [Status](status.md) records active tasks and measured results. Dated sections below preserve prior product decisions and evidence; their old current-state labels do not supersede newer records for the same component.
@@ -139,6 +222,8 @@
 [VERIFIED, user-confirmed terminology, 2026-09-11] **Backtest** means evaluating a strategy against historical market data without real capital or orders.
 
 [VERIFIED, user-confirmed terminology, 2026-09-11] **Live execution** means real trading activity; the confirmed sequence is live advisory, then paper/simulation, then later live execution. **Backtest** is the separate track defined in the following decision. The Client Agent remains the execution owner.
+
+[VERIFIED, user-confirmed, 2026-09-30] **Devnet execution proof** means a wallet-signed lending supply and redemption with test tokens on Solana Devnet, confirmed receipts, reconciled balances, and saved history. It is distinct from an unsigned simulation and from funded live execution.
 
 [VERIFIED, user-confirmed domain decision, 2026-09-11] **Backtest** is a separate parallel or post-observation historical-replay validation track. It does not block initial live advisory or explicitly provisional paper/simulation, but it is required before FalconOS permits later live execution and before performance or alpha claims. Backtest remains distinct from live advisory, paper/simulation, and live execution, and binds the historical dataset, strategy/model release, replay assumptions, metrics, and known blind spots. This supersedes the prior unresolved ordering note.
 
