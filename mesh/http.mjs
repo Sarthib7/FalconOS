@@ -36,6 +36,12 @@ function keys(value, expected) {
   }
 }
 
+function requireSessionLendingWallet(walletSession, wallet) {
+  if (walletSession && wallet !== walletSession.walletAddress) {
+    throw new MeshError('UNAUTHORIZED', 'Lending wallet must match the authenticated session wallet.');
+  }
+}
+
 async function body(request) {
   if (request.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/json') {
     throw new MeshError('INVALID_INPUT', 'Content-Type must be application/json.');
@@ -198,12 +204,8 @@ export function createApi({
           if (request.method === 'GET') { send(200, { records: await lending.list(owner), limit: 20 }); return; }
           if (request.method === 'POST') {
             const input = await body(request);
-            // decisionId is the only optional key; the lending store requires it for supply and forbids it for redeem.
             keys(input, ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits', ...(input && typeof input === 'object' && Object.hasOwn(input, 'decisionId') ? ['decisionId'] : [])]);
-            // For lending prepare, require wallet === session.walletAddress when using wallet-session auth
-            if (walletSession && input.wallet !== walletSession.walletAddress) {
-              throw new MeshError('UNAUTHORIZED', 'Lending wallet must match the authenticated session wallet.');
-            }
+            requireSessionLendingWallet(walletSession, input.wallet);
             send(200, { record: await lending.prepare(owner, input) }); return;
           }
         }
@@ -215,6 +217,11 @@ export function createApi({
         }
         if (match && request.method === 'POST' && match[2]) {
           const input = await body(request); keys(input, match[2] === 'submit' ? ['requestId', 'transactionBase64'] : ['requestId']);
+          if (walletSession) {
+            const existing = await lending.get(owner, match[1]);
+            if (!existing) throw new MeshError('NOT_FOUND', 'Lending record not found.');
+            requireSessionLendingWallet(walletSession, existing.record?.request?.wallet);
+          }
           send(200, { event: await lending[match[2]](owner, match[1], input) }); return;
         }
         throw new MeshError('NOT_FOUND', 'Lending endpoint not found.');
@@ -261,7 +268,6 @@ export function createApi({
       if (response.headersSent) { response.destroy(); return; }
       const known = error instanceof MeshError && Object.hasOwn(STATUSES, error.code);
       const code = known ? error.code : 'STORAGE_UNAVAILABLE';
-      if (known && code === 'RATE_LIMITED' && Number.isInteger(error.retryAfter)) response.setHeader('Retry-After', String(error.retryAfter));
       if (request.method === 'POST') request.resume();
       if (known && code === 'RATE_LIMITED' && Number.isInteger(error.retryAfter)) response.setHeader('Retry-After', String(error.retryAfter));
       // Prepare failures attach already-JSON-safe external RPC exchanges (kamino.mjs). Surface the last few, bounded; never for the unknown-error fallback.
