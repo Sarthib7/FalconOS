@@ -113,3 +113,36 @@ After creating the Pages project, open **Pages → the project → Custom domain
 - [Cloudflare Pages: Build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/): root directory and deployment settings.
 - [Cloudflare Pages: Build image](https://developers.cloudflare.com/pages/configuration/build-image/): Node.js version defaults and overrides.
 - [Cloudflare Pages: Custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/): custom-domain setup and DNS requirements.
+- [Phantom: Detect the provider](https://docs.phantom.com/solana/detecting-the-provider): browser-extension detection for Solana.
+- [Phantom: Sign a message](https://docs.phantom.com/solana/signing-a-message): message signing with the injected Solana provider.
+
+## Yield Agent bot
+
+[VERIFIED, source: `package.json`, `vite.bot.config.js`] From the repository root, run `npm --prefix web run dev:bot` to serve the bot at `/`. Run `npm --prefix web run build:bot` to write `web/dist-bot/`.
+
+[VERIFIED, source: `web/bot/auth.mjs`, `mesh/wallet-auth.mjs`] Phantom signs an origin-bound challenge with `solana:signMessage`. The browser stores the server-issued session token in `sessionStorage`. Sign-in does not sign transactions or move funds. The Agent reads yield data and creates simulation plans only.
+
+[VERIFIED, source: `web/bot/phantom-injected.mjs`, `web/bot/PhantomWalletConnect.jsx`, `web/bot/App.jsx`; local fake-provider browser run: `button=Continue with Phantom`, `connectCalls=0` before click, `connectCalls=1` after click] When Wallet Standard has no available Phantom entry, the bot falls back to Phantom's injected provider. It calls Phantom's `connect()` only after the user clicks `Continue with Phantom`.
+
+## Falcon plugin install panel and SKILLS.md
+
+[VERIFIED, source: `web/bot/App.jsx`, `web/bot/InstallPanel.jsx`] The signed-out bot page shows a Human/Agent switch after the site navigation and before the hero. Human is selected by default and shows the Phantom wallet sign-in component. Agent shows one copyable skill-download command: `curl -fsSL <skill URL>`.
+
+[VERIFIED, source: `web/scripts/skills-plugin.mjs`, `web/skills/SKILLS.md`] The skill template is emitted as `/SKILLS.md`. Set `VITE_FALCON_SKILL_URL` to the chosen host's `/SKILLS.md` path. Dev defaults to `http://127.0.0.1:5194/SKILLS.md`; production falls back to `https://agents.falconos.markets/SKILLS.md`. Set `VITE_FALCON_MCP_URL` to an HTTPS `/mcp` URL before production so the downloaded skill contains the MCP install instructions.
+
+[VERIFIED, source: `web/bot/install-commands.mjs`, `web/scripts/skills-plugin.mjs`] A production build without `VITE_FALCON_MCP_URL` keeps the bot page buildable and gives the Agent tab a skill download command. The downloaded skill says the MCP server is not deployed and includes no MCP setup commands.
+
+[VERIFIED, source: `web/dashboard/api.mjs`, `mesh/local.mjs`] Production wallet sign-in also needs `VITE_MESH_API_URL` for a deployed Mesh API. That Mesh service must allow the bot page's exact Origin in `FALCON_MESH_ORIGINS`.
+
+### agents.falconos.markets release settings
+
+[VERIFIED, Railway, 2026-10-05] The MCP server is live at `https://mcp.falconos.markets/mcp`. Mesh is live at `https://api.falconos.markets`. Mesh allows the Origin `https://agents.falconos.markets`.
+
+[VERIFIED, local production build] These Cloudflare Pages settings produce a `dist-bot/SKILLS.md` that contains the live MCP install command:
+
+- **Root directory:** `web`
+- **Build command:** `npm run build:bot`
+- **Build output directory:** `dist-bot`
+- **Environment variables:** `VITE_FALCON_MCP_URL=https://mcp.falconos.markets/mcp`, `VITE_FALCON_SKILL_URL=https://agents.falconos.markets/SKILLS.md`, `VITE_MESH_API_URL=https://api.falconos.markets`
+
+[NOT DETERMINED] The Pages project and the `agents.falconos.markets` DNS record do not exist yet. `dig +short agents.falconos.markets` returned no record on 2026-10-05.
