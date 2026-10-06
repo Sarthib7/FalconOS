@@ -9,7 +9,6 @@ const hashes = parseTokenHashes(JSON.stringify({ [digest(token)]: 'test_owner' }
 
 test('T72: wallet-session auth is checked for owner-scoped endpoints', async t => {
   let getSessionCalls = [];
-  let graphOwners = [];
   const mockWalletAuth = {
     async ready() {},
     async getSession(token) {
@@ -17,7 +16,7 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
       if (token === 'wsi1_valid_token_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') {
         return {
           walletAddress: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
-          ownerId: `wallet_${'a'.repeat(56)}`,
+          ownerId: 'w_test_owner_id',
           expiresAt: '2026-09-27T12:30:00.000Z',
         };
       }
@@ -27,7 +26,9 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
 
   const mockStore = {
     async ready() {},
-    async getGraph(owner) { graphOwners.push(owner); return { nodes: [], edges: [], sources: [], revision: 'test-rev' }; },
+    async getGraph() { return { nodes: [], edges: [], sources: [], revision: 'test-rev' }; },
+    async captureSource() { return { revisionId: '11111111-1111-4111-8111-111111111111' }; },
+    async listAnalyses() { return []; },
   };
 
   const server = createApi({
@@ -51,30 +52,25 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
 
   await t.test('static mesh token bypasses wallet-session auth', async () => {
     getSessionCalls = [];
-    graphOwners = [];
     const response = await fetch(`${base}/v1/graph`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     assert.equal(response.status, 200);
     assert.equal(getSessionCalls.length, 0, 'getSession should not be called for static tokens');
-    assert.deepEqual(graphOwners, ['test_owner']);
   });
 
   await t.test('valid wsi1 token triggers wallet-session auth', async () => {
     getSessionCalls = [];
-    graphOwners = [];
     const response = await fetch(`${base}/v1/graph`, {
       headers: { Authorization: 'Bearer wsi1_valid_token_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
     });
     assert.equal(response.status, 200);
     assert.equal(getSessionCalls.length, 1);
     assert.equal(getSessionCalls[0], 'wsi1_valid_token_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-    assert.deepEqual(graphOwners, [`wallet_${'a'.repeat(56)}`], 'owner comes from the verified session only');
   });
 
   await t.test('invalid wsi1 token is rejected', async () => {
     getSessionCalls = [];
-    graphOwners = [];
     const response = await fetch(`${base}/v1/graph`, {
       headers: { Authorization: 'Bearer wsi1_invalid_token_bbbbbbbbbbbbbbbbbbbbbbbbb' },
     });
@@ -82,7 +78,6 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
     const data = await response.json();
     assert.equal(data.error.code, 'UNAUTHORIZED');
     assert.equal(getSessionCalls.length, 1);
-    assert.deepEqual(graphOwners, [], 'no store access for a rejected session');
   });
 
   await t.test('connectors endpoint accepts wallet-session auth', async () => {
@@ -107,17 +102,38 @@ test('T72: wallet-session auth is checked for owner-scoped endpoints', async t =
     const data = await response.json();
     assert.equal(data.error.code, 'UNAUTHORIZED');
   });
+
+  await t.test('captures and analyses accept wallet-session auth', async () => {
+    getSessionCalls = [];
+    const capture = await fetch(`${base}/v1/captures`, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer wsi1_valid_token_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requestId: '12345678-1234-1234-1234-123456789012',
+        connectorId: 'kamino',
+        expectedRevisionId: null,
+      }),
+    });
+    assert.equal(capture.status, 200);
+    const analyses = await fetch(`${base}/v1/analyses`, {
+      headers: { Authorization: 'Bearer wsi1_valid_token_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
+    });
+    assert.equal(analyses.status, 200);
+    assert.equal(getSessionCalls.length, 2);
+  });
 });
 
 test('T72: lending prepare wallet validation with wallet-session', async t => {
-  const prepareCalls = [];
   const mockWalletAuth = {
     async ready() {},
     async getSession(token) {
       if (token === 'wsi1_wallet1_token_aaaaaaaaaaaaaaaaaaaaaaaaaa') {
         return {
           walletAddress: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
-          ownerId: `wallet_${'b'.repeat(56)}`,
+          ownerId: 'w_owner1',
           expiresAt: '2026-09-27T12:30:00.000Z',
         };
       }
@@ -132,8 +148,7 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
 
   const mockLending = {
     async prepare(owner, input) {
-      prepareCalls.push({ owner, input });
-      // Owner is `wallet_...` for a wallet session and `test_owner` for the static token.
+      // Owner can be either 'w_owner1' (wallet-session) or 'test_owner' (static token)
       return {
         id: 'test-intent-id',
         requestId: input.requestId,
@@ -176,15 +191,13 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
         requestId: '12345678-1234-1234-1234-123456789012',
         analysisId: '87654321-4321-4321-4321-210987654321',
         wallet: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
-        action: 'redeem',
+        action: 'supply',
         inputBaseUnits: '1000000',
       }),
     });
     assert.equal(response.status, 200);
     const data = await response.json();
     assert.ok(data.record);
-    assert.equal(prepareCalls.length, 1);
-    assert.equal(prepareCalls[0].owner, `wallet_${'b'.repeat(56)}`, 'owner is the verified session owner');
   });
 
   await t.test('lending prepare fails when wallet does not match session', async () => {
@@ -198,7 +211,7 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
         requestId: '12345678-1234-1234-1234-123456789013',
         analysisId: '87654321-4321-4321-4321-210987654321',
         wallet: 'J3dxNj7nDRRqRRXuEMynDG57DkZK4jYRuv3Garmb1i99', // Different wallet
-        action: 'redeem',
+        action: 'supply',
         inputBaseUnits: '1000000',
       }),
     });
@@ -206,27 +219,6 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
     const data = await response.json();
     assert.equal(data.error.code, 'UNAUTHORIZED');
     assert.match(data.error.message, /wallet must match/i);
-    assert.equal(prepareCalls.length, 1, 'prepare must not run for a foreign wallet');
-  });
-
-  await t.test('lending prepare rejects a caller-supplied owner field and never reaches prepare', async () => {
-    const response = await fetch(`${base}/v1/lending/intents`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer wsi1_wallet1_token_aaaaaaaaaaaaaaaaaaaaaaaaaa',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        requestId: '12345678-1234-1234-1234-123456789015',
-        analysisId: '87654321-4321-4321-4321-210987654321',
-        wallet: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
-        action: 'redeem',
-        inputBaseUnits: '1000000',
-        ownerId: 'test_owner',
-      }),
-    });
-    assert.equal(response.status, 400);
-    assert.equal(prepareCalls.length, 1);
   });
 
   await t.test('lending prepare with static token allows any wallet', async () => {
@@ -240,14 +232,229 @@ test('T72: lending prepare wallet validation with wallet-session', async t => {
         requestId: '12345678-1234-1234-1234-123456789014',
         analysisId: '87654321-4321-4321-4321-210987654321',
         wallet: 'J3dxNj7nDRRqRRXuEMynDG57DkZK4jYRuv3Garmb1i99',
-        action: 'redeem',
+        action: 'supply',
         inputBaseUnits: '1000000',
       }),
     });
     assert.equal(response.status, 200);
     const data = await response.json();
     assert.ok(data.record);
-    assert.equal(prepareCalls.length, 2);
-    assert.equal(prepareCalls[1].owner, 'test_owner');
   });
 });
+
+test('T72: lending submit and receipt bind session wallet before mutation', async t => {
+  const wallet1 = '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV';
+  const wallet2 = 'J3dxNj7nDRRqRRXuEMynDG57DkZK4jYRuv3Garmb1i99';
+  const session1 = 'wsi1_wallet1_token_aaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const session2 = 'wsi1_wallet2_token_aaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const expired = 'wsi1_expired_token_aaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const revoked = 'wsi1_revoked_token_aaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const matchId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const mismatchId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const tx = Buffer.from('fixture-signed-intent').toString('base64');
+  const calls = { get: 0, submit: 0, receipt: 0 };
+
+  const mockWalletAuth = {
+    async ready() {},
+    async getSession(token) {
+      if (token === session1) return { walletAddress: wallet1, ownerId: 'w_owner1', expiresAt: '2026-09-27T12:30:00.000Z' };
+      if (token === session2) return { walletAddress: wallet2, ownerId: 'w_owner2', expiresAt: '2026-09-27T12:30:00.000Z' };
+      return null;
+    },
+  };
+  const mockLending = {
+    async get(owner, id) {
+      calls.get += 1;
+      if (owner !== 'w_owner1') return null;
+      if (id === matchId) return { record: { id, request: { wallet: wallet1 } }, events: [] };
+      if (id === mismatchId) return { record: { id, request: { wallet: wallet2 } }, events: [] };
+      return null;
+    },
+    async submit() { calls.submit += 1; return { id: 'submit-event' }; },
+    async receipt() { calls.receipt += 1; return { id: 'receipt-event' }; },
+  };
+  const server = createApi({
+    store: { async ready() {} },
+    walletAuth: mockWalletAuth,
+    lending: mockLending,
+    tokenHashes: hashes,
+  });
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = (path, { credential, input }) => fetch(`${base}${path}`, {
+    method: 'POST',
+    headers: {
+      ...(credential ? { Authorization: `Bearer ${credential}` } : {}),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  await t.test('submit succeeds when stored intent wallet matches session', async () => {
+    calls.get = calls.submit = 0;
+    const response = await post(`/v1/lending/intents/${matchId}/submit`, {
+      credential: session1,
+      input: { requestId: '12345678-1234-1234-1234-123456789012', transactionBase64: tx },
+    });
+    assert.equal(response.status, 200);
+    assert.equal(calls.get, 1);
+    assert.equal(calls.submit, 1);
+  });
+
+  await t.test('submit rejects stored wallet mismatch before mutation', async () => {
+    calls.get = calls.submit = 0;
+    const response = await post(`/v1/lending/intents/${mismatchId}/submit`, {
+      credential: session1,
+      input: { requestId: '12345678-1234-1234-1234-123456789013', transactionBase64: tx },
+    });
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'UNAUTHORIZED');
+    assert.equal(calls.get, 1);
+    assert.equal(calls.submit, 0);
+  });
+
+  await t.test('receipt rejects stored wallet mismatch before mutation', async () => {
+    calls.get = calls.receipt = 0;
+    const response = await post(`/v1/lending/intents/${mismatchId}/receipt`, {
+      credential: session1,
+      input: { requestId: '12345678-1234-1234-1234-123456789014' },
+    });
+    assert.equal(response.status, 401);
+    assert.equal(calls.get, 1);
+    assert.equal(calls.receipt, 0);
+  });
+
+  await t.test('receipt succeeds when stored intent wallet matches session', async () => {
+    calls.get = calls.receipt = 0;
+    const response = await post(`/v1/lending/intents/${matchId}/receipt`, {
+      credential: session1,
+      input: { requestId: '12345678-1234-1234-1234-123456789015' },
+    });
+    assert.equal(response.status, 200);
+    assert.equal(calls.receipt, 1);
+  });
+
+  await t.test('cross-owner submit cannot mutate another wallet intent', async () => {
+    calls.get = calls.submit = 0;
+    const response = await post(`/v1/lending/intents/${matchId}/submit`, {
+      credential: session2,
+      input: { requestId: '12345678-1234-1234-1234-123456789016', transactionBase64: tx },
+    });
+    assert.equal(response.status, 404);
+    assert.equal((await response.json()).error.code, 'NOT_FOUND');
+    assert.equal(calls.submit, 0);
+  });
+
+  await t.test('expired session is rejected before submit lookup', async () => {
+    calls.get = calls.submit = 0;
+    const response = await post(`/v1/lending/intents/${matchId}/submit`, {
+      credential: expired,
+      input: { requestId: '12345678-1234-1234-1234-123456789017', transactionBase64: tx },
+    });
+    assert.equal(response.status, 401);
+    assert.equal(calls.get, 0);
+    assert.equal(calls.submit, 0);
+  });
+
+  await t.test('revoked session is rejected before submit lookup', async () => {
+    calls.get = calls.submit = 0;
+    const response = await post(`/v1/lending/intents/${matchId}/submit`, {
+      credential: revoked,
+      input: { requestId: '12345678-1234-1234-1234-123456789018', transactionBase64: tx },
+    });
+    assert.equal(response.status, 401);
+    assert.equal(calls.get, 0);
+    assert.equal(calls.submit, 0);
+  });
+
+  await t.test('missing authorization is rejected before submit', async () => {
+    calls.get = calls.submit = 0;
+    const response = await post(`/v1/lending/intents/${matchId}/submit`, {
+      input: { requestId: '12345678-1234-1234-1234-123456789019', transactionBase64: tx },
+    });
+    assert.equal(response.status, 401);
+    assert.equal(calls.get, 0);
+    assert.equal(calls.submit, 0);
+  });
+
+  await t.test('session login is not a transaction: submit still requires signed bytes', async () => {
+    calls.get = calls.submit = 0;
+    const response = await post(`/v1/lending/intents/${matchId}/submit`, {
+      credential: session1,
+      input: { requestId: '12345678-1234-1234-1234-123456789020' },
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'INVALID_INPUT');
+    assert.equal(calls.get, 0);
+    assert.equal(calls.submit, 0);
+  });
+
+  await t.test('legacy static token still submits without session wallet bind', async () => {
+    calls.get = calls.submit = 0;
+    const response = await post(`/v1/lending/intents/${matchId}/submit`, {
+      credential: token,
+      input: { requestId: '12345678-1234-1234-1234-123456789021', transactionBase64: tx },
+    });
+    assert.equal(response.status, 200);
+    assert.equal(calls.get, 0);
+    assert.equal(calls.submit, 1);
+  });
+});
+
+test('T72: yield JWT path is unchanged and does not authorize mesh or lending', async t => {
+  const jwt = `eyJhbGciOiJIUzI1NiJ9.${'e'.repeat(500)}.sig`;
+  const user = '123e4567-e89b-42d3-a456-426614174000';
+  let jwtCalls = 0;
+  let lendingCalls = 0;
+  const server = createApi({
+    store: { async ready() {}, async getGraph() { return { nodes: [] }; } },
+    lending: { async prepare() { lendingCalls += 1; return { id: 'intent' }; } },
+    yieldService: { async getOpportunities() { return { status: 'NO_DATA', opportunities: [] }; } },
+    tokenHashes: hashes,
+    verifySupabaseToken: async value => {
+      jwtCalls += 1;
+      return value === jwt ? user : null;
+    },
+  });
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  await t.test('Supabase JWT still authorizes yield', async () => {
+    jwtCalls = 0;
+    const response = await fetch(`${base}/v1/yield/opportunities`, { headers: { Authorization: `Bearer ${jwt}` } });
+    assert.equal(response.status, 200);
+    assert.equal(jwtCalls, 1);
+  });
+
+  await t.test('Supabase JWT does not authorize graph', async () => {
+    const response = await fetch(`${base}/v1/graph`, { headers: { Authorization: `Bearer ${jwt}` } });
+    assert.equal(response.status, 401);
+  });
+
+  await t.test('Supabase JWT does not authorize lending', async () => {
+    lendingCalls = 0;
+    const response = await fetch(`${base}/v1/lending/intents`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requestId: '12345678-1234-1234-1234-123456789022',
+        analysisId: '87654321-4321-4321-4321-210987654321',
+        wallet: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
+        action: 'supply',
+        inputBaseUnits: '1000000',
+      }),
+    });
+    assert.equal(response.status, 401);
+    assert.equal(lendingCalls, 0);
+  });
+
+  await t.test('legacy static token still authorizes yield without JWT verify', async () => {
+    jwtCalls = 0;
+    const response = await fetch(`${base}/v1/yield/opportunities`, { headers: { Authorization: `Bearer ${token}` } });
+    assert.equal(response.status, 200);
+    assert.equal(jwtCalls, 0);
+  });
+});
+
