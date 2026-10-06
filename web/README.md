@@ -123,6 +123,12 @@ After creating the Pages project, open **Pages → the project → Custom domain
 
 [VERIFIED, source: `web/bot/phantom-injected.mjs`, `web/bot/PhantomWalletConnect.jsx`, `web/bot/App.jsx`; local fake-provider browser run: `button=Continue with Phantom`, `connectCalls=0` before click, `connectCalls=1` after click] When Wallet Standard has no available Phantom entry, the bot falls back to Phantom's injected provider. It calls Phantom's `connect()` only after the user clicks `Continue with Phantom`.
 
+## MCP OAuth approval
+
+[VERIFIED, source: web/bot/main.jsx, web/bot/OAuthApproval.jsx, mesh/oauth.mjs] The bot serves the approval view at /oauth/approve. Mesh sends a one-time request handle in the URL fragment. The page removes it before making an API request, then shows client, resource, redirect host and scope. A human connects Phantom and signs a non-transaction message. The page does not create a wallet session or store an access token.
+
+[VERIFIED, source: web/dashboard/api.mjs, mesh/local.mjs] The page sends approval requests to the Mesh URL in VITE_MESH_API_URL. Mesh must allow the exact bot origin in FALCON_MESH_ORIGINS. In local development, web/bot runs at http://127.0.0.1:5194 and the route is http://127.0.0.1:5194/oauth/approve.
+
 ## Falcon plugin install panel and SKILLS.md
 
 [VERIFIED, source: `web/bot/App.jsx`, `web/bot/InstallPanel.jsx`] The signed-out bot page shows a Human/Agent switch after the site navigation and before the hero. Human is selected by default and shows the Phantom wallet sign-in component. Agent shows one copyable skill-download command: `curl -fsSL <skill URL>`.
@@ -143,5 +149,5 @@ After creating the Pages project, open **Pages → the project → Custom domain
 - **Build command:** `npm run build:bot`
 - **Build output directory:** `dist-bot`
 - **Environment variables:** `VITE_FALCON_MCP_URL=https://mcp.falconos.markets/mcp`, `VITE_FALCON_SKILL_URL=https://agents.falconos.markets/SKILLS.md`, `VITE_MESH_API_URL=https://api.falconos.markets`
-
+[VERIFIED, source: Cloudflare Pages Serving Pages docs](https://developers.cloudflare.com/pages/configuration/serving-pages/); local dist-bot listing. Pages uses its SPA fallback when the build has no top-level 404.html. Unmatched routes then fall back to the root index.html. dist-bot contains index.html and no 404.html, so /oauth/approve uses the React route. The hosted path remains unverified until Pages is published. Do not add a top-level 404.html without preserving this fallback.
 [NOT DETERMINED] The Pages project and the `agents.falconos.markets` DNS record do not exist yet. `dig +short agents.falconos.markets` returned no record on 2026-10-05.
