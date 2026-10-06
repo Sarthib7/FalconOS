@@ -39,6 +39,21 @@ function mcpOrigin(raw) {
   }
   return raw;
 }
+function oauthUrl(raw, name, path) {
+  if (!raw) throw new ConfigError(`${name} is required.`);
+  let url;
+  try { url = new URL(raw); } catch { throw new ConfigError(`${name} must be a valid URL.`); }
+  if (!(['https:'].includes(url.protocol) || (url.protocol === 'http:' && isLoopbackHost(url.hostname)))
+    || url.username || url.password || url.search || url.hash || url.pathname !== path) {
+    throw new ConfigError(`${name} must use HTTPS, or loopback HTTP locally, with path ${path}.`);
+  }
+  return path === '/' ? url.href.replace(/\/$/, '') : url.href;
+}
+
+function serviceSecret(raw) {
+  if (typeof raw !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(raw)) throw new ConfigError('FALCON_MCP_OAUTH_SERVICE_SECRET must be a 32-byte base64url secret.');
+  return raw;
+}
 
 function allowedHosts(raw) {
   const hosts = String(raw ?? '').split(',').map(item => item.trim().toLowerCase()).filter(Boolean);
@@ -55,17 +70,12 @@ export function parseConfig(env = process.env) {
     throw new ConfigError('FALCON_MCP_ALLOWED_HOSTS is required when FALCON_MCP_HOST is not a loopback address.');
   }
   const origin = mcpOrigin(env.FALCON_MCP_ORIGIN);
+  const oauthIssuer = oauthUrl(env.FALCON_MCP_OAUTH_ISSUER, 'FALCON_MCP_OAUTH_ISSUER', '/');
+  const oauthResource = oauthUrl(env.FALCON_MCP_OAUTH_RESOURCE, 'FALCON_MCP_OAUTH_RESOURCE', '/mcp');
+  const oauthServiceSecret = serviceSecret(env.FALCON_MCP_OAUTH_SERVICE_SECRET);
   return {
     port: integer(env, 'PORT', 8792, { min: 0, max: 65535 }),
-    host,
-    allowedHosts: hosts,
-    meshUrl: meshUrl(env.FALCON_MESH_API_URL),
-    origin,
-    rate: {
-      windowMs: integer(env, 'FALCON_MCP_RATE_WINDOW_MS', 60_000),
-      perSession: integer(env, 'FALCON_MCP_RATE_MAX_PER_SESSION', 60),
-      perWallet: integer(env, 'FALCON_MCP_RATE_MAX_CONNECT', 10),
-      global: integer(env, 'FALCON_MCP_RATE_MAX_GLOBAL', 300),
-    },
+    host, allowedHosts: hosts, meshUrl: meshUrl(env.FALCON_MESH_API_URL), origin, oauthIssuer, oauthResource, oauthServiceSecret,
+    rate: { windowMs: integer(env, 'FALCON_MCP_RATE_WINDOW_MS', 60_000), perToken: integer(env, 'FALCON_MCP_RATE_MAX_PER_TOKEN', 60), global: integer(env, 'FALCON_MCP_RATE_MAX_GLOBAL', 300) },
   };
 }
