@@ -31,6 +31,7 @@ npm --prefix web run preview:local
 [VERIFIED, user choice, 2026-10-06] Correction: the public Personal Plugin uses the remote Devnet MCP. The install page has no wallet UI; the agent uses its own wallet, and the human approves every signature and broadcast. The local JSON plugin remains advisory-only.
 
 [VERIFIED, browser check, 2026-10-06] `https://agents.falconos.markets/` still showed title `Falcon · Solana Yield Agent` and `Install Phantom`. `GET /SKILLS.md` returned `200 text/markdown`; response headers included `server: cloudflare` and `cf-cache-status: DYNAMIC`.
+[VERIFIED, Wrangler direct upload and browser check, 2026-10-07] Production deployment `658c1a01-78fc-49d0-9597-d45b09688111` for `falcon-agents` reports branch `main` and source `6972641`. Browser now reports title `Falcon | Agent install`; `GET /SKILLS.md` returned `200 text/markdown`. The `Install Phantom` result above was accurate before this deployment; it no longer describes the live site.
 
 [VERIFIED, Railway CLI and MCP read-only checks, 2026-10-06] `falcon-mcp` and `falcon-mesh` had status `SUCCESS`; `GET https://api.falconos.markets/readyz` returned `200 {"status":"ready"}`. MCP initialization reported `falcon-mcp@0.1.0` and `2025-11-25`.
 
