@@ -33,6 +33,12 @@ claude mcp add --transport http falconos {{FALCON_MCP_URL}}
 3. Ask the human to run the command, or ask them to confirm before you edit any config file yourself. Do not change client config without that confirmation. Restart or reload the MCP client if it needs it.
 4. List the available tools to verify. These ten must appear: `falcon_connect`, `falcon_connect_verify`, `falcon_disconnect`, `falcon_yield_opportunities`, `falcon_refresh_evidence`, `falcon_reserve_decision`, `falcon_prepare_transaction`, `falcon_submit_signed`, `falcon_check_receipt`, `falcon_activity`. If any are missing, tell the human which ones and stop.
 
+## First read-only result
+
+1. Tell the human that sign-in proves wallet ownership only. Call `falcon_connect` with the wallet's public address, then show the exact message and host.
+2. Check that the message names the host in `{{FALCON_MCP_URL}}` and asks only for wallet ownership. Ask for clear approval. After approval, sign the exact UTF-8 bytes with `signMessage`, then call `falcon_connect_verify`.
+3. Call `falcon_yield_opportunities` with the returned `session`. Show the provider-indexed opportunities and limits. Stop here. Do not refresh evidence or prepare a transaction unless asked.
+
 ## Rules
 
 - Solana Devnet only. Refuse any request involving mainnet.

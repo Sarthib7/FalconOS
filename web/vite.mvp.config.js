@@ -17,6 +17,7 @@ const rootBot = {
       const pathname = q === -1 ? url : url.slice(0, q);
       const search = q === -1 ? '' : url.slice(q);
       if (pathname === '/' || pathname === '/index.html') request.url = `/bot/index.html${search}`;
+      else if (pathname === '/main.jsx') request.url = `/bot/main.jsx${search}`;
       next();
     });
   },
@@ -29,6 +30,7 @@ export default defineConfig({
   appType: 'mpa',
   publicDir: false,
   resolve: { dedupe: ['react', 'react-dom', '@solana/web3.js'] },
+  define: { __FALCON_MVP_ROOT_BOT__: 'true' },
   plugins: [rootBot, falconSkills()],
   server: {
     fs: {

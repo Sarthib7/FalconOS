@@ -363,6 +363,18 @@ try {
   chrome.stdio[4].on('data', receive);
 
   const p = await page();
+  if (root.endsWith(sep + 'dist-mvp')) {
+    check('V152: signed-out local MVP mesh exposes wallet sign-in and keeps the token fallback', await p.evaluate('!document.getElementById("wallet-signin-link").hidden && document.getElementById("wallet-signin-link").getAttribute("href") === "/" && document.getElementById("access-token").type === "password"'));
+    const walletSignInUrl = await p.evaluate('document.getElementById("wallet-signin-link").href');
+    await p.send('Page.navigate', { url: walletSignInUrl });
+    await p.wait('document.readyState === "complete" && document.title === "Falcon · Solana Yield Agent" && document.querySelector("#root")?.textContent.trim().length > 0');
+    check('V152: wallet sign-in route loads the local bot in the same tab', await p.evaluate('location.pathname === "/" && document.title === "Falcon · Solana Yield Agent" && document.querySelector("#root")?.textContent.trim().length > 0'));
+    await p.send('Page.navigate', { url: origin + '/mesh/' });
+    await p.wait('document.readyState === "complete" && document.getElementById("connect") && document.getElementById("api-location").textContent');
+  }
+  else {
+    check('V152: non-MVP mesh build keeps local bot sign-in hidden', await p.evaluate('document.getElementById("wallet-signin-link").hidden'));
+  }
   check('V96: a fresh viewer waits for Connect and uses a password input', await p.evaluate('document.getElementById("mesh-workspace").hidden && document.getElementById("access-token").type === "password"') && apiRequests.length === 0);
   await p.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
   await connect(p);

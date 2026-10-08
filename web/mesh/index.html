@@ -26,6 +26,7 @@
       <section class="panel connection-panel" aria-labelledby="connection-title">
         <div><p class="eyebrow">YOUR SAVED WORKSPACE</p><h2 id="connection-title">Connect to Falcon.</h2><p id="api-location" class="small-note"></p><p class="small-note">Wallet sessions stay in this tab's sessionStorage. The operator-token fallback stays in memory only.</p></div>
         <form id="connect-form">
+          <a id="wallet-signin-link" class="button primary" href="/" hidden>Sign in with wallet</a>
           <label for="access-token">Operator token (fallback)<input id="access-token" name="token" type="password" required autocomplete="off" spellcheck="false" maxlength="512"></label>
           <div class="button-row"><button id="connect" class="button primary" type="submit">Connect</button><button id="disconnect" class="button" type="button" hidden>Disconnect view</button></div>
         </form>
