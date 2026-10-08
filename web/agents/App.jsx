@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import falconMark from '../landing/assets/falcon.svg';
-import { MCP_CLI_COMMAND, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from './install.mjs';
+import { MCP_CLI_COMMAND, MCP_CODEX_CLI_COMMAND, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from './install.mjs';
 import './style.css';
 const SKILL_COMMAND = SKILL_FETCH_COMMAND;
 
@@ -72,10 +72,11 @@ export default function App() {
           <div className="section-heading">
             <p className="agents-eyebrow">SETUP</p>
             <h2 id="install-title">Connect your MCP client</h2>
-            <p>Use one command in Claude Code, or add the HTTP server entry to another MCP client.</p>
+            <p>Use a command in Claude Code or Codex, or add the HTTP server entry in another MCP client. After setup, restart the client and verify the ten tools in SKILLS.md appear in the active session.</p>
           </div>
           <div className="install-grid">
             <InstallCard title="Claude Code" description="Add Falcon's hosted HTTP MCP server." value={MCP_CLI_COMMAND} label="Copy Claude Code command" />
+            <InstallCard title="Codex" description="Register Falcon with the Codex CLI." value={MCP_CODEX_CLI_COMMAND} label="Copy Codex command" />
             <InstallCard title="Other MCP clients" description="Add this entry to your client's MCP server configuration." value={MCP_JSON_CONFIG} label="Copy MCP configuration" />
           </div>
           <div className="agents-skill-card">
@@ -88,8 +89,8 @@ export default function App() {
           <div className="boundary-mark" aria-hidden="true">F</div>
           <div>
             <p className="agents-eyebrow">WALLET BOUNDARY</p>
-            <h2 id="boundary-title">This page never connects a wallet.</h2>
-            <p>The MCP tools support Solana Devnet actions. Your agent uses its own wallet, and you approve each signature and broadcast. Falcon does not hold keys or broadcast transactions. Mainnet is not supported.</p>
+            <h2 id="boundary-title">Reserve review requires wallet sign-in.</h2>
+            <p>Before reserve review, your agent connects with its own wallet. Its message-only sign-in proves wallet ownership; it does not sign a transaction. Evidence capture and a reserve decision require this session, but no transaction signature. Any transaction signature and broadcast are separate actions and need your explicit approval. Falcon holds no keys and does not sign or broadcast transactions. Mainnet is not supported.</p>
           </div>
         </section>
 
