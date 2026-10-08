@@ -1042,3 +1042,4 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, browser checks] Axe 4.13.0 reported `violations: 0`, `passes: 23`. At 390 CSS pixels, `scrollWidth` was `390`. The standard-site preview kept the local link hidden and the `Operator token (fallback)` label visible.
 [NOT RUN, database unavailable] The full Mesh browser harness needs an initialized disposable database. `pg_isready -h 127.0.0.1 -p 55447` printed `127.0.0.1:55447 - no response`.
 [VERIFIED, scope] No deployment, DNS, Cloudflare, remote migration, wallet signature, or transaction occurred.
+[VERIFIED, workflow source] `.github/workflows/ci.yml` now runs `node web/test/mesh-browser.mjs` with `web/dist-mvp` after repository verification; exact-head CI remains pending.

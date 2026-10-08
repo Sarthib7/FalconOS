@@ -4,7 +4,8 @@ import { createHash, generateKeyPairSync, randomBytes, randomUUID } from 'node:c
 import { createServer } from 'node:http';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { extname, resolve, sep } from 'node:path';
+import { tmpdir } from 'node:os';
+import { extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApi } from '../../mesh/http.mjs';
 import { createStore } from '../../mesh/store.mjs';
@@ -21,7 +22,7 @@ const require = createRequire(new URL('../../mesh/package.json', import.meta.url
 const { Pool } = require('pg');
 const { PublicKey } = require('@solana/web3.js');
 const root = resolve(process.env.FALCON_MESH_WEB_ROOT || fileURLToPath(new URL('../dist-mesh/', import.meta.url)));
-const artifactDir = await mkdtemp('/private/tmp/falcon-mesh-browser-');
+const artifactDir = await mkdtemp(join(tmpdir(), 'falcon-mesh-browser-'));
 const owner = `browser_${randomUUID().replaceAll('-', '')}`;
 const credential = `test-only-${randomBytes(32).toString('hex')}`;
 const otherOwner = `browser_${randomUUID().replaceAll('-', '')}`;
