@@ -268,6 +268,99 @@ test('R2: the global rate limit trips across owners even when no owner reaches i
   assert.equal((await get('/readyz')).status, 200, 'readiness checks stay exempt while the global cap is exhausted');
 });
 
+test('V150: invalid wallet lookups exhaust source and global pre-auth budgets before storage', async t => {
+  const origin = 'https://falcon.example';
+  let time = 1_000_000;
+  for (const [scope, limits, allowed] of [
+    ['source', { walletLookupMaxPerSource: 2, walletLookupMaxGlobal: 10 }, 2],
+    ['global', { walletLookupMaxPerSource: 10, walletLookupMaxGlobal: 3 }, 3],
+  ]) {
+    await t.test(scope, async t => {
+      const lookups = [];
+      const revocations = [];
+      const walletAuth = {
+        async getSession(bearer) { lookups.push(bearer); return null; },
+        async revokeSession(bearer) { revocations.push(bearer); return false; },
+      };
+      const server = createApi({ store: {}, tokenHashes: hashes, walletAuth, allowedOrigins: new Set([origin]),
+        clock: () => time, rateWindowMs: 1000, ...limits });
+      await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+      t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+      const base = 'http://127.0.0.1:' + server.address().port;
+      let requests = 0;
+      const ask = async (path, method = 'GET', authorization = 'Bearer wsi1_invalid_aaaaaaaaaaaaaaaaaaaaaaaaaaa') => {
+        const response = await fetch(base + path, { method, headers: { origin, authorization,
+          ...(method === 'POST' && { 'content-type': 'application/json' }), 'x-forwarded-for': '198.51.100.' + (++requests) },
+        ...(method === 'POST' && { body: '{}' }) });
+        return { status: response.status, retryAfter: response.headers.get('retry-after'), data: await response.json() };
+      };
+      for (let i = 0; i < allowed; i++) {
+        const path = i % 2 ? '/v1/auth/wallet/session' : '/v1/graph';
+        assert.equal((await ask(path, 'GET', 'Bearer wsi1_invalid_' + String(i).padStart(32, 'a'))).status, 401);
+      }
+      assert.equal(lookups.length, allowed);
+      const blocked = await ask('/v1/auth/wallet/logout', 'POST');
+      assert.equal(blocked.status, 429);
+      assert.equal(blocked.data.error.code, 'RATE_LIMITED');
+      assert.equal(blocked.retryAfter, '1');
+      assert.equal(revocations.length, 0);
+      assert.equal((await ask('/v1/auth/wallet/session')).status, 429, 'introspection is also rejected before session storage');
+      assert.equal((await ask('/v1/graph')).status, 429);
+      assert.equal(lookups.length, allowed, 'blocked retries never reach session storage');
+      time += 1000;
+      assert.equal((await ask('/v1/auth/wallet/logout', 'POST')).status, 401, 'window reset allows one more lookup');
+      assert.equal(revocations.length, 1);
+    });
+  }
+});
+
+test('V150: successful wallet sessions keep owner limits; existing auth paths remain separate', async t => {
+  const origin = 'https://falcon.example';
+  const walletOne = 'wsi1_valid_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const walletTwo = 'wsi1_valid_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+  const lookups = [];
+  const calls = { challenge: 0, verify: 0, revoke: 0, supabase: 0 };
+  const session = bearer => ({ ownerId: bearer === walletOne ? 'wallet_one' : 'wallet_two', walletAddress: 'wallet', expiresAt: at });
+  const walletAuth = {
+    async getSession(bearer) { lookups.push(bearer); return [walletOne, walletTwo].includes(bearer) ? session(bearer) : null; },
+    async revokeSession(bearer) { calls.revoke++; return bearer === walletOne; },
+    async createChallenge() { calls.challenge++; return { challengeId: 'issued' }; },
+    async verifyChallenge() { calls.verify++; return { sessionToken: walletOne }; },
+  };
+  const server = createApi({ store: {}, tokenHashes: hashes, walletAuth, allowedOrigins: new Set([origin]),
+    rateMaxPerOwner: 2, rateMaxGlobal: 100, walletLookupMaxPerSource: 1, walletLookupMaxGlobal: 1,
+    yieldService: { async getOpportunities() { return { status: 'READY' }; } },
+    verifySupabaseToken: async bearer => { calls.supabase++; return bearer === 'supabase-valid-token-that-is-long-enough' ? 'cf6c5a09-7d4f-45a3-9498-1fb2d6cd98a1' : null; } });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  const base = 'http://127.0.0.1:' + server.address().port;
+  const ask = async (path, { method = 'GET', bearer, input, requestOrigin = origin } = {}) => {
+    const response = await fetch(base + path, { method, headers: {
+      ...(requestOrigin && { origin: requestOrigin }), ...(bearer && { authorization: 'Bearer ' + bearer }),
+      ...(input && { 'content-type': 'application/json' }),
+    }, ...(input && { body: JSON.stringify(input) }) });
+    return { status: response.status, data: await response.json(), cors: response.headers.get('access-control-allow-origin') };
+  };
+  assert.equal((await ask('/v1/auth/wallet/session', { bearer: walletOne })).status, 200);
+  assert.equal((await ask('/v1/auth/wallet/logout', { bearer: walletOne, method: 'POST', input: {} })).status, 200);
+  assert.equal(calls.revoke, 1);
+  assert.equal((await ask('/v1/connectors', { bearer: walletOne })).status, 200);
+  assert.equal((await ask('/v1/connectors', { bearer: walletOne })).status, 200);
+  assert.equal((await ask('/v1/connectors', { bearer: walletOne })).status, 429, 'owner limit applies after successful wallet lookup');
+  assert.equal((await ask('/v1/connectors', { bearer: walletTwo })).status, 200, 'another owner behind the same socket address remains admitted');
+  assert.equal(lookups.length, 5, 'valid sessions pass the pre-auth cap and reach owner accounting');
+  assert.equal((await ask('/v1/connectors', { bearer: token })).status, 200, 'static token route stays independent');
+  assert.equal((await ask('/v1/yield/opportunities', { bearer: 'supabase-valid-token-that-is-long-enough' })).status, 200);
+  assert.equal(calls.supabase, 1);
+  assert.equal((await ask('/v1/auth/wallet/challenge', { method: 'POST', input: { address: 'wallet' } })).status, 200);
+  assert.equal((await ask('/v1/auth/wallet/verify', { method: 'POST', input: { challengeId: 'issued', signature: 'sig' } })).status, 200);
+  assert.equal((await ask('/v1/auth/wallet/challenge', { method: 'POST', input: { address: 'wallet' } })).status, 429);
+  assert.deepEqual([calls.challenge, calls.verify], [1, 1], 'challenge and verify retain their existing source rate limit');
+  const denied = await ask('/v1/auth/wallet/session', { bearer: walletOne, requestOrigin: 'https://attacker.example' });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.cors, null);
+  assert.equal(lookups.length, 5, 'denied origin never invokes wallet storage');
+});
 test('V95: readiness failure does not expose storage details in response or logs', async t => {
   const store = { ready: async () => { const error = new Error('postgresql://secret@host/private'); error.code = '28P01'; throw error; } };
   const server = createApi({ store, tokenHashes: hashes });

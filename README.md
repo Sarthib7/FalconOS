@@ -70,12 +70,12 @@ The server exposes 10 tools. Every authenticated tool requires `session` as an a
 | `falcon_yield_opportunities` | Reads yield opportunities. Read-only. |
 | `falcon_refresh_evidence` | Captures the three Devnet connectors and creates the live analysis. Returns `analysisId`. |
 | `falcon_reserve_decision` | Returns REVIEW, BLOCKED or NO_DATA for a proposed supply. REVIEW is not approval. |
-| `falcon_prepare_transaction` | Prepares an unsigned Devnet supply or redeem. Supply needs `decisionId`; redeem forbids it. |
+| `falcon_prepare_transaction` | Prepares an unsigned Devnet supply using `amountUsdc` (and a REVIEW `decisionId`) or redeem using `amountReceiptTokens` (no decision). Redeem previews the tokens burned and estimated USDC output. |
 | `falcon_submit_signed` | Registers wallet-signed bytes. Falcon never broadcasts. |
 | `falcon_check_receipt` | Reconciles the transaction against Devnet. |
 | `falcon_activity` | Joins recent decisions and prepared transactions into one trail. Read-only. |
 
-Amounts are decimal USDC strings with at most 6 decimals, for example `"0.5"`. They convert to base units with BigInt, not floats.
+Supply amounts are decimal USDC strings in `amountUsdc`; redeem amounts are decimal receipt-token strings in `amountReceiptTokens`, not USDC. Both use at most 6 decimals and convert to base units with BigInt, not floats. Activity likewise labels redeemed inputs as receipt tokens; the USDC output is an adapter estimate at prepare time, not a guaranteed redemption amount.
 
 ## Status and limits
 
@@ -84,7 +84,7 @@ Amounts are decimal USDC strings with at most 6 decimals, for example `"0.5"`. T
 - **Sessions expire after 30 minutes.** Call `falcon_disconnect` to revoke early.
 - **Evidence is short-lived.** Captured evidence is usable for about 300 seconds. A prepared transaction expires in about 120 seconds.
 - **Supply cap.** Mesh caps Devnet supply at 1 USDC.
-- **No OAuth on the MCP endpoint.** All data access requires a valid wallet session. All write actions require the wallet's own signature.
+- **No OAuth on the MCP endpoint.** Data access and tool writes require a valid wallet session obtained by signing the sign-in message. Captures, decisions, and transaction preparation do not require a transaction signature; only the transaction bytes registered with Falcon must be signed by the wallet. Falcon does not broadcast.
 
 ## Run locally
 

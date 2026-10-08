@@ -1041,5 +1041,15 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, web output] From `web/`, `npm test` printed `tests 297`, `pass 297`, `fail 0`. `npm run build:site` ended `✓ built in 4.68s`. `node --test test/mvp-routes.test.mjs` printed `tests 2`, `pass 2`, `fail 0`.
 [VERIFIED, browser checks] Axe 4.13.0 reported `violations: 0`, `passes: 23`. At 390 CSS pixels, `scrollWidth` was `390`. The standard-site preview kept the local link hidden and the `Operator token (fallback)` label visible.
 [NOT RUN, database unavailable] The full Mesh browser harness needs an initialized disposable database. `pg_isready -h 127.0.0.1 -p 55447` printed `127.0.0.1:55447 - no response`.
-[VERIFIED, scope] No deployment, DNS, Cloudflare, remote migration, wallet signature, or transaction occurred.
-[VERIFIED, workflow source] `.github/workflows/ci.yml` now runs `node web/test/mesh-browser.mjs` with `web/dist-mvp` after repository verification; exact-head CI remains pending.
+[VERIFIED, workflow source] `.github/workflows/ci.yml` runs `node web/test/mesh-browser.mjs` with `web/dist-mvp` after repository verification; exact-head CI was pending when this entry was written.
+[REPORTED, user branch-return summary, 2026-10-08] Later, PR #51 merged as `e7da666`; PR #52 merged as `f550c345`. The user reported exact-head CI runs `37786921051` and `37786920929`, plus post-merge runs `37787753395` and `37787753266`, all passed. The PR #52 Cloudflare Pages check returned `Deploy successful!` and preview URL `https://a56f4cdc.falconos.pages.dev`; no production deployment or DNS change was reported.
+
+## MCP execution review fixes: 2026-10-08
+
+[VERIFIED, prior MCP tests] `npm test` from `mcp/` returned tests 52, pass 52, fail 0. Targeted V148 and V151 tool tests returned 4/4 pass through the local MCP HTTP client and fake Mesh.
+
+[VERIFIED, prior Mesh tests] Initialized schema v3 from local schema history on disposable PostgreSQL 17. `npm --prefix mesh test` returned tests 223, pass 223, fail 0. Mesh suite included PostgreSQL tests; RPC remained fixture-backed.
+
+[VERIFIED, behavior changes] T74 requires `amountReceiptTokens` for redeem and shows receipt units plus estimated USDC. T75 binds REVIEW to analysis graph revision. T76 budgets wallet-session lookups before PostgreSQL. T77 gives prepare a 60-second Mesh-client timeout. Wallet or agent still signs and broadcasts. No live transaction was signed or sent.
+
+[VERIFIED, prior scope] Commit `4de5856` was left local and unpushed before this release request; no remote migration or live Devnet call occurred.

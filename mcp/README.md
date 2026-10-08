@@ -30,12 +30,14 @@ Replace `YOUR-MCP-HOST` with the host of your deployment. Any MCP client that sp
 | `falcon_yield_opportunities` | Reads yield opportunities. Read-only. |
 | `falcon_refresh_evidence` | Captures the three Devnet connectors and creates the live analysis. Returns `analysisId`. |
 | `falcon_reserve_decision` | Returns REVIEW, BLOCKED or NO_DATA for a proposed supply. REVIEW is not approval. |
-| `falcon_prepare_transaction` | Prepares an unsigned Devnet supply or redeem. Supply needs `decisionId`; redeem forbids it. The wallet is always the session wallet. |
+| `falcon_prepare_transaction` | Prepares an unsigned Devnet supply using `amountUsdc` or redeem using `amountReceiptTokens`. Supply needs `decisionId`; redeem forbids it. Redeem returns receipt tokens burned and estimated USDC output. The wallet is always the session wallet. |
 | `falcon_submit_signed` | Registers wallet-signed bytes. Falcon never broadcasts. |
 | `falcon_check_receipt` | Reconciles the transaction against Devnet. |
 | `falcon_activity` | Joins recent decisions and prepared transactions into one trail. Read-only. |
 
-Every authenticated tool takes `session` and rejects unknown keys. Amounts are decimal USDC strings with at most 6 decimals (`"0.5"`), converted to base units with BigInt, never floats. Supply is capped at 1 USDC on Devnet by Mesh.
+Every authenticated tool takes `session` and rejects unknown keys. Supply needs `amountUsdc` (decimal USDC); redeem needs `amountReceiptTokens` (decimal receipt tokens to burn), not `amountUsdc`. The two amount fields cannot be combined. Both tokens have 6 decimals, so use decimal strings with at most 6 fractional digits (for example `"0.5"`); base-unit conversion uses BigInt, never floats. The redeem prepare response includes `estimatedUsdc` from the adapter's simulation; this is an estimate, not a promise of settlement output. Activity labels supply amounts `amountUsdc` and redeem burns `amountReceiptTokens`. Supply is capped at 1 USDC on Devnet by Mesh.
+
+The prepare POST has a 60-second Mesh-client timeout to accommodate four sequential Devnet RPC calls (each bounded at 8 seconds). Other Mesh calls keep their usual timeout; Falcon still never signs or broadcasts.
 
 ## Configuration
 
@@ -86,6 +88,6 @@ Tests need no database: `npm test` runs against fake Mesh servers.
 - **Per-instance rate limits.** Limits are in memory. Running N instances multiplies them by N. Authenticated tools are keyed by a SHA-256 of the session (60 per minute by default), `falcon_connect` by wallet (10 per minute), plus a global ceiling (300 per minute). Exceeding returns a tool error with `RATE_LIMITED` and `retryAfterSeconds`.
 - **Shared Mesh wallet-auth bucket.** Mesh rate-limits wallet sign-in by remote IP. Behind this server every agent shares one IP, so every agent shares one bucket. Heavy sign-in traffic from one agent can delay others.
 - **Devnet only.** No mainnet, no custody, no key handling by Falcon, no server-side broadcast. Falcon never sees a private key; the agent broadcasts its own signed bytes.
-- **No OAuth on the MCP endpoint yet.** `/mcp` is reachable by anyone who can reach the host. All data access still requires a valid wallet session, and all write actions require the wallet's own signature.
+- **No OAuth on the MCP endpoint yet.** `/mcp` is reachable by anyone who can reach the host. Data access and tool writes require a valid wallet session obtained by signing the sign-in message. Captures, decisions, and preparation do not require a transaction signature; the wallet signs the prepared transaction bytes before registration, then broadcasts them itself.
 - **Evidence is short-lived.** Captured evidence is only usable for about 300 seconds, and a prepared transaction expires in about 120 seconds.
 - **Data is not advice.** Yield data is provider-indexed, APY is not a realized return, and nothing is guaranteed.

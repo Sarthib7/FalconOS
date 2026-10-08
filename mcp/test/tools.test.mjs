@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import bs58 from 'bs58';
 import { IDS, ORIGIN, SESSION, SIGNED_TX, UNSIGNED_TX, WALLET, body, startStack } from './support/harness.mjs';
-import { TOOL_NAMES } from '../src/tools.mjs';
+import { TOOL_NAMES, registerFalconTools } from '../src/tools.mjs';
 
 const AUTHENTICATED = TOOL_NAMES.filter(name => !['falcon_connect', 'falcon_connect_verify'].includes(name));
 const signature = Buffer.from(Array.from({ length: 64 }, (_, i) => (i * 5 + 1) % 256));
@@ -180,7 +180,7 @@ test('falcon_activity returns empty arrays and never invents rows', () => withSt
   assert.deepEqual(body(await call('falcon_activity', { session: SESSION })), { trail: [], counts: { decisions: 0, intents: 0 }, limit: 20 });
 }));
 
-test('falcon_activity keeps decisions without intents and redeems without decisions', () => withStack({
+test('V148 activity keeps decisions without intents and labels redeem burns as receipt tokens', () => withStack({
   overrides: {
     'GET /v1/decisions': () => ({ status: 200, body: { records: [{ id: IDS.decision, createdAt: '2026-10-05T09:00:00.000Z', analysis: { status: 'BLOCKED', summary: 'No.', expiresAt: null } }], limit: 20 } }),
     'GET /v1/lending/intents': () => ({ status: 200, body: { records: [{ id: IDS.intent, createdAt: '2026-10-05T10:00:00.000Z', request: { wallet: WALLET, action: 'redeem', inputBaseUnits: '250000' }, status: 'PREPARED', signature: null }], limit: 20 } }),
@@ -190,7 +190,8 @@ test('falcon_activity keeps decisions without intents and redeems without decisi
   assert.equal(trail.length, 2);
   assert.equal(trail[0].intent.action, 'redeem');
   assert.equal(trail[0].decision, null);
-  assert.equal(trail[0].intent.amountUsdc, '0.25');
+  assert.equal(trail[0].intent.amountReceiptTokens, '0.25');
+  assert.equal(Object.hasOwn(trail[0].intent, 'amountUsdc'), false);
   assert.equal(trail[1].intent, null);
   assert.equal(trail[1].decision.status, 'BLOCKED');
 }));
@@ -226,18 +227,58 @@ test('(f) prepare_transaction rejects a caller-supplied wallet and reads the wal
   assert.deepEqual(Object.keys(intent).sort(), ['action', 'analysisId', 'decisionId', 'inputBaseUnits', 'requestId', 'wallet']);
 }));
 
-test('(f) a redeem sends no decisionId key; zero and bad amounts are refused locally', () => withStack({}, async ({ call, mesh }) => {
-  const { decisionId, ...redeem } = { ...prepareArgs, action: 'redeem', amountUsdc: '0.25' };
-  assert.equal((await call('falcon_prepare_transaction', redeem)).isError, undefined);
+test('V148 redeem sends receipt-token units and displays burn plus non-1:1 estimated USDC output', () => withStack({
+  overrides: { 'POST /v1/lending/intents': () => ({ status: 200, body: { record: { id: IDS.intent, intent: { transactionBase64: UNSIGNED_TX, messageSha256: 'ab'.repeat(32), estimatedAmounts: { liquidityBaseUnits: '375000', receiptBaseUnits: '250000' } } } } }) },
+}, async ({ call, mesh }) => {
+  const redeem = { session: SESSION, action: 'redeem', amountReceiptTokens: '0.25', analysisId: IDS.analysis };
+  const result = await call('falcon_prepare_transaction', redeem);
+  assert.equal(result.isError, undefined);
+  const prepared = body(result);
+  assert.equal(prepared.amountReceiptTokens, '0.25');
+  assert.equal(prepared.estimatedUsdc, '0.375');
+  assert.equal(Object.hasOwn(prepared, 'amountUsdc'), false);
+  assert.match(prepared.summary, /0\.25 receipt tokens.*estimated 0\.375 USDC/);
   const intent = mesh.calls.find(item => item.path === '/v1/lending/intents').body;
   assert.equal(Object.hasOwn(intent, 'decisionId'), false);
   assert.equal(intent.inputBaseUnits, '250000');
   const before = mesh.calls.length;
-  for (const amountUsdc of ['0', '1e3', '-1', '1.1234567', '', '01', '18446744073709.551616']) {
-    assert.equal((await call('falcon_prepare_transaction', { ...redeem, amountUsdc })).isError, true, amountUsdc);
+  for (const amountReceiptTokens of ['0', '1e3', '-1', '1.1234567', '', '01', '18446744073709.551616']) {
+    assert.equal((await call('falcon_prepare_transaction', { ...redeem, amountReceiptTokens })).isError, true, amountReceiptTokens);
   }
   assert.equal(mesh.calls.length, before);
 }));
+
+test('V148 supply and redeem require their respective amount field, rejecting wrong and extra units before Mesh', () => withStack({}, async ({ call, mesh }) => {
+  const { amountUsdc, ...supply } = prepareArgs;
+  const { decisionId, ...redeem } = supply;
+  for (const input of [
+    supply, { ...supply, amountReceiptTokens: '0.5' }, { ...prepareArgs, amountReceiptTokens: '0.5' },
+    { ...redeem, action: 'redeem' }, { ...redeem, action: 'redeem', amountUsdc: '0.5' },
+    { ...redeem, action: 'redeem', amountUsdc: '0.5', amountReceiptTokens: '0.25' },
+  ]) {
+    const result = await call('falcon_prepare_transaction', input);
+    assert.equal(result.isError, true, JSON.stringify(input));
+    assert.match(result.content[0].text, /amountUsdc|amountReceiptTokens/);
+  }
+  assert.equal(mesh.calls.length, 0);
+}));
+
+test('V151: prepare remains available when sequential Devnet RPC work exceeds the ordinary Mesh timeout', () => withStack({
+  overrides: {
+    'POST /v1/lending/intents': async () => {
+      await new Promise(resolve => setTimeout(resolve, 16_000));
+      return { status: 200, body: { record: { id: IDS.intent, intent: {
+        transactionBase64: UNSIGNED_TX, messageSha256: 'ab'.repeat(32),
+        estimatedAmounts: { liquidityBaseUnits: '500000', receiptBaseUnits: '500000' },
+      } } } };
+    },
+  },
+}, async ({ call }) => {
+  const prepared = body(await call('falcon_prepare_transaction', prepareArgs));
+  assert.equal(prepared.intentId, IDS.intent);
+  assert.equal(prepared.unsignedTransactionBase64, UNSIGNED_TX);
+}));
+
 
 test('(g) Mesh 409, 401 and 429 map to isError with the Mesh code and retryAfterSeconds', () => withStack({
   overrides: {
@@ -358,7 +399,7 @@ test('(b2) session tools turn UNAUTHORIZED into a sign-in-again step', () => wit
 
 test('a missing analysisId names the tool that returns it, for supply and redeem', () => withStack({}, async ({ call, mesh }) => {
   for (const args of [{ action: 'supply', decisionId: IDS.decision }, { action: 'redeem' }]) {
-    const result = await call('falcon_prepare_transaction', { session: SESSION, amountUsdc: '0.1', ...args });
+    const result = await call('falcon_prepare_transaction', { session: SESSION, ...(args.action === 'supply' ? { amountUsdc: '0.1' } : { amountReceiptTokens: '0.1' }), ...args });
     assert.equal(result.isError, true);
     assert.match(result.content[0].text, /analysisId is required\. Get it from falcon_refresh_evidence first\./);
   }
@@ -382,9 +423,9 @@ test('falcon_refresh_evidence returns NO_DATA when reserve analysis is not OBSER
 }));
 
 test('usdc schema: malformed input gets format error, not too-large', () => withStack({}, async ({ call }) => {
-  const redeem = { session: SESSION, action: 'redeem', amountUsdc: '1', analysisId: IDS.analysis };
+  const supply = { session: SESSION, action: 'supply', amountUsdc: '1', analysisId: IDS.analysis, decisionId: IDS.decision };
   for (const badAmount of ['1e3', '0.1234567']) {
-    const result = await call('falcon_prepare_transaction', { ...redeem, amountUsdc: badAmount });
+    const result = await call('falcon_prepare_transaction', { ...supply, amountUsdc: badAmount });
     assert.equal(result.isError, true, `${badAmount} must be rejected`);
     const msg = result.content[0].text;
     assert.ok(!msg.includes('too large'), `${badAmount}: must not say "too large", got: ${msg}`);

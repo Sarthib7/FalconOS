@@ -79,15 +79,16 @@ function sameRequest(row, input) {
   return row.analysis_id === input.analysisId && row.request.decisionId === input.decisionId
     && ['wallet', 'action', 'inputBaseUnits'].every(key => row.request[key] === input.request[key]);
 }
-// Only a saved, live, unexpired REVIEW reserve decision of THIS owner covering the amount can authorize a supply.
+// Only a saved, live, unexpired REVIEW reserve decision of THIS owner, for this analysis revision and amount, can authorize a supply.
 // Missing, foreign, wrong-kind and non-REVIEW decisions share one message so existence is not leaked.
-async function requireDecision(db, owner, input, at) {
+async function requireDecision(db, owner, input, graphRevision, at) {
   const result = await db.query('SELECT analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2 AND observation_id = $3', [owner, input.decisionId, RESERVE_DECISION_MARKER]);
   const decision = result.rows[0]?.analysis;
   if (decision?.kind !== 'reserve_scenario_decision' || decision.mode !== 'live' || decision.status !== 'REVIEW' || typeof decision.expiresAt !== 'string') {
     fail('CONFLICT', 'A fresh REVIEW reserve decision for this amount is required.');
   }
   if (Date.parse(decision.expiresAt) < Date.parse(at)) fail('CONFLICT', 'The reserve decision has expired. Save a new decision before supplying.');
+  if (decision.graphRevision !== graphRevision) fail('CONFLICT', 'Reserve decision evidence changed. Save a new decision before supplying.');
   if (BigInt(input.request.inputBaseUnits) > BigInt(decision.scenario.proposedUnits)) fail('CONFLICT', 'The amount exceeds the proposal in the reserve decision. Save a new decision for this amount.');
 }
 function requireAnalysis(record, at) {
@@ -173,7 +174,7 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
       const at = stamp();
       requireAnalysis(analysis, at);
       // Fail before the adapter spends any RPC; the same rule is enforced again under the owner lock below.
-      if (normalized.decisionId) await requireDecision(pool, owner, normalized, at);
+      if (normalized.decisionId) await requireDecision(pool, owner, normalized, analysis.analysis.graphRevision, at);
       const current = await meshStore.getGraph(owner, at, 'live');
       if (current.revision !== analysis.graph.revision) fail('CONFLICT', 'Live source heads changed. Refresh and analyze them again.');
       const intent = await prepareLending(normalized.request);
@@ -186,7 +187,7 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
         if (winner) return reuseIntent(winner, normalized);
         const committedAt = stamp();
         await currentUnderLock(client, owner, analysis, committedAt);
-        if (normalized.decisionId) await requireDecision(client, owner, normalized, committedAt);
+        if (normalized.decisionId) await requireDecision(client, owner, normalized, analysis.analysis.graphRevision, committedAt);
         const result = await client.query(`
           INSERT INTO falcon_mesh.lending_intents (owner_id, id, request_id, analysis_id, created_at, request, intent)
           VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb) RETURNING *`,

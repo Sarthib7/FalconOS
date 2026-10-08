@@ -73,7 +73,8 @@ async function body(request) {
 
 export function createApi({
   store, lending = null, yieldService = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
-  rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600, clock = () => Date.now(),
+  rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600,
+  walletLookupMaxPerSource = 240, walletLookupMaxGlobal = rateMaxGlobal, clock = () => Date.now(),
 }) {
   if (!(tokenHashes instanceof Map) || !tokenHashes.size) throw new Error('Mesh authentication is required.');
   let windowStart = clock();
@@ -91,6 +92,33 @@ export function createApi({
     }
     ownerCounts.set(owner, nextOwner);
     globalCount = nextGlobal;
+  };
+  // Reserve capacity before a wallet-session query; only failed lookups retain their slot.
+  // In-flight reservations are counted too, so concurrent guesses cannot outrun the budget.
+  let lookupWindowStart = clock();
+  let lookupGlobal = 0;
+  const lookupSources = new Map();
+  const reserveWalletLookup = source => {
+    const time = clock();
+    if (time - lookupWindowStart >= rateWindowMs) {
+      lookupWindowStart = time; lookupGlobal = 0; lookupSources.clear();
+    }
+    const count = lookupSources.get(source) || 0;
+    if (count >= walletLookupMaxPerSource || lookupGlobal >= walletLookupMaxGlobal) {
+      const error = new MeshError('RATE_LIMITED', 'Rate limit exceeded. Retry shortly.');
+      error.retryAfter = Math.max(1, Math.ceil((lookupWindowStart + rateWindowMs - time) / 1000));
+      throw error;
+    }
+    lookupSources.set(source, count + 1);
+    lookupGlobal++;
+    const reservedWindow = lookupWindowStart;
+    return () => {
+      if (lookupWindowStart !== reservedWindow) return;
+      const remaining = lookupSources.get(source) - 1;
+      if (remaining) lookupSources.set(source, remaining);
+      else lookupSources.delete(source);
+      lookupGlobal--;
+    };
   };
   const server = createServer({ maxHeaderSize: 8192, requestTimeout: 15000, headersTimeout: 10000 }, async (request, response) => {
     const send = (status, payload) => {
@@ -139,13 +167,17 @@ export function createApi({
           send(200, await walletAuth.verifyChallenge(input.challengeId, input.signature, origin)); return;
         }
         if (request.method === 'GET' && url.pathname === '/v1/auth/wallet/session') {
+          const release = walletBearer && reserveWalletLookup(request.socket.remoteAddress || 'unknown');
           const session = await walletAuth.getSession(walletBearer);
           if (!session) throw new MeshError('UNAUTHORIZED', 'A valid wallet session is required.');
+          release?.();
           send(200, session); return;
         }
         if (request.method === 'POST' && url.pathname === '/v1/auth/wallet/logout') {
           const input = await body(request); keys(input, []);
+          const release = walletBearer && reserveWalletLookup(request.socket.remoteAddress || 'unknown');
           if (!await walletAuth.revokeSession(walletBearer)) throw new MeshError('UNAUTHORIZED', 'A valid wallet session is required.');
+          release?.();
           send(200, { revoked: true }); return;
         }
         throw new MeshError('NOT_FOUND', 'Wallet authentication endpoint not found.');
@@ -158,8 +190,10 @@ export function createApi({
       // Wallet-session auth for owner-scoped endpoints
       if (!owner && bearer?.startsWith('wsi1_')) {
         if (!walletAuth) throw new MeshError('AUTH_UNAVAILABLE', 'Wallet authentication is not configured.');
+        const release = reserveWalletLookup(request.socket.remoteAddress || 'unknown');
         walletSession = await walletAuth.getSession(bearer);
         if (!walletSession) throw new MeshError('UNAUTHORIZED', 'A valid wallet session is required.');
+        release();
         owner = walletSession.ownerId;
       }
       // Supabase JWT auth for yield routes only
