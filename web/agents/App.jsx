@@ -27,10 +27,10 @@ function CopyControl({ value, label }) {
   }
 
   return (
-    <div className="copy-control">
+    <span className="copy-control">
       <button type="button" onClick={copy} aria-label={label}>Copy</button>
       <span aria-live="polite">{status}</span>
-    </div>
+    </span>
   );
 }
 
