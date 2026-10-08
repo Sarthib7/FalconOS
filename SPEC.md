@@ -536,6 +536,7 @@ V144: ∀ bot wallet session → opaque random token maps server-side to wallet-
 V145: [INFERRED] ∀ wallet-session DevNet lending request → derive owner from current server-verified session; requested wallet equals session's verified wallet address; prepared intent, transaction signer and receipt stay bound to that wallet and owner; mismatch, revocation or expiry rejects before mutation or broadcast.
 V146: ∀ agents.falconos.markets → install page + SKILLS.md only; no platform wallet UI, yield chat, or mesh route
 V147: ∀ public MCP Devnet action → agent's wallet signs; human approves every signature and broadcast; Falcon holds no keys and broadcasts no tx; mainnet ⊥ allowed
+V152: ∀ local build:mvp /mesh signed-out view → same-tab link to wallet-gated root loads bot UI; operator-token fallback remains; public install origin unchanged
 
 
 ## §T TASKS
@@ -617,6 +618,7 @@ T70|x|test challenge replay/origin/expiry/signature, wallet owner isolation, leg
 T71|~|verify local `build:mvp` wallet-gated bot `/` and graph/DevNet `/mesh/` only; ⊥ public-origin wallet-app claim; preserve main-site routes; no DNS or deployment|I15,I19,V96,V143,V144,V145
 T72|~|authorize wallet sessions for owner-scoped mesh graph, capture, analysis, and lending routes; bind every lending wallet to the session wallet; preserve legacy tokens; test cross-owner, mismatch, expiry, revocation, and transaction intent boundaries|I15,I19,V92,V95,V101,V102,V103,V145
 T73|x|build agent-only installer at `agents.falconos.markets`; serve SKILLS.md and MCP setup; no wallet UI; keep bot and mesh routes separate; verify build and live MCP contract; no Cloudflare deploy|I19,V146,V147
+T78|x|add local /mesh same-tab wallet entry + MCP read-only quickstart; preserve operator-token fallback, public install origin, and transaction gates|I15,I19,V152
 
 ## §B BUGS
 
@@ -713,3 +715,4 @@ B89|2026-10-03|[VERIFIED, scoped security scan secscan_01a103243c5d777b902836ed8
 B90|2026-10-03|[VERIFIED, `mesh/yield-domain.mjs:91`: `candidates.slice(0, maxVenues)` counted pool rows] same project could consume multiple concentration caps and venue slots|V140; count distinct project slugs and cap each project target
 B91|2026-10-03|[VERIFIED, local reproduction: connectPhantomWallet returned 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'] character and length checks accepted a Base58 string that does not decode to a 32-byte key|V142; reject addresses unless Base58 decoding yields exactly 32 bytes
 B92|2026-10-05|[VERIFIED, V103 regression] unchanged account snapshot cleared pending sign-in and rejected signature|V103; retain selection while selected account and signing capability still match
+B97|2026-10-08|absolute bot script path failed Vite build: `Failed to resolve /bot/main.jsx`|V152

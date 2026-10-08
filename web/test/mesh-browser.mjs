@@ -4,7 +4,8 @@ import { createHash, generateKeyPairSync, randomBytes, randomUUID } from 'node:c
 import { createServer } from 'node:http';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { extname, resolve, sep } from 'node:path';
+import { tmpdir } from 'node:os';
+import { extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApi } from '../../mesh/http.mjs';
 import { createStore } from '../../mesh/store.mjs';
@@ -21,7 +22,7 @@ const require = createRequire(new URL('../../mesh/package.json', import.meta.url
 const { Pool } = require('pg');
 const { PublicKey } = require('@solana/web3.js');
 const root = resolve(process.env.FALCON_MESH_WEB_ROOT || fileURLToPath(new URL('../dist-mesh/', import.meta.url)));
-const artifactDir = await mkdtemp('/private/tmp/falcon-mesh-browser-');
+const artifactDir = await mkdtemp(join(tmpdir(), 'falcon-mesh-browser-'));
 const owner = `browser_${randomUUID().replaceAll('-', '')}`;
 const credential = `test-only-${randomBytes(32).toString('hex')}`;
 const otherOwner = `browser_${randomUUID().replaceAll('-', '')}`;
@@ -363,6 +364,18 @@ try {
   chrome.stdio[4].on('data', receive);
 
   const p = await page();
+  if (root.endsWith(sep + 'dist-mvp')) {
+    check('V152: signed-out local MVP mesh exposes wallet sign-in and keeps the token fallback', await p.evaluate('!document.getElementById("wallet-signin-link").hidden && document.getElementById("wallet-signin-link").getAttribute("href") === "/" && document.getElementById("access-token").type === "password"'));
+    const walletSignInUrl = await p.evaluate('document.getElementById("wallet-signin-link").href');
+    await p.send('Page.navigate', { url: walletSignInUrl });
+    await p.wait('document.readyState === "complete" && document.title === "Falcon · Solana Yield Agent" && document.querySelector("#root")?.textContent.trim().length > 0');
+    check('V152: wallet sign-in route loads the local bot in the same tab', await p.evaluate('location.pathname === "/" && document.title === "Falcon · Solana Yield Agent" && document.querySelector("#root")?.textContent.trim().length > 0'));
+    await p.send('Page.navigate', { url: origin + '/mesh/' });
+    await p.wait('document.readyState === "complete" && document.getElementById("connect") && document.getElementById("api-location").textContent');
+  }
+  else {
+    check('V152: non-MVP mesh build keeps local bot sign-in hidden', await p.evaluate('document.getElementById("wallet-signin-link").hidden'));
+  }
   check('V96: a fresh viewer waits for Connect and uses a password input', await p.evaluate('document.getElementById("mesh-workspace").hidden && document.getElementById("access-token").type === "password"') && apiRequests.length === 0);
   await p.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
   await connect(p);

@@ -5,6 +5,7 @@ import { clearWalletSession, restoreWalletSession as restoreBotWalletSession } f
 const $ = (id) => document.getElementById(id);
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const API_BASE = (import.meta.env?.VITE_MESH_API_URL || 'http://127.0.0.1:8791').replace(/\/$/, '');
+const LOCAL_MVP_ROOT_BOT = typeof __FALCON_MVP_ROOT_BOT__ !== 'undefined' && __FALCON_MVP_ROOT_BOT__;
 function assertSafeApiBase() {
   const endpoint = new URL(API_BASE);
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash
@@ -172,6 +173,8 @@ async function api(path, body) {
 }
 
 function controls() {
+  $('wallet-signin-link').hidden = !LOCAL_MVP_ROOT_BOT || connected;
+  if (LOCAL_MVP_ROOT_BOT) $('connect').classList.remove('primary');
   $('access-token').disabled = busy || connected;
   $('connect').disabled = busy || connected;
   $('disconnect').hidden = !connected;

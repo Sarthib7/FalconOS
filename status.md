@@ -1035,3 +1035,11 @@ The demo used synthetic responses. No live API call occurred.
 [NOT DETERMINED] Round-2 tester reported that `falcon_reserve_decision` returns a decision without the caller passing an `analysisId`, so the caller cannot see which evidence backed it. Not investigated.
 
 [PLANNED, user choice] Keep `falcon-mcp-production-5875.up.railway.app` and `falcon-mesh-production.up.railway.app` until 2026-10-13, then delete both service domains and drop them from `FALCON_MESH_ORIGINS` and `FALCON_MCP_ALLOWED_HOSTS`. No doc or skill links to them.
+## Terminal and agent first-use UX: 2026-10-08
+
+[VERIFIED, browser] `dev:mvp` `/mesh/` showed `Sign in with wallet`; clicking opened `/` in the same tab with title `Falcon · Solana Yield Agent`. Returning to `/mesh/` showed the link. Fresh browser error list was `[]`.
+[VERIFIED, web output] From `web/`, `npm test` printed `tests 297`, `pass 297`, `fail 0`. `npm run build:site` ended `✓ built in 4.68s`. `node --test test/mvp-routes.test.mjs` printed `tests 2`, `pass 2`, `fail 0`.
+[VERIFIED, browser checks] Axe 4.13.0 reported `violations: 0`, `passes: 23`. At 390 CSS pixels, `scrollWidth` was `390`. The standard-site preview kept the local link hidden and the `Operator token (fallback)` label visible.
+[NOT RUN, database unavailable] The full Mesh browser harness needs an initialized disposable database. `pg_isready -h 127.0.0.1 -p 55447` printed `127.0.0.1:55447 - no response`.
+[VERIFIED, scope] No deployment, DNS, Cloudflare, remote migration, wallet signature, or transaction occurred.
+[VERIFIED, workflow source] `.github/workflows/ci.yml` now runs `node web/test/mesh-browser.mjs` with `web/dist-mvp` after repository verification; exact-head CI remains pending.

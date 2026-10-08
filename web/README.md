@@ -65,7 +65,7 @@ npm --prefix web run dev:bot
 
 [INFERRED, local paused-app commands] Run `npm --prefix web run build:mvp` to build the paused yield chat at `/` and the source graph and DevNet terminal at `/mesh/` into `web/dist-mvp/`. The standard `falconos.markets` build and routes remain unchanged. `npm --prefix web run dev:mvp` and `npm --prefix web run preview:mvp` serve those same local closed-beta routes. They do not bind DNS, deploy, or define the public install origin.
 
-[VERIFIED, source: `web/bot/auth.mjs`, `web/mesh/app.mjs`] On the local paused app, the same-tab wallet login session is restored by `/mesh/`; operator tokens remain a manual fallback in memory. The bot chat remains simulation-only. Only the separate terminal requests an explicit DevNet transaction signature. The public `agents.falconos.markets` origin does not serve this app.
+[VERIFIED, browser smoke, 2026-10-08] Local `dev:mvp` `/mesh/` shows `Sign in with wallet`; same-tab navigation opens `/` and renders `Falcon · Solana Yield Agent`; returning to `/mesh/` restores the signed-out view. [VERIFIED, source: `web/bot/auth.mjs`, `web/mesh/app.mjs`] Wallet sessions restore from this tab's `sessionStorage`; operator tokens stay in memory. The bot chat remains simulation-only. Only the separate terminal requests an explicit DevNet transaction signature. The public `agents.falconos.markets` origin does not serve this app.
 
 [VERIFIED, source: `mesh/README.md`] The Mesh API needs PostgreSQL schema version 3. Migration `0003_wallet_auth.sql` remains a local candidate until the remote database is checked and migration approval is granted.
 
