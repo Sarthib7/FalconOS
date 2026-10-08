@@ -178,8 +178,12 @@ jobs:
         run: |
           npm --prefix web run build:site
           npm --prefix web run build:mvp
+          npm --prefix web run build:agents
           npm --prefix web run build:treasury
           npm --prefix web run build:mesh
 
       - name: Check MVP and main-site routes
         run: node --test web/test/mvp-routes.test.mjs
+
+      - name: Check agents install routes
+        run: node --test web/test/agents-site.test.mjs

@@ -3,5 +3,6 @@ dist-bot/
 dist-treasury/
 dist-mesh/
 dist-mvp/
+dist-agents/
 .wrangler/
 .local/

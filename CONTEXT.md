@@ -232,6 +232,8 @@
 
 [VERIFIED, user direction, 2026-10-06] The public origin for the Personal Plugin is `https://agents.falconos.markets`. That origin is an install page only: SKILLS.md and the MCP add command. This slice has no Phantom login, yield chat, or mesh terminal on this host. `bot.falconos.markets` and `agent.falconos.markets` are historical names. The host is branded Falcon. It is not called Falcon Agent. Falcon Agent stays the customer-facing agent for one person or organization. The web app of yield chat and mesh is paused, closed-beta. The active build is the Personal Plugin. This plugin slice is advisory only: discover, simulate, and explain. It has no signing and no fund movement. After that ships, execution under policy comes next, then Organization Workspace on Falcon cloud. Organization Workspace remains Falcon-hosted cloud. It is not this install page.
 
+[VERIFIED, user choice, 2026-10-06] Correction: the user kept Devnet actions in the remote MCP. The earlier advisory-only boundary applies to the local JSON plugin, not the public MCP install flow.
+
 ### Language added 2026-10-06
 
 **agents.falconos.markets**:
@@ -239,5 +241,5 @@ The public install origin for the Personal Plugin.
 _Avoid_: bot.falconos.markets, agent.falconos.markets, Falcon Agent as the hostname, hosted yield app
 
 **Personal Plugin**:
-An advisory-only plugin the customer installs into an existing compatible agent environment.
-_Avoid_: hosted yield app, signing surface, fund-movement surface
+Falcon's public skill and remote MCP capability for a customer's compatible agent environment. The agent uses its own wallet for Devnet actions.
+_Avoid_: hosted yield app, wallet login on this site, Falcon-held keys, mainnet transaction tools

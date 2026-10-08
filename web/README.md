@@ -28,8 +28,22 @@ npm --prefix web run preview:local
 ## Personal Plugin public origin
 
 [VERIFIED, user direction, 2026-10-06] The public origin for the Personal Plugin is `https://agents.falconos.markets`. That origin is an install page only: SKILLS.md and the MCP add command. This slice has no Phantom login, yield chat, or mesh terminal on this host. `bot.falconos.markets` and `agent.falconos.markets` are historical names. The host is branded Falcon. It is not called Falcon Agent. Falcon Agent stays the customer-facing agent for one person or organization. The web app of yield chat and mesh is paused, closed-beta. The active build is the Personal Plugin. This plugin slice is advisory only: discover, simulate, and explain. It has no signing and no fund movement.
+[VERIFIED, user choice, 2026-10-06] Correction: the public Personal Plugin uses the remote Devnet MCP. The install page has no wallet UI; the agent uses its own wallet, and the human approves every signature and broadcast. The local JSON plugin remains advisory-only.
 
-[INFERRED] This README does not claim DNS or a Pages project for `agents.falconos.markets` is live.
+[VERIFIED, browser check, 2026-10-06] `https://agents.falconos.markets/` still showed title `Falcon · Solana Yield Agent` and `Install Phantom`. `GET /SKILLS.md` returned `200 text/markdown`; response headers included `server: cloudflare` and `cf-cache-status: DYNAMIC`.
+[VERIFIED, Wrangler direct upload and browser check, 2026-10-07] Production deployment `658c1a01-78fc-49d0-9597-d45b09688111` for `falcon-agents` reports branch `main` and source `6972641`. Browser now reports title `Falcon | Agent install`; `GET /SKILLS.md` returned `200 text/markdown`. The `Install Phantom` result above was accurate before this deployment; it no longer describes the live site.
+
+[VERIFIED, Railway CLI and MCP read-only checks, 2026-10-06] `falcon-mcp` and `falcon-mesh` had status `SUCCESS`; `GET https://api.falconos.markets/readyz` returned `200 {"status":"ready"}`. MCP initialization reported `falcon-mcp@0.1.0` and `2025-11-25`.
+
+[VERIFIED, local build and browser smoke, 2026-10-06] `npm --prefix web run build:agents` creates standalone `web/dist-agents/` and serves `/SKILLS.md`. It does not change the main site, paused bot, or paused mesh build. Cloudflare remains user-managed.
+
+Run the install site locally:
+
+```bash
+npm --prefix web run dev:agents
+npm --prefix web run build:agents
+npm --prefix web run preview:agents
+```
 
 The main marketing site remains `https://falconos.markets/`.
 
