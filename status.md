@@ -1053,3 +1053,11 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, behavior changes] T74 requires `amountReceiptTokens` for redeem and shows receipt units plus estimated USDC. T75 binds REVIEW to analysis graph revision. T76 budgets wallet-session lookups before PostgreSQL. T77 gives prepare a 60-second Mesh-client timeout. Wallet or agent still signs and broadcasts. No live transaction was signed or sent.
 
 [VERIFIED, prior scope] Commit `4de5856` was left local and unpushed before this release request; no remote migration or live Devnet call occurred.
+
+## Agent setup fixes: 2026-10-08
+
+[VERIFIED, implementation] GitHub issues #54 and #55 remain open. README.md lines 19-30 now show Codex setup and active-session tool verification. web/agents/App.jsx adds a Codex setup card and explains wallet sign-in and transaction-signing boundaries. web/agents/install.mjs supplies the Codex CLI command.
+
+[VERIFIED, checks] `npm --prefix web run build:agents` printed `✓ built in 204ms`. `node --test web/test/agents-site.test.mjs` printed `tests 2`, `pass 2`, `fail 0`. The local page at `http://127.0.0.1:4178/` showed the Codex command and wallet boundary copy. Axe-core 4.13.0 reported `violations: 0`, `passes: 33`, `incomplete: 1`.
+
+[VERIFIED, live readiness] `curl -fsS https://mcp.falconos.markets/readyz` returned `{"status":"ready"}`. This confirms readiness only; it does not confirm `tools/list` or tool exposure in this Codex session.

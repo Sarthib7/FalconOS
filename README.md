@@ -16,6 +16,19 @@ curl -fsSL https://agents.falconos.markets/SKILLS.md
 claude mcp add --transport http falconos https://mcp.falconos.markets/mcp
 ```
 
+**Codex:** add the remote server to `~/.codex/config.toml`:
+```toml
+ [mcp_servers.falconos]
+url = "https://mcp.falconos.markets/mcp"
+```
+
+Or register it with the Codex CLI:
+```sh
+codex mcp add falconos --url https://mcp.falconos.markets/mcp
+```
+
+After restarting Codex, verify that all ten Falcon tools appear in the active session: `falcon_connect`, `falcon_connect_verify`, `falcon_disconnect`, `falcon_yield_opportunities`, `falcon_refresh_evidence`, `falcon_reserve_decision`, `falcon_prepare_transaction`, `falcon_submit_signed`, `falcon_check_receipt`, and `falcon_activity`. `codex mcp list` confirms server registration only; it does not confirm that the tools loaded in the active session.
+
 **JSON config** (any MCP client that supports Streamable HTTP):
 ```json
 {
