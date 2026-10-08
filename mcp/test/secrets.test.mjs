@@ -28,9 +28,9 @@ test('(i) the session and signatures never reach stdout, stderr, errors or any r
     await record('yield', call('falcon_yield_opportunities', { session: SESSION }));
     await record('refresh', call('falcon_refresh_evidence', { session: SESSION }));
     await record('decision', call('falcon_reserve_decision', { session: SESSION, proposedUsdc: '0.5', maxUsdc: '1', minBookLiquidityUsdc: '2', maxEvidenceAgeSeconds: 120 }));
-    await record('prepare-unexpected', call('falcon_prepare_transaction', { session: SESSION, action: 'redeem', amountUsdc: '0.5', analysisId: IDS.analysis }));
-    await record('prepare-bad-amount', call('falcon_prepare_transaction', { session: SESSION, action: 'redeem', amountUsdc: '1e3', analysisId: IDS.analysis }));
-    await record('prepare-unknown-key', call('falcon_prepare_transaction', { session: SESSION, action: 'redeem', amountUsdc: '1', analysisId: IDS.analysis, wallet: 'x' }));
+    await record('prepare-unexpected', call('falcon_prepare_transaction', { session: SESSION, action: 'redeem', amountReceiptTokens: '0.5', analysisId: IDS.analysis }));
+    await record('prepare-bad-amount', call('falcon_prepare_transaction', { session: SESSION, action: 'redeem', amountReceiptTokens: '1e3', analysisId: IDS.analysis }));
+    await record('prepare-unknown-key', call('falcon_prepare_transaction', { session: SESSION, action: 'redeem', amountReceiptTokens: '1', analysisId: IDS.analysis, wallet: 'x' }));
     await record('submit', call('falcon_submit_signed', { session: SESSION, intentId: IDS.intent, signedTransactionBase64: SIGNED_TX }));
     await record('receipt', call('falcon_check_receipt', { session: SESSION, intentId: IDS.intent }));
     await record('activity-429', call('falcon_activity', { session: SESSION }));

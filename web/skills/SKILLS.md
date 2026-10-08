@@ -47,7 +47,7 @@ claude mcp add --transport http falconos {{FALCON_MCP_URL}}
 - Read the sign-in message to the human. Refuse to sign it if it names a host other than the one in the server URL above, or if it asks you to spend, transfer, approve, or sign a transaction.
 - Never call `falcon_prepare_transaction` for a supply unless `falcon_reserve_decision` returned REVIEW in this same conversation, and the amount is at most the decision's proposed amount.
 - A BLOCKED or NO_DATA decision stops the supply. Explain the reason from the checks. For NO_DATA, you may call `falcon_refresh_evidence` and ask for a new decision.
-- Amounts are decimal USDC strings with at most 6 decimals, such as `"0.5"` or `"1"`. Never use floats, exponents or signs.
+- Supply takes `amountUsdc` in decimal USDC; redeem takes `amountReceiptTokens` in decimal receipt tokens to burn, not USDC. Both use at most 6 decimals, such as `"0.5"` or `"1"`. Never use floats, exponents or signs, and never pass both fields.
 - Never claim guaranteed returns. APY is provider-indexed data, not realized return. Nothing is guaranteed.
 
 ## Wallet
@@ -76,6 +76,7 @@ Falcon uses Kamino's KLend program on Solana Devnet. These are the live addresse
 - BLOCKED means a limit the human set was exceeded. Do not prepare a supply. Say which check failed and why.
 - NO_DATA means evidence is missing or too old. Do not prepare a supply. Refresh evidence and ask again, once.
 - Why supply needs REVIEW and redeem does not. A supply puts funds into a market, so Falcon requires a saved, unexpired REVIEW decision for this owner that covers the amount. A redeem takes funds out. Blocking an exit would trap the human, so redeem never needs a decision and must not carry a `decisionId`. A redeem still needs a fresh `analysisId` from `falcon_refresh_evidence`, because Falcon builds the transaction from the observed reserve state.
+- On redeem, report the receipt tokens being burned and the adapter's `estimatedUsdc` output separately. The simulated estimate is not guaranteed settlement output. Activity shows redeem input as `amountReceiptTokens`, never as USDC.
 - Owner caps. The limits in the decision (maximum, book floor, evidence age) come from the human. Do not pick them yourself to make a decision pass.
 - Devnet cap. A supply is capped at 1 USDC (1000000 base units) on Devnet, whatever the decision says.
 - `executionReady` is always `false`. Opportunities and decisions are information, never approval to execute. It does not block anything. Only the human approves a transaction, and only `falcon_prepare_transaction` builds one.
@@ -99,10 +100,10 @@ A prepared intent expires after about 120 seconds. Do steps 1 to 4 without long 
 3. `falcon_yield_opportunities` with `{session}`. Returns provider-indexed USDC lending opportunities and a `limits` list. Repeat the limits to the human.
 4. `falcon_refresh_evidence` with `{session}`. Captures the live sources and builds the analysis. Returns `analysisId`, `status`, `capturedAt`, and the reserve liquidity and slot when present.
 5. `falcon_reserve_decision` with `{session, proposedUsdc, maxUsdc, minBookLiquidityUsdc, maxEvidenceAgeSeconds}`. Returns the decision id, status, summary, checks, `expiresAt` and a `next` hint.
-6. `falcon_prepare_transaction` with `{session, action, amountUsdc, analysisId, decisionId}`. Both actions need `analysisId` from step 4. For `supply`, `decisionId` is required and comes from step 5. For `redeem`, skip step 5 and leave `decisionId` out. Returns `unsignedTransactionBase64`, `intentId` and `messageSha256`.
+6. `falcon_prepare_transaction`: supply with `{session, action: "supply", amountUsdc, analysisId, decisionId}`; redeem with `{session, action: "redeem", amountReceiptTokens, analysisId}`. Both actions need `analysisId` from step 4. Supply needs `decisionId` from step 5; redeem skips step 5 and forbids it. Returns `unsignedTransactionBase64`, `intentId`, `messageSha256`; a redeem also returns `amountReceiptTokens` burned and `estimatedUsdc` output.
 7. Follow the signing order above, using `falcon_submit_signed` with `{session, intentId, signedTransactionBase64}`, then your own broadcast.
 8. `falcon_check_receipt` with `{session, intentId}`. Returns the reconciled event. Report it as it is, including a pending or failed status.
-9. `falcon_activity` with `{session}`. Returns the trail of decisions, intents and latest event status. Empty arrays mean nothing exists yet.
+9. `falcon_activity` with `{session}`. Returns the trail of decisions, intents and latest event status. Supply inputs are `amountUsdc`; redeem inputs are `amountReceiptTokens`, not USDC. Empty arrays mean nothing exists yet.
 10. `falcon_disconnect` with `{session}` when the human is done.
 
 ## Worked Devnet example

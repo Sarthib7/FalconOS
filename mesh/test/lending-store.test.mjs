@@ -117,6 +117,32 @@ test('V101: stale or changed live evidence blocks preparation before the adapter
   assert.deepEqual(await f.store.list(f.owner), []);
 });
 
+test('V149: a REVIEW decision from an older graph cannot authorize supply against fresh live analysis', async () => {
+  const f = await fixture();
+  const updatedReserve = await f.meshStore.captureSource(f.owner, {
+    requestId: randomUUID(), connectorId: 'solana-devnet-reserve-liquidity', expectedRevisionId: f.sources[2].revisionId,
+  });
+  assert.notEqual(updatedReserve.revisionId, f.sources[2].revisionId);
+  const freshAnalysis = await f.meshStore.createAnalysis(f.owner, {
+    requestId: randomUUID(), observationId: 'observation:live:solana-devnet-klend', maxHops: 3,
+  }, AT, 'live');
+  assert.equal(freshAnalysis.analysis.status, 'OBSERVED');
+  assert.notEqual(f.decision.analysis.graphRevision, freshAnalysis.analysis.graphRevision);
+  const input = { ...f.input, analysisId: freshAnalysis.id };
+  await assert.rejects(f.store.prepare(f.owner, input), code('CONFLICT'));
+  assert.equal(f.counts.prepare, 0);
+  assert.deepEqual(await f.store.list(f.owner), []);
+
+  const freshDecision = await f.meshStore.createDecision(f.owner, {
+    requestId: randomUUID(), scenario: { proposedUnits: '5', maxProposedUnits: '10', minBookLiquidityUnits: '1', maxObservationAgeSeconds: 300 },
+  }, AT);
+  assert.equal(freshDecision.analysis.status, 'REVIEW');
+  assert.equal(freshDecision.analysis.graphRevision, freshAnalysis.analysis.graphRevision);
+  const prepared = await f.store.prepare(f.owner, { ...input, decisionId: freshDecision.id });
+  assert.equal(prepared.analysisId, freshAnalysis.id);
+  assert.equal(f.counts.prepare, 1);
+});
+
 test('V101: source head change during preparation rejects persistence under the owner lock', async () => {
   let f;
   f = await fixture({ prepare: async request => {

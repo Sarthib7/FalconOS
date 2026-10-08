@@ -34,6 +34,11 @@ const usdc = (label) => z.string().max(40)
   .regex(DECIMAL_USDC, `${label} must be a decimal USDC string with at most 6 decimals, for example "0.5".`)
   .superRefine((v, ctx) => { if (DECIMAL_USDC.test(v) && !isUsdcAmount(v)) ctx.addIssue({ code: 'custom', message: `${label} is too large.` }); })
   .describe(`${label} as a decimal USDC string, at most 6 decimals, no exponent or sign.`);
+// The receipt mint also has six decimals; Mesh inputBaseUnits is denominated in the input token for each action.
+const receiptTokens = z.string().max(40)
+  .regex(DECIMAL_USDC, 'amountReceiptTokens must be a decimal receipt-token string with at most 6 decimals, for example "0.5".')
+  .superRefine((v, ctx) => { if (DECIMAL_USDC.test(v) && !isUsdcAmount(v)) ctx.addIssue({ code: 'custom', message: 'amountReceiptTokens is too large.' }); })
+  .describe('Receipt tokens to burn as a decimal string, at most 6 decimals, no exponent or sign.');
 
 const READ = { readOnlyHint: true, openWorldHint: true };
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: true };
@@ -86,7 +91,10 @@ export function buildActivity(decisionsPayload, intentsPayload) {
     const decision = decisionId ? decisionById.get(decisionId) ?? { id: decisionId, createdAt: null, status: null, summary: null, expiresAt: null } : null;
     if (decisionId) used.add(decisionId);
     trail.push(trailRow(item.createdAt, decision, {
-      id: item.id, createdAt: item.createdAt, action: item.request?.action ?? null, amountUsdc: baseUnitsToUsdc(item.request?.inputBaseUnits),
+      id: item.id, createdAt: item.createdAt, action: item.request?.action ?? null,
+      ...(item.request?.action === 'redeem'
+        ? { amountReceiptTokens: baseUnitsToUsdc(item.request?.inputBaseUnits) }
+        : { amountUsdc: baseUnitsToUsdc(item.request?.inputBaseUnits) }),
       wallet: item.request?.wallet ?? null, status: item.status ?? null, transactionSignature: item.signature ?? null,
     }));
   }
@@ -259,31 +267,41 @@ export function registerFalconTools(server, { mesh, limiter }) {
 
   define('falcon_prepare_transaction', {
     title: 'Prepare unsigned Devnet transaction',
-    description: 'Prepare a Devnet supply or redeem as an UNSIGNED transaction for your own wallet to sign. Supply needs a decisionId from a REVIEW result of falcon_reserve_decision. Get one first. supply at most 1 USDC. redeem must not carry a decisionId. The wallet is the session wallet. The prepared transaction expires in about 120 seconds.',
+    description: 'Prepare a Devnet supply or redeem as an UNSIGNED transaction for your own wallet to sign. Supply requires amountUsdc and a decisionId from a REVIEW result of falcon_reserve_decision (at most 1 USDC). Redeem requires amountReceiptTokens to burn, not USDC, and must not carry a decisionId. The wallet is the session wallet. The prepared transaction expires in about 120 seconds.',
     inputSchema: z.strictObject({
       session,
       action: z.enum(['supply', 'redeem']),
-      amountUsdc: usdc('amountUsdc'),
+      amountUsdc: usdc('amountUsdc').optional().describe('Required for supply, forbidden for redeem. Decimal USDC with at most 6 decimals.'),
+      amountReceiptTokens: receiptTokens.optional().describe('Required for redeem, forbidden for supply. Decimal receipt tokens with at most 6 decimals.'),
       analysisId: uuid('analysisId', 'falcon_refresh_evidence').describe('analysisId returned by falcon_refresh_evidence. Required for supply and redeem.'),
       decisionId: uuid('decisionId').optional().describe('Required for supply, forbidden for redeem.'),
     }).superRefine((value, ctx) => {
+      if (value.action === 'supply' && value.amountUsdc === undefined) ctx.addIssue({ code: 'custom', path: ['amountUsdc'], message: 'Supply requires amountUsdc in USDC units.' });
+      if (value.action === 'supply' && value.amountReceiptTokens !== undefined) ctx.addIssue({ code: 'custom', path: ['amountReceiptTokens'], message: 'amountReceiptTokens is not allowed for supply; use amountUsdc.' });
+      if (value.action === 'redeem' && value.amountReceiptTokens === undefined) ctx.addIssue({ code: 'custom', path: ['amountReceiptTokens'], message: 'Redeem requires amountReceiptTokens in receipt-token units.' });
+      if (value.action === 'redeem' && value.amountUsdc !== undefined) ctx.addIssue({ code: 'custom', path: ['amountUsdc'], message: 'amountUsdc is not allowed for redeem; use amountReceiptTokens.' });
       if (value.action === 'supply' && value.decisionId === undefined) ctx.addIssue({ code: 'custom', path: ['decisionId'], message: 'Supply needs a decisionId from a REVIEW result of falcon_reserve_decision. Get one first.' });
       if (value.action === 'redeem' && value.decisionId !== undefined) ctx.addIssue({ code: 'custom', path: ['decisionId'], message: 'decisionId is not allowed for redeem.' });
     }),
     annotations: WRITE,
     rate: bySession,
   }, async args => {
-    const inputBaseUnits = usdcToBaseUnits(args.amountUsdc, { positive: true });
+    const inputBaseUnits = usdcToBaseUnits(args.action === 'supply' ? args.amountUsdc : args.amountReceiptTokens, { positive: true });
     const { walletAddress } = await mesh.get('/v1/auth/wallet/session', args.session);
     const { record } = await mesh.post('/v1/lending/intents', {
       requestId: mesh.newRequestId(), analysisId: args.analysisId, wallet: walletAddress, action: args.action, inputBaseUnits,
       ...(args.decisionId !== undefined && { decisionId: args.decisionId }),
-    }, args.session);
+    }, args.session, 60_000);
+    const estimatedUsdc = args.action === 'redeem' ? baseUnitsToUsdc(record.intent?.estimatedAmounts?.liquidityBaseUnits) : null;
     return {
-      intentId: record.id, action: args.action, amountUsdc: args.amountUsdc, wallet: walletAddress,
+      intentId: record.id, action: args.action,
+      ...(args.action === 'supply' ? { amountUsdc: args.amountUsdc } : { amountReceiptTokens: args.amountReceiptTokens, estimatedUsdc }),
+      wallet: walletAddress,
       unsignedTransactionBase64: record.intent?.transactionBase64 ?? null, messageSha256: record.intent?.messageSha256 ?? null,
       expiresInSeconds: PREPARED_TTL_SECONDS, decisionId: args.decisionId ?? null,
-      summary: `Unsigned Devnet ${args.action} of ${args.amountUsdc} USDC for wallet ${walletAddress}. Nothing has been signed or sent.`,
+      summary: args.action === 'supply'
+        ? `Unsigned Devnet supply of ${args.amountUsdc} USDC for wallet ${walletAddress}. Nothing has been signed or sent.`
+        : `Unsigned Devnet redeem burns ${args.amountReceiptTokens} receipt tokens for wallet ${walletAddress}; estimated ${estimatedUsdc ?? 'unknown'} USDC output. Nothing has been signed or sent.`,
       next: `Devnet only. Show the action, amount and wallet to your human and get approval. Sign with signTransaction (not signAndSendTransaction) within ${PREPARED_TTL_SECONDS} seconds, then call falcon_submit_signed with intentId and the signed transaction as base64.`,
     };
   });
