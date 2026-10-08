@@ -67,6 +67,14 @@ export default function App() {
           <p className="agents-lede">Add Falcon's MCP server to your agent environment, then load the skill guide.</p>
           <a className="agents-primary" href="#install">Set up Falcon <span aria-hidden="true">↓</span></a>
         </section>
+        <section className="agents-skill-link" aria-label="Download the agent skill">
+          <div><h2>Read or fetch the skill</h2><p>Give your agent the public Falcon setup and safety guide.</p></div>
+          <pre><code>{SKILL_COMMAND}</code><CopyControl value={SKILL_FETCH_COMMAND} label="Copy skill fetch command" /></pre>
+          <div className="agents-skill-card">
+            <div><p className="agents-eyebrow">AGENT GUIDE</p><h3>Load SKILLS.md</h3><p>Read the tool list, Devnet limits, wallet rules, and signing order before use.</p></div>
+            <a href="/SKILLS.md">Open SKILLS.md <span aria-hidden="true">↗</span></a>
+          </div>
+        </section>
 
         <section id="install" className="agents-install" aria-labelledby="install-title">
           <div className="section-heading">
@@ -79,10 +87,6 @@ export default function App() {
             <InstallCard title="Codex" description="Register Falcon with the Codex CLI." value={MCP_CODEX_CLI_COMMAND} label="Copy Codex command" />
             <InstallCard title="Other MCP clients" description="Add this entry to your client's MCP server configuration." value={MCP_JSON_CONFIG} label="Copy MCP configuration" />
           </div>
-          <div className="agents-skill-card">
-            <div><p className="agents-eyebrow">AGENT GUIDE</p><h3>Load SKILLS.md</h3><p>Read the tool list, Devnet limits, wallet rules, and signing order before use.</p></div>
-            <a href="/SKILLS.md">Open SKILLS.md <span aria-hidden="true">↗</span></a>
-          </div>
         </section>
 
         <section className="agents-boundary" aria-labelledby="boundary-title">
@@ -94,10 +98,6 @@ export default function App() {
           </div>
         </section>
 
-        <section className="agents-skill-link" aria-label="Download the agent skill">
-          <div><h2>Read or fetch the skill</h2><p>Give your agent the public Falcon setup and safety guide.</p></div>
-          <pre><code>{SKILL_COMMAND}</code><CopyControl value={SKILL_FETCH_COMMAND} label="Copy skill fetch command" /></pre>
-        </section>
       </main>
 
       <footer className="agents-footer">
