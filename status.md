@@ -1061,3 +1061,11 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, checks] `npm --prefix web run build:agents` printed `✓ built in 204ms`. `node --test web/test/agents-site.test.mjs` printed `tests 2`, `pass 2`, `fail 0`. The local page at `http://127.0.0.1:4178/` showed the Codex command and wallet boundary copy. Axe-core 4.13.0 reported `violations: 0`, `passes: 33`, `incomplete: 1`.
 
 [VERIFIED, live readiness] `curl -fsS https://mcp.falconos.markets/readyz` returned `{"status":"ready"}`. This confirms readiness only; it does not confirm `tools/list` or tool exposure in this Codex session.
+
+## Agent skill-first setup: 2026-10-08
+
+[VERIFIED, Claude Code CLI] `claude mcp add --transport http falconos https://mcp.falconos.markets/mcp` printed `Added HTTP MCP server falconos with URL: https://mcp.falconos.markets/mcp to local config`. `claude mcp get falconos` printed `Status: ✔ Connected`, `Type: http`, and the expected URL. No wallet sign-in or Devnet action ran.
+
+[VERIFIED, local page] `npm --prefix web run build:agents` succeeded. `node --test web/test/agents-site.test.mjs` printed `tests 2`, `pass 2`, `fail 0`. At 390 CSS pixels, `scrollWidth` was 390. The skill section appeared before MCP setup.
+
+[VERIFIED, live services] MCP `tools/list` returned all ten Falcon tools; `/readyz` returned `{"status":"ready"}`. The live installer still shows the old section order and no Codex card. No Cloudflare deploy ran; Cloudflare remains user-managed.
