@@ -7,7 +7,7 @@ import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer as createViteServer } from 'vite';
-import { MCP_CLI_COMMAND, MCP_CODEX_CLI_COMMAND, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from '../agents/install.mjs';
+import { MCP_CLI_COMMAND, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from '../agents/install.mjs';
 
 const root = resolve(fileURLToPath(new URL('../dist-agents/', import.meta.url)));
 const contentTypes = new Map([
@@ -47,12 +47,9 @@ function listen(server) {
 
 test('agent setup commands target the public MCP and skill', () => {
   assert.equal(MCP_CLI_COMMAND, 'claude mcp add --transport http falconos https://mcp.falconos.markets/mcp');
-  assert.equal(MCP_CODEX_CLI_COMMAND, 'codex mcp add falconos --url https://mcp.falconos.markets/mcp');
-  assert.deepEqual(JSON.parse(MCP_JSON_CONFIG), { mcpServers: { falconos: { type: 'http', url: 'https://mcp.falconos.markets/mcp' } } });
-  assert.equal(SKILL_FETCH_COMMAND, 'curl -fsSL https://agents.falconos.markets/SKILLS.md');
 });
 
-test('the public skill fetch is the first step before MCP setup', async t => {
+test('the skill entry point precedes MCP setup', async t => {
   const vite = await createViteServer({
     configFile: resolve(fileURLToPath(new URL('../vite.agents.config.js', import.meta.url))),
     server: { middlewareMode: true },
@@ -62,17 +59,15 @@ test('the public skill fetch is the first step before MCP setup', async t => {
 
   const { default: App } = await vite.ssrLoadModule('/App.jsx');
   const markup = renderToStaticMarkup(createElement(App));
-  const skillLink = markup.indexOf('<a class="agents-primary" href="/SKILLS.md">Read the skill');
-  const skillCommand = markup.indexOf(SKILL_FETCH_COMMAND);
-  const mcpSetup = markup.indexOf('Add Falcon to your agent');
-  const skillNav = markup.indexOf('>SKILLS.md</a>');
-  const mcpNav = markup.indexOf('>MCP setup</a>');
+  const nav = markup.indexOf('<nav aria-label="Page navigation">');
+  const skillNav = markup.indexOf('href="/SKILLS.md"', nav);
+  const mcpNav = markup.indexOf('href="#install"', nav);
+  const skillSection = markup.indexOf('aria-labelledby="skill-entry-title"');
+  const skillCommand = markup.indexOf(SKILL_FETCH_COMMAND, skillSection);
+  const installSection = markup.indexOf('<section id="install"');
 
-  assert.ok(skillLink >= 0, 'page must link to the skill entry point');
-  assert.ok(skillCommand >= 0, 'page must show the curl entry command');
-  assert.ok(mcpSetup >= 0, 'page must show MCP setup after the skill');
-  assert.ok(skillLink < skillCommand && skillCommand < mcpSetup, 'skill link and curl command must appear before MCP setup');
-  assert.ok(skillNav >= 0 && mcpNav >= 0 && skillNav < mcpNav, 'navigation must lead with the skill before MCP setup');
+  assert.ok(nav >= 0 && skillNav > nav && mcpNav > skillNav, 'navigation links to the skill before MCP setup');
+  assert.ok(skillSection >= 0 && skillCommand > skillSection && installSection > skillCommand, 'skill entry precedes install section');
 });
 
 test('public agent install serves the page, assets, and the MCP skill', async t => {

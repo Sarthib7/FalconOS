@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import falconMark from '../landing/assets/falcon.svg';
-import { MCP_CLI_COMMAND, MCP_CODEX_CLI_COMMAND, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from './install.mjs';
+import { MCP_CLI_COMMAND, MCP_CODEX_CLI_COMMAND, MCP_CODEX_TOML, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from './install.mjs';
 import './style.css';
 const SKILL_COMMAND = SKILL_FETCH_COMMAND;
 
@@ -77,19 +77,20 @@ export default function App() {
         <section id="install" className="agents-install" aria-labelledby="install-title">
           <div className="section-heading">
             <h2 id="install-title">Add Falcon to your agent</h2>
-            <p>Choose your client, restart it, and look for all ten Falcon tools.</p>
+            <p>Choose your client, restart it, and verify all ten Falcon tools in the active session. For Codex, <code>codex mcp list</code> confirms registration only.</p>
           </div>
           <div className="install-grid">
-            <InstallCard title="Claude Code" description="" value={MCP_CLI_COMMAND} label="Copy Claude Code command" />
-            <InstallCard title="Codex" description="" value={MCP_CODEX_CLI_COMMAND} label="Copy Codex command" />
-            <InstallCard title="Other MCP clients" description="Paste this into your MCP settings." value={MCP_JSON_CONFIG} label="Copy MCP configuration" />
+            <InstallCard title="Claude Code" description="Add Falcon's hosted HTTP MCP server." value={MCP_CLI_COMMAND} label="Copy Claude Code command" />
+            <InstallCard title="Codex CLI" description="Register Falcon with the Codex CLI, then restart Codex." value={MCP_CODEX_CLI_COMMAND} label="Copy Codex CLI command" />
+            <InstallCard title="Codex config.toml" description="Or add this block to ~/.codex/config.toml, then restart Codex." value={MCP_CODEX_TOML} label="Copy Codex TOML" />
+            <InstallCard title="Other MCP clients" description="Add this entry to your client's MCP server configuration." value={MCP_JSON_CONFIG} label="Copy MCP configuration" />
           </div>
         </section>
 
         <section className="agents-boundary" aria-labelledby="boundary-title">
           <div>
-            <h2 id="boundary-title">Your wallet stays yours.</h2>
-            <p>The site never connects to your wallet. Your agent signs in with its own wallet. That signature proves ownership. It does not approve a transaction. You approve each transaction signature and broadcast. Falcon never holds keys or broadcasts transactions. Devnet only.</p>
+            <h2 id="boundary-title">Reserve review requires wallet sign-in.</h2>
+            <p>Before reserve review, your agent connects with its own wallet. Its message-only sign-in proves wallet ownership; it does not sign a transaction. Evidence capture and a reserve decision require this session, but no transaction signature. Any transaction signature and broadcast are separate actions and need your explicit approval. Falcon holds no keys and does not sign or broadcast transactions. Mainnet is not supported.</p>
           </div>
         </section>
 

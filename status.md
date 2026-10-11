@@ -1061,3 +1061,11 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, checks] `npm --prefix web run build:agents` printed `✓ built in 204ms`. `node --test web/test/agents-site.test.mjs` printed `tests 2`, `pass 2`, `fail 0`. The local page at `http://127.0.0.1:4178/` showed the Codex command and wallet boundary copy. Axe-core 4.13.0 reported `violations: 0`, `passes: 33`, `incomplete: 1`.
 
 [VERIFIED, live readiness] `curl -fsS https://mcp.falconos.markets/readyz` returned `{"status":"ready"}`. This confirms readiness only; it does not confirm `tools/list` or tool exposure in this Codex session.
+
+## Agents skill sync and signed-bytes guidance: 2026-10-11
+
+[VERIFIED, implementation] Task T79: `vite.agents.config.js` emits `/SKILLS.md` from `web/skills/SKILLS.md` via `falconSkills()`. Removed the stale `web/agents/public/SKILLS.md`. `build:agents` / `dev:agents` bake `VITE_FALCON_MCP_URL=https://mcp.falconos.markets/mcp` and `VITE_FALCON_SKILL_URL=https://agents.falconos.markets/SKILLS.md`. SKILLS now includes Codex CLI + TOML setup, active-session ten-tool verification, the #55 wallet sign-in vs transaction-signature boundary, and retention of signed bytes for broadcast retry. Installer shows a Codex `config.toml` card. MCP `falcon_submit_signed` next text tells agents Falcon does not return signed bytes.
+
+[VERIFIED, checks] `npm --prefix web run build:agents` ended `✓ built in 144ms` and emitted `dist-agents/SKILLS.md`. `node --test web/test/agents-site.test.mjs` returned `tests 2`, `pass 2`, `fail 0`. Focused skill-asset builds with and without MCP URL returned `pass 2`. `npm --prefix mcp test` returned `tests 52`, `pass 52`, `fail 0`. No funded Devnet supply or broadcast occurred.
+
+[PLANNED, issue close] PR closes #54 and #55 on merge. Funded on-chain Devnet supply remains open (T37/T43).

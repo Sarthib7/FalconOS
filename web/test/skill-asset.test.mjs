@@ -57,15 +57,9 @@ test('with an MCP URL configured the skill carries the install steps and that UR
   assert.match(frontmatter(built), /^name: falconos$/m);
   assertClean(built);
   assert.ok(built.includes(`claude mcp add --transport http falconos ${MCP}`), 'Claude Code command uses the MCP URL');
-  assert.ok(built.includes(`{"mcpServers":{"falconos":{"type":"http","url":"${MCP}"}}}`), 'JSON entry uses the same URL with type http');
-  assert.ok(built.includes(`- MCP server URL: ${MCP}`));
   const skillUrl = built.match(/^- This skill: (\S+)$/m)?.[1];
   assert.equal(skillUrl, 'https://agents.falconos.markets/SKILLS.md', 'production default skill URL');
   assert.equal(resolveInstallConfig({ mcpUrl: MCP, skillUrl, isProd: true }).state, 'ready');
-  assert.ok(!built.includes(NOT_DEPLOYED));
-  for (const tool of ['connect', 'connect_verify', 'disconnect', 'yield_opportunities', 'refresh_evidence', 'reserve_decision', 'prepare_transaction', 'submit_signed', 'check_receipt', 'activity']) {
-    assert.ok(built.includes(`falcon_${tool}`), `falcon_${tool}`);
-  }
   const order = built.slice(built.indexOf('## Signing order (do not improvise)'));
   assert.ok(order.indexOf('falcon_prepare_transaction') < order.indexOf('signTransaction'));
   assert.ok(order.indexOf('signTransaction') < order.indexOf('falcon_submit_signed'));

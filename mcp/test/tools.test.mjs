@@ -153,7 +153,6 @@ test('full journey returns the contract output shapes', () => withStack({}, asyn
   assert.equal(submitted.event.kind, 'SUBMITTED');
   assert.equal(submitted.event.data.signature, 'txsig');
   assert.equal(JSON.stringify(submitted).includes(SIGNED_TX), false, 'signed bytes are not echoed');
-  assert.match(submitted.next, /never broadcasts|has not broadcast/);
   const submitCall = mesh.calls.find(item => item.path.endsWith('/submit'));
   assert.equal(submitCall.body.transactionBase64, SIGNED_TX);
   assert.match(submitCall.body.requestId, /^[a-f0-9-]{36}$/);

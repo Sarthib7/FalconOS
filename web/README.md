@@ -37,6 +37,8 @@ npm --prefix web run preview:local
 
 [VERIFIED, local build and browser smoke, 2026-10-06] `npm --prefix web run build:agents` creates standalone `web/dist-agents/` and serves `/SKILLS.md`. It does not change the main site, paused bot, or paused mesh build. Cloudflare remains user-managed.
 
+[VERIFIED, 2026-10-11] `build:agents` / `dev:agents` / `preview:agents` bake `VITE_FALCON_MCP_URL=https://mcp.falconos.markets/mcp` and `VITE_FALCON_SKILL_URL=https://agents.falconos.markets/SKILLS.md`. `vite.agents.config.js` emits `/SKILLS.md` from `web/skills/SKILLS.md` through `falconSkills()`; there is no stale `agents/public/SKILLS.md`.
+
 Run the install site locally:
 
 ```bash
