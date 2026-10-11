@@ -627,6 +627,7 @@ T75|x|bind supply REVIEW decision to intent evidence revision|V149,V145
 T76|x|bound wallet-session lookups, introspection and logout with source/global pre-auth limits|V150,V145
 T77|x|align MCP prepare deadline with bounded Devnet RPC sequence|V151,V97,V99
 T78|x|add local /mesh same-tab wallet entry + MCP read-only quickstart; preserve operator-token fallback, public install origin, and transaction gates|I15,I19,V152
+T79|x|serve agents SKILLS from the shared template with Codex TOML/CLI setup, wallet sign-in vs transaction-signature boundary, and signed-bytes retention for broadcast retry; bake live MCP/skill URLs into build:agents|I19,V146,V147
 
 ## §B BUGS
 

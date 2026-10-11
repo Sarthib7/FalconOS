@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import falconMark from '../landing/assets/falcon.svg';
-import { MCP_CLI_COMMAND, MCP_CODEX_CLI_COMMAND, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from './install.mjs';
+import { MCP_CLI_COMMAND, MCP_CODEX_CLI_COMMAND, MCP_CODEX_TOML, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from './install.mjs';
 import './style.css';
 const SKILL_COMMAND = SKILL_FETCH_COMMAND;
 
@@ -72,11 +72,12 @@ export default function App() {
           <div className="section-heading">
             <p className="agents-eyebrow">SETUP</p>
             <h2 id="install-title">Connect your MCP client</h2>
-            <p>Use a command in Claude Code or Codex, or add the HTTP server entry in another MCP client. After setup, restart the client and verify the ten tools in SKILLS.md appear in the active session.</p>
+            <p>Use a command in Claude Code or Codex, or add the HTTP server entry in another MCP client. After setup, restart the client and verify the ten tools in SKILLS.md appear in the active session. For Codex, <code>codex mcp list</code> confirms registration only.</p>
           </div>
           <div className="install-grid">
             <InstallCard title="Claude Code" description="Add Falcon's hosted HTTP MCP server." value={MCP_CLI_COMMAND} label="Copy Claude Code command" />
-            <InstallCard title="Codex" description="Register Falcon with the Codex CLI." value={MCP_CODEX_CLI_COMMAND} label="Copy Codex command" />
+            <InstallCard title="Codex CLI" description="Register Falcon with the Codex CLI, then restart Codex." value={MCP_CODEX_CLI_COMMAND} label="Copy Codex CLI command" />
+            <InstallCard title="Codex config.toml" description="Or add this block to ~/.codex/config.toml, then restart Codex." value={MCP_CODEX_TOML} label="Copy Codex TOML" />
             <InstallCard title="Other MCP clients" description="Add this entry to your client's MCP server configuration." value={MCP_JSON_CONFIG} label="Copy MCP configuration" />
           </div>
           <div className="agents-skill-card">

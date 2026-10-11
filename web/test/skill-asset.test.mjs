@@ -57,8 +57,15 @@ test('with an MCP URL configured the skill carries the install steps and that UR
   assert.match(frontmatter(built), /^name: falconos$/m);
   assertClean(built);
   assert.ok(built.includes(`claude mcp add --transport http falconos ${MCP}`), 'Claude Code command uses the MCP URL');
+  assert.ok(built.includes(`codex mcp add falconos --url ${MCP}`), 'Codex CLI command uses the MCP URL');
+  assert.ok(built.includes(`[mcp_servers.falconos]\nurl = "${MCP}"`), 'Codex TOML uses the MCP URL');
+  assert.ok(built.includes('codex mcp list'), 'Codex registration vs active-session check');
   assert.ok(built.includes(`{"mcpServers":{"falconos":{"type":"http","url":"${MCP}"}}}`), 'JSON entry uses the same URL with type http');
   assert.ok(built.includes(`- MCP server URL: ${MCP}`));
+  assert.ok(built.includes('reserve review needs wallet sign-in'), 'sign-in required for reserve review');
+  assert.ok(built.includes('do not need a transaction signature'), 'evidence and decision need no tx signature');
+  assert.ok(built.includes('Transaction signing and broadcast stay separate from sign-in'));
+  assert.ok(built.includes('Keep the signed transaction bytes'), 'agent retains signed bytes for retry');
   const skillUrl = built.match(/^- This skill: (\S+)$/m)?.[1];
   assert.equal(skillUrl, 'https://agents.falconos.markets/SKILLS.md', 'production default skill URL');
   assert.equal(resolveInstallConfig({ mcpUrl: MCP, skillUrl, isProd: true }).state, 'ready');

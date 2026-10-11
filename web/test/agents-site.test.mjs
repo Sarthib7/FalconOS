@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { MCP_CLI_COMMAND, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from '../agents/install.mjs';
+import { MCP_CLI_COMMAND, MCP_CODEX_CLI_COMMAND, MCP_CODEX_TOML, MCP_JSON_CONFIG, SKILL_FETCH_COMMAND } from '../agents/install.mjs';
 
 const root = resolve(fileURLToPath(new URL('../dist-agents/', import.meta.url)));
 const contentTypes = new Map([
@@ -44,6 +44,8 @@ function listen(server) {
 
 test('agent setup commands target the public MCP and skill', () => {
   assert.equal(MCP_CLI_COMMAND, 'claude mcp add --transport http falconos https://mcp.falconos.markets/mcp');
+  assert.equal(MCP_CODEX_CLI_COMMAND, 'codex mcp add falconos --url https://mcp.falconos.markets/mcp');
+  assert.equal(MCP_CODEX_TOML, '[mcp_servers.falconos]\nurl = "https://mcp.falconos.markets/mcp"');
   assert.deepEqual(JSON.parse(MCP_JSON_CONFIG), { mcpServers: { falconos: { type: 'http', url: 'https://mcp.falconos.markets/mcp' } } });
   assert.equal(SKILL_FETCH_COMMAND, 'curl -fsSL https://agents.falconos.markets/SKILLS.md');
 });
@@ -69,4 +71,17 @@ test('public agent install serves the page, assets, and the MCP skill', async t 
   assert.match(markdown, /https:\/\/mcp\.falconos\.markets\/mcp/);
   assert.match(markdown, /falcon_prepare_transaction/);
   assert.match(markdown, /falcon_check_receipt/);
+  assert.match(markdown, /codex mcp add falconos --url https:\/\/mcp\.falconos\.markets\/mcp/);
+  assert.match(markdown, /\[mcp_servers\.falconos\]/);
+  assert.match(markdown, /url = "https:\/\/mcp\.falconos\.markets\/mcp"/);
+  assert.match(markdown, /codex mcp list/);
+  assert.match(markdown, /reserve review needs wallet sign-in/);
+  assert.match(markdown, /do not need a transaction signature/i);
+  assert.match(markdown, /Transaction signing and broadcast stay separate from sign-in/);
+  assert.match(markdown, /Keep the signed transaction bytes/);
+
+  const appJs = await (await fetch(new URL(script, base))).text();
+  assert.match(appJs, /Codex config\.toml/);
+  assert.match(appJs, /Reserve review requires wallet sign-in/);
+  assert.match(appJs, /\[mcp_servers\.falconos\]/);
 });

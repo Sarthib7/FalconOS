@@ -323,7 +323,7 @@ export function registerFalconTools(server, { mesh, limiter }) {
     }, args.session);
     return {
       event: publicEvent(event),
-      next: 'Falcon has registered the signed bytes but has not broadcast them. Broadcast the signed transaction yourself to Solana Devnet with your own wallet or RPC, wait for confirmation, then call falcon_check_receipt.',
+      next: 'Falcon has registered the signed bytes but has not broadcast them and does not return them. Keep the signedTransactionBase64 you just sent. Broadcast those same bytes yourself to Solana Devnet with your own wallet or RPC. If broadcast is interrupted, retry the identical bytes while the blockhash remains valid, then call falcon_check_receipt.',
     };
   });
 
