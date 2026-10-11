@@ -2299,6 +2299,22 @@ section.slide.pitch {
       letter-spacing: .06em;
       text-transform: uppercase;
     }
+    @media (min-width: 1101px) {
+      .pitch-close {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+      }
+      .pitch-close .pitch-heading {
+        position: absolute;
+        inset: 50% auto auto 50%;
+        width: min(100%, 1500px);
+        transform: translate(-50%, -50%);
+      }
+      .pitch-close .pitch-body {
+        grid-row: 3;
+        align-self: end;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2429,8 +2445,6 @@ section.slide.pitch {
       <div class="pitch-mandate"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 38 11v11c0 9-6 16-14 21C16 38 10 31 10 22V11z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M17 24h14M24 17v14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><strong>Your mandate</strong></div>
       <div class="pitch-market-side"><strong>Digital markets</strong><div class="pitch-market-tags"><span>Tokenized assets</span><span>Liquidity</span><span>Staking</span><span>Perpetuals</span></div></div>
     </div>
-    <p class="pitch-note">Long-term direction. Not every market is live or in the final mandate.</p>
-    <div class="pitch-cta"><a href="https://agents.falconos.markets/" target="_blank" rel="noopener noreferrer">Install the Devnet plugin</a><a href="https://falconos.markets/#waitlist" target="_blank" rel="noopener noreferrer">Join the waitlist</a></div>
   </div></div>
 </section>
 
