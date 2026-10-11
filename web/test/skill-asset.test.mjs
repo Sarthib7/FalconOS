@@ -60,12 +60,23 @@ test('with an MCP URL configured the skill carries the install steps and that UR
   const skillUrl = built.match(/^- This skill: (\S+)$/m)?.[1];
   assert.equal(skillUrl, 'https://agents.falconos.markets/SKILLS.md', 'production default skill URL');
   assert.equal(resolveInstallConfig({ mcpUrl: MCP, skillUrl, isProd: true }).state, 'ready');
+  assert.ok(built.includes('"type":"http"'), 'generic config declares remote HTTP transport');
+  assert.ok(built.indexOf('## Rules') < built.indexOf('## First read-only result'), 'safety rules precede wallet use');
+  assert.ok(built.indexOf('## Wallet prerequisites') < built.indexOf('## First read-only result'), 'wallet prerequisites precede sign-in');
+  assert.match(built, /If there is no user-controlled wallet, the host cannot sign, or required funds are absent[\s\S]*stop/);
   const order = built.slice(built.indexOf('## Signing order (do not improvise)'));
-  assert.ok(order.indexOf('falcon_prepare_transaction') < order.indexOf('signTransaction'));
-  assert.ok(order.indexOf('signTransaction') < order.indexOf('falcon_submit_signed'));
-  assert.ok(order.indexOf('falcon_submit_signed') < order.indexOf('Only then broadcast the SAME signed bytes'));
-  assert.ok(order.indexOf('Only then broadcast the SAME signed bytes') < order.indexOf('falcon_check_receipt'));
-  assert.match(order, /NEVER use `signAndSendTransaction`/);
+  const prepare = order.indexOf('falcon_prepare_transaction');
+  const signApproval = order.indexOf('separate, explicit approval to sign this specific transaction');
+  const sign = order.indexOf('signTransaction');
+  const submit = order.indexOf('falcon_submit_signed');
+  const broadcastApproval = order.indexOf('separate clear yes immediately before using it');
+  const broadcast = order.indexOf('"method":"sendTransaction"');
+  const explorer = order.indexOf('https://explorer.solana.com/tx/<signature>?cluster=devnet');
+  const receipt = order.indexOf('falcon_check_receipt');
+  assert.ok(prepare < signApproval && signApproval < sign && sign < submit, 'prepare, explicit signing approval, sign and register occur in order');
+  assert.ok(submit < broadcastApproval && broadcastApproval < broadcast, 'registration precedes separately approved broadcast');
+  assert.ok(broadcast < explorer && explorer < receipt, 'broadcast precedes independent Explorer and Falcon receipt checks');
+  assert.ok(order.includes('NEVER use `signAndSendTransaction`'), 'combined signing and sending is forbidden');
 });
 
 test('a production build without an MCP URL succeeds and ships the not-deployed variant with no install commands', async (t) => {
