@@ -38,7 +38,7 @@ function InstallCard({ title, description, value, label }) {
   return (
     <article className="install-card">
       <div className="install-card-heading">
-        <div><h3>{title}</h3><p>{description}</p></div>
+        <div><h3>{title}</h3>{description && <p>{description}</p>}</div>
         <CopyControl value={value} label={label} />
       </div>
       <pre><code>{value}</code></pre>
@@ -55,54 +55,49 @@ export default function App() {
           <span><b>FALCON</b><strong>OS</strong></span>
         </a>
         <nav aria-label="Page navigation">
-          <a href="#install">Install</a>
           <a href="/SKILLS.md">SKILLS.md</a>
+          <a href="#install">MCP setup</a>
         </nav>
       </header>
 
       <main>
         <section className="agents-hero" aria-labelledby="page-title">
-          <p className="agents-eyebrow">FALCON · PERSONAL PLUGIN</p>
-          <h1 id="page-title">Falcon, in your agent.</h1>
-          <p className="agents-lede">Add Falcon's MCP server to your agent environment, then load the skill guide.</p>
-          <a className="agents-primary" href="#install">Set up Falcon <span aria-hidden="true">↓</span></a>
+          <h1 id="page-title">Bring Falcon to your agent.</h1>
+          <p className="agents-lede">Start with the skill. It explains setup and when to ask you to approve a transaction.</p>
+          <a className="agents-primary" href="/SKILLS.md">Read the skill</a>
+        </section>
+        <section className="agents-skill-link" aria-labelledby="skill-entry-title">
+          <div>
+            <h2 id="skill-entry-title">Get the skill</h2>
+            <p>Run this command to read it.</p>
+          </div>
+          <pre><code>{SKILL_COMMAND}</code><CopyControl value={SKILL_FETCH_COMMAND} label="Copy skill fetch command" /></pre>
         </section>
 
         <section id="install" className="agents-install" aria-labelledby="install-title">
           <div className="section-heading">
-            <p className="agents-eyebrow">SETUP</p>
-            <h2 id="install-title">Connect your MCP client</h2>
-            <p>Use a command in Claude Code or Codex, or add the HTTP server entry in another MCP client. After setup, restart the client and verify the ten tools in SKILLS.md appear in the active session.</p>
+            <h2 id="install-title">Add Falcon to your agent</h2>
+            <p>Choose your client, restart it, and look for all ten Falcon tools.</p>
           </div>
           <div className="install-grid">
-            <InstallCard title="Claude Code" description="Add Falcon's hosted HTTP MCP server." value={MCP_CLI_COMMAND} label="Copy Claude Code command" />
-            <InstallCard title="Codex" description="Register Falcon with the Codex CLI." value={MCP_CODEX_CLI_COMMAND} label="Copy Codex command" />
-            <InstallCard title="Other MCP clients" description="Add this entry to your client's MCP server configuration." value={MCP_JSON_CONFIG} label="Copy MCP configuration" />
-          </div>
-          <div className="agents-skill-card">
-            <div><p className="agents-eyebrow">AGENT GUIDE</p><h3>Load SKILLS.md</h3><p>Read the tool list, Devnet limits, wallet rules, and signing order before use.</p></div>
-            <a href="/SKILLS.md">Open SKILLS.md <span aria-hidden="true">↗</span></a>
+            <InstallCard title="Claude Code" description="" value={MCP_CLI_COMMAND} label="Copy Claude Code command" />
+            <InstallCard title="Codex" description="" value={MCP_CODEX_CLI_COMMAND} label="Copy Codex command" />
+            <InstallCard title="Other MCP clients" description="Paste this into your MCP settings." value={MCP_JSON_CONFIG} label="Copy MCP configuration" />
           </div>
         </section>
 
         <section className="agents-boundary" aria-labelledby="boundary-title">
-          <div className="boundary-mark" aria-hidden="true">F</div>
           <div>
-            <p className="agents-eyebrow">WALLET BOUNDARY</p>
-            <h2 id="boundary-title">Reserve review requires wallet sign-in.</h2>
-            <p>Before reserve review, your agent connects with its own wallet. Its message-only sign-in proves wallet ownership; it does not sign a transaction. Evidence capture and a reserve decision require this session, but no transaction signature. Any transaction signature and broadcast are separate actions and need your explicit approval. Falcon holds no keys and does not sign or broadcast transactions. Mainnet is not supported.</p>
+            <h2 id="boundary-title">Your wallet stays yours.</h2>
+            <p>The site never connects to your wallet. Your agent signs in with its own wallet. That signature proves ownership. It does not approve a transaction. You approve each transaction signature and broadcast. Falcon never holds keys or broadcasts transactions. Devnet only.</p>
           </div>
         </section>
 
-        <section className="agents-skill-link" aria-label="Download the agent skill">
-          <div><h2>Read or fetch the skill</h2><p>Give your agent the public Falcon setup and safety guide.</p></div>
-          <pre><code>{SKILL_COMMAND}</code><CopyControl value={SKILL_FETCH_COMMAND} label="Copy skill fetch command" /></pre>
-        </section>
       </main>
 
       <footer className="agents-footer">
         <a className="agents-brand" href="/" aria-label="FalconOS home"><img src={falconMark} alt="" /><span><b>FALCON</b><strong>OS</strong></span></a>
-        <p>Agent install only. No wallet connection on this site.</p>
+        <p>Setup guide only. No wallet connection here.</p>
       </footer>
     </div>
   );
