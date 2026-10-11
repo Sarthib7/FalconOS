@@ -1,6 +1,7 @@
 # Falcon documentation index
 
 [VERIFIED, repository inspection, 2026-09-27] Start with [current status](../status.md), this component map, and the contract for the component you will change. [SPEC.md](../SPEC.md) remains the specification. This map describes existing code and records known documentation drift. It does not replace product contracts or authorize a release.
+[INFERRED, 2026-10-11 product direction] See [FalconOS vision](vision.md), [stablecoin risk ADR 0011](adrs/0011-stablecoin-risk-monitoring.md), and the [investor deck](pitches/falcon-investor-deck.html). These records do not replace implementation contracts.
 
 ## Component map
 
