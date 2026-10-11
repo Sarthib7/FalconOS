@@ -14,9 +14,11 @@ test('goal site publishes the source deck and every local asset', async () => {
   ]);
   assert.equal(published, source, 'published page matches the investor deck source');
 
-  const refs = new Set();
+  const refs = new Set<string>();
   for (const match of source.matchAll(/(?:src|href)="assets\/([^"]+)"|url\("assets\/([^"]+)"\)/g)) {
-    refs.add(match[1] ?? match[2]);
+    const name = match[1] ?? match[2];
+    assert.ok(name, 'local asset path is captured');
+    refs.add(name);
   }
   assert.ok(refs.size > 0, 'deck references local assets');
   await Promise.all([...refs].map(name => access(new URL(name, publishedAssetsPath))));
