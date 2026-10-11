@@ -1,8 +1,14 @@
 # goal.falconos.markets
 
-Static single-file page served by the `falconos-goal` Cloudflare Worker (static assets) on the custom domain `goal.falconos.markets`.
+The site serves the investor deck from `public/index.html`. The source deck and its local assets live in `docs/pitches/`.
 
-Redeploy after editing `public/index.html`:
+Sync the published copy after editing the source deck:
+
+```bash
+node web/goal/sync-deck.mjs
+```
+
+Deploy the `falconos-goal` Cloudflare Worker to `goal.falconos.markets`:
 
 ```bash
 cd web/goal && npx wrangler@latest deploy
