@@ -52,7 +52,7 @@ test('built dist-mvp/SKILLS.md has frontmatter and no markers, and the old lower
   await assert.rejects(read(join(web, 'dist-mvp/skill.md')), /ENOENT/);
 });
 
-test('with an MCP URL configured the skill carries the install steps and that URL', async (t) => {
+test('with an MCP URL configured, the skill requires user broadcast and independent checks', async (t) => {
   const built = await buildSkill(t, { VITE_FALCON_MCP_URL: MCP });
   assert.match(frontmatter(built), /^name: falconos$/m);
   assertClean(built);
@@ -69,14 +69,20 @@ test('with an MCP URL configured the skill carries the install steps and that UR
   const signApproval = order.indexOf('separate, explicit approval to sign this specific transaction');
   const sign = order.indexOf('signTransaction');
   const submit = order.indexOf('falcon_submit_signed');
-  const broadcastApproval = order.indexOf('separate clear yes immediately before using it');
-  const broadcast = order.indexOf('"method":"sendTransaction"');
+  const userBroadcast = order.indexOf('Wait for the human to broadcast the exact registered signed transaction');
   const explorer = order.indexOf('https://explorer.solana.com/tx/<signature>?cluster=devnet');
   const receipt = order.indexOf('falcon_check_receipt');
   assert.ok(prepare < signApproval && signApproval < sign && sign < submit, 'prepare, explicit signing approval, sign and register occur in order');
-  assert.ok(submit < broadcastApproval && broadcastApproval < broadcast, 'registration precedes separately approved broadcast');
-  assert.ok(broadcast < explorer && explorer < receipt, 'broadcast precedes independent Explorer and Falcon receipt checks');
-  assert.ok(order.includes('NEVER use `signAndSendTransaction`'), 'combined signing and sending is forbidden');
+  assert.ok(submit < userBroadcast && userBroadcast < explorer && explorer < receipt, 'registered bytes wait for user broadcast before independent Explorer and receipt checks');
+  assert.ok(built.includes('The human alone broadcasts the registered transaction') && built.includes('The agent never broadcasts or calls a network send method.'), 'human is the only broadcaster');
+  assert.ok(!order.includes('submit it yourself') && !order.includes('explicitly approves your raw submission'), 'no agent broadcast alternative');
+  assert.ok(!order.includes('"method":"sendTransaction"'), 'no agent JSON-RPC broadcast recipe');
+  assert.ok(built.includes('A supply is capped at 1 USDC (1000000 base units) on Devnet, whatever the decision says.'), 'hard supply cap survives the production build');
+  assert.ok(order.includes('Verify that exact signature independently in Solana Explorer on Devnet'), 'verify the exact signature on Devnet Explorer');
+  assert.ok(order.includes('Confirm the exact signature, Devnet cluster, success status, and expected token movements'), 'check Devnet success and movements');
+  assert.ok(order.includes('Report both results'), 'report independent Explorer and Falcon results');
+  assert.ok(order.includes('If Explorer and Falcon disagree'), 'stop when the verification sources disagree');
+  assert.match(order, /never use signAndSendTransaction/i, 'combined signing and sending is forbidden');
 });
 
 test('a production build without an MCP URL succeeds and ships the not-deployed variant with no install commands', async (t) => {
