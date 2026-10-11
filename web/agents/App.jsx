@@ -64,7 +64,7 @@ export default function App() {
         <section className="agents-hero" aria-labelledby="page-title">
           <p className="agents-eyebrow">FALCON · PERSONAL PLUGIN</p>
           <h1 id="page-title">Falcon, in your agent.</h1>
-          <p className="agents-lede">Add Falcon's MCP server to your agent environment, then load the skill guide.</p>
+          <p className="agents-lede">Read the skill guide first, then add Falcon's MCP server to your agent environment.</p>
           <a className="agents-primary" href="#install">Set up Falcon <span aria-hidden="true">↓</span></a>
         </section>
         <section className="agents-skill-link" aria-label="Download the agent skill">
