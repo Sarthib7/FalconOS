@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 import {
   DEV_MCP_URL,
   DEV_SKILL_URL,
@@ -248,4 +249,17 @@ test('renderSkill rejects leftovers instead of emitting them', () => {
   assert.throws(() => renderSkill('{{FALCON_OTHER}}', { mcpUrl: MCP, skillUrl: SKILL, isProd: true }), /unresolved/);
   assert.throws(() => renderSkill('<!-- if:mcp -->\nopen only', { mcpUrl: MCP, skillUrl: SKILL, isProd: true }), /unresolved/);
   assert.throws(() => renderSkill('outside {{FALCON_MCP_URL}}', { isProd: true }), /unresolved/);
+});
+
+test('the rendered Privy RPC examples sign exact bytes without sending', async () => {
+  const template = await readFile(new URL('../skills/SKILLS.md', import.meta.url), 'utf8');
+  const out = renderSkill(template, { mcpUrl: MCP, skillUrl: SKILL, isProd: true });
+  const section = out.slice(out.indexOf('## Optional Privy signer'), out.indexOf('## First read-only result'));
+  const requests = [...section.matchAll(/```json\n([^]*?)\n```/g)].map(match => JSON.parse(match[1]));
+  assert.deepEqual(requests.map(({ method }) => method), ['signMessage', 'signTransaction']);
+  for (const { params } of requests) assert.equal(params.encoding, 'base64');
+  assert.deepEqual(Object.keys(requests[0].params).sort(), ['encoding', 'message']);
+  assert.deepEqual(Object.keys(requests[1].params).sort(), ['encoding', 'transaction']);
+  const unavailable = renderSkill(template, { isProd: true });
+  assert.ok(!unavailable.includes('@privy-io/agent-wallet-cli'), 'no wallet setup when Falcon MCP is unavailable');
 });
