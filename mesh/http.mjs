@@ -2,6 +2,9 @@ import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { MeshError } from './domain.mjs';
 import { CONNECTORS } from './live.mjs';
+import { readWalletStatus } from './wallet-status.mjs';
+import { inspectTransaction } from './transaction-inspection.mjs';
+import { PUBLIC_OWNER_ID } from './public-graph.mjs';
 
 const BODY_LIMIT = 1024 * 1024;
 const EVIDENCE_EXCHANGES = 2;
@@ -11,7 +14,7 @@ export function parseTokenHashes(raw) {
   let value;
   try { value = JSON.parse(raw); } catch { throw new Error('FALCON_MESH_TOKEN_HASHES must be a JSON object.'); }
   if (!value || Array.isArray(value) || typeof value !== 'object' || !Object.keys(value).length
-      || Object.entries(value).some(([hash, owner]) => !/^[a-f0-9]{64}$/.test(hash) || typeof owner !== 'string' || !/^[a-z0-9_-]{1,64}$/.test(owner))) {
+      || Object.entries(value).some(([hash, owner]) => !/^[a-f0-9]{64}$/.test(hash) || typeof owner !== 'string' || !/^[a-z0-9_-]{1,64}$/.test(owner) || owner === PUBLIC_OWNER_ID)) {
     throw new Error('FALCON_MESH_TOKEN_HASHES must map SHA-256 hashes to owner slugs.');
   }
   return new Map(Object.entries(value));
@@ -42,23 +45,24 @@ function requireSessionLendingWallet(walletSession, wallet) {
   }
 }
 
-async function body(request) {
+async function body(request, limit = BODY_LIMIT) {
+  const tooLargeMessage = limit === BODY_LIMIT ? 'Request exceeds 1 MiB.' : 'Request exceeds the endpoint limit.';
   if (request.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/json') {
     throw new MeshError('INVALID_INPUT', 'Content-Type must be application/json.');
   }
   if (request.headers['content-encoding'] && request.headers['content-encoding'] !== 'identity') {
     throw new MeshError('INVALID_INPUT', 'Compressed request bodies are not supported.');
   }
-  if (Number(request.headers['content-length']) > BODY_LIMIT) throw new MeshError('TOO_LARGE', 'Request exceeds 1 MiB.');
+  if (Number(request.headers['content-length']) > limit) throw new MeshError('TOO_LARGE', tooLargeMessage);
   const bytes = await new Promise((resolve, reject) => {
     const chunks = [];
     let length = 0;
     const onData = chunk => {
       length += chunk.length;
-      if (length > BODY_LIMIT) {
+      if (length > limit) {
         request.removeListener('data', onData);
         request.resume();
-        reject(new MeshError('TOO_LARGE', 'Request exceeds 1 MiB.'));
+        reject(new MeshError('TOO_LARGE', tooLargeMessage));
       } else chunks.push(chunk);
     };
     request.on('data', onData);
@@ -72,11 +76,13 @@ async function body(request) {
 }
 
 export function createApi({
-  store, lending = null, yieldService = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
+  store, lending = null, yieldService = null, publicGraph = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
   rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600,
   walletLookupMaxPerSource = 240, walletLookupMaxGlobal = rateMaxGlobal, clock = () => Date.now(),
+  walletStatus = readWalletStatus, transactionInspection = inspectTransaction,
 }) {
   if (!(tokenHashes instanceof Map) || !tokenHashes.size) throw new Error('Mesh authentication is required.');
+  if ([...tokenHashes.values()].includes(PUBLIC_OWNER_ID)) throw new Error('The public graph namespace cannot be configured as an authenticated owner.');
   let windowStart = clock();
   let globalCount = 0;
   const ownerCounts = new Map();
@@ -93,8 +99,8 @@ export function createApi({
     ownerCounts.set(owner, nextOwner);
     globalCount = nextGlobal;
   };
-  // Reserve capacity before a wallet-session query; only failed lookups retain their slot.
-  // In-flight reservations are counted too, so concurrent guesses cannot outrun the budget.
+  // Reserve before pre-auth reads; successful auth lookups release, while public reads keep their slot.
+  // In-flight reservations are counted too, so concurrent requests cannot outrun the budget.
   let lookupWindowStart = clock();
   let lookupGlobal = 0;
   const lookupSources = new Map();
@@ -151,6 +157,24 @@ export function createApi({
           send(503, { error: { code: 'STORAGE_UNAVAILABLE', message: 'Mesh storage is not ready.' } });
         }
         return;
+      }
+      if (url.pathname === '/v1/public/graph/live') {
+        if (request.method !== 'GET') throw new MeshError('NOT_FOUND', 'Endpoint not found.');
+        reserveWalletLookup(request.socket.remoteAddress || 'unknown');
+        if (request.headers.authorization || Number(request.headers['content-length'] || 0) > 0 || request.headers['transfer-encoding']) {
+          throw new MeshError('INVALID_INPUT', 'The public graph does not accept credentials or a request body.');
+        }
+        if (!publicGraph) throw new MeshError('STORAGE_UNAVAILABLE', 'The public graph service is not configured.');
+        send(200, await publicGraph.get()); return;
+      }
+      if (url.pathname === '/v1/wallet/status' || url.pathname === '/v1/transactions/decode') {
+        if (request.method !== 'POST') throw new MeshError('NOT_FOUND', 'Endpoint not found.');
+        // Public reads retain their reservation on success; auth lookups release only after validation.
+        reserveWalletLookup(request.socket.remoteAddress || 'unknown');
+        const isStatus = url.pathname === '/v1/wallet/status';
+        const input = await body(request, isStatus ? 512 : 4096);
+        const result = await (isStatus ? walletStatus(input) : transactionInspection(input));
+        send(200, result); return;
       }
       if (url.pathname.startsWith('/v1/auth/wallet/')) {
         if (!walletAuth) throw new MeshError('AUTH_UNAVAILABLE', 'Wallet authentication is not configured.');
@@ -218,6 +242,24 @@ export function createApi({
       }
       if (!owner) throw new MeshError('UNAUTHORIZED', 'A valid mesh access token is required.');
       rateLimit(owner);
+      if (url.pathname === '/v1/public/graph/adopt') {
+        if (request.method !== 'POST') throw new MeshError('NOT_FOUND', 'Endpoint not found.');
+        const input = await body(request); keys(input, ['requestId', 'reserveRequestId']);
+        send(200, await store.adoptPublicGraph(owner, input, now())); return;
+      }
+      if (url.pathname === '/v1/public/decisions/reserve') {
+        if (request.method !== 'POST') throw new MeshError('NOT_FOUND', 'Endpoint not found.');
+        const input = await body(request); keys(input, ['requestId', 'analysisId', 'scenario']);
+        send(200, { record: await store.createPublicDecision(owner, input, now()) }); return;
+      }
+      if (url.pathname === '/v1/public/lending/intents') {
+        if (request.method !== 'POST') throw new MeshError('NOT_FOUND', 'Endpoint not found.');
+        if (!lending) throw new MeshError('STORAGE_UNAVAILABLE', 'The lending service is not configured.');
+        const input = await body(request);
+        keys(input, ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits', ...(input && typeof input === 'object' && Object.hasOwn(input, 'decisionId') ? ['decisionId'] : [])]);
+        requireSessionLendingWallet(walletSession, input.wallet);
+        send(200, { record: await lending.preparePublic(owner, input) }); return;
+      }
       if (url.pathname.startsWith('/v1/yield/')) {
         if (!yieldService) throw new MeshError('STORAGE_UNAVAILABLE', 'The yield simulation service is not configured.');
         if (request.method === 'GET' && url.pathname === '/v1/yield/opportunities') {
@@ -305,7 +347,7 @@ export function createApi({
       if (request.method === 'POST') request.resume();
       if (known && code === 'RATE_LIMITED' && Number.isInteger(error.retryAfter)) response.setHeader('Retry-After', String(error.retryAfter));
       // Prepare failures attach already-JSON-safe external RPC exchanges (kamino.mjs). Surface the last few, bounded; never for the unknown-error fallback.
-      const evidence = known && Array.isArray(error.evidence?.exchanges) ? { exchanges: error.evidence.exchanges.slice(-EVIDENCE_EXCHANGES) } : null;
+      const evidence = known && !request.url?.startsWith('/v1/public/') && Array.isArray(error.evidence?.exchanges) ? { exchanges: error.evidence.exchanges.slice(-EVIDENCE_EXCHANGES) } : null;
       send(STATUSES[code], { error: { code, message: known ? error.message : 'Mesh storage could not complete the request.', ...(evidence && { evidence }) } });
     }
   });

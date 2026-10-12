@@ -42,7 +42,7 @@ export function lendingAmount(action, value) {
     throw new Error('Action or positive base-unit amount is invalid.');
   }
   const amount = BigInt(value);
-  if (amount > U64_MAX || (action === 'supply' && amount > BigInt(C.maxSupplyBaseUnits))) {
+  if (amount > U64_MAX || (action === 'supply' && amount > DEVNET_SUPPLY_LIMIT_UNITS)) {
     throw new Error('Amount exceeds the Devnet test limit.');
   }
   return amount;

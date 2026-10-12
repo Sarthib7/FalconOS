@@ -4,7 +4,7 @@ import { DEVNET_SUPPLY_LIMIT_UNITS } from './limits.mjs';
 
 export const RESERVE_DECISION_MARKER = 'decision:mesh-reserve-scenario/1';
 
-const POLICY_VERSION = 'mesh-reserve-scenario/2';
+export const POLICY_VERSION = 'mesh-reserve-scenario/2';
 const OBSERVATION_ID = 'observation:live:solana-devnet-reserve-liquidity';
 const U64_MAX = 18446744073709551615n;
 const U64 = /^(0|[1-9]\d{0,19})$/;
