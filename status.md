@@ -1083,3 +1083,12 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, PR state before documentation update] PR #65 was open on head a935dd902b1f3670a3f01c10bcc0ab10071e5857. All six checks passed on that head. A docs commit will rerun CI.
 
 [BLOCKED, current agent session] The user selected "No, not available yet" for wallet access. No wallet connection, signature, Devnet supply, broadcast, or receipt check was attempted. Resume only when the agent host exposes an already-funded user-controlled Devnet wallet with signMessage and signTransaction.
+
+## Agent-side skill 0.3.1 patch: 2026-10-12
+
+[VERIFIED, coordinator] Status: Completed locally. Branch `fix/skill-agent-flow-20261012` is based on main8153b946de04d35eceaf581f5a3e44b365296ff1. Luna owned the guide and skill-release version; the lead owned metadata/artifact tests and verification. Skill is 0.3.1; required MCP remains 0.3.0. No MCP/Mesh backend or package contract changed.
+[VERIFIED, local evidence] `npm run verify:web`: `web: PASS`, `pass 304`, `fail 0`, `skipped 1`. Requested agents-site test: `tests 3`, `pass 3`, `fail 0`. Wrong manifest-version mutation: `tests 1`, `pass 0`, `fail 1`; restored version: `tests 1`, `pass 1`, `fail 0`.
+[VERIFIED, local runtime] `GUIDE_031_HTTP_SMOKE_OK`: guide/manifest/HEAD200, skill0.3.1, requiredMCP0.3.0, bytes14084, SHA-25660176b2ba69ad97fe5877db99945f20421b11acf278658d7713a9445df0bc6fd. Built bytes matched actual loopback HTTP. JSON examples use signMessage and signTransaction only. This does not prove agent compliance or funded execution.
+[REPORTED, Luna fresh-eyes source review] No remaining material source/guide findings. Full execution-only prerequisites, owner advisory exceptions, program ID mapping, original evidence age, separate intent age, explicit approvals and independent receipt proof are preserved.
+[VERIFIED, withdrawal] User withdrew the wallet-popup-connect report. No wallet input, permission grant or signature approval was performed by the coordinator. No further diagnosis is authorized by that withdrawn message.
+[NOT DETERMINED] Commit/push/PR merge and Pages publication need explicit current approval for this new artifact. Funding, real transaction signing, user broadcast and independent Explorer proof remain blocked. The live guide has not been changed by these local edits.

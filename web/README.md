@@ -167,3 +167,17 @@ After creating the Pages project, open **Pages → the project → Custom domain
 [HISTORICAL, 2026-10-05 local configuration] A prior Pages configuration used root `web`, build `npm run build:bot`, output `dist-bot`, and the listed VITE endpoints. Current source wiring is summarized above; Cloudflare settings and deployment are user-managed.
 
 [HISTORICAL, DNS query, 2026-10-05] `dig +short agents.falconos.markets` returned no record at that time. Current DNS/project status was not checked in this change.
+
+## Agent-side skill 0.3.1 (2026-10-12)
+
+[VERIFIED, source] This guide-only revision requires MCP 0.3.0 and preserves its 14-tool contract. It puts human scenario inputs and action-specific execution prerequisites before owner adoption, uses programAnalysisId as the analysisId input, retains source-time expiry, skips default discovery and removes assumed receipt context/Explorer fields. Owner-only advisory and history remain available without funding or transaction-signing capability.
+
+[VERIFIED, local commands] `npm run verify:web` returned `web: PASS`, `pass 304`, `fail 0`, `skipped 1`. `node --test web/test/agents-site.test.mjs` returned `tests 3`, `pass 3`, `fail 0`. These are local artifact/site checks, not a funded agent flow.
+
+[VERIFIED, negative/positive regression] Temporarily labeling the manifest 0.3.0 while the guide declared 0.3.1 made the shared-renderer check return `tests 1`, `pass 0`, `fail 1` and exit 1. Restoring the correct version returned `tests 1`, `pass 1`, `fail 0`. The check compares consumer-visible manifest compatibility fields with rendered frontmatter, not pinned wording.
+
+[VERIFIED, actual loopback HTTP] GET guide/manifest and HEAD guide returned 200 at the agents Vite preview. `GUIDE_031_HTTP_SMOKE_OK` reported skillVersion 0.3.1, requiredMcpVersion 0.3.0 and 14084 bytes. The built static artifact and HTTP body share SHA-256 `60176b2ba69ad97fe5877db99945f20421b11acf278658d7713a9445df0bc6fd`. This record can be pinned through its independently authenticated GitHub commit after publication; it is not a signed release/tag claim.
+
+[REPORTED, Luna source refutation] The guide and producer/source boundaries had no remaining material findings after the integrated clarity edits. The reviewer did not run tests, query a wallet or exercise execution.
+
+[NOT DETERMINED] Public publication of this revision is pending approval. No wallet lookup, account creation, funding, signing, broadcast or independent Explorer confirmation was performed for this patch. The withdrawn wallet-popup report was not investigated further.

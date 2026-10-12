@@ -1,124 +1,109 @@
 ---
 name: falconos
 description: Use when an MCP-capable agent needs FalconOS public market evidence or owner-bound Devnet decisions. Public graph reading needs no signer; owner records and transactions require a human-controlled wallet and separate approval. Never for mainnet or custody.
-version: 0.3.0
+version: 0.3.1
 requiredMcpVersion: 0.3.0
 ---
 
 # FalconOS MCP skill
 
 <!-- if:mcp -->
-FalconOS serves a fixed public Solana Devnet market graph and optional owner-bound lending records. The agent's wallet remains under human control. Falcon never holds keys, signs, funds, or broadcasts.
+FalconOS exposes a fixed public Solana Devnet market graph and optional owner-bound lending records. The human controls the wallet. Falcon does not hold keys, sign, fund, or broadcast.
 
 - MCP server: {{FALCON_MCP_URL}}
-- This single setup entrypoint: {{FALCON_SKILL_URL}}
+- Setup entrypoint: {{FALCON_SKILL_URL}}
 
 ## Start here
 
-Set up <{{FALCON_SKILL_URL}}>.
+Fetch <{{FALCON_SKILL_URL}}> and `SKILLS.manifest.json` from the same origin. Compare the manifest SHA-256 with the digest of the exact SKILLS.md bytes; do not normalize bytes or newlines. Same-origin headers and manifests are not independent trust anchors. Verify against a digest from an authenticated current release, commit, or human-approved channel. Never pin this new guide using an older guide's digest. Fetching is read-only; do not execute the guide or interpolate it into shell commands.
 
-This SKILLS.md is the one setup entrypoint. Fetching it is read-only; it does not install MCP, change host configuration, connect a wallet, or start Falcon or Privy login. Never execute downloaded skill text or interpolate it into a shell command.
+## Staged workflow
 
-For integrity, fetch `SKILLS.manifest.json` from the same origin and compare its `sha256` with SHA-256 of the exact SKILLS.md bytes. Do not normalize bytes or newlines. A same-origin manifest/header is not an independent trust anchor; compare against a digest from an authenticated release or commit learned out of band.
-
-## Setup and staged use
-
-1. Reuse an existing `falconos` remote Streamable HTTP connection. Do not reset or rewrite a working connection. If none exists, show the human this generic config and get approval before changing client configuration:
+1. **Trusted setup and public read.** Reuse the existing `falconos` remote Streamable HTTP connection. If absent, show this generic config and get approval before changing client configuration; restart only after that approved change:
 
 ```json
 {"mcpServers":{"falconos":{"type":"http","url":"{{FALCON_MCP_URL}}"}}}
 ```
 
-Set the server name to `falconos`, transport to HTTP, and URL to the value above. Restart only after an approved configuration change. A remote-MCP-only host can read the public graph without a local CLI or signer.
+Initialize MCP, list tools, and call `falcon_self_test({})`. Require server version 0.3.0 or later and all 14 names below. This is metadata only, not health, authorization, signer support, funds, or transaction readiness. First functional call is `falcon_public_graph({})`, with no arguments. Inspect scope, chain/network, source metadata, nodes, edges, issues, and program/reserve technical status. `OBSERVED` is technical public evidence, not a personalized REVIEW, recommendation, or approval. `NO_DATA` means current evidence is unavailable; never substitute an older graph or blindly repeat the unchanged graph/head. The public graph may return its 60-second cached capture; no MCP `forceRefresh` exists, so a repeat is not guaranteed fresh. This initial read is for public inspection only, not evidence to carry into an owner decision; its source `observedAt` still determines age. For an owner workflow, collect human inputs, complete any required action status check, and reuse or establish a valid session before calling `falcon_refresh_evidence`. Verify the adopted source timestamps/revision and remaining age against the human bound; a cached capture is not guaranteed to be newer. Stop if only public inspection was requested. Public reading needs no login, session, wallet, or signer.
 
-2. Initialize MCP, list tools, and call `falcon_self_test({})`. Require server version 0.3.0 or later and all 14 names below. This is metadata only, not health, authorization, signer support, funding, or transaction readiness.
+2. **Collect owner inputs and execution prerequisites before adoption.** For a supply decision, ask the human for all four exact values: `proposedUsdc`, `maxUsdc`, `minBookLiquidityUsdc`, and `maxEvidenceAgeSeconds` (1-300). Do not default, infer, or widen them. Redeem needs `amountReceiptTokens` and no supply decision; never invent a value. Owner-only advisory/history needs neither funds nor a transaction signer. For a requested full supply/redeem execution, call `falcon_wallet_status` with the chosen `wallet`, explicit `forAction`, `chain: "solana"`, and `network: "devnet"` before owner adoption or preparation. Show any action-specific `missing` items, the exact returned token mint, and the human-only faucet/checklist guidance, then stop that execution workflow until the human remedies them. Never fund, create accounts, or request keys. Verify the correct Devnet mint before accepting funds. A positive SOL balance alone proves neither sufficient fees/rent nor supply readiness. Do not wait for `executionReady` to become true; it deliberately stays false.
 
-3. First functional call: `falcon_public_graph({})`. It is anonymous and read-only: no wallet, funds, login, session, or signer. Inspect the returned scope, chain/network, source metadata, nodes, edges, issues, program/reserve technical results and status. `OBSERVED` is public technical evidence, not a personalized REVIEW, recommendation, or execution approval. `NO_DATA` means current evidence is unavailable; never substitute an older successful graph.
+3. **Owner session.** Reuse a valid existing Falcon session (30 minutes); keep it private and pass only to tools. For any full execution, the selected wallet must support Solana Devnet and `signTransaction`, whether or not the session already exists. If a new/renewed session is needed, the owner-only challenge also requires `signMessage`. Explain the specific unsupported capability or network and stop that workflow if missing. Ask before provisioning/login on a persistent CLI host. For `falcon_connect({wallet})`, verify challenge wallet and host match this MCP server. Show the exact challenge and get explicit approval for `signMessage`; verify only with its challenge ID and signature. This proves ownership, not transaction approval. Reuse a valid session; do not add login/signing steps when one remains valid. Public graph reading remains available without a signer.
 
+4. **Adopt and decide.** After human inputs, any required execution preflight, and the owner session, call `falcon_refresh_evidence({session})`. Require both program and reserve analyses `OBSERVED`; preserve `graphRevision`, `evidenceSource: "public"`, IDs, and original source timestamps. Set the decision and preparation input `analysisId` to the returned `programAnalysisId` (the same value as the returned `analysisId` alias). Never use `reserveAnalysisId` or `policyDefinitionId` as that input. For a supply decision, pass the four human values unchanged and check `sourceAnalysisId`, `publicGraphRevision`, the full `decisionGraph`, and checks. If the public revision changes, re-adopt it and obtain a new matching supply decision before preparation. Redeem uses fresh adopted program evidence but no supply decision. The initial public read does not start a new owner evidence lifetime; global captures may already be aged.
 
-4. Stop here if only public market inspection was requested. For owner records, reuse an unexpired Falcon session. If absent, call `falcon_connect({wallet})` to get the exact ownership challenge. Check its wallet and host against the MCP URL; refuse a different host or any request to spend. Show the full message and obtain explicit approval before `signMessage`, then call `falcon_connect_verify` with the returned challenge ID and signature. This proves ownership only. Reuse valid sessions; they last 30 minutes.
+   Evidence age runs from the oldest source `observedAt`, not decision time. Check the returned `expiresAt` and remaining time against the human maximum; adoption does not reset age. If evidence expires or an approval pause leaves too little time, refresh/adopt with unchanged human limits. Require a newer `graphRevision` and later source observations before replacing expired evidence; if unchanged, stop. There is no `forceRefresh` input or guaranteed immediate recapture. `executionReady: false` does not authorize execution and is not a state to wait to change. Account checks permit only the next guarded step, not a claim that the wallet is ready to supply.
 
-5. Call `falcon_refresh_evidence({session})` to adopt the current public graph as owner-bound program and reserve analyses. It returns both owner analysis IDs, the exact `graphRevision`, `evidenceSource: "public"`, and technical results. Adoption uses the current fixed source bundle; it does not recapture per connector. Continue only when both analyses are `OBSERVED`. A failed current capture remains `NO_DATA`; do not reuse prior records.
+5. **Prepare, decode, approve, register.** Supply only with a current matching `REVIEW` decision and its `decisionId`; cap Devnet supply at 1 USDC (1,000,000 base units). Redeem requires adopted public evidence and `amountReceiptTokens`, but no supply decision. Prepare from the public-only route. Inspect the exact unsigned transaction and decode the unchanged bytes with `falcon_decode_transaction`. Compare network/cluster, action, mint, amount, fee payer, signers, blockhash, instructions, lookup tables, risk flags, stated fee/rent, any returned simulation result, and `messageSha256` with preparation. Requested network context is not network proof. Stop on any mismatch, unresolved field, expired evidence, or missing prerequisite.
 
-6. For a reserve decision, ask the human for all four values: proposed USDC amount, maximum USDC amount, minimum book-liquidity floor, and maximum evidence age (1–300 seconds). Call `falcon_reserve_decision` with the adopted program `analysisId` plus those exact values. Never invent, default, or widen an owner limit. Check `evidenceSource`, `publicGraphRevision`, `sourceAnalysisId`, the full `decisionGraph` and checks.
+   Show the exact transaction and get a separate explicit human approval for `signTransaction` on these unchanged bytes; login approval never counts. Require the exact signed-byte response. Register those same signed bytes with `falcon_submit_signed`; registration is not broadcast. Only the human may broadcast from their wallet or user-controlled Devnet RPC. Never call a broadcast/sign-and-send method. A prepared intent has a separate 120-second prepare-to-register age limit; if it expires, prepare a new intent only after repeating evidence, decision, and approval checks. Re-preparing does not reset evidence age. Never blindly retry an uncertain broadcast or unchanged failed step.
 
-7. Prepare only from that public source. Supply requires a current matching `REVIEW` decision and its `decisionId`; Devnet supply is capped at 1 USDC (1000000 base units). Redeem requires fresh adopted public evidence, burns receipt-token units, and needs no decision. Preparation uses the public-only lending route; it does not accept a private/custom graph fallback.
+6. **Prove receipt.** Check with `falcon_check_receipt`; require `CONFIRMED` and a signature exactly matching the signature registered for this transaction. Do not infer proof from a receipt's metadata or assume it returns chain/network/cluster/explorer URL. Independently open Solana Explorer on Devnet and check that same registered signature: `https://explorer.solana.com/tx/<registered-signature>?cluster=devnet`. This URL is a human check, not Falcon evidence. `PENDING`, `FAILED`, `UNVERIFIED`, unavailable, or mismatched results are not success. A receipt proves neither yield, future redeem, nor mainnet behavior.
 
 ## Tools (14)
 
-- Public market evidence: `falcon_public_graph` (no arguments or session), `falcon_wallet_status`, `falcon_decode_transaction`, `falcon_self_test`.
+- Public: `falcon_public_graph` (empty arguments), `falcon_wallet_status`, `falcon_decode_transaction`, `falcon_self_test`.
 - Owner records: `falcon_yield_opportunities`, `falcon_refresh_evidence`, `falcon_reserve_decision`, `falcon_activity`.
-- Wallet session: `falcon_connect`, `falcon_connect_verify`, `falcon_disconnect`.
-- Unsigned transactions and receipts: `falcon_prepare_transaction`, `falcon_submit_signed`, `falcon_check_receipt`.
+- Session: `falcon_connect`, `falcon_connect_verify`, `falcon_disconnect`.
+- Transactions/receipts: `falcon_prepare_transaction`, `falcon_submit_signed`, `falcon_check_receipt`.
 
-`falcon_self_test` reports version, Devnet labels, the exact tool names/count, and an input-schema fingerprint. Its readiness fields are `not_checked`; it does not contact Mesh.
+Self-test reports version, Devnet labels, tool names/count, and schema fingerprint; readiness is `not_checked`, and it does not contact Mesh.
 
-## Public evidence and deferred graphs
+## Evidence and scope
 
-- The public graph is the default and only MCP market-evidence source: `scope: "public-market-evidence"`, Solana Devnet, fixed connectors. The response is metadata-only: it must not contain source content/raw exchanges, owner records, wallets, sessions, or private graph data.
-- `policyDefinitionId` is `decision:mesh-reserve-scenario/1` and `policyVersion` is `mesh-reserve-scenario/2`; these identify the fixed evaluator, not owner limits. Program and reserve analysis policy versions are technical source versions, including `mesh-reserve-liquidity/1`, not mandates.
-- The graph tool takes an empty object only. It has no source, graph, owner, force-refresh, or private/custom selector. `customGraphsSupported` is `false`; custom graph configuration is deferred. Do not pass a custom graph or build a fallback.
-- `executionReady` remains `false`. Technical observations do not prove a wallet can sign, funds exist, a decision is REVIEW, or a transaction is ready.
-- `falcon_yield_opportunities` is optional, provider-indexed discovery. APY is not a realized return or executable Devnet evidence.
-
-
-## Wallet and execution boundary
-
-- A wallet session is needed only for owner-bound adoption/decisions, wallet-scoped history, and transaction preparation/registration. `falcon_public_graph` remains available to a basic remote-MCP host without a signer.
-- `falcon_wallet_status({wallet, forAction?, chain: "solana", network: "devnet"})` is a separate public read. Review exact account prerequisites and missing items. Faucet links/checklists are for the human only. Never fund an account, create an ATA, or ask for a seed phrase/private key.
-- Solana Devnet only. Refuse mainnet requests. Never claim guaranteed returns, and never widen a human-provided limit.
-- Reuse an existing session; keep it private and only in tool arguments. Never print, store, or send it to the human.
-- Show the exact message or transaction and obtain separate, explicit human approval before every signature. Login approval is not transaction approval. If the host cannot enforce this gate, stop.
-- Falcon never holds keys, signs, sends, or broadcasts. Use `signTransaction` only for approved exact bytes; never `signAndSendTransaction`. Register the human-signed bytes with `falcon_submit_signed`, then wait for the human to broadcast those same bytes from their wallet or user-controlled Devnet RPC.
-
-## Decode and receipts
-
-Before transaction signing, call `falcon_decode_transaction` on the unchanged unsigned bytes. Compare `messageSha256` with preparation output. Inspect fee payer, signers, blockhash, instructions, lookup tables, mint, action, amount, and risk flags. `networkAttestation: "requested-context-only"`, `safeToSign: false` and `executionReady: false` are not authorization or network proof. Stop if anything differs or is unresolved.
-
-`falcon_check_receipt` returns a validated signature and Devnet context (`chain`, `network`, `cluster`, `explorerUrl`). Signed transaction bytes, sessions, and raw RPC request/response bodies are redacted; retained hashes/metadata are not confirmation. Independently check the same signature in Solana Explorer on Devnet. `PENDING`, `FAILED`, `UNVERIFIED`, mismatched, or unavailable results are not success. Never retry an uncertain broadcast blindly.
-
-Prepared transactions expire in about 120 seconds. If expired, ask the human before preparing another. A receipt does not prove yield, future redeem, or mainnet behavior.
+- The only MCP market source is the metadata-only public graph (`scope: "public-market-evidence"`), Solana Devnet, fixed connectors. It contains no raw sources/exchanges, owner records, wallets, sessions, or private graph data. `policyDefinitionId: "decision:mesh-reserve-scenario/1"`, `policyVersion: "mesh-reserve-scenario/2"`, and technical source policy versions (including `mesh-reserve-liquidity/1`) identify implementation, not mandates.
+- Graph input is `{}` only: no source, owner, custom graph, or `forceRefresh` selector. Do not build a fallback. `executionReady` stays false; it is never a readiness signal.
+- Skip `falcon_yield_opportunities` during supply onboarding. Call it only on explicit human request, with only supported inputs; there is no `includeDiscovery` argument. Its optional mainnet discovery rows are not fixed Devnet executable rates, lending evidence, or a supply decision. APY is not realized return.
+- Solana Devnet only. Mainnet, custody, transfers, standalone/manual ATA creation or account mutation, transaction-status checks beyond listed tools, and iOS flows are out of scope. A prepared transaction may include destination-ATA creation; consider it only if present in the decoded transaction, inspect SOL rent, and obtain separate approval. Never promise returns or widen limits.
+- Never expose sessions or secrets. Show exact messages/transactions and obtain separate approval before each signature. Falcon never holds keys, signs, funds, or broadcasts.
 
 ## Optional Privy Agent CLI 0.3.7
 
-Use Privy only when the human has approved installation/login on a persistent CLI-capable host. Privy login may grant continuing signer access; it never grants approval for an individual signature. A remote-MCP-only host can still use the public graph without Privy.
-
-Only after explicit approval for wallet provisioning and ongoing signer access, the human runs this pinned login command. The human handles login and any provider confirmation; the agent does not read the resulting session files.
+Use only after explicit human approval for persistent-host provisioning, login, and ongoing signer access. Login does not approve an individual signature. The human handles login/provider confirmation; do not read session files or credentials.
 
 ```sh
 pnpm --package=@privy-io/agent-wallet-cli@0.3.7 dlx privy-agent-wallet login
 ```
 
-Before each RPC, show the exact message or transaction and obtain a new explicit approval. Serialize the JSON; never interpolate a challenge into a shell command. For sign-in, UTF-8 encode the exact Falcon challenge and base64 those bytes; do not sign the base64 text, add a prefix, normalize whitespace, or change newlines:
+Before each RPC, show the exact bytes/message and obtain new approval. Serialize JSON and pass it on stdin; never interpolate challenges into shell commands. For login, UTF-8 encode the exact Falcon challenge and base64 those bytes, without prefixing or normalizing whitespace/newlines:
 
 ```json
 {"method":"signMessage","params":{"message":"<base64 of exact UTF-8 challenge bytes>","encoding":"base64"}}
 ```
 
-The human runs the approved pinned command and passes that JSON over stdin:
-
 ```sh
 pnpm --package=@privy-io/agent-wallet-cli@0.3.7 dlx privy-agent-wallet rpc
 ```
 
-Require `data.signature`, base64 encoding, and exactly 64 decoded bytes before `falcon_connect_verify`. Stop on a changed wallet or unexpected response. Never read Privy credentials, key files, seed phrases, or the OS credential store.
+Require `data.signature`, base64, and exactly 64 decoded bytes before `falcon_connect_verify`. Stop on a changed wallet or unexpected response. Never read private keys, seed phrases, or OS credential storage.
 
-For a separately approved transaction, use the unchanged `unsignedTransactionBase64` from preparation:
+For a separately approved transaction, pass the unchanged preparation `unsignedTransactionBase64`:
 
 ```json
 {"method":"signTransaction","params":{"transaction":"<unsignedTransactionBase64>","encoding":"base64"}}
 ```
 
-Require `data.signed_transaction` with `data.encoding: "base64"`. Register the unchanged signed bytes before the human broadcasts. Privy is never used to broadcast or fund.
+Require `data.signed_transaction` and `data.encoding: "base64"`; register unchanged signed bytes. Privy never broadcasts or funds.
 
-## Errors and stop conditions
+## Errors and recovery
 
-- Show safe tool errors plainly; do not invent results or retry unchanged invalid input.
-- `RATE_LIMITED`: wait the returned interval and retry at most once.
-- `MESH_UNAVAILABLE`: current backend result is unavailable. Do not use older successful evidence.
-- Session invalid/expired: reuse it if still valid; otherwise ask for approval before the new exact ownership message.
-- Missing signer, human approval, owner scenario values, current public evidence, or verified receipt means stop at that stage.
+At most three workflow failures: stop on the third; do not turn failures into repeated retries. Show safe tool errors plainly. Retry `RATE_LIMITED` only after its returned interval and at most once, within the failure limit.
+
+| Result / condition | Action |
+| --- | --- |
+| Missing funding, source ATA, zero/frozen required token account, or zero SOL (`SOL_FOR_FEES`) | Show actual wallet-status missing-item/faucet checklist; human remedies; recheck chosen action; stop before prepare until clear. |
+| Fee/rent unaffordable or unproven after prepare | A positive SOL balance is not proof; inspect stated fee/rent and any simulation result, then stop before signing if insufficient or unknown. |
+| Status unknown/incomplete | Stop; do not infer account readiness. |
+| Session invalid/expired | Reuse only if still valid; otherwise new explicit approval for exact ownership challenge. |
+| `NO_DATA` / `MESH_UNAVAILABLE` | Stop current flow; no older evidence fallback. |
+| Expired decision | Stop preparation. Check source age against the unchanged human maximum and obtain newer evidence before a new decision if the bound expired. Never restart an old observation clock by making another decision. |
+| Expired evidence, new head, or inadequate remaining `expiresAt` time | Refresh/adopt with unchanged limits. Replace expired evidence only with a newer revision and later observations, then decide; if unchanged, stop. Never widen age or send force-refresh. |
+| Invalid `analysisId` / analysis mismatch | Stop; use adopted program analysis ID as `analysisId`; re-adopt and decide only if current evidence requires it. |
+| `BLOCKED`, `REVIEW` absent, changed transaction/hash/network, missing signer or approval | Stop at that gate; never bypass or retry unchanged. |
+| Expired prepared intent (>120s before registration) | Recheck evidence age and decision, prepare a new intent, decode and seek new explicit approval. |
+| Uncertain broadcast, receipt unavailable, non-`CONFIRMED`, or signature mismatch | No blind rebroadcast/retry; human checks registered signature in Devnet Explorer. |
 
 <!-- else:mcp -->
-The configured release does not provide the Falcon MCP URL. Do not install or edit client configuration until a trusted release supplies it.
+This release has no Falcon MCP URL. Wait for an authenticated trusted release before setup or configuration changes.
 <!-- endif:mcp -->
