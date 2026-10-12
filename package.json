@@ -22,6 +22,7 @@
     "verify:release:web": "node web/scripts/verify-release.mjs",
     "verify:release:mesh": "node mesh/check-release.mjs",
     "verify:swap": "node web/scripts/verify-swap-build.mjs",
+    "verify:skill-rebuild": "node web/scripts/verify-skill-rebuild.mjs",
     "test": "node --test test/*.test.ts stablecoins/test/*.test.ts perps/test/*.test.ts stocks/test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

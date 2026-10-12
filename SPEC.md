@@ -566,6 +566,7 @@ V166: [VERIFIED local HTTP fixtures] Anonymous projection never exposes owner re
 V167: [INFERRED client rollout contract] MCP0.3.0 exposes14 strict tools and defaults to anonymous public evidence; source path/schema/fingerprint agree; custom source configuration unsupported.
 V168: [INFERRED independent provider fix] Malformed UTF-8 provider data must yield NO_DATA, not altered READY data.
 V169: [VERIFIED local HTTP budget test] Anonymous graph source/global reservations precede storage; exhausted budget returns429 without DB/capture work.
+V170: [VERIFIED local CLI regression] ∀ skill rebuild CLI invocation, ordinary or symlink → validate immutable ref and expected digest; invalid ref returns structured FAIL and exit1, never silent success without running verification.
 
 
 ## §T TASKS
@@ -764,5 +765,6 @@ B104|2026-10-12|[VERIFIED canonical regression; independent fix deferred] malfor
 B105|2026-10-12|[INFERRED privacy risk; before-change failure not independently observed] opaque RPC bodies can repeat signed bytes in model-facing output|V160
 B106|2026-10-12|[VERIFIED source] per-owner captured heads alone could not attest shared public head; added authoritative binding|V162,V165
 B107|2026-10-12|[REPORTED review + VERIFIED budget test] anonymous public graph GET omitted pre-storage source/global reservation|V169
+B108|2026-10-13|[VERIFIED before/after CLI test: tests1/pass0/fail1 then tests1/pass1/fail0] lexical argv path differed from canonical module URL; symlink invocation skipped verification and returned exit0 with no output|V170
 
 Correction (2026-10-12): B102, B103 and B105 previously claimed VERIFIED historical regressions. The lead did not observe those before-change failures. Current passing tests do not prove that history. The records now state inferred risks, not measured prior failures.

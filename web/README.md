@@ -183,3 +183,20 @@ After creating the Pages project, open **Pages → the project → Custom domain
 [REPORTED, Luna source refutation] The guide and producer/source boundaries had no remaining material findings after the integrated clarity edits. The reviewer did not run tests, query a wallet or exercise execution.
 
 [NOT DETERMINED] Public publication of this revision is pending approval. No wallet lookup, account creation, funding, signing, broadcast or independent Explorer confirmation was performed for this patch. The withdrawn wallet-popup report was not investigated further.
+
+
+## Agent-side skill 0.3.2 rebuild verification (2026-10-13)
+
+[VERIFIED, source] Skill 0.3.2 still requires MCP 0.3.0. The 14-tool contract and MCP/Mesh services are unchanged. The guide separates safety stops from explicitly retryable same-step technical failures. It requires trusted human wallet preview evidence before signing when fee/rent or network proof is unavailable.
+
+[VERIFIED, CLI smoke] The new command is `npm run verify:skill-rebuild -- --ref <FULL_COMMIT_SHA> --expected-record <INDEPENDENTLY_OBTAINED_RECORD_JSON>`. Use a record obtained through a separately authenticated channel, outside the unverified candidate checkout. The alternative `--expected-sha256 <SHA256>` pins guide bytes, not the manifest canonical URL. CLI output states which metadata source it checked. CI uses the candidate record to check reproducibility and internal consistency. Neither mode proves publisher identity or release approval. The build executes trusted repository code; it is not a sandbox.
+
+[VERIFIED, clean local rebuild] The final unpublished source snapshot `486181bd3ae7bd5596d3c260bf41e39ed2bb2a31` rebuilt with locked dependencies. Record mode and direct-digest mode returned `"status":"PASS"` and exit 0. A wrong expected digest returned `"error":"Rendered SKILLS.md SHA-256 mismatch"` and exit 1. No owned verifier worktree registration remained after these runs. This snapshot is a temporary, unreferenced probe, not a branch commit or published trust pin. Abrupt process termination and cleanup-error injection were not exercised.
+
+[VERIFIED, final artifact] The rendered guide has 17053 bytes and SHA-256 `7ce59b33fb1f3c51dc660e50f434f318fcd593973313c6a5ee71f1046ae01b47`. The record is `web/skills/releases/0.3.2.json`. `GUIDE032_VITE_HTTP_SMOKE_OK` reported guide/manifest/HEAD 200 and the same digest. The preview used the canonical build environment and rendered from source. This is local HTTP proof, not a hosted publication check.
+
+[VERIFIED, regression checks] `npm run verify:web` returned `web: PASS`, `pass 309`, `fail 0`, `skipped 1`. Focused verifier/agents checks returned `tests 8`, `pass 8`, `fail 0`. Removing the digest guard in a scratch source copy gave `tests 5/pass 4/fail 1`; the control gave `tests 5/pass 5/fail 0`. A tampered served manifest gave `tests 1/pass 0/fail 1`; restoring it gave `tests 1/pass 1/fail 0`. The symlink entrypoint regression failed before the fix and passed after it. The user approved its SPEC.md V170/B108 entries. These checks do not prove agent compliance or a funded transaction.
+
+[NOT DETERMINED] This patch has not been committed to its branch, pushed, merged or deployed. No signing key or Git signing setting changed. No wallet lookup, funding, account creation, transaction signing, broadcast or Explorer confirmation ran. Publication requires explicit approval for this artifact.
+
+[VERIFIED, subsequent approval] User approved one commit/push and open PR for `fix/skill-repro-20261013`. The pending-approval statement above records the earlier local-only state. Leave the PR open; merge, deployment and wallet actions are outside this approval.
