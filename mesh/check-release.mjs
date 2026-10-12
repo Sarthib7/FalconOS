@@ -11,6 +11,7 @@ const RELEASE_INPUTS = [
   'server.mjs', 'http.mjs', 'store.mjs', 'lending-store.mjs', 'wallet-auth.mjs', 'domain.mjs',
   'live.mjs', 'scenario.mjs', 'kamino.mjs', 'kamino-wire.mjs', 'init-db.mjs',
   'yield-data.mjs', 'yield-domain.mjs', 'auth.mjs',
+  'limits.mjs',
   'schema.sql', 'migrations/0002_lending.sql', 'migrations/0003_wallet_auth.sql', 'deploy/supabase-permissions.sql',
 ];
 

@@ -12,6 +12,7 @@ const url = process.env.FALCON_MESH_TEST_DATABASE_URL;
 if (!url) throw new Error('FALCON_MESH_TEST_DATABASE_URL must name an initialized disposable mesh database.');
 const at = '2026-09-27T12:00:00.000Z';
 const scenario = { proposedUnits: '1000000', maxProposedUnits: '2000000', minBookLiquidityUnits: '200000000', maxObservationAgeSeconds: 300 };
+const overCapScenario = { ...scenario, proposedUnits: '2000000', maxProposedUnits: '5000000', minBookLiquidityUnits: '0' };
 const digest = token => createHash('sha256').update(token).digest('hex');
 
 test('V114/V92: owner-entered reserve decisions keep original evidence, isolate owners and cannot authorize lending', async t => {
@@ -37,11 +38,11 @@ test('V114/V92: owner-entered reserve decisions keep original evidence, isolate 
   assert.equal(created.status, 200);
   const record = created.data.record;
   assert.equal(record.analysis.status, 'REVIEW');
-  assert.equal(record.analysis.policyVersion, 'mesh-reserve-scenario/1');
+  assert.equal(record.analysis.policyVersion, 'mesh-reserve-scenario/2');
   assert.equal(record.analysis.executionReady, false);
   assert.deepEqual(record.analysis.sourceRevisionIds, [capture.revisionId]);
   assert.equal(record.analysis.availableLiquidityUnits, '252145908');
-  assert.deepEqual(record.analysis.checks.map(item => [item.id, item.status]), [['evidence', 'PASS'], ['freshness', 'PASS'], ['owner_cap', 'PASS'], ['book_floor', 'PASS'], ['proposal_vs_book', 'PASS']]);
+  assert.deepEqual(record.analysis.checks.map(item => [item.id, item.status]), [['evidence', 'PASS'], ['freshness', 'PASS'], ['owner_cap', 'PASS'], ['devnet_cap', 'PASS'], ['book_floor', 'PASS'], ['proposal_vs_book', 'PASS']]);
   assert.equal(record.analysis.scenario.provenance, 'OWNER_ENTERED');
   assert.ok(record.analysis.decisionGraph.edges.every(edge => record.analysis.decisionGraph.nodes.some(node => node.id === edge.source) && record.analysis.decisionGraph.nodes.some(node => node.id === edge.target)));
 
@@ -61,9 +62,17 @@ test('V114/V92: owner-entered reserve decisions keep original evidence, isolate 
   assert.equal((await call('/v1/decisions/reserve', token, { requestId: randomUUID(), scenario: { ...scenario, unknown: true } })).status, 400);
   assert.equal((await call('/v1/analyses/live', token, { requestId: randomUUID(), observationId: 'decision:mesh-reserve-scenario/1', maxHops: 3 })).status, 400);
 
-  const missing = await call('/v1/decisions/reserve', otherToken, { requestId: randomUUID(), scenario });
+  const overCap = await call('/v1/decisions/reserve', token, { requestId: randomUUID(), scenario: overCapScenario });
+  assert.equal(overCap.status, 200);
+  assert.equal(overCap.data.record.analysis.status, 'BLOCKED');
+  assert.equal(overCap.data.record.analysis.checks.find(item => item.id === 'devnet_cap').status, 'BLOCKED');
+  assert.equal(overCap.data.record.analysis.scenario.proposedUnits, '2000000');
+
+  const missing = await call('/v1/decisions/reserve', otherToken, { requestId: randomUUID(), scenario: overCapScenario });
   assert.equal(missing.status, 200);
   assert.equal(missing.data.record.analysis.status, 'NO_DATA');
   assert.equal(missing.data.record.analysis.availableLiquidityUnits, null);
+  assert.equal(missing.data.record.analysis.checks.find(item => item.id === 'devnet_cap').status, 'BLOCKED');
+  assert.equal(missing.data.record.analysis.scenario.proposedUnits, '2000000');
   assert.ok(missing.data.record.analysis.decisionGraph.nodes.every(node => node.origin !== 'OBSERVED'));
 });

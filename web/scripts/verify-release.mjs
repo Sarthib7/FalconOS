@@ -4,7 +4,7 @@ import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const DEFAULT_ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const SHARED_INPUTS = ['mesh/fixtures.mjs', 'mesh/kamino-wire.mjs'];
+const SHARED_INPUTS = ['mesh/fixtures.mjs', 'mesh/kamino-wire.mjs', 'mesh/limits.mjs'];
 const REQUIRED_INPUTS = [
   'web/package.json', 'web/package-lock.json', 'web/vite.config.js',
   'web/functions/api/waitlist.js', 'web/functions/_waitlist-email.js',

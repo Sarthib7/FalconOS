@@ -47,7 +47,7 @@ function verifyRecord(record, expect = {}) {
     need(!expect.requestId || record.requestId === expect.requestId, 'it does not answer this request');
     const { graph, analysis } = record;
     need(validGraph(graph), 'its graph snapshot is not a live graph');
-    need(isObject(analysis) && analysis.schemaVersion === 1 && analysis.kind === 'reserve_scenario_decision' && analysis.mode === 'live' && analysis.policyVersion === 'mesh-reserve-scenario/1' && analysis.observationId === OBSERVATION_ID, 'it is not a reserve scenario decision');
+    need(isObject(analysis) && analysis.schemaVersion === 1 && analysis.kind === 'reserve_scenario_decision' && analysis.mode === 'live' && ['mesh-reserve-scenario/1', 'mesh-reserve-scenario/2'].includes(analysis.policyVersion) && analysis.observationId === OBSERVATION_ID, 'it is not a reserve scenario decision');
     need(STATUSES.includes(analysis.status) && typeof analysis.summary === 'string', 'its status is not recognised');
     need(analysis.graphRevision === graph.revision, 'its analysis does not belong to its snapshot');
     need(validScenario(analysis.scenario), 'its scenario is not owner-entered');
@@ -72,7 +72,7 @@ function verifyRecord(record, expect = {}) {
 }
 function verifySummary(item) {
   return isObject(item) && typeof item.id === 'string' && !Number.isNaN(Date.parse(item.createdAt)) && isObject(item.analysis) && item.analysis.kind === 'reserve_scenario_decision'
-    && item.analysis.mode === 'live' && item.analysis.policyVersion === 'mesh-reserve-scenario/1' && STATUSES.includes(item.analysis.status) && validScenario(item.analysis.scenario);
+    && item.analysis.mode === 'live' && ['mesh-reserve-scenario/1', 'mesh-reserve-scenario/2'].includes(item.analysis.policyVersion) && STATUSES.includes(item.analysis.status) && validScenario(item.analysis.scenario);
 }
 // The observation node, its retained sources and its amount, from a live graph or a decision snapshot.
 function reserveOf(graph) {

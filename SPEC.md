@@ -541,6 +541,7 @@ V149: ∀ supply intent → saved REVIEW graphRevision = live analysis graphRevi
 V150: ∀ wallet-session lookup + session introspection/logout → source-address + process-global pre-auth budgets checked before DB query; over budget → RATE_LIMITED without lookup; valid sessions retain owner rate limit
 V151: ∀ MCP lending prepare → Mesh request deadline ≥60s, >4×8s bounded Devnet RPC ceiling + persistence margin
 V152: ∀ local build:mvp /mesh signed-out view → same-tab link to wallet-gated root loads bot UI; operator-token fallback remains; public install origin unchanged
+V153: [VERIFIED `mesh/limits.mjs`, `mesh/scenario.mjs`, `mesh/test/scenario.test.mjs`, `mesh/test/scenario-http.test.mjs`; local fixture smoke] Reserve REVIEW requires proposedUnits ≤ DEVNET_SUPPLY_LIMIT_UNITS (1000000); proposal/mandate unchanged; missing/stale evidence retains NO_DATA precedence; prepare uses same cap.
 
 
 ## §T TASKS
@@ -729,3 +730,4 @@ B94|2026-10-08|supply reused REVIEW decision with newer reserve evidence|V149
 B95|2026-10-08|invalid wallet-session lookup reached PostgreSQL before rate limit|V150
 B96|2026-10-08|MCP prepare deadline shorter than sequential Devnet RPC budget|V151
 B97|2026-10-08|absolute bot script path failed Vite build: `Failed to resolve /bot/main.jsx`|V152
+B98|2026-10-12|[REPORTED live + VERIFIED local regression] reserve decision omitted Devnet cap already enforced by prepare; proposal2000000/max5000000 returned REVIEW before fix|V153

@@ -58,13 +58,13 @@ test('V114: fresh reserve evidence yields REVIEW with the exact analysis contrac
   assert.equal(result.schemaVersion, 1);
   assert.equal(result.kind, 'reserve_scenario_decision');
   assert.equal(result.mode, 'live');
-  assert.equal(result.policyVersion, 'mesh-reserve-scenario/1');
+  assert.equal(result.policyVersion, 'mesh-reserve-scenario/2');
   assert.equal(result.at, AT);
   assert.equal(result.graphRevision, graph.revision);
   assert.equal(result.observationId, OBSERVATION);
   assert.equal(result.status, 'REVIEW');
   assert.deepEqual(result.scenario, { ...SCENARIO, provenance: 'OWNER_ENTERED' });
-  assert.deepEqual(result.checks.map(item => [item.id, item.status]), [['evidence', 'PASS'], ['freshness', 'PASS'], ['owner_cap', 'PASS'], ['book_floor', 'PASS'], ['proposal_vs_book', 'PASS']]);
+  assert.deepEqual(result.checks.map(item => [item.id, item.status]), [['evidence', 'PASS'], ['freshness', 'PASS'], ['owner_cap', 'PASS'], ['devnet_cap', 'PASS'], ['book_floor', 'PASS'], ['proposal_vs_book', 'PASS']]);
   assert.equal(result.availableLiquidityUnits, String(BOOK));
   assert.equal(result.totalAffectedUnits, null);
   assert.deepEqual(result.positionResults, []);
@@ -95,6 +95,7 @@ test('V114: decision graph carries only real source path IDs plus owner, rule an
     [`${M}:check:evidence`]: ['check', 'RULE'],
     [`${M}:check:freshness`]: ['check', 'RULE'],
     [`${M}:check:owner_cap`]: ['check', 'RULE'],
+    [`${M}:check:devnet_cap`]: ['check', 'RULE'],
     [`${M}:check:book_floor`]: ['check', 'RULE'],
     [`${M}:check:proposal_vs_book`]: ['check', 'RULE'],
     [`${M}:result`]: ['decision', 'DERIVED'],
@@ -130,7 +131,7 @@ test('V114: evaluation is deterministic and never mutates the graph or scenario'
   assert.equal(JSON.stringify(graph), graphCopy);
   assert.deepEqual(scenario, SCENARIO);
   first.decisionGraph.nodes.pop();
-  assert.equal(evaluateReserveScenario(graph, scenario, AT).decisionGraph.nodes.length, 12);
+  assert.equal(evaluateReserveScenario(graph, scenario, AT).decisionGraph.nodes.length, 13);
 });
 
 test('V114: owner cap and book floor boundaries are exact BigInt comparisons', async () => {
@@ -143,33 +144,53 @@ test('V114: owner cap and book floor boundaries are exact BigInt comparisons', a
   // One unit over/under blocks with a clear per-check result.
   const overCap = run({ proposedUnits: '1001' });
   assert.equal(overCap.status, 'BLOCKED');
-  assert.deepEqual(overCap.checks.map(item => item.status), ['PASS', 'PASS', 'BLOCKED', 'PASS', 'PASS']);
+  assert.deepEqual(overCap.checks.map(item => item.status), ['PASS', 'PASS', 'BLOCKED', 'PASS', 'PASS', 'PASS']);
   assert.equal(overCap.availableLiquidityUnits, String(BOOK));
   const underFloor = run({ minBookLiquidityUnits: String(BOOK + 1n) });
   assert.equal(underFloor.status, 'BLOCKED');
-  assert.deepEqual(underFloor.checks.map(item => item.status), ['PASS', 'PASS', 'PASS', 'BLOCKED', 'PASS']);
+  assert.deepEqual(underFloor.checks.map(item => item.status), ['PASS', 'PASS', 'PASS', 'PASS', 'BLOCKED', 'PASS']);
   const both = run({ proposedUnits: '1001', minBookLiquidityUnits: String(BOOK + 1n) });
   assert.equal(both.status, 'BLOCKED');
-  assert.deepEqual(both.checks.map(item => item.status), ['PASS', 'PASS', 'BLOCKED', 'BLOCKED', 'PASS']);
+  assert.deepEqual(both.checks.map(item => item.status), ['PASS', 'PASS', 'BLOCKED', 'PASS', 'BLOCKED', 'PASS']);
   assert.ok(both.summary.includes('owner maximum') && both.summary.includes('owner floor'));
   // Values beyond Number precision keep exact comparison.
   const huge = '18446744073709551615';
   // Old expectation: huge/huge => REVIEW (the proposal was never compared with the book). Now the observed book blocks it.
   const hugeOverBook = run({ proposedUnits: huge, maxProposedUnits: huge });
   assert.equal(hugeOverBook.status, 'BLOCKED');
-  assert.deepEqual(hugeOverBook.checks.map(item => item.status), ['PASS', 'PASS', 'PASS', 'PASS', 'BLOCKED']);
+  assert.deepEqual(hugeOverBook.checks.map(item => item.status), ['PASS', 'PASS', 'PASS', 'BLOCKED', 'PASS', 'BLOCKED']);
   assert.equal(run({ proposedUnits: huge, maxProposedUnits: '18446744073709551614' }).status, 'BLOCKED');
   assert.equal(run({ proposedUnits: '9007199254740993', maxProposedUnits: '9007199254740992' }).status, 'BLOCKED');
   assert.equal(run({ minBookLiquidityUnits: huge }).status, 'BLOCKED');
 });
 
+test('V153: canonical Devnet supply cap blocks over-limit proposal without clamping; exact cap is allowed and NO_DATA wins', async () => {
+  const { graph } = await liveGraph();
+  const scenario = { ...SCENARIO, maxProposedUnits: '5000000', minBookLiquidityUnits: '0' };
+  const over = evaluateReserveScenario(graph, { ...scenario, proposedUnits: '2000000' }, AT);
+  assert.equal(over.status, 'BLOCKED');
+  assert.equal(over.policyVersion, 'mesh-reserve-scenario/2');
+  assert.equal(check(over, 'owner_cap').status, 'PASS');
+  assert.equal(check(over, 'devnet_cap').status, 'BLOCKED');
+  assert.equal(over.scenario.proposedUnits, '2000000');
+
+  const exact = evaluateReserveScenario(graph, { ...scenario, proposedUnits: '1000000' }, AT);
+  assert.equal(exact.status, 'REVIEW');
+  assert.equal(check(exact, 'devnet_cap').status, 'PASS');
+  assert.equal(exact.scenario.proposedUnits, '1000000');
+
+  const stale = evaluateReserveScenario(graph, { ...scenario, proposedUnits: '2000000' }, later(301));
+  assert.equal(stale.status, 'NO_DATA');
+  assert.equal(check(stale, 'devnet_cap').status, 'BLOCKED');
+  assert.equal(stale.scenario.proposedUnits, '2000000');
+});
 test('BLUE-01: a proposal above the observed book is BLOCKED even when the owner cap and floor pass', async () => {
   const { graph } = await liveGraph();
   const run = patch => evaluateReserveScenario(graph, { ...SCENARIO, minBookLiquidityUnits: '0', ...patch }, AT);
   const over = String(BOOK + 1000n);
   const blocked = run({ proposedUnits: over, maxProposedUnits: over });
   assert.equal(blocked.status, 'BLOCKED');
-  assert.deepEqual(blocked.checks.map(item => item.id), ['evidence', 'freshness', 'owner_cap', 'book_floor', 'proposal_vs_book']);
+  assert.deepEqual(blocked.checks.map(item => item.id), ['evidence', 'freshness', 'owner_cap', 'devnet_cap', 'book_floor', 'proposal_vs_book']);
   assert.equal(check(blocked, 'owner_cap').status, 'PASS');
   assert.equal(check(blocked, 'book_floor').status, 'PASS');
   const book = check(blocked, 'proposal_vs_book');
@@ -177,7 +198,7 @@ test('BLUE-01: a proposal above the observed book is BLOCKED even when the owner
   assert.equal(book.status, 'BLOCKED');
   assert.ok(book.detail.includes(over) && book.detail.includes(String(BOOK)), book.detail);
   assert.deepEqual(book.evidenceNodeIds, [OBSERVATION, `${M}:owner-proposal`]);
-  assert.ok(blocked.summary.startsWith('Blocked by owner limits:') && blocked.summary.includes(over));
+  assert.ok(blocked.summary.startsWith('Blocked by policy limits:') && blocked.summary.includes(over));
   assert.equal(blocked.executionReady, false);
   // Graph: the check node is fed by the observation and the proposal and determines the result.
   const edges = blocked.decisionGraph.edges.filter(edge => edge.id.includes('proposal_vs_book')).map(edge => [edge.source, edge.target, edge.relation]).sort();
@@ -188,19 +209,20 @@ test('BLUE-01: a proposal above the observed book is BLOCKED even when the owner
   ].sort());
 });
 
-test('BLUE-01: proposal equal to the observed book is REVIEW; one unit above is BLOCKED', async () => {
+test('BLUE-01: proposal equal to the observed book passes its check; one unit above blocks it', async () => {
   const { graph } = await liveGraph();
   const run = units => evaluateReserveScenario(graph, { ...SCENARIO, proposedUnits: String(units), maxProposedUnits: String(units), minBookLiquidityUnits: '0' }, AT);
   const equal = run(BOOK);
-  assert.equal(equal.status, 'REVIEW');
+  assert.equal(equal.status, 'BLOCKED');
+  assert.equal(check(equal, 'devnet_cap').status, 'BLOCKED');
   assert.equal(check(equal, 'proposal_vs_book').status, 'PASS');
   assert.ok(check(equal, 'proposal_vs_book').detail.includes(String(BOOK)));
-  assert.ok(equal.summary.includes('observed') && equal.summary.includes('owner maximum') && equal.summary.includes('not withdrawable liquidity'));
+  assert.ok(equal.summary.includes('canonical Devnet supply cap'));
   assert.equal(equal.executionReady, false);
   const above = run(BOOK + 1n);
   assert.equal(above.status, 'BLOCKED');
   assert.equal(check(above, 'proposal_vs_book').status, 'BLOCKED');
-  assert.equal(run(BOOK - 1n).status, 'REVIEW');
+  assert.equal(check(run(BOOK - 1n), 'proposal_vs_book').status, 'PASS');
 });
 
 test('BLUE-01: stale or absent evidence skips proposal_vs_book and stays NO_DATA', async () => {
@@ -236,7 +258,7 @@ test('V114: owner freshness limit and the 300 second ceiling are inclusive bound
     assert.equal(result.availableLiquidityUnits, null);
     assert.equal(result.expiresAt, null);
     assert.equal(result.executionReady, false);
-    assert.deepEqual(result.checks.map(item => item.status), ['PASS', 'NO_DATA', 'PASS', 'SKIPPED', 'SKIPPED']);
+    assert.deepEqual(result.checks.map(item => item.status), ['PASS', 'NO_DATA', 'PASS', 'PASS', 'SKIPPED', 'SKIPPED']);
     assert.ok(check(result, 'freshness').detail.includes(word) || check(result, 'freshness').detail.includes('above'), check(result, 'freshness').detail);
     assert.ok(result.summary.startsWith('No decision:'));
   }
@@ -254,7 +276,7 @@ test('V114: failed or absent reserve capture is NO_DATA with skipped checks and 
     assert.equal(result.status, 'NO_DATA');
     assert.equal(result.availableLiquidityUnits, null);
     assert.equal(result.expiresAt, null);
-    assert.deepEqual(result.checks.map(item => item.status), ['NO_DATA', 'SKIPPED', 'PASS', 'SKIPPED', 'SKIPPED']);
+    assert.deepEqual(result.checks.map(item => item.status), ['NO_DATA', 'SKIPPED', 'PASS', 'PASS', 'SKIPPED', 'SKIPPED']);
     assert.deepEqual(result.decisionGraph.nodes.map(node => node.origin).filter(origin => origin === 'OBSERVED'), []);
     assert.equal(result.decisionGraph.nodes.some(node => node.id === OBSERVATION || node.id.startsWith('account:')), false);
     assert.equal(result.decisionGraph.edges.some(edge => edge.id.startsWith('edge:live:')), false);

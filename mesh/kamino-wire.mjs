@@ -1,4 +1,5 @@
 import { PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
+import { DEVNET_SUPPLY_LIMIT_UNITS } from './limits.mjs';
 
 // ABI: klend-sdk 38845294447623f6de3afc9dec29875f959f6f48.
 export const LENDING_CONFIG = Object.freeze({
@@ -21,7 +22,7 @@ export const LENDING_CONFIG = Object.freeze({
   instructionsSysvar: 'Sysvar1nstructions1111111111111111111111111',
   clockSysvar: 'SysvarC1ock11111111111111111111111111111111',
   loader: 'BPFLoaderUpgradeab1e11111111111111111111111',
-  decimals: 6, maxSupplyBaseUnits: '1000000',
+  decimals: 6, maxSupplyBaseUnits: DEVNET_SUPPLY_LIMIT_UNITS.toString(),
 });
 
 // Bumped whenever the wire ABI, account layout, or instruction encoding in this file changes.
