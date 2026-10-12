@@ -1,9 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { PublicKey } from '@solana/web3.js';
 import { MeshError } from './domain.mjs';
-import { analyzeLiveGraph } from './live.mjs';
+import { analyzeLiveGraph, CONNECTORS } from './live.mjs';
 import { verifyLendingVersions } from './kamino.mjs';
 import { RESERVE_DECISION_MARKER } from './scenario.mjs';
+import { PUBLIC_OWNER_ID, PUBLIC_PROGRAM_OBSERVATION, lockMeshOwner, lockPublicGraph } from './public-graph.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const SIGNATURE = /^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
@@ -13,7 +14,7 @@ const RECEIPT_STATUSES = ['PENDING', 'FAILED', 'UNVERIFIED', 'CONFIRMED'];
 const REQUEST_KEYS = ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits'];
 function fail(code, message) { throw new MeshError(code, message); }
 function ownerId(owner) {
-  if (typeof owner !== 'string' || !/^[a-z0-9_-]{1,64}$/.test(owner)) fail('INVALID_INPUT', 'Owner is invalid.');
+  if (typeof owner !== 'string' || owner === PUBLIC_OWNER_ID || !/^[a-z0-9_-]{1,64}$/.test(owner)) fail('INVALID_INPUT', 'Owner is invalid.');
 }
 function uuid(value) {
   if (typeof value !== 'string' || !UUID.test(value)) fail('INVALID_INPUT', 'Record ID must be a UUID.');
@@ -113,13 +114,13 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
   const findEvent = async (client, owner, requestId) => (await client.query('SELECT * FROM falcon_mesh.lending_events WHERE owner_id = $1 AND request_id = $2', [owner, requestId])).rows[0] ?? null;
   const findSubmission = async (client, owner, id) => (await client.query("SELECT * FROM falcon_mesh.lending_events WHERE owner_id = $1 AND intent_id = $2 AND kind = 'SUBMITTED'", [owner, id])).rows[0] ?? null;
 
-  async function write(owner, work) {
+  async function write(owner, work, publicBinding = false) {
     const client = await pool.connect();
     let releaseError;
     try {
       await client.query('BEGIN');
-      const lock = createHash('sha256').update(`falcon_mesh:${owner}`).digest().readBigInt64BE().toString();
-      await client.query('SELECT pg_advisory_xact_lock($1::bigint)', [lock]);
+      if (publicBinding) await lockPublicGraph(client, 'shared');
+      await lockMeshOwner(client, owner);
       const result = await work(client);
       await client.query('COMMIT');
       return result;
@@ -143,24 +144,113 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
     const age = Date.parse(at) - new Date(row.created_at).getTime();
     if (age < 0 || age > 120000) fail('CONFLICT', 'Prepared intent has expired. Prepare a new transaction.');
   }
-  async function currentUnderLock(client, owner, analysis, at) {
+  async function currentUnderLock(client, owner, analysis, at, publicBinding = false) {
     requireAnalysis(analysis, at);
-    const result = await client.query(`
-      SELECT r.revision_id, r.sha256, r.content FROM falcon_mesh.source_heads h
-      JOIN falcon_mesh.source_revisions r ON r.owner_id = h.owner_id AND r.source_key = h.source_key AND r.revision_id = h.revision_id
-      WHERE h.owner_id = $1 ORDER BY h.source_key LIMIT 33`, [owner]);
+    if (publicBinding && (analysis.analysis?.evidenceSource !== 'public'
+        || analysis.analysis?.publicGraphRevision !== analysis.graph.revision
+        || analysis.analysis?.graphRevision !== analysis.graph.revision)) {
+      fail('CONFLICT', 'A current adopted public analysis is required.');
+    }
+    const sourceOwner = publicBinding ? PUBLIC_OWNER_ID : owner;
+    const result = await client.query('SELECT r.revision_id, r.source_key, r.sha256, r.content FROM falcon_mesh.source_heads h ' +
+      'JOIN falcon_mesh.source_revisions r ON r.owner_id = h.owner_id AND r.source_key = h.source_key AND r.revision_id = h.revision_id ' +
+      'WHERE h.owner_id = $1 ORDER BY h.source_key LIMIT 33', [sourceOwner]);
     if (result.rows.length > 32) fail('CONFLICT', 'Current source coverage exceeds the analysis limit.');
     const live = result.rows.filter(row => JSON.parse(row.content).mode === 'live');
+    if (publicBinding) {
+      const expected = CONNECTORS.map(connector => 'live:' + connector.id);
+      const graphKeys = analysis.graph.sources.map(source => source.sourceKey);
+      if (live.length !== expected.length || graphKeys.length !== expected.length
+          || expected.some(key => !live.some(row => row.source_key === key) || !graphKeys.includes(key))) {
+        fail('CONFLICT', 'The public source bundle changed; do not broadcast this transaction. Refresh, adopt and prepare again.');
+      }
+    }
     if (live.length !== analysis.graph.sources.length || live.some(row => !analysis.graph.sources.some(source => source.revisionId === row.revision_id && source.sha256 === row.sha256))) {
-      fail('CONFLICT', 'Live source heads changed. Refresh and analyze them again.');
+      fail('CONFLICT', publicBinding
+        ? 'The public source bundle changed; do not broadcast this transaction. Refresh, adopt and prepare again.'
+        : 'Live source heads changed. Refresh and analyze them again.');
     }
   }
+  async function requirePublicDecision(db, owner, input, graphRevision, at) {
+    const result = await db.query('SELECT analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2 AND observation_id = $3',
+      [owner, input.decisionId, RESERVE_DECISION_MARKER]);
+    const decision = result.rows[0]?.analysis;
+    if (decision?.kind !== 'reserve_scenario_decision' || decision.mode !== 'live' || decision.status !== 'REVIEW'
+        || decision.evidenceSource !== 'public' || decision.publicGraphRevision !== graphRevision
+        || decision.graphRevision !== graphRevision || decision.sourceAnalysisId !== input.analysisId
+        || typeof decision.expiresAt !== 'string') {
+      fail('CONFLICT', 'A fresh REVIEW public reserve decision for this analysis and amount is required.');
+    }
+    if (Date.parse(decision.expiresAt) < Date.parse(at)) fail('CONFLICT', 'The public reserve decision has expired. Save a new decision before supplying.');
+    if (BigInt(input.request.inputBaseUnits) > BigInt(decision.scenario.proposedUnits)) fail('CONFLICT', 'The amount exceeds the proposal in the reserve decision. Save a new decision for this amount.');
+  }
+
+  async function loadPublicAnalysis(client, owner, id) {
+    const result = await client.query('SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2 AND observation_id <> $3',
+      [owner, id, RESERVE_DECISION_MARKER]);
+    const row = result.rows[0];
+    return row ? { id: row.id, requestId: row.request_id, createdAt: new Date(row.created_at).toISOString(), graph: row.graph, analysis: row.analysis } : null;
+  }
+
+  async function requireCurrentPublicIntent(client, owner, row, at) {
+    if (!row || row.intent?.evidenceSource !== 'public' || row.intent?.sourceAnalysisId !== row.analysis_id
+        || typeof row.intent?.publicGraphRevision !== 'string') fail('CONFLICT', 'A current public-bound lending intent is required.');
+    const analysis = await loadPublicAnalysis(client, owner, row.analysis_id);
+    if (!analysis || analysis.analysis?.evidenceSource !== 'public'
+        || analysis.analysis.publicGraphRevision !== row.intent.publicGraphRevision) {
+      fail('CONFLICT', 'The public lending analysis is no longer current. Refresh and prepare again.');
+    }
+    await currentUnderLock(client, owner, analysis, at, true);
+    if (analysis.graph.revision !== row.intent.publicGraphRevision) fail('CONFLICT', 'The public lending intent is stale. Refresh and prepare again.');
+    if (row.request.action === 'supply') {
+      await requirePublicDecision(client, owner, {
+        analysisId: row.analysis_id, decisionId: row.request.decisionId,
+        request: { inputBaseUnits: row.request.inputBaseUnits },
+      }, row.intent.publicGraphRevision, at);
+    }
+    return analysis;
+  }
+
   async function insertEvent(client, owner, id, requestId, kind, data, at) {
     const encoded = jsonObject(data);
     const result = await client.query(`
       INSERT INTO falcon_mesh.lending_events (owner_id, intent_id, id, request_id, created_at, kind, data)
       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb) RETURNING *`, [owner, id, randomUUID(), requestId, at, kind, encoded]);
     return storedEvent(result.rows[0]);
+  }
+
+  async function submitPublic(owner, id, input, requestId, transactionSha256) {
+    const preflight = await write(owner, async client => {
+      const row = await findIntent(client, owner, id);
+      if (!row) fail('NOT_FOUND', 'Lending intent not found.');
+      await requireCurrentPublicIntent(client, owner, row, stamp());
+      const repeated = await findEvent(client, owner, requestId);
+      if (repeated) return { event: reuseEvent(repeated, id, 'SUBMITTED', transactionSha256) };
+      const existing = await findSubmission(client, owner, id);
+      if (existing) return { event: reuseEvent(existing, id, 'SUBMITTED', transactionSha256) };
+      return { row };
+    }, true);
+    if (preflight.event) return preflight.event;
+
+    const row = preflight.row;
+    verifyLendingVersions(row.intent);
+    requireUnexpired(row, stamp());
+    const signature = await verifySignedLending(row.intent, input.transactionBase64);
+    if (typeof signature !== 'string' || !SIGNATURE.test(signature)) fail('INVALID_INPUT', 'Verified transaction signature is invalid.');
+    return write(owner, async client => {
+      const current = await findIntent(client, owner, id);
+      if (!current) fail('NOT_FOUND', 'Lending intent not found.');
+      const at = stamp();
+      await requireCurrentPublicIntent(client, owner, current, at);
+      const duplicate = await findEvent(client, owner, requestId);
+      if (duplicate) return reuseEvent(duplicate, id, 'SUBMITTED', transactionSha256);
+      const registered = await findSubmission(client, owner, id);
+      if (registered) return reuseEvent(registered, id, 'SUBMITTED', transactionSha256);
+      const reused = await client.query("SELECT intent_id FROM falcon_mesh.lending_events WHERE owner_id = $1 AND kind = 'SUBMITTED' AND data->>'signature' = $2 LIMIT 1", [owner, signature]);
+      if (reused.rows.length) fail('CONFLICT', 'This signature is already registered to another lending intent. Open its retained history.');
+      requireUnexpired(current, at);
+      return insertEvent(client, owner, id, requestId, 'SUBMITTED', { signature, transactionSha256, transactionBase64: input.transactionBase64 }, at);
+    }, true);
   }
 
   const methods = {
@@ -196,6 +286,54 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
       });
     },
 
+    async preparePublic(owner, input) {
+      ownerId(owner);
+      const normalized = requestFields(input);
+      const preflightAt = stamp();
+      const preflight = await write(owner, async client => {
+        const existing = await findRequest(client, owner, normalized.requestId);
+        if (existing) {
+          if (existing.intent?.evidenceSource !== 'public') fail('CONFLICT', 'This request ID belongs to a private lending intent.');
+          await requireCurrentPublicIntent(client, owner, existing, preflightAt);
+          return { existing };
+        }
+        const analysis = await loadPublicAnalysis(client, owner, normalized.analysisId);
+        if (!analysis) fail('CONFLICT', 'A current adopted public program analysis is required.');
+        await currentUnderLock(client, owner, analysis, preflightAt, true);
+        if (normalized.decisionId) await requirePublicDecision(client, owner, normalized, analysis.graph.revision, preflightAt);
+        return { analysis };
+      }, true);
+      if (preflight.existing) return reuseIntent(preflight.existing, normalized);
+
+      const prepared = await prepareLending(normalized.request);
+      if (prepared.schemaVersion !== 1 || prepared.network !== 'devnet'
+          || ['wallet', 'action', 'inputBaseUnits'].some(key => prepared[key] !== normalized.request[key])) {
+        fail('INVALID_INPUT', 'Prepared intent does not match the lending request.');
+      }
+      const intent = {
+        ...prepared, evidenceSource: 'public',
+        publicGraphRevision: preflight.analysis.graph.revision, sourceAnalysisId: preflight.analysis.id,
+      };
+      const encoded = jsonObject(intent);
+      return write(owner, async client => {
+        const winner = await findRequest(client, owner, normalized.requestId);
+        if (winner) {
+          if (winner.intent?.evidenceSource !== 'public') fail('CONFLICT', 'This request ID belongs to a private lending intent.');
+          await requireCurrentPublicIntent(client, owner, winner, stamp());
+          return reuseIntent(winner, normalized);
+        }
+        const committedAt = stamp();
+        const analysis = await loadPublicAnalysis(client, owner, normalized.analysisId);
+        if (!analysis) fail('CONFLICT', 'A current adopted public program analysis is required.');
+        await currentUnderLock(client, owner, analysis, committedAt, true);
+        if (analysis.graph.revision !== intent.publicGraphRevision) fail('CONFLICT', 'The public graph changed during preparation. Prepare again.');
+        if (normalized.decisionId) await requirePublicDecision(client, owner, normalized, analysis.graph.revision, committedAt);
+        const result = await client.query('INSERT INTO falcon_mesh.lending_intents (owner_id, id, request_id, analysis_id, created_at, request, intent) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb) RETURNING *',
+          [owner, randomUUID(), normalized.requestId, normalized.analysisId, committedAt, jsonObject(normalized.stored, 4096), encoded]);
+        return storedRecord(result.rows[0]);
+      }, true);
+    },
+
     async get(owner, id) {
       ownerId(owner); id = uuid(id);
       const row = await findIntent(pool, owner, id);
@@ -228,6 +366,7 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
       const transactionSha256 = createHash('sha256').update(signedBytes(input.transactionBase64)).digest('hex');
       const row = await findIntent(pool, owner, id);
       if (!row) fail('NOT_FOUND', 'Lending intent not found.');
+      if (row.intent?.evidenceSource === 'public') return submitPublic(owner, id, input, requestId, transactionSha256);
       const repeated = await findEvent(pool, owner, requestId);
       if (repeated) return reuseEvent(repeated, id, 'SUBMITTED', transactionSha256);
       const existing = await findSubmission(pool, owner, id);

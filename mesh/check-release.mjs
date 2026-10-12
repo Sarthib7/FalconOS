@@ -8,10 +8,10 @@ const DEFAULT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 // This is the source contract for the mesh-only release, not a Dockerignore parser.
 const RELEASE_INPUTS = [
   'package.json', 'package-lock.json', 'Dockerfile', '.dockerignore', 'railway.toml',
-  'server.mjs', 'http.mjs', 'store.mjs', 'lending-store.mjs', 'wallet-auth.mjs', 'domain.mjs',
+  'server.mjs', 'http.mjs', 'store.mjs', 'public-graph.mjs', 'lending-store.mjs', 'wallet-auth.mjs', 'domain.mjs',
   'live.mjs', 'scenario.mjs', 'kamino.mjs', 'kamino-wire.mjs', 'init-db.mjs',
   'yield-data.mjs', 'yield-domain.mjs', 'auth.mjs',
-  'limits.mjs',
+  'limits.mjs', 'wallet-status.mjs', 'transaction-inspection.mjs',
   'schema.sql', 'migrations/0002_lending.sql', 'migrations/0003_wallet_auth.sql', 'deploy/supabase-permissions.sql',
 ];
 

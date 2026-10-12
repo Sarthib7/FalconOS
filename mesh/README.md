@@ -95,3 +95,14 @@ node web/test/landing-browser.mjs
 [VERIFIED, correction] The earlier plan placed both API and PostgreSQL on Railway. The user's Supabase choice replaced only the database target. A successful schema setup does not establish runtime credentials, TLS, or an API deployment.
 
 [VERIFIED, source: `http.mjs`, `server.mjs`] The API limits authenticated requests per owner and across the process in a fixed window. Defaults are 120 requests per owner and 600 globally every 60 seconds. Set positive integer `FALCON_MESH_RATE_WINDOW_MS`, `FALCON_MESH_RATE_MAX_PER_OWNER`, and `FALCON_MESH_RATE_MAX_GLOBAL` to change them. A capped request returns 429 with `Retry-After`; `/healthz` and `/readyz` are exempt. Limits reset on process restart and are not shared across instances.
+
+
+## Public graph-backed evidence
+
+`GET /v1/public/graph/live` is anonymous and GET-only. It rejects query parameters, authorization headers, and request bodies, and reserves the existing per-source/global anonymous lookup budget before accessing storage. It captures only the three fixed, registered Devnet connectors. Responses expose source keys, URLs, hashes, observation/capture timestamps, graph structure, and technical analyses—not retained source content, raw exchanges, owner IDs, actor IDs, or private identifiers. Custom graph selectors are unsupported.
+
+The service single-flights captures per process and reuses a complete persisted head for up to 60 seconds. Analyses retain the 300-second evidence freshness rule. Incomplete or stale evidence returns `NO_DATA`; failed current captures do not serve last-good evidence, and thrown captures invalidate the current public head. The public policy is the existing `mesh-reserve-scenario/2`; scenario limits are supplied explicitly by the owner, with no default mandate.
+
+Authenticated `POST /v1/public/graph/adopt` copies the current public source rows into the requesting owner namespace while preserving revision IDs, source bytes, hashes, and original observation/capture timestamps. `POST /v1/public/decisions/reserve` requires that owner's current adopted public program analysis. `POST /v1/public/lending/intents` is a separate prepare path: supply requires the matching current public reserve decision, while redeem remains ungated. Public intents are bound to the shared public head; submission and registered retries recheck that head before returning or registering a signature and reject stale transactions with a do-not-broadcast warning. Existing private/operator lending byte and history responses remain unchanged and owner-scoped.
+
+The read-only Devnet endpoints `POST /v1/wallet/status` and `POST /v1/transactions/decode` use bounded request bodies and the same anonymous lookup budget. They report observed account status or decode known transaction instructions; they do not sign or submit transactions. The reserved public namespace cannot be configured as an authenticated owner.

@@ -1,11 +1,14 @@
 import { Pool } from 'pg';
 import { createApi, parseOrigins, parseTokenHashes } from './http.mjs';
 import { createStore } from './store.mjs';
+import { createPublicGraphService } from './public-graph.mjs';
 import { createLendingStore } from './lending-store.mjs';
 import { prepareLending, verifySignedLending, readLendingReceipt } from './kamino.mjs';
 import { createWalletAuth } from './wallet-auth.mjs';
 import { createYieldService } from './yield-data.mjs';
 import { createSupabaseSessionVerifier } from './auth.mjs';
+import { readWalletStatus } from './wallet-status.mjs';
+import { inspectTransaction } from './transaction-inspection.mjs';
 
 const tokenHashes = parseTokenHashes(process.env.FALCON_MESH_TOKEN_HASHES);
 const allowedOrigins = parseOrigins(process.env.FALCON_MESH_ORIGINS);
@@ -21,6 +24,7 @@ if (!Number.isInteger(rateMaxGlobal) || rateMaxGlobal < 1) throw new Error('FALC
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5, connectionTimeoutMillis: 5000, statement_timeout: 10000, idle_in_transaction_session_timeout: 15000 });
 pool.on('error', () => process.stderr.write('Mesh database connection failed.\n'));
 const store = createStore(pool);
+const publicGraph = createPublicGraphService({ store });
 const lending = createLendingStore(pool, { meshStore: store, prepareLending, verifySignedLending, readLendingReceipt });
 const yieldService = createYieldService();
 const walletAuth = createWalletAuth(pool, { allowedOrigins });
@@ -28,7 +32,11 @@ const verifySupabaseToken = createSupabaseSessionVerifier({
   url: process.env.FALCON_SUPABASE_URL,
   publishableKey: process.env.FALCON_SUPABASE_PUBLISHABLE_KEY,
 });
-const server = createApi({ store, lending, yieldService, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken });
+const server = createApi({
+  store, lending, yieldService, publicGraph, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken,
+  walletStatus: readWalletStatus,
+  transactionInspection: inspectTransaction,
+});
 server.on('error', () => { process.stderr.write('Mesh HTTP service failed to start.\n'); process.exitCode = 1; void pool.end(); });
 server.listen(port, process.env.FALCON_MESH_HOST || '127.0.0.1', () => process.stdout.write(`Falcon mesh listening on port ${port}.\n`));
 let closing = false;

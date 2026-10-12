@@ -319,6 +319,14 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - [SUPERSEDED, user choice, 2026-10-03] Simulation records remain browser-local and user-scoped by wallet owner; wallet message signatures authorize identity only. No live funds or transaction actions.
 - [VERIFIED, user choice, 2026-10-04] Bot chat simulation records remain browser-local and owner-scoped. The same-origin Mesh terminal uses the wallet session for owner-scoped evidence and permits only the manual DevNet test path above; it does not authorize real funds or automatic execution.
 - [VERIFIED, operational boundary] Code and local verification only; domain binding, Cloudflare configuration, and deployment remain user-managed.
+
+### I20. Public market evidence backend
+
+- [VERIFIED source + local HTTP/DB fixtures] Anonymous GET `/v1/public/graph/live` serves fixed Kamino docs, Devnet program and reserve/vault graph metadata. No wallet/session or custom graph required; no raw bodies/owner records exposed. Technical OBSERVED or NO_DATA never approves execution.
+- [VERIFIED source + local DB fixtures] Authenticated POST `/v1/public/graph/adopt` creates owner-bound program/reserve records from exact shared source revisions and original timestamps. POST `/v1/public/decisions/reserve` binds explicit analysisId and owner scenario. POST `/v1/public/lending/intents` requires that public source and current matching private decision for supply.
+- [VERIFIED source + local fixtures] POST `/v1/wallet/status` and `/v1/transactions/decode` provide bounded read-only preflight. Wallet funding/signing/broadcast remain human-only. Existing private operator byte/history APIs stay unchanged.
+- [VERIFIED schema inspection] Reserved service namespace and shared/exclusive PostgreSQL head locks reuse schema3; no migration. Custom graph configuration deferred.
+
 ## §V INVARIANTS
 
 V1: ∀ plugin process → read exactly one bounded (≤8 MiB) JSON object from stdin, emit exactly one bounded (≤64 KiB) JSON response line to stdout, diagnostics ⊥ stdout
@@ -543,6 +551,21 @@ V151: ∀ MCP lending prepare → Mesh request deadline ≥60s, >4×8s bounded D
 V152: ∀ local build:mvp /mesh signed-out view → same-tab link to wallet-gated root loads bot UI; operator-token fallback remains; public install origin unchanged
 V153: [VERIFIED `mesh/limits.mjs`, `mesh/scenario.mjs`, `mesh/test/scenario.test.mjs`, `mesh/test/scenario-http.test.mjs`; local fixture smoke] Reserve REVIEW requires proposedUnits ≤ DEVNET_SUPPLY_LIMIT_UNITS (1000000); proposal/mandate unchanged; missing/stale evidence retains NO_DATA precedence; prepare uses same cap.
 V154: [VERIFIED source and local regression `mesh/yield-data.mjs`, `mesh/test/yield-data.test.mjs`] Provider-indexed mainnet opportunities carry network mainnet-beta and executionSupported false for Devnet-only release; discovery rates never attest executable Devnet yield/liquidity.
+V155: [INFERRED client rollout contract] MCP published action schema and runtime agree: supply requires USDC plus decisionId and forbids receipt amount; redeem requires receipt amount and forbids USDC plus decisionId.
+V156: [VERIFIED local fixtures] Wallet status validates fixed Devnet genesis/mints/accounts and exact balances; System non-executable fee context; public budgets/body caps; no readiness or automatic funding.
+V157: [VERIFIED local fixtures] Canonical1232byte legacy/V0 decode preserves message hash and roles; unknown/unresolved/malformed instructions remain risks; safeToSign and executionReady false; wire cannot attest network.
+V158: [INFERRED client rollout contract] Exact rendered skill bytes determine manifest/digest; independent authenticated expected hash required.
+V159: [INFERRED client rollout contract] Metadata self-test never claims signer/funding readiness; human alone signs/broadcasts; valid connections/sessions reused.
+V160: [VERIFIED local fixtures] Owner records retain validated signature and Devnet/Explorer context without upgrading pending status; private operator retained bytes unchanged; MCP model-facing body redaction belongs to client rollout.
+V161: [VERIFIED local public-graph fixtures] Public source uses only registered fixed connectors; failed/stale current evidence remains NO_DATA, no synthetic or last-good substitute.
+V162: [VERIFIED local DB fixtures] Whole public bundle publishes atomically under CAS; reserved owner cannot map to user credentials; replicas share PostgreSQL authority.
+V163: [VERIFIED local DB fixtures] Distinct owner traces adopt identical public revision IDs, hashes, bytes and original observed/captured times; no client source upload/selector.
+V164: [VERIFIED local DB fixtures] Decision binds owner public analysis and same current graph; caller proposal/max/floor/age mandatory, no default mandate/private graph fallback.
+V165: [VERIFIED local race fixtures] Public prepare and signed registration/retry check global current heads under publication-shared then owner lock; head advance blocks stale action, while Devnet1USDC/human gates remain.
+V166: [VERIFIED local HTTP fixtures] Anonymous projection never exposes owner records/raw bodies; owner routes stay authenticated, no reserved-owner wildcard.
+V167: [INFERRED client rollout contract] MCP0.3.0 exposes14 strict tools and defaults to anonymous public evidence; source path/schema/fingerprint agree; custom source configuration unsupported.
+V168: [INFERRED independent provider fix] Malformed UTF-8 provider data must yield NO_DATA, not altered READY data.
+V169: [VERIFIED local HTTP budget test] Anonymous graph source/global reservations precede storage; exhausted budget returns429 without DB/capture work.
 
 
 ## §T TASKS
@@ -733,3 +756,11 @@ B96|2026-10-08|MCP prepare deadline shorter than sequential Devnet RPC budget|V1
 B97|2026-10-08|absolute bot script path failed Vite build: `Failed to resolve /bot/main.jsx`|V152
 B98|2026-10-12|[REPORTED live + VERIFIED local regression] reserve decision omitted Devnet cap already enforced by prepare; proposal2000000/max5000000 returned REVIEW before fix|V153
 B99|2026-10-12|[REPORTED UX + VERIFIED normalization] mainnet provider-indexed rows lacked discovery network and execution-support separation|V154
+B100|2026-10-12|[REPORTED prior live schema drift] client action schema parity requires separately verified client rollout|V155
+B101|2026-10-12|[REPORTED prior live guidance] agent broadcast guidance must remain human-only in client rollout|V159
+B102|2026-10-12|[VERIFIED failing local regression] opcode without required account metas was decoded as a known operation|V157
+B103|2026-10-12|[VERIFIED failing local regression] native fee account validation ignored System ownership/executable state|V156
+B104|2026-10-12|[VERIFIED canonical regression; independent fix deferred] malformed provider UTF-8 could become altered READY data|V168
+B105|2026-10-12|[VERIFIED prior consumer regression] raw RPC bodies could repeat signed bytes in model-facing output; client rollout owns redaction|V160
+B106|2026-10-12|[VERIFIED source] per-owner captured heads alone could not attest shared public head; added authoritative binding|V162,V165
+B107|2026-10-12|[REPORTED review + VERIFIED budget test] anonymous public graph GET omitted pre-storage source/global reservation|V169

@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { MeshError, validateSource, projectGraph, analyzeGraph } from './domain.mjs';
 import { CONNECTORS, captureSource as captureLiveSource, validateLiveSource, projectLiveGraph, analyzeLiveGraph } from './live.mjs';
 import { RESERVE_DECISION_MARKER, parseScenario, evaluateReserveScenario } from './scenario.mjs';
+import { PUBLIC_OWNER_ID, PUBLIC_PROGRAM_OBSERVATION, PUBLIC_RESERVE_OBSERVATION, lockPublicGraph } from './public-graph.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$/;
@@ -17,7 +18,7 @@ const COLUMNS = {
 
 function invalid(message) { throw new MeshError('INVALID_INPUT', message); }
 function ownerId(owner) {
-  if (typeof owner !== 'string' || !/^[a-z0-9_-]{1,64}$/.test(owner)) invalid('Owner is invalid.');
+  if (typeof owner !== 'string' || owner === PUBLIC_OWNER_ID || !/^[a-z0-9_-]{1,64}$/.test(owner)) invalid('Owner is invalid.');
 }
 function uuid(value) {
   if (typeof value !== 'string' || !UUID.test(value)) invalid('Record ID must be a UUID.');
@@ -65,13 +66,14 @@ async function currentSources(client, owner) {
 }
 
 export function createStore(pool, { capture = captureLiveSource, now = () => new Date().toISOString() } = {}) {
-  async function transaction(owner, repeatable, work) {
+  async function transaction(owner, repeatable, work, publicLockMode = null) {
     const lock = createHash('sha256').update(`falcon_mesh:${owner}`).digest().readBigInt64BE().toString();
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const client = await pool.connect();
       let releaseError;
       try {
-        await client.query(repeatable ? 'BEGIN ISOLATION LEVEL REPEATABLE READ' : 'BEGIN');
+        await client.query(repeatable && !publicLockMode ? 'BEGIN ISOLATION LEVEL REPEATABLE READ' : 'BEGIN');
+        if (publicLockMode) await lockPublicGraph(client, publicLockMode);
         await client.query('SELECT pg_advisory_xact_lock($1::bigint)', [lock]);
         const result = await work(client);
         await client.query('COMMIT');
@@ -137,7 +139,184 @@ export function createStore(pool, { capture = captureLiveSource, now = () => new
     if (!['synthetic', 'live'].includes(mode)) invalid('Graph mode is invalid.');
     return revisions.filter(revision => JSON.parse(revision.content).mode === mode);
   }
+  async function getPublicBundle() {
+    const sources = await transaction(PUBLIC_OWNER_ID, false, client => currentSources(client, PUBLIC_OWNER_ID), 'shared');
+    const expected = CONNECTORS.map(connector => 'live:' + connector.id);
+    if (sources.length !== expected.length || expected.some(key => !sources.some(source => source.sourceKey === key))) return null;
+    return { sources };
+  }
+
+  async function publishPublicBundle(revisions, expectedSources = null) {
+    if (!Array.isArray(revisions) || revisions.length !== CONNECTORS.length) invalid('The fixed public source bundle is incomplete.');
+    const seenIds = new Set();
+    const seenKeys = new Set();
+    const prepared = revisions.map(input => {
+      exactKeys(input, ['revisionId', 'capturedAt', 'content']);
+      const revisionId = uuid(input.revisionId);
+      timestamp(input.capturedAt);
+      const document = validateLiveSource(input.content, input.capturedAt);
+      if (Buffer.from(input.content, 'utf8').toString('utf8') !== input.content || input.content.includes('\0')) invalid('Source content must be valid UTF-8 text without null bytes.');
+      if (seenIds.has(revisionId) || seenKeys.has(document.sourceKey)) invalid('The fixed public source bundle contains duplicate identities.');
+      if (!CONNECTORS.some(connector => document.sourceKey === 'live:' + connector.id)) invalid('The public source is not registered.');
+      seenIds.add(revisionId); seenKeys.add(document.sourceKey);
+      return { revisionId, capturedAt: input.capturedAt, content: input.content, document, sha256: createHash('sha256').update(input.content, 'utf8').digest('hex') };
+    });
+    const expected = CONNECTORS.map(connector => 'live:' + connector.id);
+    if (seenKeys.size !== expected.length || expected.some(key => !seenKeys.has(key))) invalid('The fixed public source bundle is incomplete.');
+    return transaction(PUBLIC_OWNER_ID, false, async client => {
+      const current = await currentSources(client, PUBLIC_OWNER_ID);
+      const unchanged = expectedSources === null ? current.length === 0
+        : current.length === expectedSources.length && expectedSources.every(expected => current.some(source =>
+          source.revisionId === expected.revisionId && source.sourceKey === expected.sourceKey && source.sha256 === expected.sha256));
+      if (!unchanged) throw new MeshError('CONFLICT', 'The public source head changed during capture.');
+      if (current.length && (current.length !== expected.length || expected.some(key => !current.some(source => source.sourceKey === key)))) {
+        throw new MeshError('CONFLICT', 'The public source bundle is incomplete.');
+      }
+      const previous = new Map(current.map(source => [source.sourceKey, source]));
+      for (const item of prepared) {
+        const prior = previous.get(item.document.sourceKey);
+        if (prior && Date.parse(item.capturedAt) < Date.parse(prior.capturedAt)) throw new MeshError('CONFLICT', 'A newer public source bundle is already published.');
+      }
+      for (const item of prepared) {
+        await client.query('INSERT INTO falcon_mesh.source_revisions (owner_id, revision_id, source_key, source_url, observed_at, captured_at, sha256, content) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+          [PUBLIC_OWNER_ID, item.revisionId, item.document.sourceKey, item.document.sourceUrl, item.document.observedAt, item.capturedAt, item.sha256, item.content]);
+        await client.query('INSERT INTO falcon_mesh.source_heads (owner_id, source_key, revision_id) VALUES ($1, $2, $3) ON CONFLICT (owner_id, source_key) DO UPDATE SET revision_id = EXCLUDED.revision_id',
+          [PUBLIC_OWNER_ID, item.document.sourceKey, item.revisionId]);
+      }
+      return { sources: await currentSources(client, PUBLIC_OWNER_ID) };
+    }, 'exclusive');
+  }
+
+  async function invalidatePublicBundle(expectedSources) {
+    return transaction(PUBLIC_OWNER_ID, false, async client => {
+      const current = await currentSources(client, PUBLIC_OWNER_ID);
+      const unchanged = expectedSources === undefined ? true
+        : expectedSources === null ? current.length === 0
+          : current.length === expectedSources.length && expectedSources.every(expected => current.some(source =>
+            source.revisionId === expected.revisionId && source.sourceKey === expected.sourceKey && source.sha256 === expected.sha256));
+      if (!unchanged) return false;
+      await client.query('DELETE FROM falcon_mesh.source_heads WHERE owner_id = $1', [PUBLIC_OWNER_ID]);
+      return true;
+    }, 'exclusive');
+  }
+
+  async function adoptPublicGraph(owner, input, at) {
+    ownerId(owner); timestamp(at);
+    exactKeys(input, ['requestId', 'reserveRequestId']);
+    const requestId = uuid(input.requestId);
+    const reserveRequestId = uuid(input.reserveRequestId);
+    if (requestId === reserveRequestId) invalid('Program and reserve request IDs must differ.');
+    return transaction(owner, false, async client => {
+      const sources = await currentSources(client, PUBLIC_OWNER_ID);
+      const expected = CONNECTORS.map(connector => 'live:' + connector.id);
+      if (sources.length !== expected.length || expected.some(key => !sources.some(source => source.sourceKey === key))) {
+        throw new MeshError('CONFLICT', 'A complete current public source bundle is required.');
+      }
+      const graph = projectLiveGraph(sources, at);
+      const ownerHeads = await client.query('SELECT source_key FROM falcon_mesh.source_heads WHERE owner_id = $1', [owner]);
+      const ownerKeys = new Set(ownerHeads.rows.map(row => row.source_key));
+      const additions = sources.filter(source => !ownerKeys.has(source.sourceKey)).length;
+      if (ownerHeads.rows.length + additions > SOURCE_LIMIT) throw new MeshError('TOO_LARGE', 'Owner source limit is 32 documents.');
+      for (const sourceRow of sources) {
+        await client.query('INSERT INTO falcon_mesh.source_revisions (owner_id, revision_id, source_key, source_url, observed_at, captured_at, sha256, content) SELECT $1, revision_id, source_key, source_url, observed_at, captured_at, sha256, content FROM falcon_mesh.source_revisions WHERE owner_id = $2 AND revision_id = $3 ON CONFLICT (owner_id, revision_id) DO NOTHING',
+          [owner, PUBLIC_OWNER_ID, sourceRow.revisionId]);
+        const copied = await client.query('SELECT 1 FROM falcon_mesh.source_revisions target JOIN falcon_mesh.source_revisions public_source ON public_source.owner_id = $2 AND public_source.revision_id = $3 WHERE target.owner_id = $1 AND target.revision_id = $3 AND target.source_key = public_source.source_key AND target.source_url = public_source.source_url AND target.observed_at = public_source.observed_at AND target.captured_at = public_source.captured_at AND target.sha256 = public_source.sha256 AND target.content = public_source.content',
+          [owner, PUBLIC_OWNER_ID, sourceRow.revisionId]);
+        if (!copied.rows.length) throw new MeshError('CONFLICT', 'The public source revision could not be adopted exactly.');
+        await client.query('INSERT INTO falcon_mesh.source_heads (owner_id, source_key, revision_id) VALUES ($1, $2, $3) ON CONFLICT (owner_id, source_key) DO UPDATE SET revision_id = EXCLUDED.revision_id',
+          [owner, sourceRow.sourceKey, sourceRow.revisionId]);
+      }
+
+      async function analysisFor(id, observationId) {
+        const existing = await client.query('SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND request_id = $2', [owner, id]);
+        if (existing.rows.length) {
+          const saved = existing.rows[0];
+          if (saved.observation_id !== observationId || saved.graph?.revision !== graph.revision
+              || saved.analysis?.evidenceSource !== 'public' || saved.analysis?.publicGraphRevision !== graph.revision) {
+            throw new MeshError('CONFLICT', 'Public adoption request ID already has different or stale evidence.');
+          }
+          return record(saved);
+        }
+        const base = analyzeLiveGraph(graph, { observationId, maxHops: 3 }, at);
+        const analysis = { ...base, evidenceSource: 'public', publicGraphRevision: graph.revision };
+        const saved = await client.query('INSERT INTO falcon_mesh.analyses (owner_id, id, request_id, created_at, observation_id, max_hops, graph, analysis) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb) ON CONFLICT (owner_id, request_id) DO NOTHING RETURNING *',
+          [owner, randomUUID(), id, at, observationId, 3, JSON.stringify(graph), JSON.stringify(analysis)]);
+        if (!saved.rows.length) throw new MeshError('CONFLICT', 'Public adoption request changed. Retry with the same request IDs.');
+        return record(saved.rows[0]);
+      }
+
+      const programRecord = await analysisFor(requestId, PUBLIC_PROGRAM_OBSERVATION);
+      const reserveRecord = await analysisFor(reserveRequestId, PUBLIC_RESERVE_OBSERVATION);
+      return { record: programRecord, reserveRecord, graphRevision: graph.revision, evidenceSource: 'public' };
+    }, 'shared');
+  }
+
+  async function createPublicDecision(owner, input, at) {
+    ownerId(owner); timestamp(at);
+    exactKeys(input, ['requestId', 'analysisId', 'scenario']);
+    const requestId = uuid(input.requestId);
+    const analysisId = uuid(input.analysisId);
+    const scenario = parseScenario(input.scenario);
+    return transaction(owner, false, async client => {
+      const sources = await currentSources(client, PUBLIC_OWNER_ID);
+      const expected = CONNECTORS.map(connector => 'live:' + connector.id);
+      if (sources.length !== expected.length || expected.some(key => !sources.some(source => source.sourceKey === key))) {
+        throw new MeshError('CONFLICT', 'A complete current public source bundle is required.');
+      }
+      const publicGraph = projectLiveGraph(sources, at);
+      const found = await client.query('SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2 AND observation_id = $3',
+        [owner, analysisId, PUBLIC_PROGRAM_OBSERVATION]);
+      const sourceRecord = found.rows[0];
+      const currentProgram = analyzeLiveGraph(publicGraph, { observationId: PUBLIC_PROGRAM_OBSERVATION, maxHops: 3 }, at);
+      if (!sourceRecord || sourceRecord.analysis?.evidenceSource !== 'public'
+          || sourceRecord.analysis?.publicGraphRevision !== publicGraph.revision
+          || sourceRecord.analysis?.graphRevision !== publicGraph.revision
+          || sourceRecord.graph?.mode !== 'live' || sourceRecord.graph?.revision !== publicGraph.revision
+          || sourceRecord.analysis?.status !== 'OBSERVED' || currentProgram.status !== 'OBSERVED') {
+        throw new MeshError('CONFLICT', 'A current adopted public program analysis is required.');
+      }
+      const existing = await client.query('SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND request_id = $2', [owner, requestId]);
+      if (existing.rows.length) {
+        const saved = existing.rows[0];
+        if (saved.observation_id !== RESERVE_DECISION_MARKER || saved.analysis?.evidenceSource !== 'public'
+            || saved.analysis?.publicGraphRevision !== publicGraph.revision || saved.analysis?.sourceAnalysisId !== analysisId
+            || !Object.keys(scenario).every(key => saved.analysis?.scenario?.[key] === scenario[key])) {
+          throw new MeshError('CONFLICT', 'Public decision request ID already has different or stale evidence.');
+        }
+        return record(saved);
+      }
+      const analysis = {
+        ...evaluateReserveScenario(sourceRecord.graph, scenario, at),
+        evidenceSource: 'public', publicGraphRevision: publicGraph.revision, sourceAnalysisId: analysisId,
+      };
+      const saved = await client.query('INSERT INTO falcon_mesh.analyses (owner_id, id, request_id, created_at, observation_id, max_hops, graph, analysis) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb) ON CONFLICT (owner_id, request_id) DO NOTHING RETURNING *',
+        [owner, randomUUID(), requestId, at, RESERVE_DECISION_MARKER, 3, JSON.stringify(sourceRecord.graph), JSON.stringify(analysis)]);
+      if (!saved.rows.length) throw new MeshError('CONFLICT', 'Public decision request changed. Retry with the same request ID.');
+      return record(saved.rows[0]);
+    }, 'shared');
+  }
+
   const methods = {
+    async getPublicBundle() {
+      return getPublicBundle();
+    },
+
+    async publishPublicBundle(revisions, expectedSources) {
+      return publishPublicBundle(revisions, expectedSources);
+    },
+
+    async invalidatePublicBundle() {
+      return invalidatePublicBundle();
+    },
+
+    async adoptPublicGraph(owner, input, at) {
+      return adoptPublicGraph(owner, input, at);
+    },
+
+    async createPublicDecision(owner, input, at) {
+      return createPublicDecision(owner, input, at);
+    },
+
     async ingestSources(owner, revisions, at) {
       return saveSources(owner, revisions, at, 'synthetic');
     },
