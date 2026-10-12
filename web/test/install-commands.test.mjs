@@ -254,7 +254,7 @@ test('renderSkill rejects leftovers instead of emitting them', () => {
 test('the rendered Privy RPC examples sign exact bytes without sending', async () => {
   const template = await readFile(new URL('../skills/SKILLS.md', import.meta.url), 'utf8');
   const out = renderSkill(template, { mcpUrl: MCP, skillUrl: SKILL, isProd: true });
-  const section = out.slice(out.indexOf('## Optional Privy signer'), out.indexOf('## First read-only result'));
+  const section = out.slice(out.indexOf('## Optional Privy Agent CLI 0.3.7'), out.indexOf('## Errors and stop conditions'));
   const requests = [...section.matchAll(/```json\n([^]*?)\n```/g)].map(match => JSON.parse(match[1]));
   assert.deepEqual(requests.map(({ method }) => method), ['signMessage', 'signTransaction']);
   for (const { params } of requests) assert.equal(params.encoding, 'base64');

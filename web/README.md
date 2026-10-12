@@ -41,17 +41,15 @@ npm --prefix web run preview:local
 
 ## Current agent skill
 
-[VERIFIED, correction, 2026-10-11] The 2026-10-06 note above records an earlier flow. The current skill requires a user-controlled wallet exposed by the agent host. It says: "The human alone broadcasts the registered transaction from their wallet or user-controlled Devnet RPC. The agent never broadcasts or calls a network send method." See web/skills/SKILLS.md lines 60 and 115.
+[VERIFIED, source: `web/skills/SKILLS.md`] Version 0.3.0 requires MCP 0.3.0 and lists all 14 tools. The anonymous `falcon_public_graph({})` call is the first functional step and needs no signer, wallet, funds, or login. Owner-bound adoption, reserve review, and public-only preparation follow only when requested. Custom graphs are deferred; owner limits are never defaulted; human approval remains separate for every signature and broadcast.
 
-[VERIFIED, production, 2026-10-11] GET https://agents.falconos.markets/SKILLS.md returned 200 text/markdown; charset=utf-8, with 170 lines. Its SHA-256 matches web/dist-agents/SKILLS.md: a0f4f209fea584a12b5cc0e76f93d245376ac6aff331b1b9f90da260f762f922.
+[VERIFIED, source: `web/scripts/skills-release.mjs`, `web/scripts/skills-plugin.mjs`] The shared renderer emits `/SKILLS.md`, `/SKILLS.manifest.json` (`version`, `requiredMcpVersion`, `canonicalSkillUrl` and exact rendered-byte `sha256`) plus Cloudflare Pages integrity headers. The guide includes the pinned Privy CLI 0.3.7 exact-byte sign-only examples and does not contain its own digest.
 
-[VERIFIED, tests, 2026-10-11] npm run verify:web reported web: PASS, 299 passed, 0 failed, and 1 skipped. node --test web/test/agents-site.test.mjs reported 3 tests, 3 passed, and 0 failed. The skipped test requires the main-site build.
+[HISTORICAL, pre-0.3.0 local source/build/HTTP tests, 2026-10-12] The earlier release suite reported 31/31 passing for guide rendering, integrity headers and loopback GET/HEAD behavior. This is evidence for that earlier guide version only.
 
-[VERIFIED, local Privy guide, 2026-10-12] The optional Privy section in web/skills/SKILLS.md documents CLI 0.3.7, human-approved login, and signMessage/signTransaction requests with explicit base64 encoding. A remote-MCP-only host cannot run this CLI. Login grants ongoing signing authority; the Falcon flow still requires new approval before every signature and leaves broadcast to the human. Source: the official Privy Agent CLI docs and the published 0.3.7 CLI RPC dispatcher.
+[VERIFIED, local 0.3.0 release tests, 2026-10-12] `node --test web/test/skills-release.test.mjs web/test/install-commands.test.mjs web/test/skill-asset.test.mjs` reported 33 tests, 33 passed, 0 failed. Coverage includes the 0.3.0/14-tool guide and manifest, exact-byte integrity, the 260-line limit, Vite asset builds, and loopback GET/HEAD integrity checks; no browser was used.
 
-[VERIFIED, previous temporary checkout, 2026-10-12] node --test web/test/install-commands.test.mjs reported tests 26, pass 26, fail 0. A signAndSendTransaction mutation failed the new request-contract test. The real skills middleware served a 217-line guide over HTTP with status 200 and text/markdown; HEAD returned 200 with an empty body. Dependency installation timed out three times; full web verification and CLI help also timed out. That temporary checkout was removed before push. The changes are restored here for fresh verification. No Privy login, wallet provisioning, signature, funding, or broadcast occurred.
-
-[VERIFIED, persistent worktree, 2026-10-12] Reusing installed dependencies with matching lockfile hashes restored both Vite builds. The web suite reported tests 301, pass 300, fail 0, skipped 1. The release-input check then failed: Website dependency is missing from web/node_modules: @solana/web3.js. This is not a passing npm run verify:web result. The separate agents-site test reported tests 3, pass 3, fail 0. Fresh HTTP smoke returned 200 text/markdown for the 217-line Privy guide and 200 with an empty HEAD body. A clean dependency install and full release verification remain required before publishing.
+[NOT TESTED] No live-site request, browser, Privy login, wallet provisioning, funding, transaction signature, supply/redeem, or broadcast was performed. Cloudflare deployment remains user-managed.
 
 Run the install site locally:
 
@@ -156,23 +154,16 @@ After creating the Pages project, open **Pages → the project → Custom domain
 
 ## Falcon plugin install panel and SKILLS.md
 
-[VERIFIED, source: `web/bot/App.jsx`, `web/bot/InstallPanel.jsx`] The signed-out bot page shows a Human/Agent switch after the site navigation and before the hero. Human is selected by default and shows the Phantom wallet sign-in component. Agent shows one copyable skill-download command: `curl -fsSL <skill URL>`.
+[VERIFIED, source: `web/bot/App.jsx`, `web/bot/InstallPanel.jsx`] The install panel still presents its copyable fetch command. The skill guide itself uses one URL entry and explicitly treats retrieval as read-only; it is never downloaded for shell execution.
 
-[VERIFIED, source: `web/scripts/skills-plugin.mjs`, `web/skills/SKILLS.md`] The skill template is emitted as `/SKILLS.md`. Set `VITE_FALCON_SKILL_URL` to the chosen host's `/SKILLS.md` path. Dev defaults to `http://127.0.0.1:5194/SKILLS.md`; production falls back to `https://agents.falconos.markets/SKILLS.md`. Set `VITE_FALCON_MCP_URL` to an HTTPS `/mcp` URL before production so the downloaded skill contains the MCP install instructions.
+[VERIFIED, source: `web/scripts/skills-plugin.mjs`, `web/scripts/skills-release.mjs`] `falconSkills()` is wired into the site, bot, MVP, and agents Vite configs. Each build and dev/preview server uses the shared renderer for the guide and manifest. Production builds emit a root `_headers` file with the exact content digests. `VITE_FALCON_MCP_URL` must be a validated HTTPS `/mcp` URL and `VITE_FALCON_SKILL_URL` a validated HTTPS `/SKILLS.md` URL in production. Without a valid MCP URL the guide keeps the not-deployed branch and contains no CLI setup.
 
-[VERIFIED, source: `web/bot/install-commands.mjs`, `web/scripts/skills-plugin.mjs`] A production build without `VITE_FALCON_MCP_URL` keeps the bot page buildable and gives the Agent tab a skill download command. The downloaded skill says the MCP server is not deployed and includes no MCP setup commands.
+[VERIFIED, local tests only, 2026-10-12] See Current agent skill above for the focused test command and exact loopback/build provenance. These checks do not fetch or attest the live hostname.
 
-[VERIFIED, source: `web/dashboard/api.mjs`, `mesh/local.mjs`] Production wallet sign-in also needs `VITE_MESH_API_URL` for a deployed Mesh API. That Mesh service must allow the bot page's exact Origin in `FALCON_MESH_ORIGINS`.
+### Historical deployment notes
 
-### agents.falconos.markets release settings
+[HISTORICAL, Railway record, 2026-10-05] MCP and Mesh were reported live at their Falcon origins and Mesh allowed the agents origin. This dated record is not a current deployment check.
 
-[VERIFIED, Railway, 2026-10-05] The MCP server is live at `https://mcp.falconos.markets/mcp`. Mesh is live at `https://api.falconos.markets`. Mesh allows the Origin `https://agents.falconos.markets`.
+[HISTORICAL, 2026-10-05 local configuration] A prior Pages configuration used root `web`, build `npm run build:bot`, output `dist-bot`, and the listed VITE endpoints. Current source wiring is summarized above; Cloudflare settings and deployment are user-managed.
 
-[VERIFIED, local production build] These Cloudflare Pages settings produce a `dist-bot/SKILLS.md` that contains the live MCP install command:
-
-- **Root directory:** `web`
-- **Build command:** `npm run build:bot`
-- **Build output directory:** `dist-bot`
-- **Environment variables:** `VITE_FALCON_MCP_URL=https://mcp.falconos.markets/mcp`, `VITE_FALCON_SKILL_URL=https://agents.falconos.markets/SKILLS.md`, `VITE_MESH_API_URL=https://api.falconos.markets`
-
-[NOT DETERMINED] The Pages project and the `agents.falconos.markets` DNS record do not exist yet. `dig +short agents.falconos.markets` returned no record on 2026-10-05.
+[HISTORICAL, DNS query, 2026-10-05] `dig +short agents.falconos.markets` returned no record at that time. Current DNS/project status was not checked in this change.

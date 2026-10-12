@@ -1,6 +1,7 @@
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
+import bs58 from 'bs58';
 import { parseConfig } from '../../src/config.mjs';
 import { createApp } from '../../src/http.mjs';
 
@@ -17,46 +18,104 @@ export const IDS = {
 };
 export const UNSIGNED_TX = 'AQAAunsignedTransactionBytesForTests//AAAA==';
 export const SIGNED_TX = 'AQBBsignedTransactionBytesForTests//BBBB==';
+export const TRANSACTION_SIGNATURE = bs58.encode(Buffer.from(Array.from({ length: 64 }, (_, index) => (index * 5 + 1) % 256)));
 
-const PROGRAM = 'observation:live:solana-devnet-klend';
-const RESERVE = 'observation:live:solana-devnet-reserve-liquidity';
 
 function json(value) { return { status: 200, body: value }; }
 
-function defaults(call) {
+function defaults() {
   const id = IDS.intent;
-  const event = (kind, data) => ({ id: 'e1', requestId: 'r1', intentId: id, createdAt: '2026-10-05T10:00:00.000Z', kind, data });
+  const event = (kind, data) => ({
+    id: 'e1', requestId: 'r1', intentId: id, createdAt: '2026-10-05T10:00:00.000Z', kind,
+    data: { ...data, ...(typeof data?.signature === 'string' && {
+      chain: 'solana', network: 'devnet', cluster: 'devnet',
+      explorerUrl: 'https://explorer.solana.com/tx/' + data.signature + '?cluster=devnet',
+    }) },
+  });
+  const graph = {
+    revisionId: IDS.head,
+    sources: [{ sourceKey: 'live:solana-devnet-klend', revisionId: 'source-revision-1', capturedAt: '2026-10-05T10:00:00.000Z' }],
+    nodes: [{ id: 'program', kind: 'program', properties: { status: 'OBSERVED' } }], edges: [], issues: [],
+  };
+  const baseAnalysis = {
+    schemaVersion: 1, mode: 'live', policyVersion: 'mesh-public-evidence/1', at: '2026-10-05T10:00:00.000Z',
+    graphRevision: IDS.head, status: 'OBSERVED', totalAffectedUnits: null, positionResults: [],
+    sourceRevisionIds: ['source-revision-1'], coverage: { complete: true },
+    evidenceSource: 'public', publicGraphRevision: IDS.head,
+  };
   return {
-    'POST /v1/auth/wallet/challenge': () => json({ challengeId: IDS.challenge, message: `mcp.falcon.test wants you to sign in with your Solana account:\n${WALLET}\n\nThis request is for authentication only.`, expiresAt: '2026-10-05T10:05:00.000Z' }),
+    'POST /v1/auth/wallet/challenge': () => json({ challengeId: IDS.challenge, message: 'mcp.falcon.test wants you to sign in with ' + WALLET + '. Authentication only.', expiresAt: '2026-10-05T10:05:00.000Z' }),
     'POST /v1/auth/wallet/verify': () => json({ sessionToken: SESSION, walletAddress: WALLET, ownerId: 'wallet_abc', expiresAt: '2026-10-05T10:30:00.000Z' }),
     'GET /v1/auth/wallet/session': () => json({ walletAddress: WALLET, ownerId: 'wallet_abc', expiresAt: '2026-10-05T10:30:00.000Z' }),
     'POST /v1/auth/wallet/logout': () => json({ revoked: true }),
     'GET /v1/yield/opportunities': () => json({ status: 'READY', provider: 'defillama', opportunities: [{ poolId: 'p1', apy: 4.2 }] }),
-    'GET /v1/graph/live': () => json({ graph: { sources: [{ revisionId: IDS.head, sourceKey: 'live:kamino-program-docs' }] } }),
-    'POST /v1/captures': () => json({ source: { revisionId: call.body.requestId, sourceKey: `live:${call.body.connectorId}`, capturedAt: `2026-10-05T10:00:0${call.body.connectorId.length % 9}.000Z` } }),
-    'POST /v1/analyses/live': (c) => c.body?.observationId === RESERVE
-      ? json({ record: { id: IDS.reserveAnalysis, analysis: { status: 'OBSERVED', summary: 'Reserve observed.' } } })
-      : json({ record: { id: IDS.analysis, graph: { nodes: [{ id: RESERVE, properties: { status: 'ok', slot: 123, availableLiquidityUnits: '5000000' } }] }, analysis: { status: 'OBSERVED', summary: 'Evidence observed.', observationId: PROGRAM } } }),
-    'POST /v1/decisions/reserve': () => json({ record: { id: IDS.decision, analysis: { status: 'REVIEW', summary: 'Review the supply.', checks: [{ id: 'liquidity', status: 'PASS' }], expiresAt: '2026-10-05T10:05:00.000Z', limits: ['Not approval.'] } } }),
-    'POST /v1/lending/intents': () => json({ record: { id, intent: { transactionBase64: UNSIGNED_TX, messageSha256: 'ab'.repeat(32) } } }),
-    [`POST /v1/lending/intents/${id}/submit`]: () => json({ event: event('SUBMITTED', { signature: 'txsig', transactionSha256: 'cd'.repeat(32), transactionBase64: SIGNED_TX }) }),
-    [`POST /v1/lending/intents/${id}/receipt`]: () => json({ event: event('RECEIPT', { status: 'CONFIRMED', signature: 'txsig' }) }),
+    'GET /v1/public/graph/live': () => json({
+      scope: 'public-market-evidence', chain: 'solana', network: 'devnet', graph,
+      programAnalysis: { status: 'OBSERVED', summary: 'Program observed.', policyVersion: 'mesh-public-evidence/1' },
+      reserveAnalysis: { status: 'OBSERVED', summary: 'Reserve observed.', availableLiquidityUnits: '5000000', slot: 123, policyVersion: 'mesh-reserve-liquidity/1' },
+      status: 'OBSERVED', policyDefinitionId: 'decision:mesh-reserve-scenario/1', policyVersion: 'mesh-reserve-scenario/2',
+      maxSupplyBaseUnits: '1000000', customGraphsSupported: false, executionReady: false,
+    }),
+    'POST /v1/public/graph/adopt': () => json({
+      record: { id: IDS.analysis, graph, analysis: { ...baseAnalysis, observationId: 'observation:live:solana-devnet-klend', summary: 'Evidence observed.', availableLiquidityUnits: null } },
+      reserveRecord: { id: IDS.reserveAnalysis, graph, analysis: { ...baseAnalysis, policyVersion: 'mesh-reserve-liquidity/1', observationId: 'observation:live:solana-devnet-reserve-liquidity', summary: 'Reserve observed.', availableLiquidityUnits: '5000000', slot: 123 } },
+      graphRevision: IDS.head, evidenceSource: 'public',
+    }),
+    'POST /v1/public/decisions/reserve': () => json({ record: {
+      id: IDS.decision,
+      analysis: {
+        status: 'REVIEW', summary: 'Review the supply.', checks: [{ id: 'liquidity', status: 'PASS' }],
+        expiresAt: '2026-10-05T10:05:00.000Z', limits: ['Evidence is not execution approval.'],
+        evidenceSource: 'public', publicGraphRevision: IDS.head, sourceAnalysisId: IDS.analysis,
+        decisionGraph: {
+          nodes: [{ id: 'evidence', kind: 'evidence', properties: { status: 'OBSERVED', graphRevision: IDS.head } },
+            { id: 'scenario', kind: 'owner-input', properties: { proposedUnits: '500000', maxProposedUnits: '1000000', minBookLiquidityUnits: '2250000', maxObservationAgeSeconds: 120 } },
+            { id: 'decision', kind: 'result', properties: { status: 'REVIEW' } }],
+          edges: [{ from: 'evidence', to: 'decision', kind: 'supports' }, { from: 'scenario', to: 'decision', kind: 'evaluates' }], issues: [],
+        },
+      },
+    } }),
+    'POST /v1/public/lending/intents': () => json({ record: { id, intent: {
+      transactionBase64: UNSIGNED_TX, messageSha256: 'ab'.repeat(32),
+      evidenceSource: 'public', publicGraphRevision: IDS.head, sourceAnalysisId: IDS.analysis,
+    } } }),
+    ['POST /v1/lending/intents/' + id + '/submit']: () => json({ event: event('SUBMITTED', { signature: TRANSACTION_SIGNATURE, transactionSha256: 'cd'.repeat(32), transactionBase64: SIGNED_TX }) }),
+    ['POST /v1/lending/intents/' + id + '/receipt']: () => json({ event: event('RECEIPT', { status: 'CONFIRMED', signature: TRANSACTION_SIGNATURE }) }),
     'GET /v1/decisions': () => json({ records: [{ id: IDS.decision, createdAt: '2026-10-05T10:00:00.000Z', analysis: { status: 'REVIEW', summary: 'Review the supply.', expiresAt: '2026-10-05T10:05:00.000Z' } }], limit: 20 }),
-    'GET /v1/lending/intents': () => json({ records: [{ id, requestId: 'r1', analysisId: IDS.analysis, createdAt: '2026-10-05T10:01:00.000Z', request: { wallet: WALLET, action: 'supply', inputBaseUnits: '1000000', decisionId: IDS.decision }, status: 'SUBMITTED', signature: 'txsig' }], limit: 20 }),
+    'GET /v1/lending/intents': () => json({ records: [{ id, requestId: 'r1', analysisId: IDS.analysis, createdAt: '2026-10-05T10:01:00.000Z', request: { wallet: WALLET, action: 'supply', inputBaseUnits: '1000000', decisionId: IDS.decision }, status: 'SUBMITTED', signature: TRANSACTION_SIGNATURE }], limit: 20 }),
+    'POST /v1/wallet/status': () => json({
+      walletAddress: WALLET, chain: 'solana', network: 'devnet', capturedAt: '2026-10-05T10:00:00.000Z', slot: 123,
+      sol: { balanceLamports: '1000000000' },
+      usdc: { mint: 'devnet-usdc-mint', tokenAccount: 'wallet-usdc-account', exists: false, balanceBaseUnits: '0', decimals: 6 },
+      receipt: { mint: 'devnet-receipt-mint', tokenAccount: 'wallet-receipt-account', exists: false, balanceBaseUnits: '0', decimals: 6 },
+      missing: [], faucet: { humanOnly: true, links: { solFaucet: 'https://faucet.solana.com/', usdcFaucet: 'https://faucet.circle.com/' }, checklist: [] }, executionReady: false,
+    }),
+    'POST /v1/transactions/decode': () => json({
+      transactionVersion: 'legacy', messageSha256: 'ab'.repeat(32), feePayer: WALLET, recentBlockhash: 'devnet-blockhash',
+      requiredSigners: [WALLET], signatureState: 'unsigned', instructions: [], lookupTables: [], riskFlags: [],
+      networkAttestation: 'requested-context-only', executionReady: false, safeToSign: false,
+    }),
   };
 }
 
-// Exact body keys the real Mesh demands per route (mesh/http.mjs keys()). Missing or extra keys get its INVALID_INPUT.
+// Exact body keys the frozen public endpoints and existing Mesh routes demand.
 const BODY_KEYS = {
-  'POST /v1/analyses/live': ['requestId', 'observationId', 'maxHops'],
-  'POST /v1/captures': ['requestId', 'connectorId', 'expectedRevisionId'],
+  'POST /v1/public/graph/adopt': ['requestId', 'reserveRequestId'],
+  'POST /v1/public/decisions/reserve': ['requestId', 'analysisId', 'scenario'],
+  'POST /v1/public/lending/intents': ['requestId', 'analysisId', 'wallet', 'action', 'inputBaseUnits'],
   'POST /v1/auth/wallet/challenge': ['address'],
   'POST /v1/auth/wallet/verify': ['challengeId', 'signature'],
+  'POST /v1/wallet/status': ['wallet', 'chain', 'network'],
+  'POST /v1/transactions/decode': ['transactionBase64', 'chain', 'network'],
 };
-const sameKeys = (body, expected) => body && typeof body === 'object' && !Array.isArray(body)
-  && Object.keys(body).length === expected.length && expected.every(key => Object.hasOwn(body, key));
-
-// Fake Mesh. Enforces what the real one enforces for this client: Origin on wallet-auth routes, a Bearer session elsewhere.
+const OPTIONAL_BODY_KEYS = {
+  'POST /v1/public/lending/intents': ['decisionId'],
+  'POST /v1/wallet/status': ['forAction'],
+};
+const sameKeys = (body, expected, optional = []) => body && typeof body === 'object' && !Array.isArray(body)
+  && expected.every(key => Object.hasOwn(body, key))
+  && Object.keys(body).every(key => expected.includes(key) || optional.includes(key));
+// Fake Mesh. Wallet-auth routes check Origin; the public graph/status/decode reads need no Bearer; owner-scoped routes do.
 export async function startFakeMesh(overrides = {}) {
   const calls = [];
   const sockets = new Set();
@@ -73,10 +132,13 @@ export async function startFakeMesh(overrides = {}) {
     const isAuthRoute = request.url.startsWith('/v1/auth/wallet/');
     if (key === 'GET /readyz') { const o = overrides[key]; if (o) { const r = await o(call); return send(r.status, r.body, r.headers); } return send(200, { status: 'ready' }); }
     if (isAuthRoute && request.headers.origin !== ORIGIN) return send(403, { error: { code: 'ORIGIN_DENIED', message: 'A permitted browser origin is required.' } });
-    const needsBearer = !['POST /v1/auth/wallet/challenge', 'POST /v1/auth/wallet/verify'].includes(key);
+    const needsBearer = !['GET /v1/public/graph/live', 'POST /v1/auth/wallet/challenge', 'POST /v1/auth/wallet/verify', 'POST /v1/wallet/status', 'POST /v1/transactions/decode'].includes(key);
     if (needsBearer && request.headers.authorization !== `Bearer ${SESSION}`) return send(401, { error: { code: 'UNAUTHORIZED', message: 'A valid wallet session is required.' } });
     const expectedKeys = BODY_KEYS[key];
-    if (expectedKeys && !sameKeys(body, expectedKeys)) return send(400, { error: { code: 'INVALID_INPUT', message: 'Request fields do not match the endpoint.' } });
+    if (expectedKeys && !sameKeys(body, expectedKeys, OPTIONAL_BODY_KEYS[key])) return send(400, { error: { code: 'INVALID_INPUT', message: 'Request fields do not match the endpoint.' } });
+    if (key === 'POST /v1/public/decisions/reserve' && !sameKeys(body?.scenario, ['proposedUnits', 'maxProposedUnits', 'minBookLiquidityUnits', 'maxObservationAgeSeconds'])) {
+      return send(400, { error: { code: 'INVALID_INPUT', message: 'Reserve scenario fields do not match the endpoint.' } });
+    }
     const handler = overrides[key] ?? defaults(call)[key];
     if (!handler) return send(404, { error: { code: 'NOT_FOUND', message: 'Endpoint not found.' } });
     const result = await handler(call);
