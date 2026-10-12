@@ -47,6 +47,12 @@ npm --prefix web run preview:local
 
 [VERIFIED, tests, 2026-10-11] npm run verify:web reported web: PASS, 299 passed, 0 failed, and 1 skipped. node --test web/test/agents-site.test.mjs reported 3 tests, 3 passed, and 0 failed. The skipped test requires the main-site build.
 
+[VERIFIED, local Privy guide, 2026-10-12] The optional Privy section in web/skills/SKILLS.md documents CLI 0.3.7, human-approved login, and signMessage/signTransaction requests with explicit base64 encoding. A remote-MCP-only host cannot run this CLI. Login grants ongoing signing authority; the Falcon flow still requires new approval before every signature and leaves broadcast to the human. Source: the official Privy Agent CLI docs and the published 0.3.7 CLI RPC dispatcher.
+
+[VERIFIED, previous temporary checkout, 2026-10-12] node --test web/test/install-commands.test.mjs reported tests 26, pass 26, fail 0. A signAndSendTransaction mutation failed the new request-contract test. The real skills middleware served a 217-line guide over HTTP with status 200 and text/markdown; HEAD returned 200 with an empty body. Dependency installation timed out three times; full web verification and CLI help also timed out. That temporary checkout was removed before push. The changes are restored here for fresh verification. No Privy login, wallet provisioning, signature, funding, or broadcast occurred.
+
+[VERIFIED, persistent worktree, 2026-10-12] Reusing installed dependencies with matching lockfile hashes restored both Vite builds. The web suite reported tests 301, pass 300, fail 0, skipped 1. The release-input check then failed: Website dependency is missing from web/node_modules: @solana/web3.js. This is not a passing npm run verify:web result. The separate agents-site test reported tests 3, pass 3, fail 0. Fresh HTTP smoke returned 200 text/markdown for the 217-line Privy guide and 200 with an empty HEAD body. A clean dependency install and full release verification remain required before publishing.
+
 Run the install site locally:
 
 ```bash

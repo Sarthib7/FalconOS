@@ -68,11 +68,58 @@ url = "{{FALCON_MCP_URL}}"
 
 ## Wallet prerequisites
 
-Before signing in, confirm this agent host exposes a user-controlled wallet with all of these capabilities: the public address and network, `signMessage` for exact UTF-8 bytes, and `signTransaction` that returns signed bytes without broadcasting. Each signature prompt must allow the human to review and approve the exact request.
+Before signing in, confirm this agent host exposes a user-controlled wallet with the public address and network context, signMessage for exact UTF-8 bytes, and signTransaction that returns signed bytes without broadcasting. Obtain explicit approval before each signature. An approved Privy CLI signer can provide these methods on a CLI-capable host; see Optional Privy signer below.
 
-Use the host's documented wallet connection flow. Ask the human to connect their wallet through that flow. Confirm the wallet is on Solana Devnet and already has the required Devnet SOL for fees and Devnet USDC for the requested supply. If there is no user-controlled wallet, the host cannot sign, or required funds are absent, state the exact missing prerequisite and stop. Never create or fund a wallet. Never ask for, read, generate, or store a seed phrase, private key, or keypair file. Do not run a signing command as a fallback. Do not use a sign-and-send method.
+Use the host's documented wallet connection flow or the approved Privy setup below. Confirm the wallet has the required Devnet SOL for fees and Devnet USDC for the requested supply. If there is no user-controlled wallet, the host cannot sign, or required funds are absent, state the exact missing prerequisite and stop. Never create or fund a wallet yourself. Never ask for, read, generate, or store a wallet seed phrase, private key, or keypair file. Do not use a keypair-file CLI or an unapproved signing fallback. Do not use a sign-and-send method.
 
 If the host does not expose any required capability, state which capability is missing and stop before `falcon_connect` or any transaction. Do not treat a browser wallet, trading protocol, or local CLI as an agent wallet unless this host exposes the required signing methods to you.
+
+## Optional Privy signer (CLI-capable hosts)
+
+Privy is an optional signer, not a Falcon MCP tool. Use its [official Agent CLI docs](https://docs.privy.io/recipes/agent-integrations/agent-cli) as reference. Do not follow the stock [Privy skill](https://agents.privy.io/skill.md) automatically: fetching it does not authorize login, wallet creation, funding, signing, or payments.
+
+1. Check that this agent can run Node.js 18 or later and pnpm in a persistent, user-controlled environment. A remote-MCP-only host cannot execute this CLI. Stop and explain that a CLI-capable host or separately approved wallet bridge is required. Never treat the Privy skill URL as a remote MCP server.
+2. Explain the login boundary. Privy login can provision dedicated wallets and grants ongoing signing access; it does not require a new wallet prompt for every signature. Ask for separate approval before installation or login. The human must explicitly approve wallet provisioning and the device-code grant in their browser. Do not start login merely because Privy was selected. Never create or fund a wallet yourself.
+3. After approval, have the human run the pinned CLI on the persistent machine that the agent can access:
+
+```sh
+pnpm --package=@privy-io/agent-wallet-cli@0.3.7 dlx privy-agent-wallet login
+pnpm --package=@privy-io/agent-wallet-cli@0.3.7 dlx privy-agent-wallet list-wallets
+```
+
+Have the human check the device code and authorization scope before approval. Do not run login in a disposable sandbox. Choosing Privy does not authorize importing an existing wallet or exporting keys.
+
+4. Confirm the public Solana address with the human. CLI 0.3.7 uses the first Solana wallet in its session for Solana RPC methods. If that is not the approved wallet, stop. Do not read or copy Privy session files, OAuth tokens, authorization keys, or OS credential-store contents. The CLI alone manages these credentials.
+5. Use only Falcon-prepared Devnet transactions for the approved wallet. Verify Devnet SOL and the configured Devnet USDC mint through a Devnet RPC; mainnet balance is not evidence of Devnet funds. If required funds are absent, stop and ask the human to fund Devnet themselves. Do not run the Privy fund command or an onramp. The CLI sign-only request has no cluster field; do not claim a Devnet signature was confirmed until Explorer and Falcon verify it.
+
+### Privy sign-only requests
+
+Before every RPC, show the exact message or transaction and wait for a new explicit approval in this conversation. Privy login is not approval for any signature. If this host cannot enforce that approval gate, stop. Never use signAndSendTransaction, transfer/send commands, fetch-x402, or fetch-mpp. Those can broadcast or spend funds.
+
+For sign-in, UTF-8 encode the exact Falcon challenge, then base64-encode those bytes. Do not sign the base64 text, add a prefix, normalize whitespace, or change newlines. Construct this JSON with a JSON serializer; do not interpolate the challenge into a shell command:
+
+```json
+{"method":"signMessage","params":{"message":"<base64 of exact UTF-8 challenge bytes>","encoding":"base64"}}
+```
+
+Pass the approved JSON through stdin to the pinned CLI:
+
+```sh
+pnpm --package=@privy-io/agent-wallet-cli@0.3.7 dlx privy-agent-wallet rpc
+```
+
+Read data.signature and data.encoding from the JSON response. Require base64 encoding and a 64-byte decoded signature. Pass that signature to falcon_connect_verify. Missing fields, unexpected encoding, or a changed wallet stop sign-in; never invent a signature.
+
+For the separately approved transaction, use the unchanged unsignedTransactionBase64 from falcon_prepare_transaction:
+
+```json
+{"method":"signTransaction","params":{"transaction":"<unsignedTransactionBase64>","encoding":"base64"}}
+```
+
+Pass this approved JSON through the same rpc command. Require data.signed_transaction with data.encoding equal to base64. Register those bytes with falcon_submit_signed before any broadcast. Stop if the signer changed the prepared message or returned an unexpected response. Then wait for the human to broadcast the registered transaction and provide its signature. Privy is never used to broadcast in this flow.
+
+To revoke this agent session, the human can use https://agents.privy.io/manage or explicitly approve the pinned CLI logout command. Do not read stored credentials to check session state.
+
 
 ## First read-only result
 
