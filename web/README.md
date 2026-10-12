@@ -41,15 +41,17 @@ npm --prefix web run preview:local
 
 ## Current agent skill
 
-[VERIFIED, source: `web/skills/SKILLS.md`] Version 0.3.0 requires MCP 0.3.0 and lists all 14 tools. The anonymous `falcon_public_graph({})` call is the first functional step and needs no signer, wallet, funds, or login. Owner-bound adoption, reserve review, and public-only preparation follow only when requested. Custom graphs are deferred; owner limits are never defaulted; human approval remains separate for every signature and broadcast.
+[VERIFIED, source: `web/skills/SKILLS.md`] Version 0.3.1 requires MCP 0.3.0 and lists all 14 tools. The anonymous public graph is the initial inspection step and needs no signer, wallet, funds or login. Human scenario inputs and action-specific full-execution prerequisites precede owner adoption. Owner-only advisory/history does not require funds or transaction signing. Custom graphs stay deferred; human approval remains separate for every signature and broadcast.
 
 [VERIFIED, source: `web/scripts/skills-release.mjs`, `web/scripts/skills-plugin.mjs`] The shared renderer emits `/SKILLS.md`, `/SKILLS.manifest.json` (`version`, `requiredMcpVersion`, `canonicalSkillUrl` and exact rendered-byte `sha256`) plus Cloudflare Pages integrity headers. The guide includes the pinned Privy CLI 0.3.7 exact-byte sign-only examples and does not contain its own digest.
 
 [HISTORICAL, pre-0.3.0 local source/build/HTTP tests, 2026-10-12] The earlier release suite reported 31/31 passing for guide rendering, integrity headers and loopback GET/HEAD behavior. This is evidence for that earlier guide version only.
 
-[VERIFIED, local 0.3.0 release tests, 2026-10-12] `node --test web/test/skills-release.test.mjs web/test/install-commands.test.mjs web/test/skill-asset.test.mjs` reported 33 tests, 33 passed, 0 failed. Coverage includes the 0.3.0/14-tool guide and manifest, exact-byte integrity, the 260-line limit, Vite asset builds, and loopback GET/HEAD integrity checks; no browser was used.
+[HISTORICAL, REPORTED builder local 0.3.0 release tests, 2026-10-12] The earlier focused command `node --test web/test/skills-release.test.mjs web/test/install-commands.test.mjs web/test/skill-asset.test.mjs` reported 33 tests, 33 passed, 0 failed. That suite included earlier wording/version and 260-line pins removed by 0.3.1. This is not verification of the new guide or agent execution.
 
-[NOT TESTED] No live-site request, browser, Privy login, wallet provisioning, funding, transaction signature, supply/redeem, or broadcast was performed. Cloudflare deployment remains user-managed.
+[HISTORICAL, earlier 0.3.0 local batch] That batch did not exercise the live site, browser, Privy login, wallet provisioning, funding, transaction signatures, supply/redeem or broadcast. Current 0.3.1 evidence appears below.
+
+Correction (2026-10-12): this current-source section previously retained version 0.3.0 and presented builder-reported fixture counts as verified. Version is now 0.3.1; the earlier counts remain historical reports. Current local command and HTTP evidence is recorded in the 0.3.1 section below.
 
 Run the install site locally:
 
