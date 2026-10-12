@@ -113,8 +113,28 @@ Tests need no database: `npm test` runs against fake Mesh servers.
 
 ## Local 0.3.0 verification
 
-[VERIFIED, local SDK wire/harness fixtures, 2026-10-12] `node --test test/tools.test.mjs` reported 33 tests, 33 passed, 0 failed. The suite uses the official MCP client over Streamable HTTP on loopback with fake Mesh responses. It covers anonymous/no-auth public graph reads and redaction, current NO_DATA without stale reuse, two-ID public adoption and graphRevision binding, required human scenario inputs, the full decisionGraph, and public-only prepare.
+[REPORTED, builder local SDK fixtures, 2026-10-12] `node --test test/tools.test.mjs` reported 33 tests, 33 passed, 0 failed. The suite uses the official MCP client over Streamable HTTP on loopback with fake Mesh responses. It covers anonymous/no-auth public graph reads and redaction, current NO_DATA without stale reuse, two-ID public adoption and graphRevision binding, required human scenario inputs, the full decisionGraph, and public-only prepare.
 
-[VERIFIED, local secret-boundary fixture, 2026-10-12] `node --test test/secrets.test.mjs` reported 1 test, 1 passed, 0 failed.
+[REPORTED, builder local secret-boundary fixture, 2026-10-12] `node --test test/secrets.test.mjs` reported 1 test, 1 passed, 0 failed.
 
 [NOT DETERMINED] The full `npm test` run did not complete within its 240-second deadline; `test/http.mjs` remained pending. No full-package pass, production parity, live RPC, signing, funding, broadcast, or deployment is claimed.
+
+Correction (2026-10-12): the two local 0.3.0 fixture paragraphs previously claimed VERIFIED results. Those counts came from builder reports. The lead did not confirm that local full run. The observed CI and hosted evidence below supersede the release-readiness uncertainty, not the test history.
+
+## Hosted 0.3.0 release (2026-10-12)
+
+[VERIFIED] Backend PR #69 and client PR #70 merged sequentially. Exact-head CI runs `38291447461` (head `7cf843c65a583f00df15da598fd4af22522eae12`) and `38292172173` (head `ba0deb9be3b7f25757221570d4dca1f7fb16b62b`) completed successfully, including the repository verification, browser journey and container checks. Runtime source was published from merged commits `7ffbfe9c69bb09a3c2c5a176ea6bdb20d2ea84f4` (Mesh) and `f2d4b8ca2bef97947b86de3682a17d36900085cb` (MCP).
+
+[VERIFIED, Railway API readback] Mesh deployment `5d6ee043-6824-4191-a34e-dd8cd572b83a` and MCP deployment `3552088e-ecd8-4f07-a9ef-0c45a52ef4e4` returned `SUCCESS`. Mesh uses `/readyz`; MCP uses `/healthz`. Both health-check timeouts are 60 seconds. Live probes returned `200 {"status":"ready"}` and `200 {"status":"alive"}`.
+
+[VERIFIED, official SDK over hosted Streamable HTTP] The final check returned:
+
+```json
+{"marker":"FINAL_HOSTED_RELEASE_E2E_OK","serverVersion":"0.3.0","toolCount":14,"actionSchemaParity":true,"schemaFingerprint":"sha256:8a5230bd2cd9cf373b9a84706759723742a1c9cdf94f482f3752cb427674c09c","status":"OBSERVED","programStatus":"OBSERVED","reserveStatus":"OBSERVED","sourceCount":3,"executionReady":false}
+```
+
+[VERIFIED, hosted negative checks] A custom graph argument and missing session were rejected. Malformed transaction bytes returned `INVALID_INPUT`. An unapproved HTTP Origin returned `403`. These checks do not attest a funded wallet or an executed transaction.
+
+[VERIFIED, HTTPS byte comparison] Approved Pages deployment `31b1f779` serves the guide and manifest on `agents.falconos.markets`. Both return `200`, version `0.3.0`; the manifest requires MCP `0.3.0`. The 10888-byte guide SHA-256 is `1e036bc96d7014fb701a2bffb20bbd56bb9f53eb64de3c5c297c7335bb8fb8d7`, matching the built artifact. Pin this value through an independently trusted channel; a digest fetched beside the guide does not establish trust.
+
+[NOT DETERMINED] No funded supply/redeem or independent Explorer receipt was exercised. This release check used no wallet, signing, funding or broadcast. Custom graph configuration and the separate swap/send/receive/quote expansion are not part of these 14 tools.
