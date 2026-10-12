@@ -758,9 +758,11 @@ B98|2026-10-12|[REPORTED live + VERIFIED local regression] reserve decision omit
 B99|2026-10-12|[REPORTED UX + VERIFIED normalization] mainnet provider-indexed rows lacked discovery network and execution-support separation|V154
 B100|2026-10-12|[REPORTED prior live schema drift] client action schema parity requires separately verified client rollout|V155
 B101|2026-10-12|[REPORTED prior live guidance] agent broadcast guidance must remain human-only in client rollout|V159
-B102|2026-10-12|[VERIFIED failing local regression] opcode without required account metas was decoded as a known operation|V157
-B103|2026-10-12|[VERIFIED failing local regression] native fee account validation ignored System ownership/executable state|V156
+B102|2026-10-12|[INFERRED safety risk; before-change failure not independently observed] opcode decoding without required account metas can misidentify an operation|V157
+B103|2026-10-12|[INFERRED safety risk; before-change failure not independently observed] balance alone cannot attest a System-owned, non-executable fee account|V156
 B104|2026-10-12|[VERIFIED canonical regression; independent fix deferred] malformed provider UTF-8 could become altered READY data|V168
-B105|2026-10-12|[VERIFIED prior consumer regression] raw RPC bodies could repeat signed bytes in model-facing output; client rollout owns redaction|V160
+B105|2026-10-12|[INFERRED privacy risk; before-change failure not independently observed] opaque RPC bodies can repeat signed bytes in model-facing output|V160
 B106|2026-10-12|[VERIFIED source] per-owner captured heads alone could not attest shared public head; added authoritative binding|V162,V165
 B107|2026-10-12|[REPORTED review + VERIFIED budget test] anonymous public graph GET omitted pre-storage source/global reservation|V169
+
+Correction (2026-10-12): B102, B103 and B105 previously claimed VERIFIED historical regressions. The lead did not observe those before-change failures. Current passing tests do not prove that history. The records now state inferred risks, not measured prior failures.
