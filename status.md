@@ -1069,3 +1069,17 @@ The demo used synthetic responses. No live API call occurred.
 [VERIFIED, checks] `npm --prefix web run build:agents` ended `✓ built in 144ms` and emitted `dist-agents/SKILLS.md`. `node --test web/test/agents-site.test.mjs` returned `tests 2`, `pass 2`, `fail 0`. Focused skill-asset builds with and without MCP URL returned `pass 2`. `npm --prefix mcp test` returned `tests 52`, `pass 52`, `fail 0`. No funded Devnet supply or broadcast occurred.
 
 [PLANNED, issue close] PR closes #54 and #55 on merge. Funded on-chain Devnet supply remains open (T37/T43).
+
+## User-broadcast skill correction and release: 2026-10-11
+
+[VERIFIED, correction] The preceding Agents skill sync and signed-bytes guidance entry described an agent-side broadcast path. That path did not meet the user-broadcast-only requirement. The current source says: "The human alone broadcasts the registered transaction from their wallet or user-controlled Devnet RPC. The agent never broadcasts or calls a network send method." Source: web/skills/SKILLS.md:60,115-117.
+
+[VERIFIED, test command: npm run verify:web] Output: web: PASS; tests 300; pass 299; fail 0; skipped 1. The website-release-inputs check returned status PASS. The skipped test requires the main-site build.
+[VERIFIED, test command: node --test web/test/agents-site.test.mjs] Output: tests 3; pass 3; fail 0.
+[VERIFIED, negative regression] A temporary agent raw-send instruction made node --test web/test/skill-asset.test.mjs fail at the no agent broadcast alternative assertion. After removing the test mutation, npm run verify:web passed.
+
+[VERIFIED, production HTTPS] GET https://agents.falconos.markets/SKILLS.md returned 200 text/markdown; charset=utf-8 and 170 lines. Its SHA-256 matched web/dist-agents/SKILLS.md: a0f4f209fea584a12b5cc0e76f93d245376ac6aff331b1b9f90da260f762f922.
+[VERIFIED, Wrangler] Deployment completed at https://3ccf676d.falcon-agents.pages.dev. The upload ran from dist-agents and included no Functions bundle.
+[VERIFIED, PR state before documentation update] PR #65 was open on head a935dd902b1f3670a3f01c10bcc0ab10071e5857. All six checks passed on that head. A docs commit will rerun CI.
+
+[BLOCKED, current agent session] The user selected "No, not available yet" for wallet access. No wallet connection, signature, Devnet supply, broadcast, or receipt check was attempted. Resume only when the agent host exposes an already-funded user-controlled Devnet wallet with signMessage and signTransaction.

@@ -39,6 +39,14 @@ npm --prefix web run preview:local
 
 [VERIFIED, 2026-10-11] `build:agents` / `dev:agents` / `preview:agents` bake `VITE_FALCON_MCP_URL=https://mcp.falconos.markets/mcp` and `VITE_FALCON_SKILL_URL=https://agents.falconos.markets/SKILLS.md`. `vite.agents.config.js` emits `/SKILLS.md` from `web/skills/SKILLS.md` through `falconSkills()`; there is no stale `agents/public/SKILLS.md`.
 
+## Current agent skill
+
+[VERIFIED, correction, 2026-10-11] The 2026-10-06 note above records an earlier flow. The current skill requires a user-controlled wallet exposed by the agent host. It says: "The human alone broadcasts the registered transaction from their wallet or user-controlled Devnet RPC. The agent never broadcasts or calls a network send method." See web/skills/SKILLS.md lines 60 and 115.
+
+[VERIFIED, production, 2026-10-11] GET https://agents.falconos.markets/SKILLS.md returned 200 text/markdown; charset=utf-8, with 170 lines. Its SHA-256 matches web/dist-agents/SKILLS.md: a0f4f209fea584a12b5cc0e76f93d245376ac6aff331b1b9f90da260f762f922.
+
+[VERIFIED, tests, 2026-10-11] npm run verify:web reported web: PASS, 299 passed, 0 failed, and 1 skipped. node --test web/test/agents-site.test.mjs reported 3 tests, 3 passed, and 0 failed. The skipped test requires the main-site build.
+
 Run the install site locally:
 
 ```bash
