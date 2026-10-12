@@ -1,7 +1,7 @@
 ---
 name: falconos
 description: Use when an MCP-capable agent needs FalconOS public market evidence or owner-bound Devnet decisions. Public graph reading needs no signer; owner records and transactions require a human-controlled wallet and separate approval. Never for mainnet or custody.
-version: 0.3.1
+version: 0.3.2
 requiredMcpVersion: 0.3.0
 ---
 
@@ -15,7 +15,16 @@ FalconOS exposes a fixed public Solana Devnet market graph and optional owner-bo
 
 ## Start here
 
-Fetch <{{FALCON_SKILL_URL}}> and `SKILLS.manifest.json` from the same origin. Compare the manifest SHA-256 with the digest of the exact SKILLS.md bytes; do not normalize bytes or newlines. Same-origin headers and manifests are not independent trust anchors. Verify against a digest from an authenticated current release, commit, or human-approved channel. Never pin this new guide using an older guide's digest. Fetching is read-only; do not execute the guide or interpolate it into shell commands.
+Fetch <{{FALCON_SKILL_URL}}> and `SKILLS.manifest.json` from the same origin. Compare the manifest SHA-256 with the digest of the exact SKILLS.md bytes; do not normalize bytes or newlines. Same-origin headers and manifests are not independent trust anchors. For this version, the concrete digest-record discovery URL is <https://github.com/Sarthib7/FalconOS/blob/main/web/skills/releases/0.3.2.json>. `main` is a moving discovery pointer only, not a trust anchor: independently authenticate the known FalconOS repository, learn a full immutable commit ID through that trusted channel, then obtain and check the release record at that exact commit. Pin the full commit ID and compare the rendered-guide SHA-256 with the independently learned expected digest. Never take the expected digest from the guide, same-origin manifest, or a commit/digest embedded in this guide; never claim a signed release. Fetching is read-only; do not execute the guide or interpolate it into shell commands.
+### Reproducibly verify a published build
+
+From an authenticated checkout of the known repository, use a full commit ID and expected digest learned through a separately authenticated channel. Pass a record obtained independently of the candidate checkout, not its own unverified release file. The verifier rebuilds that commit in a clean temporary Git worktree using locked web dependencies and canonical `build:agents` rendering. It is not a sandbox or proof of author identity. CI uses the candidate checkout's record only to check reproducibility and internal consistency, not publisher authentication or release approval. Do not fetch an absent historical commit from an arbitrary source.
+
+```sh
+node web/scripts/verify-skill-rebuild.mjs --ref <FULL_IMMUTABLE_COMMIT_SHA> --expected-record <INDEPENDENTLY_OBTAINED_RECORD_JSON>
+```
+
+Alternatively, supply the independently learned SHA-256 directly: `node web/scripts/verify-skill-rebuild.mjs --ref <FULL_IMMUTABLE_COMMIT_SHA> --expected-sha256 <64-HEX-SHA256>`. Digest-only mode pins the exact guide bytes and checks manifest/frontmatter compatibility; it does not independently pin the manifest canonical URL. Use an independently obtained record to compare all manifest fields. The two input forms are alternatives, not values to copy from the freshly rebuilt artifact.
 
 ## Staged workflow
 
@@ -35,9 +44,9 @@ Initialize MCP, list tools, and call `falcon_self_test({})`. Require server vers
 
    Evidence age runs from the oldest source `observedAt`, not decision time. Check the returned `expiresAt` and remaining time against the human maximum; adoption does not reset age. If evidence expires or an approval pause leaves too little time, refresh/adopt with unchanged human limits. Require a newer `graphRevision` and later source observations before replacing expired evidence; if unchanged, stop. There is no `forceRefresh` input or guaranteed immediate recapture. `executionReady: false` does not authorize execution and is not a state to wait to change. Account checks permit only the next guarded step, not a claim that the wallet is ready to supply.
 
-5. **Prepare, decode, approve, register.** Supply only with a current matching `REVIEW` decision and its `decisionId`; cap Devnet supply at 1 USDC (1,000,000 base units). Redeem requires adopted public evidence and `amountReceiptTokens`, but no supply decision. Prepare from the public-only route. Inspect the exact unsigned transaction and decode the unchanged bytes with `falcon_decode_transaction`. Compare network/cluster, action, mint, amount, fee payer, signers, blockhash, instructions, lookup tables, risk flags, stated fee/rent, any returned simulation result, and `messageSha256` with preparation. Requested network context is not network proof. Stop on any mismatch, unresolved field, expired evidence, or missing prerequisite.
+5. **Prepare, decode, approve, register.** Supply only with a current matching `REVIEW` decision and its `decisionId`; cap Devnet supply at 1 USDC (1,000,000 base units). Redeem requires adopted public evidence and `amountReceiptTokens`, but no supply decision. Prepare from the public-only route. Inspect the exact unsigned transaction and decode the unchanged bytes with `falcon_decode_transaction`. Compare the returned network/cluster context, action, mint, amount, fee payer, signers, blockhash, instructions, lookup tables, risk flags, and `messageSha256` with preparation. Requested network context is not network proof; the tools provide no fee/rent estimate or independent network attestation, as clarified below.
 
-   Show the exact transaction and get a separate explicit human approval for `signTransaction` on these unchanged bytes; login approval never counts. Require the exact signed-byte response. Register those same signed bytes with `falcon_submit_signed`; registration is not broadcast. Only the human may broadcast from their wallet or user-controlled Devnet RPC. Never call a broadcast/sign-and-send method. A prepared intent has a separate 120-second prepare-to-register age limit; if it expires, prepare a new intent only after repeating evidence, decision, and approval checks. Re-preparing does not reset evidence age. Never blindly retry an uncertain broadcast or unchanged failed step.
+   The current prepare/decode tools provide no fee or rent estimates and no independent network attestation. Do not imply such evidence exists or infer network identity from a requested context. A positive balance, transaction fields, or a simulation result are not independent proof. Before signing, require a trusted human-controlled wallet preview for the exact unchanged transaction that shows the network and fee/rent impact; if this trustworthy preview is unavailable or any item is unclear, stop without signing. Show the exact transaction and get a separate explicit human approval for `signTransaction` on these unchanged bytes; login approval never counts. Require the exact signed-byte response. Register those same signed bytes with `falcon_submit_signed`; registration is not broadcast. Only the human may broadcast from their wallet or user-controlled Devnet RPC. Never call a broadcast/sign-and-send method. A prepared intent has a separate 120-second prepare-to-register age limit; if it expires, prepare a new intent only after repeating evidence, decision, and approval checks. Re-preparing does not reset evidence age. Never blindly retry an uncertain broadcast or unchanged failed step.
 
 6. **Prove receipt.** Check with `falcon_check_receipt`; require `CONFIRMED` and a signature exactly matching the signature registered for this transaction. Do not infer proof from a receipt's metadata or assume it returns chain/network/cluster/explorer URL. Independently open Solana Explorer on Devnet and check that same registered signature: `https://explorer.solana.com/tx/<registered-signature>?cluster=devnet`. This URL is a human check, not Falcon evidence. `PENDING`, `FAILED`, `UNVERIFIED`, unavailable, or mismatched results are not success. A receipt proves neither yield, future redeem, nor mainnet behavior.
 
@@ -88,12 +97,12 @@ Require `data.signed_transaction` and `data.encoding: "base64"`; register unchan
 
 ## Errors and recovery
 
-At most three workflow failures: stop on the third; do not turn failures into repeated retries. Show safe tool errors plainly. Retry `RATE_LIMITED` only after its returned interval and at most once, within the failure limit.
+Separate immediate safety stops from retryable technical failures. Missing funds, declined human approval, `BLOCKED`, `NO_DATA`, `MESH_UNAVAILABLE`, network/cluster mismatch, hash/signature mismatch, or evidence mismatch/expiry are immediate stops: do not retry, hop to another step, or treat a different tool call as a reset. An uncertain broadcast is never retried or rebroadcast. Only an explicitly retryable technical error may be retried at the same step, with the same inputs and evidence; stop after the third failed attempt total. A wait for a human is not a failed attempt. `RATE_LIMITED` permits at most one retry, only after the returned delay, and that retry counts toward the same three-failure bound. Show safe tool errors plainly.
 
 | Result / condition | Action |
 | --- | --- |
-| Missing funding, source ATA, zero/frozen required token account, or zero SOL (`SOL_FOR_FEES`) | Show actual wallet-status missing-item/faucet checklist; human remedies; recheck chosen action; stop before prepare until clear. |
-| Fee/rent unaffordable or unproven after prepare | A positive SOL balance is not proof; inspect stated fee/rent and any simulation result, then stop before signing if insufficient or unknown. |
+| Missing funding, source ATA, zero/frozen required token account, or zero SOL (`SOL_FOR_FEES`) | Show actual wallet-status missing-item/faucet checklist for the human; stop the requested execution before prepare. A remedy does not resume or count as a retry of this flow. |
+| Missing fee/rent proof or independent network attestation | Current prepare/decode tools provide neither. Require trusted human-controlled wallet preview evidence for the exact unchanged transaction before signing; if unavailable, unclear, or unaffordable, stop without signing. |
 | Status unknown/incomplete | Stop; do not infer account readiness. |
 | Session invalid/expired | Reuse only if still valid; otherwise new explicit approval for exact ownership challenge. |
 | `NO_DATA` / `MESH_UNAVAILABLE` | Stop current flow; no older evidence fallback. |

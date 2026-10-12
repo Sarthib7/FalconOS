@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
@@ -87,8 +88,15 @@ test('public agent install serves the page, assets, and the MCP skill', async t 
   const skill = await fetch(base + '/SKILLS.md');
   assert.equal(skill.status, 200);
   assert.match(skill.headers.get('content-type') ?? '', /text\/markdown/);
-  const markdown = await skill.text();
-  assert.match(markdown, /https:\/\/mcp\.falconos\.markets\/mcp/);
-  assert.match(markdown, /falcon_prepare_transaction/);
-  assert.match(markdown, /falcon_check_receipt/);
+  const bytes = Buffer.from(await skill.arrayBuffer());
+  const manifestResponse = await fetch(base + '/SKILLS.manifest.json');
+  assert.equal(manifestResponse.status, 200);
+  const manifest = await manifestResponse.json();
+  assert.equal(manifest.sha256, createHash('sha256').update(bytes).digest('hex'));
+  const frontmatter = bytes.toString('utf8').match(/^---\n([\s\S]*?)\n---\n/);
+  assert.ok(frontmatter, 'served guide must contain release metadata');
+  for (const key of ['version', 'requiredMcpVersion']) {
+    const value = frontmatter[1].match(new RegExp('^' + key + ': (.+)$', 'm'))?.[1];
+    assert.equal(manifest[key], value, 'served manifest must match guide ' + key);
+  }
 });
