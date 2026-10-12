@@ -9,6 +9,10 @@ const MAX_POOLS_BYTES = 16 * 1024 * 1024;
 const MAX_PROTOCOLS_BYTES = 12 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 15000;
 const CACHE_TTL_MS = 60000;
+const CATALOG_CONTEXT = Object.freeze({
+  discovery: Object.freeze({ provider: 'defillama', network: 'mainnet-beta', kind: 'provider-indexed' }),
+  execution: Object.freeze({ network: 'devnet', supported: false }),
+});
 
 function isRecord(value) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value)
@@ -66,6 +70,7 @@ export function normalizeYieldCatalog({ pools, protocols, retrievedAt }) {
       provider: 'defillama', project: row.project, protocolName: protocol.name, category: protocol.category,
       poolId: row.pool, poolMeta: typeof row.poolMeta === 'string' ? row.poolMeta.slice(0, 160) : null,
       chain: 'Solana', assetMint: SOLANA_USDC_MINT, symbol: row.symbol,
+      network: 'mainnet-beta', executionSupported: false, executionNetwork: null, discoveryOnly: true,
       baseApyBps, apyRewardBps, reportedApyBps, tvlUsdCents,
       stablecoin: true, exposure: 'single', ilRisk: 'no', outlier: false,
       retrievedAt, providerAsOf: null, freshness: 'SOURCE_TIME_UNKNOWN',
@@ -74,6 +79,7 @@ export function normalizeYieldCatalog({ pools, protocols, retrievedAt }) {
   opportunities.sort((a, b) => a.poolId.localeCompare(b.poolId));
   const status = opportunities.length ? 'READY' : 'NO_DATA';
   return {
+    ...CATALOG_CONTEXT,
     status, provider: 'defillama', retrievedAt, providerAsOf: null, executionReady: false,
     coverage: { indexedPoolRows: pools.length, solanaLendingProjects: [...protocolBySlug.values()].filter(item => item.category === 'Lending').length, eligibleOpportunities: opportunities.length, excludedCounts, catalogCompleteness: 'PROVIDER_INDEXED_ONLY' },
     opportunities,
@@ -120,7 +126,7 @@ export function createYieldService({ fetchImpl = globalThis.fetch, now = () => n
         if (result.status === 'READY') { cached = result; cachedUntil = clock() + cacheTtlMs; }
         return result;
       } catch {
-        return { status: 'NO_DATA', provider: 'defillama', retrievedAt, providerAsOf: null, executionReady: false,
+        return { ...CATALOG_CONTEXT, status: 'NO_DATA', provider: 'defillama', retrievedAt, providerAsOf: null, executionReady: false,
           coverage: { indexedPoolRows: 0, solanaLendingProjects: 0, eligibleOpportunities: 0, excludedCounts: { SOURCE_UNAVAILABLE: 1 }, catalogCompleteness: 'PROVIDER_UNAVAILABLE' }, opportunities: [] };
       } finally { pending = null; }
     })();
