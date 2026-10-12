@@ -1,0 +1,1 @@
+export const DEVNET_SUPPLY_LIMIT_UNITS = 1_000_000n;

@@ -27,7 +27,7 @@ async function checkout(t, component) {
   }
   if (component === 'web') {
     await mkdir(join(root, 'mesh'));
-    for (const file of ['fixtures.mjs', 'kamino-wire.mjs', 'domain.mjs']) {
+    for (const file of ['fixtures.mjs', 'kamino-wire.mjs', 'domain.mjs', 'limits.mjs']) {
       await cp(join(ROOT, 'mesh', file), join(root, 'mesh', file));
     }
   }

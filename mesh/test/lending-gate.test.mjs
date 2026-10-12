@@ -18,7 +18,7 @@ const WALLET = Keypair.generate().publicKey.toBase58();
 const GENESIS = 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG';
 const NOT_REVIEW = 'A fresh REVIEW reserve decision for this amount is required.';
 // The fixed reserve fixture book is 252145908 base units; every proposal here is far inside it.
-const SCENARIO = { proposedUnits: '5000000', maxProposedUnits: '10000000', minBookLiquidityUnits: '1000000', maxObservationAgeSeconds: 300 };
+const SCENARIO = { proposedUnits: '500000', maxProposedUnits: '10000000', minBookLiquidityUnits: '1000000', maxObservationAgeSeconds: 300 };
 const code = expected => error => error?.code === expected;
 const later = seconds => new Date(Date.parse(AT) + seconds * 1000).toISOString();
 const makeOwner = () => `gate_${randomUUID().replaceAll('-', '')}`;
@@ -49,7 +49,7 @@ async function fixture() {
     verifySignedLending: async () => { throw new Error('not used'); },
     readLendingReceipt: async () => { throw new Error('not used'); },
   });
-  const supply = (decisionId, extra = {}) => ({ requestId: randomUUID(), analysisId: analysis.id, wallet: WALLET, action: 'supply', inputBaseUnits: '1000000', decisionId, ...extra });
+  const supply = (decisionId, extra = {}) => ({ requestId: randomUUID(), analysisId: analysis.id, wallet: WALLET, action: 'supply', inputBaseUnits: '500000', decisionId, ...extra });
   return { owner, meshStore, analysis, store, decide, supply, prepared, setTime: value => { clock = value; } };
 }
 
@@ -76,8 +76,8 @@ test('C2: supply from a fresh REVIEW decision is accepted, keeps the decisionId 
   assert.equal(decision.analysis.status, 'REVIEW');
   const input = f.supply(decision.id);
   const record = await f.store.prepare(f.owner, input);
-  assert.deepEqual(record.request, { wallet: WALLET, action: 'supply', inputBaseUnits: '1000000', decisionId: decision.id });
-  assert.deepEqual(f.prepared, [{ wallet: WALLET, action: 'supply', inputBaseUnits: '1000000' }], 'the adapter still sees only the transaction fields');
+  assert.deepEqual(record.request, { wallet: WALLET, action: 'supply', inputBaseUnits: '500000', decisionId: decision.id });
+  assert.deepEqual(f.prepared, [{ wallet: WALLET, action: 'supply', inputBaseUnits: '500000' }], 'the adapter still sees only the transaction fields');
   const freshPool = new Pool({ connectionString, max: 1, connectionTimeoutMillis: 5000 });
   try {
     const reopened = createLendingStore(freshPool, { meshStore: f.meshStore, now: () => AT });
@@ -152,7 +152,7 @@ test('C2: redeem with a decisionId is INVALID_INPUT, redeem without one is never
   await assert.rejects(f.store.prepare(f.owner, { ...bare, action: 'redeem', decisionId: decision.id }), code('INVALID_INPUT'));
   await assertNoIntent(f);
   // No decision of any kind exists for this redeem: exits stay open.
-  const record = await f.store.prepare(f.owner, { ...bare, action: 'redeem' });
+  const record = await f.store.prepare(f.owner, { ...bare, action: 'redeem', inputBaseUnits: '1000000' });
   assert.deepEqual(record.request, { wallet: WALLET, action: 'redeem', inputBaseUnits: '1000000' });
   assert.equal(Object.hasOwn(record.request, 'decisionId'), false);
   // A redeem also works when the only decision is BLOCKED or expired.

@@ -1,9 +1,10 @@
 import { MeshError } from './domain.mjs';
 import { analyzeLiveGraph } from './live.mjs';
+import { DEVNET_SUPPLY_LIMIT_UNITS } from './limits.mjs';
 
 export const RESERVE_DECISION_MARKER = 'decision:mesh-reserve-scenario/1';
 
-const POLICY_VERSION = 'mesh-reserve-scenario/1';
+const POLICY_VERSION = 'mesh-reserve-scenario/2';
 const OBSERVATION_ID = 'observation:live:solana-devnet-reserve-liquidity';
 const U64_MAX = 18446744073709551615n;
 const U64 = /^(0|[1-9]\d{0,19})$/;
@@ -14,6 +15,7 @@ const LIMITS = Object.freeze([
   'This decision never executes or approves a transaction; executionReady is always false.',
   'No wallet positions were evaluated, so affected units and position results are empty.',
   'The decision re-evaluates only the fixed Devnet reserve and vault capture and is valid only until expiresAt.',
+  'Proposals above the canonical Devnet supply cap are blocked and never clamped.',
 ]);
 
 function invalid(message) { throw new MeshError('INVALID_INPUT', message); }
@@ -74,6 +76,7 @@ export function evaluateReserveScenario(graph, scenario, at) {
   const available = freshness.ok ? props.availableLiquidityUnits : null;
 
   const capFail = BigInt(owner.proposedUnits) > BigInt(owner.maxProposedUnits);
+  const devnetCapFail = BigInt(owner.proposedUnits) > DEVNET_SUPPLY_LIMIT_UNITS;
   const floorFail = freshness.ok && BigInt(available) < BigInt(owner.minBookLiquidityUnits);
   const bookFail = freshness.ok && BigInt(owner.proposedUnits) > BigInt(available);
   const skipped = detail => ({ status: 'SKIPPED', detail });
@@ -95,6 +98,13 @@ export function evaluateReserveScenario(graph, scenario, at) {
       detail: capFail
         ? `Proposed ${owner.proposedUnits} base units exceeds the owner maximum of ${owner.maxProposedUnits}.`
         : `Proposed ${owner.proposedUnits} base units is within the owner maximum of ${owner.maxProposedUnits}.`,
+    },
+    devnet_cap: {
+      label: 'Devnet supply cap',
+      status: devnetCapFail ? 'BLOCKED' : 'PASS',
+      detail: devnetCapFail
+        ? `Proposed ${owner.proposedUnits} base units exceeds the canonical Devnet supply cap of ${DEVNET_SUPPLY_LIMIT_UNITS} base units.`
+        : `Proposed ${owner.proposedUnits} base units is within the canonical Devnet supply cap of ${DEVNET_SUPPLY_LIMIT_UNITS} base units.`,
     },
     book_floor: {
       label: 'Owner book liquidity floor',
@@ -118,12 +128,12 @@ export function evaluateReserveScenario(graph, scenario, at) {
     },
   };
 
-  const status = !evidenceOk || !freshness.ok ? 'NO_DATA' : capFail || floorFail || bookFail ? 'BLOCKED' : 'REVIEW';
+  const status = !evidenceOk || !freshness.ok ? 'NO_DATA' : capFail || devnetCapFail || floorFail || bookFail ? 'BLOCKED' : 'REVIEW';
   let summary;
   if (status === 'NO_DATA') {
     summary = `No decision: ${(!evidenceOk ? checkBodies.evidence : checkBodies.freshness).detail} No live reserve evidence was used.`;
   } else if (status === 'BLOCKED') {
-    summary = `Blocked by owner limits: ${[capFail && checkBodies.owner_cap.detail, floorFail && checkBodies.book_floor.detail, bookFail && checkBodies.proposal_vs_book.detail].filter(Boolean).join(' ')}`;
+    summary = `Blocked by policy limits: ${[capFail && checkBodies.owner_cap.detail, devnetCapFail && checkBodies.devnet_cap.detail, floorFail && checkBodies.book_floor.detail, bookFail && checkBodies.proposal_vs_book.detail].filter(Boolean).join(' ')}`;
   } else {
     summary = `Owner-entered proposal of ${owner.proposedUnits} base units is within the observed unborrowed reserve book of ${available} base units at Devnet slot ${props.slot} and within the owner maximum of ${owner.maxProposedUnits}, and the observed book meets the owner floor of ${owner.minBookLiquidityUnits}. This is for review only: it is not withdrawable liquidity, a wallet holding, or execution approval.`;
   }
@@ -174,13 +184,14 @@ export function evaluateReserveScenario(graph, scenario, at) {
     evidence: sourceIds,
     freshness: [...observationIds, mandateId],
     owner_cap: [proposalId, mandateId],
+    devnet_cap: [proposalId],
     book_floor: [...observationIds, mandateId],
     proposal_vs_book: [...observationIds, proposalId],
   };
   const shortOf = id => id === OBSERVATION_ID ? 'observation' : id === proposalId ? 'proposal' : id === mandateId ? 'mandate'
     : Object.entries(pathIds).find(([, value]) => value === id)?.[0];
   const checks = [];
-  for (const id of ['evidence', 'freshness', 'owner_cap', 'book_floor', 'proposal_vs_book']) {
+  for (const id of ['evidence', 'freshness', 'owner_cap', 'devnet_cap', 'book_floor', 'proposal_vs_book']) {
     const body = checkBodies[id];
     const nodeId = `${M}:check:${id}`;
     checks.push({ id, label: body.label, status: body.status, detail: body.detail, evidenceNodeIds: [...inputs[id]] });
