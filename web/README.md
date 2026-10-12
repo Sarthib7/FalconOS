@@ -41,15 +41,17 @@ npm --prefix web run preview:local
 
 ## Current agent skill
 
-[VERIFIED, source: `web/skills/SKILLS.md`] Version 0.3.0 requires MCP 0.3.0 and lists all 14 tools. The anonymous `falcon_public_graph({})` call is the first functional step and needs no signer, wallet, funds, or login. Owner-bound adoption, reserve review, and public-only preparation follow only when requested. Custom graphs are deferred; owner limits are never defaulted; human approval remains separate for every signature and broadcast.
+[VERIFIED, source: `web/skills/SKILLS.md`] Version 0.3.1 requires MCP 0.3.0 and lists all 14 tools. The anonymous public graph is the initial inspection step and needs no signer, wallet, funds or login. Human scenario inputs and action-specific full-execution prerequisites precede owner adoption. Owner-only advisory/history does not require funds or transaction signing. Custom graphs stay deferred; human approval remains separate for every signature and broadcast.
 
 [VERIFIED, source: `web/scripts/skills-release.mjs`, `web/scripts/skills-plugin.mjs`] The shared renderer emits `/SKILLS.md`, `/SKILLS.manifest.json` (`version`, `requiredMcpVersion`, `canonicalSkillUrl` and exact rendered-byte `sha256`) plus Cloudflare Pages integrity headers. The guide includes the pinned Privy CLI 0.3.7 exact-byte sign-only examples and does not contain its own digest.
 
 [HISTORICAL, pre-0.3.0 local source/build/HTTP tests, 2026-10-12] The earlier release suite reported 31/31 passing for guide rendering, integrity headers and loopback GET/HEAD behavior. This is evidence for that earlier guide version only.
 
-[VERIFIED, local 0.3.0 release tests, 2026-10-12] `node --test web/test/skills-release.test.mjs web/test/install-commands.test.mjs web/test/skill-asset.test.mjs` reported 33 tests, 33 passed, 0 failed. Coverage includes the 0.3.0/14-tool guide and manifest, exact-byte integrity, the 260-line limit, Vite asset builds, and loopback GET/HEAD integrity checks; no browser was used.
+[HISTORICAL, REPORTED builder local 0.3.0 release tests, 2026-10-12] The earlier focused command `node --test web/test/skills-release.test.mjs web/test/install-commands.test.mjs web/test/skill-asset.test.mjs` reported 33 tests, 33 passed, 0 failed. That suite included earlier wording/version and 260-line pins removed by 0.3.1. This is not verification of the new guide or agent execution.
 
-[NOT TESTED] No live-site request, browser, Privy login, wallet provisioning, funding, transaction signature, supply/redeem, or broadcast was performed. Cloudflare deployment remains user-managed.
+[HISTORICAL, earlier 0.3.0 local batch] That batch did not exercise the live site, browser, Privy login, wallet provisioning, funding, transaction signatures, supply/redeem or broadcast. Current 0.3.1 evidence appears below.
+
+Correction (2026-10-12): this current-source section previously retained version 0.3.0 and presented builder-reported fixture counts as verified. Version is now 0.3.1; the earlier counts remain historical reports. Current local command and HTTP evidence is recorded in the 0.3.1 section below.
 
 Run the install site locally:
 
@@ -167,3 +169,17 @@ After creating the Pages project, open **Pages → the project → Custom domain
 [HISTORICAL, 2026-10-05 local configuration] A prior Pages configuration used root `web`, build `npm run build:bot`, output `dist-bot`, and the listed VITE endpoints. Current source wiring is summarized above; Cloudflare settings and deployment are user-managed.
 
 [HISTORICAL, DNS query, 2026-10-05] `dig +short agents.falconos.markets` returned no record at that time. Current DNS/project status was not checked in this change.
+
+## Agent-side skill 0.3.1 (2026-10-12)
+
+[VERIFIED, source] This guide-only revision requires MCP 0.3.0 and preserves its 14-tool contract. It puts human scenario inputs and action-specific execution prerequisites before owner adoption, uses programAnalysisId as the analysisId input, retains source-time expiry, skips default discovery and removes assumed receipt context/Explorer fields. Owner-only advisory and history remain available without funding or transaction-signing capability.
+
+[VERIFIED, local commands] `npm run verify:web` returned `web: PASS`, `pass 304`, `fail 0`, `skipped 1`. `node --test web/test/agents-site.test.mjs` returned `tests 3`, `pass 3`, `fail 0`. These are local artifact/site checks, not a funded agent flow.
+
+[VERIFIED, negative/positive regression] Temporarily labeling the manifest 0.3.0 while the guide declared 0.3.1 made the shared-renderer check return `tests 1`, `pass 0`, `fail 1` and exit 1. Restoring the correct version returned `tests 1`, `pass 1`, `fail 0`. The check compares consumer-visible manifest compatibility fields with rendered frontmatter, not pinned wording.
+
+[VERIFIED, actual loopback HTTP] GET guide/manifest and HEAD guide returned 200 at the agents Vite preview. `GUIDE_031_HTTP_SMOKE_OK` reported skillVersion 0.3.1, requiredMcpVersion 0.3.0 and 14084 bytes. The built static artifact and HTTP body share SHA-256 `60176b2ba69ad97fe5877db99945f20421b11acf278658d7713a9445df0bc6fd`. This record can be pinned through its independently authenticated GitHub commit after publication; it is not a signed release/tag claim.
+
+[REPORTED, Luna source refutation] The guide and producer/source boundaries had no remaining material findings after the integrated clarity edits. The reviewer did not run tests, query a wallet or exercise execution.
+
+[NOT DETERMINED] Public publication of this revision is pending approval. No wallet lookup, account creation, funding, signing, broadcast or independent Explorer confirmation was performed for this patch. The withdrawn wallet-popup report was not investigated further.
