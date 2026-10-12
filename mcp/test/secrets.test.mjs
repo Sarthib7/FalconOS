@@ -10,7 +10,7 @@ const signature = Buffer.from(Array.from({ length: 64 }, (_, i) => (i * 11 + 5) 
 test('(i) the session and signatures never reach stdout, stderr, errors or any result except falcon_connect_verify', async () => {
   const mesh = await startFakeMesh({
     // Forces an unexpected handler failure: a 200 without the record the tool destructures.
-    'POST /v1/lending/intents': () => ({ status: 200, body: {} }),
+    'POST /v1/public/lending/intents': () => ({ status: 200, body: {} }),
     'GET /v1/lending/intents': () => ({ status: 429, headers: { 'Retry-After': '3' }, body: { error: { code: 'RATE_LIMITED', message: 'Rate limit exceeded. Retry shortly.' } } }),
   });
   const server = runServer({ FALCON_MESH_API_URL: mesh.url, FALCON_MCP_ORIGIN: ORIGIN, PORT: '0' });
@@ -27,7 +27,7 @@ test('(i) the session and signatures never reach stdout, stderr, errors or any r
     await record('verify-bad', call('falcon_connect_verify', { challengeId: IDS.challenge, signature: bs58.encode(signature.subarray(1)) }));
     await record('yield', call('falcon_yield_opportunities', { session: SESSION }));
     await record('refresh', call('falcon_refresh_evidence', { session: SESSION }));
-    await record('decision', call('falcon_reserve_decision', { session: SESSION, proposedUsdc: '0.5', maxUsdc: '1', minBookLiquidityUsdc: '2', maxEvidenceAgeSeconds: 120 }));
+    await record('decision', call('falcon_reserve_decision', { session: SESSION, analysisId: IDS.analysis, proposedUsdc: '0.5', maxUsdc: '1', minBookLiquidityUsdc: '2', maxEvidenceAgeSeconds: 120 }));
     await record('prepare-unexpected', call('falcon_prepare_transaction', { session: SESSION, action: 'redeem', amountReceiptTokens: '0.5', analysisId: IDS.analysis }));
     await record('prepare-bad-amount', call('falcon_prepare_transaction', { session: SESSION, action: 'redeem', amountReceiptTokens: '1e3', analysisId: IDS.analysis }));
     await record('prepare-unknown-key', call('falcon_prepare_transaction', { session: SESSION, action: 'redeem', amountReceiptTokens: '1', analysisId: IDS.analysis, wallet: 'x' }));

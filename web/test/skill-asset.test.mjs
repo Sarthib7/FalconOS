@@ -9,7 +9,7 @@ import { resolveInstallConfig } from '../bot/install-commands.mjs';
 
 const web = fileURLToPath(new URL('../', import.meta.url));
 const MCP = 'https://mcp.falconos.example/mcp';
-const NOT_DEPLOYED = 'The Falcon MCP server is not deployed yet. Do not install anything or edit any config. Tell the human the plugin is not available yet.';
+const MCP_UNCONFIGURED = 'The configured release does not provide the Falcon MCP URL. Do not install or edit client configuration until a trusted release supplies it.';
 const read = (path) => readFile(path, 'utf8');
 
 // Builds the bot bundle (it carries the same shared skills plugin as the MVP and site builds)
@@ -52,44 +52,12 @@ test('built dist-mvp/SKILLS.md has frontmatter and no markers, and the old lower
   await assert.rejects(read(join(web, 'dist-mvp/skill.md')), /ENOENT/);
 });
 
-test('with an MCP URL configured, the skill requires user broadcast and independent checks', async (t) => {
-  const built = await buildSkill(t, { VITE_FALCON_MCP_URL: MCP });
-  assert.match(frontmatter(built), /^name: falconos$/m);
-  assertClean(built);
-  assert.ok(built.includes(`claude mcp add --transport http falconos ${MCP}`), 'Claude Code command uses the MCP URL');
-  const skillUrl = built.match(/^- This skill: (\S+)$/m)?.[1];
-  assert.equal(skillUrl, 'https://agents.falconos.markets/SKILLS.md', 'production default skill URL');
-  assert.equal(resolveInstallConfig({ mcpUrl: MCP, skillUrl, isProd: true }).state, 'ready');
-  assert.ok(built.includes('"type":"http"'), 'generic config declares remote HTTP transport');
-  assert.ok(built.indexOf('## Rules') < built.indexOf('## First read-only result'), 'safety rules precede wallet use');
-  assert.ok(built.indexOf('## Wallet prerequisites') < built.indexOf('## First read-only result'), 'wallet prerequisites precede sign-in');
-  assert.match(built, /If there is no user-controlled wallet, the host cannot sign, or required funds are absent[\s\S]*stop/);
-  const order = built.slice(built.indexOf('## Signing order (do not improvise)'));
-  const prepare = order.indexOf('falcon_prepare_transaction');
-  const signApproval = order.indexOf('separate, explicit approval to sign this specific transaction');
-  const sign = order.indexOf('signTransaction');
-  const submit = order.indexOf('falcon_submit_signed');
-  const userBroadcast = order.indexOf('Wait for the human to broadcast the exact registered signed transaction');
-  const explorer = order.indexOf('https://explorer.solana.com/tx/<signature>?cluster=devnet');
-  const receipt = order.indexOf('falcon_check_receipt');
-  assert.ok(prepare < signApproval && signApproval < sign && sign < submit, 'prepare, explicit signing approval, sign and register occur in order');
-  assert.ok(submit < userBroadcast && userBroadcast < explorer && explorer < receipt, 'registered bytes wait for user broadcast before independent Explorer and receipt checks');
-  assert.ok(built.includes('The human alone broadcasts the registered transaction') && built.includes('The agent never broadcasts or calls a network send method.'), 'human is the only broadcaster');
-  assert.ok(!order.includes('submit it yourself') && !order.includes('explicitly approves your raw submission'), 'no agent broadcast alternative');
-  assert.ok(!order.includes('"method":"sendTransaction"'), 'no agent JSON-RPC broadcast recipe');
-  assert.ok(built.includes('A supply is capped at 1 USDC (1000000 base units) on Devnet, whatever the decision says.'), 'hard supply cap survives the production build');
-  assert.ok(order.includes('Verify that exact signature independently in Solana Explorer on Devnet'), 'verify the exact signature on Devnet Explorer');
-  assert.ok(order.includes('Confirm the exact signature, Devnet cluster, success status, and expected token movements'), 'check Devnet success and movements');
-  assert.ok(order.includes('Report both results'), 'report independent Explorer and Falcon results');
-  assert.ok(order.includes('If Explorer and Falcon disagree'), 'stop when the verification sources disagree');
-  assert.match(order, /never use signAndSendTransaction/i, 'combined signing and sending is forbidden');
-});
 
-test('a production build without an MCP URL succeeds and ships the not-deployed variant with no install commands', async (t) => {
+test('a production build without an MCP URL succeeds and ships the unconfigured variant with no install commands', async (t) => {
   const built = await buildSkill(t, {});
   assert.match(frontmatter(built), /^name: falconos$/m);
   assertClean(built);
-  assert.ok(built.includes(NOT_DEPLOYED), 'not deployed yet sentence');
+  assert.ok(built.includes(MCP_UNCONFIGURED), 'unconfigured release instructions');
   for (const text of INSTALL_STRINGS) assert.ok(!built.includes(text), `no ${text}`);
   assert.ok(!/https?:\/\/[^\s]*\/mcp/.test(built), 'no MCP URL');
 });

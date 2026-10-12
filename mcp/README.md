@@ -1,8 +1,10 @@
 # Falcon MCP server
 
-A remote [MCP](https://modelcontextprotocol.io) server (Streamable HTTP) that lets any agent with its own signing wallet work with FalconOS on Solana **Devnet**. It is a thin, stateless adapter over the Mesh API: it adds no database, no custody and no key handling.
+A stateless remote MCP (Streamable HTTP) adapter for FalconOS on Solana **Devnet**. It adds no database, custody, key handling, signing, funding, or transaction broadcast.
 
-The agent signs in with its wallet, reads yield opportunities, refreshes evidence, gets a REVIEW, BLOCKED or NO_DATA reserve decision, prepares a Devnet supply or redeem as an **unsigned** transaction, signs it with its own wallet, registers the signed bytes, broadcasts them itself, and checks the receipt.
+The first functional call is `falcon_public_graph({})`. It reads the fixed live public market graph without a wallet, funds, login, session, or signer. Public `OBSERVED` is technical evidence, not a personalized reserve decision or approval. Owner-bound records and preparation are optional later stages.
+
+Only the human reviews and approves each signature, and only the human broadcasts the exact registered transaction.
 
 ## Install (agent)
 
@@ -12,32 +14,40 @@ Claude Code:
 claude mcp add --transport http falconos https://YOUR-MCP-HOST/mcp
 ```
 
-Or as JSON. The `"type": "http"` field is required; an entry with only `url` is treated as stdio and skipped.
+Or use the common JSON format. The `type` field must be `http`; a URL-only entry may be treated as stdio.
 
 ```json
-{ "mcpServers": { "falconos": { "type": "http", "url": "https://YOUR-MCP-HOST/mcp" } } }
+{"mcpServers":{"falconos":{"type":"http","url":"https://YOUR-MCP-HOST/mcp"}}}
 ```
 
-Replace `YOUR-MCP-HOST` with the host of your deployment. Any MCP client that speaks Streamable HTTP can use the same URL.
+Replace `YOUR-MCP-HOST` with the deployment hostname. Any MCP client that speaks Streamable HTTP can use the same URL.
 
-## Tools
+## Tools (14)
 
 | Tool | What it does |
 | --- | --- |
-| `falcon_connect` | Starts wallet sign-in. Returns a message to sign. |
-| `falcon_connect_verify` | Takes the signature (64 bytes, base64 or base58). Returns a 30 minute `session`. The only tool whose output contains a session. |
+| `falcon_public_graph` | First functional call. Anonymous, read-only fixed public market graph and technical program/reserve results; no arguments or session. |
+| `falcon_connect` | Starts wallet sign-in. The human reviews and signs the exact ownership message. Reuse a valid session. |
+| `falcon_connect_verify` | Verifies the human's 64-byte signature and returns the 30-minute session. |
 | `falcon_disconnect` | Revokes the session. |
-| `falcon_yield_opportunities` | Reads yield opportunities. Read-only. |
-| `falcon_refresh_evidence` | Captures the three Devnet connectors and creates the live analysis. Returns `analysisId`. |
-| `falcon_reserve_decision` | Returns REVIEW, BLOCKED or NO_DATA for a proposed supply. REVIEW is not approval. |
-| `falcon_prepare_transaction` | Prepares an unsigned Devnet supply using `amountUsdc` or redeem using `amountReceiptTokens`. Supply needs `decisionId`; redeem forbids it. Redeem returns receipt tokens burned and estimated USDC output. The wallet is always the session wallet. |
-| `falcon_submit_signed` | Registers wallet-signed bytes. Falcon never broadcasts. |
-| `falcon_check_receipt` | Reconciles the transaction against Devnet. |
-| `falcon_activity` | Joins recent decisions and prepared transactions into one trail. Read-only. |
+| `falcon_yield_opportunities` | Reads authenticated, provider-indexed lending discovery. Not Devnet execution evidence. |
+| `falcon_refresh_evidence` | Adopts the current public graph into owner-bound program and reserve analysis records. Returns both IDs, graphRevision and evidenceSource. No per-connector capture. |
+| `falcon_reserve_decision` | Requires the adopted analysisId and all human-provided scenario inputs; returns REVIEW, BLOCKED or NO_DATA, binding fields and full decisionGraph. |
+| `falcon_prepare_transaction` | Prepares unsigned Devnet supply/redeem only through the public-evidence lending route. |
+| `falcon_submit_signed` | Registers exact human-signed bytes. Falcon does not broadcast or return signed bytes. |
+| `falcon_check_receipt` | Reconciles a registered transaction against Devnet. |
+| `falcon_activity` | Reads the owner-scoped decision/intent trail. |
+| `falcon_wallet_status` | Public read-only Devnet wallet account snapshot and human-only faucet guidance. |
+| `falcon_decode_transaction` | Public bounded Devnet transaction decode. No signing, simulation, or broadcast. |
+| `falcon_self_test` | Metadata-only version, tool names/count and schema fingerprint; not health/readiness. |
 
-Every authenticated tool takes `session` and rejects unknown keys. Supply needs `amountUsdc` (decimal USDC); redeem needs `amountReceiptTokens` (decimal receipt tokens to burn), not `amountUsdc`. The two amount fields cannot be combined. Both tokens have 6 decimals, so use decimal strings with at most 6 fractional digits (for example `"0.5"`); base-unit conversion uses BigInt, never floats. The redeem prepare response includes `estimatedUsdc` from the adapter's simulation; this is an estimate, not a promise of settlement output. Activity labels supply amounts `amountUsdc` and redeem burns `amountReceiptTokens`. Supply is capped at 1 USDC on Devnet by Mesh.
+### Public graph contract
 
-The prepare POST has a 60-second Mesh-client timeout to accommodate four sequential Devnet RPC calls (each bounded at 8 seconds). Other Mesh calls keep their usual timeout; Falcon still never signs or broadcasts.
+`falcon_public_graph` accepts `{}` only and calls `GET /v1/public/graph/live` without query, body, Origin, or Bearer token. It returns the frozen public-market-evidence scope, Solana Devnet graph metadata, program/reserve technical analyses, status, fixed policy metadata, the 1 USDC base-unit cap, `customGraphsSupported: false`, and `executionReady: false`. It never accepts a source or graph selector.
+
+The public graph response must not expose source content/raw exchanges, owner records, wallets, sessions, or private/custom graph data. `OBSERVED` is technical evidence, not a personalized `REVIEW`, owner mandate, recommendation, or approval. A current `NO_DATA` result never falls back to older successful evidence.
+
+Policy metadata is fixed: `policyDefinitionId` = `decision:mesh-reserve-scenario/1`, `policyVersion` = `mesh-reserve-scenario/2`. Program analysis uses technical `mesh-public-evidence/1`; reserve analysis uses technical `mesh-reserve-liquidity/1`. These identifiers and versions are not owner limits or mandates.
 
 ## Configuration
 
@@ -49,11 +59,11 @@ The prepare POST has a 60-second Mesh-client timeout to accommodate four sequent
 | `FALCON_MCP_HOST` | no | `127.0.0.1` | Bind address. The Docker image sets `0.0.0.0`. |
 | `PORT` | no | `8792` | Listen port. Railway sets it. |
 | `FALCON_MCP_RATE_WINDOW_MS` | no | `60000` | Rate limit window. |
-| `FALCON_MCP_RATE_MAX_PER_SESSION` | no | `60` | Authenticated tool calls per session per window. |
-| `FALCON_MCP_RATE_MAX_CONNECT` | no | `10` | `falcon_connect` calls per wallet, and `falcon_connect_verify` calls per challenge, per window. |
+| `FALCON_MCP_RATE_MAX_PER_SESSION` | no | `60` | Authenticated calls per session per window; public decode and self-test each use a separate bounded public bucket. |
+| `FALCON_MCP_RATE_MAX_CONNECT` | no | `10` | `falcon_connect` and `falcon_wallet_status` calls per wallet, and `falcon_connect_verify` calls per challenge, per window. |
 | `FALCON_MCP_RATE_MAX_GLOBAL` | no | `300` | Tool calls per window across all callers. |
 
-Endpoints: `POST|GET|DELETE /mcp`, `GET /healthz` (`{"status":"alive"}`), `GET /readyz` (calls Mesh `/readyz`; `{"status":"ready"}` or 503). `/healthz` and `/readyz` skip the Host check so platform probes work. `/mcp` checks `Host` against the allowed hosts and rejects a browser `Origin` that is not the MCP host or the configured origin.
+Endpoints: `POST|GET|DELETE /mcp`, `GET /healthz` (`{"status":"alive"}`), `GET /readyz` (calls Mesh `/readyz`; `{"status":"ready"}` or 503). `/healthz` and `/readyz` skip the Host check so platform probes work. `/mcp` checks `Host` against the allowed hosts and rejects a browser `Origin` that is not the MCP host or the configured origin. Health/readiness only describe process/Mesh availability; they do not establish wallet signing support, funds, or transaction execution readiness.
 
 The server logs one short line at startup and a code-only line for unexpected failures. It never logs tool arguments, sessions, signatures or transactions.
 
@@ -83,11 +93,28 @@ Tests need no database: `npm test` runs against fake Mesh servers.
 
 ## Limits
 
-- **Stateless.** Each HTTP request builds a fresh server. Nothing persists here. Sessions live in Mesh.
-- **The session is a tool argument.** The agent passes it on each call, so it is visible in the model context and in any transcript the client keeps. Treat it like a short-lived password. It works for 30 minutes and only for Devnet actions on that wallet. `falcon_disconnect` revokes it.
-- **Per-instance rate limits.** Limits are in memory. Running N instances multiplies them by N. Authenticated tools are keyed by a SHA-256 of the session (60 per minute by default), `falcon_connect` by wallet (10 per minute), plus a global ceiling (300 per minute). Exceeding returns a tool error with `RATE_LIMITED` and `retryAfterSeconds`.
-- **Shared Mesh wallet-auth bucket.** Mesh rate-limits wallet sign-in by remote IP. Behind this server every agent shares one IP, so every agent shares one bucket. Heavy sign-in traffic from one agent can delay others.
-- **Devnet only.** No mainnet, no custody, no key handling by Falcon, no server-side broadcast. Falcon never sees a private key; the agent broadcasts its own signed bytes.
-- **No OAuth on the MCP endpoint yet.** `/mcp` is reachable by anyone who can reach the host. Data access and tool writes require a valid wallet session obtained by signing the sign-in message. Captures, decisions, and preparation do not require a transaction signature; the wallet signs the prepared transaction bytes before registration, then broadcasts them itself.
-- **Evidence is short-lived.** Captured evidence is only usable for about 300 seconds, and a prepared transaction expires in about 120 seconds.
-- **Data is not advice.** Yield data is provider-indexed, APY is not a realized return, and nothing is guaranteed.
+- **Stateless:** sessions and owner records live in Mesh; the MCP process stores nothing.
+- **Session privacy:** an authenticated tool receives the session argument in model context. Treat it as a short-lived password. Reuse it; `falcon_disconnect` revokes it.
+- **Per-instance limits:** authenticated calls are keyed by a session hash, sign-in/status by wallet, verification by challenge, plus the global cap. Public graph/decode/self-test use bounded public buckets; exceeding a limit returns `RATE_LIMITED` with `retryAfterSeconds`.
+- **Public read tools:** the live graph, wallet status, and transaction decode are unauthenticated read-only APIs. Wallet-status faucet links/checklist are human-only; Falcon never funds or creates accounts.
+- **Wallet authorization:** `/mcp` is reachable by anyone who can reach the host. The public graph needs no session. Owner-bound adoption, decisions, activity, and execution records require a valid wallet session. Preparation requires no transaction signature; the human alone signs and broadcasts afterward.
+- **Devnet only:** no mainnet, custody, Falcon-held keys, funding, or server-side broadcast.
+- **Self-test:** metadata only. `/readyz` probes Mesh availability, not wallet support, funds, or transaction readiness.
+- **Freshness:** public source evidence is usable for about 300 seconds; an unsigned prepared transaction expires in about 120 seconds.
+- **Data:** APY is provider-indexed, may be stale, is not a realized return, and nothing is guaranteed.
+
+## Local 0.2.0 verification
+
+[VERIFIED] The real loopback MCP SDK smoke returned `falcon-mcp` version `0.2.0`, 13 tools and `SMOKE_OK`. Its schema fingerprint was `sha256:2b280b3dbf093582fab4c33e19d11d9b54f52e6b73f58277cce380fc73c9ec5f`. A synthetic unsigned System transfer decoded to 1000 lamports with its original message hash and `safeToSign: false`. Invalid wallet input was rejected before a wallet lookup.
+
+[VERIFIED] `npm --prefix mcp test` reported `56` tests, `56` passed, `0` failed. Fresh disposable PostgreSQL verification reported Mesh `238` tests, `238` passed, `0` failed. Regressions failed when cap enforcement or receipt redaction was absent.
+
+[NOT DETERMINED] Production commit parity is not established. These are local results, not a production release or funded supply/redeem proof. No wallet lookup, signing, funding or broadcast occurred in the loopback smoke.
+
+## Local 0.3.0 verification
+
+[VERIFIED, local SDK wire/harness fixtures, 2026-10-12] `node --test test/tools.test.mjs` reported 33 tests, 33 passed, 0 failed. The suite uses the official MCP client over Streamable HTTP on loopback with fake Mesh responses. It covers anonymous/no-auth public graph reads and redaction, current NO_DATA without stale reuse, two-ID public adoption and graphRevision binding, required human scenario inputs, the full decisionGraph, and public-only prepare.
+
+[VERIFIED, local secret-boundary fixture, 2026-10-12] `node --test test/secrets.test.mjs` reported 1 test, 1 passed, 0 failed.
+
+[NOT DETERMINED] The full `npm test` run did not complete within its 240-second deadline; `test/http.mjs` remained pending. No full-package pass, production parity, live RPC, signing, funding, broadcast, or deployment is claimed.

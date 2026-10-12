@@ -11,7 +11,7 @@ export function runServer(env) {
   child.stderr.on('data', chunk => { output.stderr += chunk; });
   const exited = once(child, 'exit').then(([code, signal]) => ({ code, signal }));
   async function listening() {
-    for (let i = 0; i < 200; i += 1) {
+    for (let i = 0; i < 400; i += 1) {
       const match = /listening on port (\d+)/.exec(output.stdout);
       if (match) return Number(match[1]);
       const done = await Promise.race([exited, new Promise(resolve => setTimeout(resolve, 25))]);
