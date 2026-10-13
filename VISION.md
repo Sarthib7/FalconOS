@@ -1,5 +1,8 @@
 # FalconOS Vision
 
+[VERIFIED, scope correction, 2026-10-13] This file is a historical vision, not current execution authority. [CONTEXT.md](CONTEXT.md), [SPEC I21](SPEC.md) and the [active MCP roadmap](plans/roadmap.md#active-mcp-plan-2026-10-13) govern the approved Solana-execution and cross-market-advice plan. The owner approves each action; mainnet and delegated autonomy remain gated.
+
+
 > [VERIFIED, user direction, 2026-09-05] Historical vision. The user changed the scope to multichain trading with Obsidian research and continuous discovery. [Current context](CONTEXT.md) and [build plan](plans/roadmap.md) now govern implementation. The original text below is preserved as a reference.
 
 > **The Solana-native operating system for verifiable capital agents.**

@@ -1,5 +1,22 @@
 # First research slice interfaces
 
+## Agent decision and execution contract, 2026-10-13
+
+[VERIFIED, user choices] Interface ID: MCP-OS-1, specified by SPEC I21. Owner: architect. Provider: Mesh and the planned shared Council backend. Consumers: MCP agents. Status: Planned. This is a design contract, not an available API. The [active roadmap](../plans/roadmap.md#active-mcp-plan-2026-10-13) defines its delivery gates.
+
+[INFERRED, capability input/output] Extend existing empty-input falcon_self_test with versioned domain/network/action metadata, owner-approval rules and references to contextual checks. Preserve its metadata-only behavior and not_checked readiness. Exact published schemas and fingerprints must match the implementation. Do not add an account lookup or provider probe to metadata discovery.
+
+[INFERRED, advisory input/output] Accept a supported domain and host-owned instrument identity. Account-specific assessment requires authenticated owner context; public market assessment does not. Return retained evidence identity, source/version citations, capture and source times, expiry, checks, risk outcome and reasons. Preserve domain semantics through explicit adapters. Results remain advisory-only with executionReady=false. Missing, stale, conflicting or unsupported evidence cannot produce a proposal. Exclude basket allocation and broker orders.
+
+[INFERRED, execution input/output] Reuse explicit owner inputs, current analysis, unsigned intent, message hash and preflight. Supply requires a fresh decisionId and USDC units. Redemption forbids decisionId, burns receipt-token units and retains its existing owner/analysis/intent/message/preflight checks; no supply decision or Council approval may gate this exit. Both retain per-action human approval. Future swaps bind exact input and enforceable minimum output, approved mints, route and costs. No caller flag or model statement proves human approval.
+
+[VERIFIED, retained owner boundary] V147 requires a human to approve every signature and broadcast. Authentication proves identity only. REVIEW, risk PASS and Falcon-verified preflight cannot approve spending. Signing and broadcast stay outside Falcon; changed bytes require a new review and signature.
+
+[INFERRED, errors/events] Keep existing typed NO_DATA, BLOCKED and authorization/conflict errors. Unsupported capabilities include the specific unavailable domain, action or network. Retain owner-bound intent and registration/receipt events. Registration is not broadcast; pending and expired-unobserved states do not prove failure or permit an automatic new spend.
+
+[INFERRED, compatibility and verification] Preserve existing public read-only calls and owner-scoped lending behavior while introducing the planned contract. Migrate affected callers and the skill together; do not keep a second financial-policy implementation in MCP. Acceptance covers metadata during Mesh outage, stale/mismatched evidence, risk veto, owner/hash mismatch, expired approval and uncertain sends. T82 requires an approved real Devnet round trip; no migration or deployment follows from this document.
+
+
 ## Repository verification contract, 2026-09-27
 
 [VERIFIED, user choice and local completion] The user selected repository option `1`: retain folders and add a current map, explicit verification, and release checks. Interface ID: `REPO-VERIFY-1`. Owner: coordinator. Providers: repository verification scripts. Consumers: engineers reviewing a checkout or release candidate. Status: Completed. The [verification record](verification/2026-09-27-repository.md) records the combined local run. This interface adds local checks; it changes no product API, financial authority, or schema.

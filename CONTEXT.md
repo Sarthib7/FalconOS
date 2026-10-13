@@ -1,5 +1,14 @@
 # FalconOS
 
+## Active agent product scope: 2026-10-13
+
+[VERIFIED, user choices] FalconOS is the decision and execution backend for agents. Scope: "Solana execution, cross-market advice" with "Approve each action". Falcon Investment Council remains its non-binding advisory module. SPEC I21 and T81-T85 define the planned expansion; the [active roadmap](plans/roadmap.md#active-mcp-plan-2026-10-13) defines gates and ownership.
+
+[VERIFIED, authority correction] Earlier advisory-only product exclusions and future automatic-execution proposals do not define this build queue. Solana execution is now a product target, but the current release remains capped Devnet lending with human approval, signing and broadcast. Mainnet, broker/EVM execution, delegated autonomy, custody and pooled capital remain outside the approved plan. Public install and gated dashboard/workspace boundaries are unchanged.
+
+[INFERRED, architecture] MCP remains a thin interface. Mesh owns state, policy and execution orchestration. Council uses one backend evidence kernel with stocks/perps adapters on the production path. Cross-market assessments use real evidence and cannot grant trading authority. The plan does not claim those integrations exist today.
+
+
 ## Repository work: 2026-09-27
 
 [VERIFIED, user choice] The user selected option `1`: retain folders, document current architecture and authority, expose component verification, and check website/API release inputs. The [current map](docs/README.md) is the navigation entry point. [Status](status.md) records active tasks and measured results. Dated sections below preserve prior product decisions and evidence; their old current-state labels do not supersede newer records for the same component.
