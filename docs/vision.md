@@ -1,5 +1,12 @@
 # FalconOS vision
 
+## Approved build direction, 2026-10-13
+
+[VERIFIED, user choices] FalconOS should give agents Solana execution and cross-market advice. The owner approves every action. The [active roadmap](../plans/roadmap.md#active-mcp-plan-2026-10-13) and SPEC I21 define the work; Falcon Investment Council remains advisory-only within that backend.
+
+[VERIFIED, scope correction] The broader company-treasury and AI-CFO ideas below remain hypotheses. They do not authorize autonomy, brokerage/EVM execution, private tenant launches, custody or pooled investing. The current build sequence is capability discovery, complete Devnet lending proof, shared stocks/perps advice, then approved Solana swaps. Human signing/broadcast and the Devnet release cap remain unchanged.
+
+
 ## Purpose
 
 [VERIFIED, user direction] “FalconOS was like an investment operating system for agents and humans.” FalconOS should help a company see its full treasury, find where liquidity can work, allocate it toward company goals, and manage it over time.
@@ -32,7 +39,7 @@
 2. Decision and simulation engine: [INFERRED] Discover eligible opportunities, compare expected return against risk, cost, and liquidity, then test allocation choices against named baselines. Track modeled results separately from realized outcomes.
 3. Falcon Cloud and plugin: [VERIFIED, user direction] The user said, “Falcon Cloud is where we’ll do this,” and described a private workspace for each company. [INFERRED] Offer a graph builder and private workspace through Cloud. Let compatible agents connect through MCP and API.
 4. Cross-market coverage: [VERIFIED, user direction] The user named multiple chains, stocks, lending, borrowing, yield, and Zcash. [INFERRED] Add connectors based on customer demand, available data, legal review, and integration quality. Robinhood stock access is one candidate to assess. No chain, broker, or asset should be described as supported until its integration is built and verified.
-5. AI CFO and managed treasury: [VERIFIED, user direction] The user’s end goal is an agent that can “manage funds highly autonomously.” [INFERRED] Grow from recommendations to monitored allocation and bounded execution. Start with explicit customer approval and customer-owned accounts. Consider limited automatic actions only after permission, revocation, incident response, and legal reviews pass.
+5. Historical AI CFO proposal: [SUPERSEDED for the active build queue, 2026-10-13] The earlier goal to "manage funds highly autonomously" remains a future hypothesis. The selected execution model requires owner approval for every action. Limited automatic actions require a new product and authority decision.
 6. Separate financial services: [VERIFIED, user direction] The user described a later service that could pool funds, invest them, and issue a token backed by treasury assets. [INFERRED] Treat this as a separate later product and regulatory workstream. Do not present pooled funds, a treasury-backed token, custody, or portfolio management as current FalconOS capabilities.
 
 ## Architecture and authority

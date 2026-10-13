@@ -1,5 +1,40 @@
 # FalconOS phased plan
 
+## Active MCP plan, 2026-10-13
+
+[VERIFIED, user choices] Scope: "Solana execution, cross-market advice" and "Approve each action". The user approved updating this plan and the docs. [SPEC I21 and T81-T85](../SPEC.md) own the contract and task status. Owner: coordinator. Status: Planned. Earlier phase maps below are historical where they conflict with this section.
+
+[INFERRED, design] External agents call MCP. Mesh retains evidence, applies deterministic policy, and owns preparation and reconciliation. Council shares one evidence kernel with domain adapters. Wallet providers keep keys; humans approve, sign and broadcast each action. The public install origin and gated dashboard remain unchanged.
+
+[INFERRED, status ownership] Table states are the planning snapshot at 2026-10-13, not a second task tracker. Update active task status only in SPEC.md.
+
+| Task / owner | Deliverable | Dependency | Acceptance and failure proof | Status |
+| --- | --- | --- | --- | --- |
+| T81 / MCP implementer | Versioned capability metadata in existing self-test; matching skill guidance. | I21 contract review. | Actual MCP client sees supported actions, networks and approval rules. Metadata works without Mesh; unavailable actions explain why. No readiness claim from an inventory. | Planned |
+| T82 / execution implementer | Complete existing Devnet supply and receipt-token redemption. | T37 implementation; approved deployment and owner actions. | Each action uses separately approved exact bytes. Retain confirmed matching signature/token deltas plus independent Explorer evidence. Reject wrong owner, altered bytes, stale evidence and expired height; uncertain sends cannot trigger a fresh spend. | Planned |
+| T83 / Council implementer | One retained, real stocks risk assessment through shared backend evidence and MCP. | T81 contract; verified stock sources and explicit Rust/TypeScript evidence mapping. May run beside T82. | Agent receives source citations, timestamps, immutable evidence identity, expiry and bound lead/risk result. Missing, stale or conflicting sources return NO_DATA. Risk veto blocks publication. No basket allocation or execution. | Planned |
+| T84 / perps implementer | Real native perps evidence and Council advice through the same kernel. | T83; verified instrument registry and provider access. | One sourced assessment reaches the agent; unavailable or mismatched native data returns NO_DATA. No synthetic live output or perps order tools. | Planned |
+| T85 / execution implementer | Solana swap quote, policy, preparation and receipt adapter. | T82 confirmed round trip; verified route/program/token support. | Exact input, mints, minimum output, route, fees and validity bind approved bytes. Unchanged-byte simulation and reconciled token changes meet bounds. Unsupported token/lookup-table formats fail before signing. | Planned |
+
+### Implementation and release gates
+
+[INFERRED, implementation rule] Ship each row as one complete workflow before widening it. Keep financial logic outside MCP. Reuse current owner isolation and durable intent/events; do not introduce a general workflow framework or new database schema without a demonstrated need.
+
+[INFERRED, verification rule] Each behavior change needs deterministic consumer-visible success and failure checks in the relevant existing CI workflow. Prove a plausible regression fails the check. Run the actual MCP/backend scenario separately; tests alone do not prove live providers, a signer, or settlement. Exact PR-head test CI must pass before merge.
+
+[VERIFIED, retained boundary] Current execution is Devnet lending, capped at 1 USDC. Supply/redemption proof remains open in T37. Mainnet, broker/EVM execution, autonomy, funding, custody and deployment are not authorized by this plan. Pending or unobserved transactions remain uncertain. Cloudflare remains user-managed.
+
+[REPORTED, independent design review, 2026-10-13] The Rust stocks path and TypeScript Council contracts use different evidence schemas. The review identified production integration, durable Council evidence and live perps inputs as missing work. Sources: engine/src/serve.rs, stocks/stocks.ts, perps/perps.ts and engine/src/perps.rs at main fd918497. These observations do not prove live provider availability.
+
+### Least confident decisions
+
+1. [INFERRED] Stocks advice precedes perps because a live-capable stocks path exists. Provider coverage must still pass T83 acceptance.
+2. [INFERRED] Extending self-test avoids another discovery tool. If the manifest needs account or provider state, put that check behind a separate contextual call.
+3. [VERIFIED, retained boundary] Human broadcast remains required. A Falcon relay would need a separate authority decision and exact-byte replay controls.
+
+## Historical roadmap
+
+
 [VERIFIED, user request, 2026-09-05] This plan replaces the earlier slice summary with indexed tasks, checkpoints, tests, and pass criteria. The user requested a local build and a proper execution plan. [CONTEXT.md](../CONTEXT.md) remains the product scope. No SPEC.md is created by this plan.
 
 [VERIFIED, scope correction] The earlier roadmap marked the first slice "Completed, prototype". That described implemented code and local checks. It did not establish asset metadata, sustained source access, or an agent decision loop. This plan preserves P0 completion and leaves CP1A and CP1B open.

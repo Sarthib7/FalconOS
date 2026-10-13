@@ -1,6 +1,8 @@
 # FalconOS
 
-FalconOS is the umbrella product. Its current module, Falcon Investment Council, is agent-first market intelligence and risk advisory. The live MVP is an MCP plugin and a Solana Devnet USDC yield agent. The agent connects to Kamino's KLend program on Devnet, reads reserve data, produces a hashed evidence record, evaluates a supply or redeem proposal against user-defined limits, and returns an unsigned transaction. The user's or agent's own wallet signs and broadcasts. Falcon never holds keys, never broadcasts, and never moves real funds. There is no mainnet deployment and no custody. No signed Devnet transaction has been completed yet: the live end-to-end check verified wallet sign-in, evidence capture, a REVIEW decision, and correct rejection of an unfunded wallet; a signed supply has not been confirmed on chain.
+[VERIFIED, approved direction, 2026-10-13] FalconOS is the decision and execution backend for agents. The selected scope is Solana execution and cross-market advice, with owner approval for every action. Falcon Investment Council supplies non-binding market intelligence and risk assessment. The [active plan](plans/roadmap.md#active-mcp-plan-2026-10-13) is specified in SPEC I21 and T81-T85; broader execution and a shared Council backend are not shipped capabilities.
+
+[VERIFIED, current source boundary: mcp/src/tools.mjs, mesh/limits.mjs] The MCP workflow exposes public evidence and owner-scoped Solana Devnet lending preparation. Supply is capped at 1 Devnet USDC. Falcon holds no keys and never signs or broadcasts. Humans approve each signature and broadcast through their own wallet/provider. [REPORTED, retained acceptance status: SPEC T37] A complete owner-wallet supply/redemption round trip remains unverified. Mainnet, custody and delegated execution are outside the current release.
 
 ## Try it
 
@@ -27,7 +29,7 @@ Or register it with the Codex CLI:
 codex mcp add falconos --url https://mcp.falconos.markets/mcp
 ```
 
-After restarting Codex, verify that all ten Falcon tools appear in the active session: `falcon_connect`, `falcon_connect_verify`, `falcon_disconnect`, `falcon_yield_opportunities`, `falcon_refresh_evidence`, `falcon_reserve_decision`, `falcon_prepare_transaction`, `falcon_submit_signed`, `falcon_check_receipt`, and `falcon_activity`. `codex mcp list` confirms server registration only; it does not confirm that the tools loaded in the active session.
+[VERIFIED, source: mcp/src/tools.mjs] After restarting the client, inspect its active tools and call `falcon_self_test({})`. The current source reports 14 registered tools and a schema fingerprint; check the connected server rather than relying on an old tool list. Self-test metadata does not prove signer, funds or transaction readiness. `codex mcp list` confirms registration only.
 
 **JSON config** (any MCP client that supports Streamable HTTP):
 ```json
@@ -69,11 +71,11 @@ Falcon has no custom on-chain program. It uses Kamino's existing KLend program o
 | Reserve | `HRwMj8uuoGVWCanKzKvpTWN5ZvXjtjKGxcFbn2qTPKMW` |
 | Market | `6aaNTBEmwdN19AAdTwbNrWyUo6iEyiLguxCTePEzSqoH` |
 
-**Signing boundary:** Mesh reads reserve accounts over Devnet RPC and records evidence with hashes. It evaluates user-defined limits and returns `REVIEW`, `BLOCKED`, or `NO_DATA`. It prepares an unsigned Kamino supply or redeem transaction. Supply is capped at 1 Devnet USDC and requires a fresh `REVIEW` decisionId. Redeem does not require a decisionId. The user's wallet or the agent's own wallet signs and broadcasts. Falcon never holds a private key and never broadcasts.
+[VERIFIED, source: mcp/src/tools.mjs; authority: SPEC V147] Mesh reads Devnet reserve accounts and retains hashed evidence. It evaluates explicit owner limits and returns REVIEW, BLOCKED or NO_DATA. Supply preparation requires a fresh REVIEW decisionId and caps input at 1 Devnet USDC. Redemption forbids decisionId and uses receipt-token units. Both require separate human review and signing. The human broadcasts the exact registered bytes through their wallet/provider. Falcon holds no private key and never broadcasts.
 
 ## MCP tools
 
-The server exposes 10 tools. Every authenticated tool requires `session` as an argument.
+[VERIFIED, source: mcp/src/tools.mjs] Selected lending workflow tools appear below. Use falcon_self_test for the complete registered inventory, including public evidence and inspection tools. Authenticated tools require session as an argument.
 
 | Tool | What it does |
 | ---- | ------------ |
@@ -93,7 +95,7 @@ Supply amounts are decimal USDC strings in `amountUsdc`; redeem amounts are deci
 ## Status and limits
 
 - **Devnet only.** No mainnet deployment. No real funds.
-- **No custody.** Falcon never holds keys. The agent signs and broadcasts its own bytes.
+- **No custody.** [VERIFIED, SPEC V147] Falcon holds no keys. The human approves each signature and broadcast through their own wallet/provider.
 - **Sessions expire after 30 minutes.** Call `falcon_disconnect` to revoke early.
 - **Evidence is short-lived.** Captured evidence is usable for about 300 seconds. A prepared transaction expires in about 120 seconds.
 - **Supply cap.** Mesh caps Devnet supply at 1 USDC.

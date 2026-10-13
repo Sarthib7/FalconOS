@@ -1,7 +1,9 @@
 # SPEC
 
 ## §G GOAL
-Build FalconOS as a chat-first, Solana-first USDC yield agent and plug-in: discover provider-indexed opportunities, apply a deterministic user policy, and show replayable simulated fund flows; no live fund movement in MVP.
+[VERIFIED, user choices, 2026-10-13] Build FalconOS as decision and execution backend for agents: Solana execution, cross-market advice, owner approval for each action. MCP exposes backend capabilities; Council supplies non-binding assessment. Current execution release remains capped Devnet lending until separate acceptance and release gates pass.
+
+[SUPERSEDED, goal before 2026-10-13] Chat-first USDC yield agent and simulation remain existing surfaces, not the complete product goal. I21 and T81-T85 define the approved expansion. This direction does not authorize deployment, mainnet, funds movement, delegated signing, or automatic broadcast.
 
 [VERIFIED, user direction, 2026-09-26] Add accepted Stage 01 treasury MVP through local simulation first. [INFERRED, active slice] Owner mandate → decision graph → checked simulated settlement → browser-local replay. Existing modules retain their current boundaries.
 
@@ -11,6 +13,8 @@ Build FalconOS as a chat-first, Solana-first USDC yield agent and plug-in: disco
 [VERIFIED, user choice, 2026-10-02] Pause prior one-week peg pilot. I17 and T49-T54 describe a retained proposal, not the current build queue. Investment-service options remain research; none replaces the MVP yet.
 
 ## §C CONSTRAINTS
+- [VERIFIED, user choices, 2026-10-13] Solana execution + cross-market advice; approve each action. No broker/EVM execution, pooled capital, custody, delegated autonomy, or server-held keys in this plan. Human signing/broadcast under V147 remains unchanged. Earlier automatic-execution T39 is superseded, not completed.
+- [INFERRED, approved design, 2026-10-13] Mesh owns evidence persistence, deterministic policy and execution lifecycle; MCP remains thin. Shared Council evidence kernel with stocks/perps adapters must run on the production path. Real observations only for current advice; fixture success never establishes live coverage.
 - [VERIFIED, user choice, 2026-10-03] Pause peg I17 and T49-T54. This choice supersedes the 2026-10-02 statement that no replacement MVP was authorized.
 - [SUPERSEDED, user choice, 2026-10-03] New MVP is a simulation-only Solana USDC yield agent; no wallet action, real funds, or live signing.
 - [VERIFIED, user choice, 2026-10-04] MVP keeps deterministic simulation and permits one manual, owner-signed Kamino USDC supply/redemption test path on Solana Devnet, capped at 1 Devnet USDC. Each transaction needs an explicit wallet signature and confirmed receipt reconciliation. No mainnet, real funds, pooled client capital, automatic signing, or live rebalancing.
@@ -328,6 +332,15 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - [VERIFIED schema inspection] Reserved service namespace and shared/exclusive PostgreSQL head locks reuse schema3; no migration. Custom graph configuration deferred.
 - [PLANNED, explicitly approved preflight contract] Existing MCP `falcon_prepare_transaction` returns bounded Falcon-verified network/genesis, exact-message simulation/token effects, affordable fee/rent quotes and real block-height/time validity. Inputs and 14-tool inventory unchanged; MCP0.3.1, skill0.3.3 requires0.3.1. No client RPC key required for standard review. Falcon proof is not independent proof; human approvals, sign-only wallet, human broadcast and final independent Devnet Explorer remain. Reuse JSON intent storage; no migration.
 
+### I21. Agent decision and execution backend (planned)
+
+- [VERIFIED, user choices, 2026-10-13] Consumers: external MCP agents. Execution target: Solana lending then swaps. Stocks/perps: advice only. Per-action owner approval required; existing Devnet cap and human-only signing/broadcast remain release constraints.
+- [INFERRED, planned contract] Extend metadata-only `falcon_self_test({})` with versioned capability scope: domain, chain/network, supported actions, approval boundary and contextual-check references. Keep metadata distinct from health, funds, signer and transaction readiness; no Mesh call from self-test.
+- [INFERRED, planned workflow] Discover capabilities → explicit owner inputs → current evidence → Council assessment where supported → deterministic policy → unsigned intent + exact-byte preflight → separate owner approval/signature → signed registration → human broadcast → reconciled receipt. Public advice needs no wallet unless account context is requested.
+- [INFERRED, planned advice contract] Backend retains immutable source evidence and domain/version identity, hashes, source and receipt times, expiry, proposal/risk bindings and reasons. Thin MCP returns bounded citations/checks with advisory-only authority and executionReady=false. Stocks risk assessment first; no basket allocation or broker order capability implied.
+- [INFERRED, planned execution contract] Reuse Mesh owner isolation, durable intent/events and idempotency. Supply requires decisionId; redemption forbids it and retains current owner/analysis/message/preflight checks plus human approval. Keep protocol-specific quote/wire/preflight/receipt validation. Swap bounds include exact input, approved mints, enforceable minimum output, route and costs; changed bytes or expired evidence require new approval.
+- [INFERRED, implementation sequence] T81 capability contract; T82 closes T37 lending proof; T83 shared evidence + stocks risk slice may run beside T82; T84 real perps advice follows T83; T85 swaps follows T82. Each slice needs consumer-visible failure tests, exact-head CI and actual workflow proof. Mainnet activation remains outside this plan. See plans/roadmap.md and docs/interfaces.md.
+
 ## §V INVARIANTS
 
 V1: ∀ plugin process → read exactly one bounded (≤8 MiB) JSON object from stdin, emit exactly one bounded (≤64 KiB) JSON response line to stdout, diagnostics ⊥ stdout
@@ -573,6 +586,14 @@ V172: [VERIFIED, source and local fixture/HTTP proof; not human signing] ∀ MCP
 V173: [VERIFIED, source and local fixture/HTTP proof] ∀ preflight validity → real observed block height and lastValidBlockHeight plus earliest intent/decision/oracle time bound; expiresAt is not a blockhash lifetime guarantee; stale state rejects reuse or registration.
 
 
+V174: [INFERRED, planned I21] ∀ capability metadata → supported scope + chain/network + owner-approval boundary explicit; configuration ≠ operational readiness; self-test makes no provider call; unsupported action returns specific reason, never a synthetic success.
+V175: [VERIFIED, user authority choice; planned enforcement] ∀ execution action → explicit owner approval for exact current intent/message; wallet login, REVIEW, risk PASS, preflight and model text ≠ approval; changed bytes, wallet, amount, route or expiry invalidate prior approval; V147 unchanged.
+V176: [INFERRED, planned I21] ∀ Council result → one retained canonical evidence identity binds sources, versions, timestamps, hashes, proposal and independent risk review; domain adapters preserve instrument semantics; missing/stale/conflicting evidence → NO_DATA; veto → BLOCKED; no unlabelled synthetic or last-good replacement.
+V177: [INFERRED, planned I21] ∀ cross-market advice → advisory-only + executionReady=false; unsupported broker/EVM/perps execution remains unavailable; no pooled portfolio, custody or asset-allocation authority from assessment.
+V178: [INFERRED, planned I21] ∀ execution receipt → owner, intent, exact message and signature bind observed outcome; registration ≠ broadcast ≠ confirmation; pending/expired-unobserved remains uncertain, never successful or safe to retry as a new spend.
+V179: [INFERRED, planned I21 swaps] ∀ swap → quote provenance/expiry, mints, input units, enforced minimum output, route/accounts and costs bind approved message; unchanged-byte simulation and confirmed token deltas satisfy bounds; unsupported token/lookup-table form rejects before signing.
+V180: [INFERRED, planned release gate] ∀ wider execution release → T37/T82 owner-approved Devnet supply/redemption proof retained first; regression checks cover stale evidence, wrong owner/hash, expired validity and uncertain send; exact-head CI plus scenario proof required; deployment/mainnet/funding remain separate approvals.
+
 ## §T TASKS
 
 id|status|task|cites
@@ -615,7 +636,7 @@ T35|x|build local treasury vertical slice: owner setup → graph-first simulated
 T36|x|verify treasury invariants, failure preservation, negative controls, full web suite, static build, and browser workflow|I14,V77,V78,V79,V80,V81,V82,V83,V84,V85,V86
 T37|~|prove one exact Kamino USDC supply/redemption path on Devnet; verify reserve settings, receipt ownership, rounding, and confirmed balances|I14,V78,V81,V101,V102,V145
 T38|.|prepare shareable HTTPS simulation release; verify browser storage isolation, mobile flow, and deployment target before user-authorized publication|I14,V77,V82,V84
-T39|.|specify and prove restricted agent authority, durable server reconciliation, and funded launch prerequisites before automatic real execution|I14,V78,V80,V81
+T39|.|[SUPERSEDED 2026-10-13, not active] prior restricted-authority/automatic-execution proposal; T81-T85 require per-action owner approval instead|I21,V175,V180
 T40|~|publish treasury documentation and four independently verified feature slices as small draft PRs, based on fresh remote main and excluding unrelated worktree changes|I14,V77,V82,V84,V85,V86
 T41|x|finish browser graph prototype: pinned policy, saved records, evidence-linked checks, readable inspector, custom synthetic evidence, legacy replay, Pages candidate|I14,V77,V78,V81,V82,V87,V88,V89,V90
 T42|x|build persistent mesh vertical slice: retained sources, typed multi-hop analysis, Postgres history, authenticated API, viewer and local verification|I15,V91,V92,V93,V94,V95,V96,V97
@@ -659,6 +680,11 @@ T77|x|align MCP prepare deadline with bounded Devnet RPC sequence|V151,V97,V99
 T78|x|add local /mesh same-tab wallet entry + MCP read-only quickstart; preserve operator-token fallback, public install origin, and transaction gates|I15,I19,V152
 T79|x|serve agents SKILLS from the shared template with Codex TOML/CLI setup, wallet sign-in vs transaction-signature boundary, and signed-bytes retention for broadcast retry; bake live MCP/skill URLs into build:agents|I19,V146,V147
 T80|x|add Falcon-owned exact-byte preflight costs, validity and safe MCP projection; refine guide trust policy; prove positive/negative behavior and HTTP SDK smoke; delivery PR/merge tracked in status.md, no deployment|I20,V147,V155,V157,V158,V164,V165,V171,V172,V173
+T81|.|[PLANNED] extend self-test with versioned backend capability/authority contract; expose explicit unsupported reasons; update skill and verify metadata without readiness claims|I21,V159,V174,V177
+T82|.|[PLANNED] close T37 through separately owner-approved Devnet supply and receipt-token redemption; reconcile exact signatures/token changes and independent Explorer proof; exercise stale/altered/uncertain outcomes|I20,I21,V147,V171-V173,V175,V178,V180
+T83|.|[PLANNED] connect one real stocks risk assessment through shared backend evidence kernel, retained source audit and thin MCP; integrate production path; test stale/conflicting evidence and risk veto; no allocation advice|I21,V176,V177
+T84|.|[PLANNED] add verified native perps metadata and real source adapters through T83 kernel; independent risk review and MCP evidence retrieval; prove live NO_DATA and cited advisory paths|I7,I21,V176,V177
+T85|.|[PLANNED] after T82 add Solana swap adapter and MCP workflow with quote bounds, owner approval, unchanged-byte preflight and receipt reconciliation; retain Devnet release gate|I21,V175,V178-V180
 
 ## §B BUGS
 

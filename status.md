@@ -1,4 +1,23 @@
 # Status
+
+## MCP plan and repository cleanup: 2026-10-13
+
+[VERIFIED, user approval] Owner: coordinator. The user approved the MCP plan/docs update, merging eligible PRs and removing completed pushed worktrees. Product choices: Solana execution, cross-market advice, owner approval for each action. This approval does not include deployment, mainnet, migrations, wallet signatures or funding.
+
+[VERIFIED, inventory] Baseline main: fd91849770fcbbab26f3681d0bb3eb9acd448e03, merged PR #74. GitHub open-PR inventory returned 17 PRs. The original deck worktree has modified docs/README.md and four untracked paths; it is preserved. Documentation work uses branch docs/mcp-os-plan-20261013, separate from that worktree.
+
+| Task | Owner | Status | Evidence / next action |
+| --- | --- | --- | --- |
+| MCP-OS-PLAN | coordinator | Completed | Authored SPEC I21, V174-V180 and T81-T85; updated 11 doc files. Two independent reviews identified four ambiguities, now corrected. PR delivery and exact-head CI remain separate. |
+| PR-CLEANUP | coordinator | In Progress | Closed #5, #6, #7, #8, #9, #10, #12 and #58 as superseded. Preserved #3, #4, #11, #25, #28, #43, #44, #45 and #62 with review blockers posted. New docs PR still needs CI and merge. |
+| WORKTREE-CLEANUP | coordinator | In Progress | Check tracked, untracked and valuable ignored data before deletion. Pushed alone does not mean completed. Keep local/remote branches unless separately verified and selected. |
+
+[INFERRED, next implementation] T81 is the first implementation task after this documentation change. T82 needs a separately approved Devnet supply/redemption proof. No T81-T85 behavior is implemented by this docs-only change.
+
+[VERIFIED, documentation checks] Temporary Node verifier printed {"files":11,"addedLocalLinksChecked":13,"spec":"PASS","negativeControls":2,"proseFindings":1}. Removing V180 or using a missing local link triggered rejection. The prose finding is uniform punctuation in the required SPEC table/invariant format; no wording defect was identified. These checks do not prove any new product behavior.
+
+[REPORTED, PR reviews] The open OAuth stack needs pre-auth budgets, bounded metadata fetches, current public-tool compatibility, and a consent-origin/schema decision. Market PRs retain unique integrity work but restore the obsolete live stack. Docs/deck PRs retain unique records or publication changes with stale scope. Preserve those branches rather than merging their old diffs.
+
 ## Falcon bot MVP: 2026-10-03
 [VERIFIED, correction] The first heading used 2026-10-04. The date command returned 2026-10-03, so task IDs below use the corrected date.
 

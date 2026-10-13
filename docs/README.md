@@ -3,6 +3,9 @@
 [VERIFIED, repository inspection, 2026-09-27] Start with [current status](../status.md), this component map, and the contract for the component you will change. [SPEC.md](../SPEC.md) remains the specification. This map describes existing code and records known documentation drift. It does not replace product contracts or authorize a release.
 [INFERRED, 2026-10-11 product direction] See [FalconOS vision](vision.md), [stablecoin risk ADR 0011](adrs/0011-stablecoin-risk-monitoring.md), and the [investor deck](pitches/falcon-investor-deck.html). These records do not replace implementation contracts.
 
+[VERIFIED, user-approved plan, 2026-10-13] Start new MCP work with [SPEC I21](../SPEC.md), the [active MCP roadmap](../plans/roadmap.md#active-mcp-plan-2026-10-13), and [MCP-OS-1](interfaces.md#agent-decision-and-execution-contract-2026-10-13). Scope: Solana execution, cross-market advice, owner approval for each action. The shared Council backend and swaps are planned, not shipped. Earlier autonomy and advisory-only product statements are historical where they conflict with this decision.
+
+
 ## Component map
 
 [INFERRED, review ownership] These roles identify the expertise needed for a change. The coordinator assigns a named task owner in [status](../status.md). A review role grants no access to credentials, capital, or deployment.

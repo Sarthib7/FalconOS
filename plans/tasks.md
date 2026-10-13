@@ -1,6 +1,9 @@
 # FalconOS task board
 
-[INFERRED, workflow] This file owns task status. The roadmap owns checkpoint rules. The check register owns pass criteria. Update evidence and status together. Do not mark a task complete from an agent report alone.
+[VERIFIED, scope correction, 2026-10-13] Active MCP work is T81-T85 in [SPEC.md](../SPEC.md). The [active roadmap](roadmap.md#active-mcp-plan-2026-10-13) owns dependencies and acceptance gates. The task board below retains the earlier research work; it does not schedule autonomous execution or mark the new plan implemented.
+
+
+[INFERRED, historical workflow] This file owns the earlier research task statuses below. SPEC.md owns active T81-T85 status. The roadmap defines dependencies and acceptance gates. Update evidence and status together; an agent report alone cannot complete a task.
 
 [INFERRED, ownership] Root assigns each implementation task to one builder agent and verifies its result. A research agent can collect independent evidence. Sarthi decides product scope and approves actions that require approval. Future agent assignments are proposals until work starts.
 

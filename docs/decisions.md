@@ -1,5 +1,21 @@
 # Decisions
 
+## Agent execution and advisory scope, 2026-10-13
+
+[VERIFIED, user choices] ID: DEC-2026-10-13-MCP-OS. Owner: architect. Status: Planned. The user selected "Solana execution, cross-market advice" and "Approve each action", then approved the plan/docs update. Alternatives were crypto execution across venues or crypto plus brokerage execution, and bounded delegated authority instead of per-action approval.
+
+[INFERRED, approved design] Keep MCP thin over Mesh. Reuse owner-scoped evidence, deterministic policy and lending reconciliation. Put Council evidence validation/publication in a shared backend kernel with domain adapters on the production path. Connect stocks risk advice before perps; prove the current lending round trip before widening Solana execution to swaps. SPEC I21, V174-V180 and T81-T85 define the planned contract.
+
+[VERIFIED, authority correction] The current choice supersedes T39's automatic-execution proposal and the autonomous-management sequence in docs/vision.md for this build queue. It does not authorize mainnet, broker/EVM execution, custody, pooling, funding or deployment. Historical proposals remain readable but cannot grant authority. V147 human signing/broadcast and the Devnet cap remain unchanged.
+
+[REPORTED, independent design reviews, 2026-10-13] Three reviewers supported backend-owned policy/execution orchestration, thin MCP, per-action approval and a completed Devnet receipt proof before wider execution. They found separate live-capable Rust stocks and TypeScript Council contracts, rather than one production Council path. Source scope: main fd918497; engine/src/serve.rs, stocks/stocks.ts, perps/perps.ts, mesh/lending-store.mjs and mcp/src/tools.mjs. No live-provider or wallet proof follows from those reviews.
+
+### Least confident decisions
+
+1. [INFERRED] Existing stocks code makes stocks the first advisory integration. Its provider coverage and evidence schema still need acceptance.
+2. [INFERRED] Static self-test metadata is sufficient for capability discovery. Runtime readiness remains a separate check.
+
+
 ## Supabase mesh storage, 2026-09-27
 
 [VERIFIED, DEC-2026-09-27-02] Owner: coordinator. The user provided access to Supabase project `mcmxfwkhdzzsfpvldgdw`. The user then approved the reviewed schema and restricted role with login disabled. This replaces the earlier Railway PostgreSQL choice; the personal Railway workspace remains selected for the API.
