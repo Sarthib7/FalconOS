@@ -1,8 +1,8 @@
 ---
 name: falconos
 description: Use when an MCP-capable agent needs FalconOS public market evidence or owner-bound Devnet decisions. Public graph reading needs no signer; owner records and transactions require a human-controlled wallet and separate approval. Never for mainnet or custody.
-version: 0.3.3
-requiredMcpVersion: 0.3.1
+version: 0.4.0
+requiredMcpVersion: 0.4.0
 ---
 
 # FalconOS MCP skill
@@ -15,7 +15,7 @@ FalconOS exposes a fixed public Solana Devnet market graph and optional owner-bo
 
 ## Start here
 
-Fetch <{{FALCON_SKILL_URL}}> and `SKILLS.manifest.json` from the same origin. Compare the manifest SHA-256 with the digest of the exact SKILLS.md bytes; do not normalize bytes or newlines. Same-origin headers and manifests are not independent trust anchors. This version’s digest-record discovery URL is <https://github.com/Sarthib7/FalconOS/blob/main/web/skills/releases/0.3.3.json>; it is a discovery URL on moving `main`, not a final pin or trust anchor. Independently authenticate the known FalconOS repository, learn a full immutable commit ID through that trusted channel, then obtain and check the release record at that exact commit. Pin the full commit ID and compare the rendered-guide SHA-256 with the independently learned expected digest. Never take the candidate checkout’s own unverified record or digest as the expected value.
+Fetch <{{FALCON_SKILL_URL}}> and `SKILLS.manifest.json` from the same origin. Compare the manifest SHA-256 with the digest of the exact SKILLS.md bytes; do not normalize bytes or newlines. Same-origin headers and manifests are not independent trust anchors. This version’s digest-record discovery URL is <https://github.com/Sarthib7/FalconOS/blob/main/web/skills/releases/0.4.0.json>; it is a discovery URL on moving `main`, not a final pin or trust anchor. Independently authenticate the known FalconOS repository, learn a full immutable commit ID through that trusted channel, then obtain and check the release record at that exact commit. Pin the full commit ID and compare the rendered-guide SHA-256 with the independently learned expected digest. Never take the candidate checkout’s own unverified record or digest as the expected value.
 ### Reproducibly verify a published build
 
 From an authenticated checkout of the known repository, use a full commit ID and expected digest learned through a separately authenticated channel. Pass a record obtained independently of the candidate checkout, not its own unverified release file. The verifier rebuilds that commit in a clean temporary Git worktree using locked web dependencies and canonical `build:agents` rendering. It is not a sandbox or proof of author identity. CI uses the candidate checkout's record only to check reproducibility and internal consistency, not publisher authentication or release approval. Do not fetch an absent historical commit from an arbitrary source.
@@ -34,7 +34,11 @@ Alternatively, supply the independently learned SHA-256 directly: `node web/scri
 {"mcpServers":{"falconos":{"type":"http","url":"{{FALCON_MCP_URL}}"}}}
 ```
 
-Initialize MCP, list tools, and call `falcon_self_test({})`. Require server version 0.3.1 or later and all 14 names below. This is metadata only, not health, authorization, signer support, funds, or transaction readiness. First functional call is `falcon_public_graph({})`, with no arguments. Inspect scope, chain/network, source metadata, nodes, edges, issues, and program/reserve technical status. `OBSERVED` is technical public evidence, not a personalized REVIEW, recommendation, or approval. `NO_DATA` means current evidence is unavailable; never substitute an older graph or blindly repeat the unchanged graph/head. The public graph may return its 60-second cached capture; no MCP `forceRefresh` exists, so a repeat is not guaranteed fresh. This initial read is market context only; it does not adopt owner evidence or authorize execution.
+Initialize MCP, list tools, and call `falcon_self_test({})`. Require server version 0.4.0 or later and all 14 names below. This is metadata only, not health, authorization, signer support, funds, or transaction readiness. First functional call is `falcon_public_graph({})`, with no arguments. Inspect scope, chain/network, source metadata, nodes, edges, issues, and program/reserve technical status. `OBSERVED` is technical public evidence, not a personalized REVIEW, recommendation, or approval. `NO_DATA` means current evidence is unavailable; never substitute an older graph or blindly repeat the unchanged graph/head. The public graph may return its 60-second cached capture; no MCP `forceRefresh` exists, so a repeat is not guaranteed fresh. This initial read is market context only; it does not adopt owner evidence or authorize execution.
+
+Before choosing an owner action, require `capabilities.schemaVersion: 1`, `verification: "metadata-only"`, and `defaultSupport: "unsupported"`. Match the requested domain, action, chain and network to a `supported` entry. A missing match is unsupported; show the matching `unavailable` entry's `code` and `reason`, or explain which requested scope is absent. Null chain/network values in unavailable entries are not wildcards. Missing or unknown schema versions stop this workflow rather than granting fallback support.
+
+The manifest describes support, not readiness. `lending-execution` is fixed-reserve Solana Devnet supply/redeem preparation, registration and reconciliation. `yield-discovery` is mainnet discovery only and has `executionSupported: false`. Stocks/perps advice, swaps, mainnet execution, EVM execution and brokerage orders remain unavailable. `authority` requires separate human approval for each signature and broadcast; it permits neither custody nor delegated execution. Follow `contextualChecks` for wallet status, transaction decoding, exact-byte preflight and receipt reconciliation. These checks cannot replace approval or upgrade `readiness` from `not_checked`.
 
 2. **Collect owner inputs and execution prerequisites before adoption.** For a supply decision, ask the human for all four exact values: `proposedUsdc`, `maxUsdc`, `minBookLiquidityUsdc`, and `maxEvidenceAgeSeconds` (1-300). Do not default, infer, or widen them. Redeem needs `amountReceiptTokens` and no supply decision; never invent a value. Owner-only advisory/history needs neither funds nor a transaction signer. For a requested full execution, call `falcon_wallet_status` with the chosen `wallet`, explicit `forAction`, `chain: "solana"` and `network: "devnet"` before owner adoption or preparation. Show its action-specific `missing` items, exact returned token mint and human-only faucet/checklist guidance. Missing funds or required accounts stop that execution before prepare. Do not infer readiness from incomplete status. This is a Falcon MCP check; clients do not need their own RPC connection. Additional client-RPC checks are optional when Falcon returns a complete verified transaction preflight.
 
@@ -57,7 +61,7 @@ Initialize MCP, list tools, and call `falcon_self_test({})`. Require server vers
 - Session: `falcon_connect`, `falcon_connect_verify`, `falcon_disconnect`.
 - Transactions/receipts: `falcon_prepare_transaction`, `falcon_submit_signed`, `falcon_check_receipt`.
 
-Self-test reports version, Devnet labels, tool names/count, and schema fingerprint; readiness is `not_checked`, and it does not contact Mesh.
+Self-test reports server version, tool inventory/schema fingerprint, versioned capability scope, unavailable reasons, authority rules and contextual-check tool names. It remains available during a Mesh outage because it makes no Mesh call. Readiness stays `not_checked`; successful metadata discovery is not a health or execution check.
 
 ## Evidence and scope
 

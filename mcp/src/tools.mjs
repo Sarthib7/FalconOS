@@ -14,8 +14,73 @@ export const TOOL_NAMES = Object.freeze([
   'falcon_check_receipt', 'falcon_activity', 'falcon_wallet_status', 'falcon_decode_transaction', 'falcon_self_test',
 ]);
 
+const CAPABILITIES = {
+  schemaVersion: 1,
+  verification: 'metadata-only',
+  defaultSupport: 'unsupported',
+  authority: {
+    humanApproval: 'each-signature-and-broadcast',
+    signing: 'human-controlled-wallet',
+    broadcast: 'human-only',
+    custody: false,
+    delegatedExecution: false,
+  },
+  supported: [
+    {
+      id: 'public-market-evidence', domain: 'lending', chain: 'solana', network: 'devnet',
+      actions: ['observe'], scope: 'fixed-kamino-reserve',
+      tools: ['falcon_public_graph'],
+    },
+    {
+      id: 'lending-execution', domain: 'lending', chain: 'solana', network: 'devnet',
+      actions: ['supply', 'redeem'], scope: 'fixed-kamino-reserve', maxSupplyUsdc: '1',
+      executionMode: 'prepare-register-reconcile',
+      tools: ['falcon_refresh_evidence', 'falcon_reserve_decision', 'falcon_prepare_transaction', 'falcon_submit_signed', 'falcon_check_receipt', 'falcon_activity'],
+    },
+    {
+      id: 'yield-discovery', domain: 'lending', chain: 'solana', network: 'mainnet-beta',
+      actions: ['discover'], executionSupported: false,
+      tools: ['falcon_yield_opportunities'],
+    },
+  ],
+  unavailable: [
+    {
+      id: 'solana-swaps', domain: 'swaps', chain: 'solana', network: 'devnet', actions: ['swap'],
+      code: 'MCP_INTEGRATION_UNAVAILABLE', reason: 'No swap preparation or receipt adapter is exposed through Falcon MCP.',
+    },
+    {
+      id: 'stocks-advice', domain: 'stocks', chain: null, network: null, actions: ['advise'],
+      code: 'MCP_INTEGRATION_UNAVAILABLE', reason: 'Stocks evidence and Council assessment are not connected to Falcon MCP.',
+    },
+    {
+      id: 'perps-advice', domain: 'perps', chain: null, network: null, actions: ['advise', 'execute'],
+      code: 'MCP_INTEGRATION_UNAVAILABLE', reason: 'No perps advisory or execution tools are exposed through Falcon MCP.',
+    },
+    {
+      id: 'solana-mainnet-execution', domain: 'execution', chain: 'solana', network: 'mainnet-beta', actions: ['execute'],
+      code: 'EXECUTION_NETWORK_UNSUPPORTED', reason: 'Execution preparation is Devnet only. Mainnet yield discovery does not enable mainnet transactions.',
+    },
+    {
+      id: 'evm-execution', domain: 'execution', chain: 'evm', network: null, actions: ['execute'],
+      code: 'EXECUTION_CHAIN_UNSUPPORTED', reason: 'Falcon MCP has no EVM execution adapter.',
+    },
+    {
+      id: 'brokerage-execution', domain: 'stocks', chain: null, network: null, actions: ['execute'],
+      code: 'MCP_INTEGRATION_UNAVAILABLE', reason: 'Falcon MCP has no brokerage account or order adapter.',
+    },
+  ],
+  contextualChecks: {
+    wallet: 'falcon_wallet_status',
+    transactionDecode: 'falcon_decode_transaction',
+    transactionPreflight: 'falcon_prepare_transaction',
+    receipt: 'falcon_check_receipt',
+  },
+};
+
+
 export const INSTRUCTIONS = [
   'FalconOS Solana Devnet tools. The public live market graph is the first functional call and needs no wallet, funds, login, or signer.',
+  'Call falcon_self_test({}) for versioned capability scope and specific unavailable reasons. Unlisted capabilities are unsupported; metadata does not prove backend availability or action readiness.',
   'Call falcon_public_graph({}) first. It reads only fixed public-market evidence; OBSERVED is technical data, not a personalized REVIEW, recommendation, or execution approval. NO_DATA never falls back to an older graph.',
   'Custom graph selection is not supported. Policy identifiers and version are graph metadata, not owner mandates or durable decision IDs. Never invent proposed amount, owner maximum, book floor, or evidence-age limit.',
   'Reuse an existing unexpired session. Only sign a new wallet-ownership message when one is required for owner-bound adoption, decisions, or execution records; sessions last 30 minutes.',
@@ -462,7 +527,7 @@ export function registerFalconTools(server, { mesh, limiter }) {
 
   define('falcon_self_test', {
     title: 'Read MCP metadata self-test',
-    description: 'Metadata-only report of server package version, network labels, the registered tool names/count, and a deterministic fingerprint of their published input schemas. It does not probe Mesh, health, signer support, funds, or transaction readiness.',
+    description: 'Metadata-only report of server version, tool schemas, and versioned capabilities: supported domain/action/network scope, unavailable reasons, human approval boundaries, and contextual-check tools. Unlisted capabilities are unsupported. It does not probe Mesh, health, signer support, funds, or transaction readiness.',
     inputSchema: z.strictObject({}),
     annotations: READ,
     rate: () => ['public', 'falcon_self_test'],
@@ -473,6 +538,7 @@ export function registerFalconTools(server, { mesh, limiter }) {
     tools: [...TOOL_NAMES],
     toolCount: TOOL_NAMES.length,
     schemaFingerprint: fingerprintInputSchemas(registeredSchemas),
+    capabilities: CAPABILITIES,
     readiness: { signer: 'not_checked', funding: 'not_checked', transaction: 'not_checked' },
   }));
 }

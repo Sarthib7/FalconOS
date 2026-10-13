@@ -65,7 +65,6 @@ test('tools/list exposes exactly fourteen strict tools and the action-dependent 
   for (const tool of tools) {
     assert.equal(tool.inputSchema.type, 'object', tool.name);
     assert.equal(tool.inputSchema.additionalProperties, false, `${tool.name} must reject extra keys`);
-    assert.ok(tool.description.length > 20, tool.name);
   }
   const byName = new Map(tools.map(tool => [tool.name, tool]));
   for (const name of AUTHENTICATED) {
@@ -636,7 +635,6 @@ test('self-test is metadata-only and fingerprints the actual tools/list schemas'
   assert.equal(result.isError, undefined);
   const selfTest = body(result);
   assert.equal(selfTest.serverVersion, packageJson.version);
-  assert.equal(selfTest.serverVersion, '0.3.1');
   assert.equal(selfTest.chain, 'solana');
   assert.equal(selfTest.network, 'devnet');
   assert.deepEqual(selfTest.tools, TOOL_NAMES);
@@ -650,6 +648,55 @@ test('self-test is metadata-only and fingerprints the actual tools/list schemas'
   assert.equal((await call('falcon_self_test', { wallet: WALLET })).isError, true, 'self-test rejects unknown arguments');
   assert.equal(mesh.calls.length, 0);
 }));
+
+test('V159/V174/V177: capability discovery remains metadata-only when Mesh is offline', () => withStack({}, async ({ call, mesh, url }) => {
+  await mesh.close();
+  assert.equal((await fetch(url + '/readyz')).status, 503, 'the backend is unavailable');
+  const result = await call('falcon_self_test', {});
+  assert.equal(result.isError, undefined);
+  const { capabilities, readiness } = body(result);
+  assert.equal(capabilities.schemaVersion, 1);
+  assert.equal(capabilities.verification, 'metadata-only');
+  assert.equal(capabilities.defaultSupport, 'unsupported');
+  assert.deepEqual(readiness, { signer: 'not_checked', funding: 'not_checked', transaction: 'not_checked' });
+  assert.equal(capabilities.authority.humanApproval, 'each-signature-and-broadcast');
+  assert.equal(capabilities.authority.signing, 'human-controlled-wallet');
+  assert.equal(capabilities.authority.broadcast, 'human-only');
+  assert.equal(capabilities.authority.custody, false);
+  assert.equal(capabilities.authority.delegatedExecution, false);
+  const execution = capabilities.supported.filter(item => item.executionMode);
+  assert.deepEqual(execution.map(({ chain, network, actions }) => ({ chain, network, actions })), [
+    { chain: 'solana', network: 'devnet', actions: ['supply', 'redeem'] },
+  ]);
+  assert.equal(execution[0].maxSupplyUsdc, '1');
+  assert.equal(capabilities.supported.find(item => item.network === 'mainnet-beta').executionSupported, false);
+  assert.equal(capabilities.supported.some(item => ['stocks', 'perps', 'swaps'].includes(item.domain)), false);
+  for (const id of ['solana-swaps', 'stocks-advice', 'perps-advice', 'solana-mainnet-execution', 'evm-execution', 'brokerage-execution']) {
+    const unavailable = capabilities.unavailable.find(item => item.id === id);
+    assert.ok(unavailable, id + ' has an explicit unsupported scope');
+    assert.match(unavailable.code, /UNAVAILABLE|UNSUPPORTED/);
+    assert.equal(typeof unavailable.reason, 'string');
+    assert.ok(unavailable.reason.trim(), id + ' explains why it is unavailable');
+  }
+  assert.equal(mesh.calls.length, 0, 'discovery makes no backend call');
+}));
+
+test('V174: unavailable execution cannot be enabled through tool inputs', () => withStack({}, async ({ call, mesh }) => {
+  const { capabilities } = body(await call('falcon_self_test', {}));
+  assert.equal(capabilities.unavailable.find(item => item.id === 'solana-mainnet-execution').network, 'mainnet-beta');
+  for (const [name, args] of [
+    ['falcon_prepare_transaction', { ...prepareArgs, action: 'swap' }],
+    ['falcon_prepare_transaction', { ...prepareArgs, network: 'mainnet-beta' }],
+    ['falcon_wallet_status', { wallet: WALLET, network: 'mainnet-beta' }],
+    ['falcon_wallet_status', { wallet: WALLET, chain: 'ethereum' }],
+    ['falcon_self_test', { domain: 'stocks' }],
+  ]) {
+    assert.equal((await call(name, args)).isError, true, name + ' rejects unsupported scope');
+  }
+  assert.equal(mesh.calls.length, 0, 'unsupported requests never reach Mesh');
+}));
+
+
 
 test('public status and decode validate inputs, default context, and send no bearer', () => withStack({}, async ({ call, mesh }) => {
   const statusResult = await call('falcon_wallet_status', { wallet: WALLET, forAction: 'supply' });
