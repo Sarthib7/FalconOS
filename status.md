@@ -9,14 +9,39 @@
 | Task | Owner | Status | Evidence / next action |
 | --- | --- | --- | --- |
 | MCP-OS-PLAN | coordinator | Completed | Authored SPEC I21, V174-V180 and T81-T85; updated 11 doc files. Two independent reviews identified four ambiguities, now corrected. PR delivery and exact-head CI remain separate. |
-| PR-CLEANUP | coordinator | In Progress | Closed #5, #6, #7, #8, #9, #10, #12 and #58 as superseded. Preserved #3, #4, #11, #25, #28, #43, #44, #45 and #62 with review blockers posted. New docs PR still needs CI and merge. |
-| WORKTREE-CLEANUP | coordinator | In Progress | Check tracked, untracked and valuable ignored data before deletion. Pushed alone does not mean completed. Keep local/remote branches unless separately verified and selected. |
+| PR-CLEANUP | coordinator | Completed | Reviewed all 17 prior open PRs. Closed #5, #6, #7, #8, #9, #10, #12 and #58 as superseded. Preserved nine unique blocked PRs with review comments. PR #75 carries this plan and cleanup record; its live checks and merge state are delivery evidence. |
+| WORKTREE-CLEANUP | coordinator | Completed | Removed six completed worktrees and 24 missing-path registrations. Removed only the FundLabsSSD symlink. Preserved eight dirty listed worktrees, the original deck checkout and the backup archive. Active docs worktree is removable only after #75 merges. |
 
 [INFERRED, next implementation] T81 is the first implementation task after this documentation change. T82 needs a separately approved Devnet supply/redemption proof. No T81-T85 behavior is implemented by this docs-only change.
 
 [VERIFIED, documentation checks] Temporary Node verifier printed {"files":11,"addedLocalLinksChecked":13,"spec":"PASS","negativeControls":2,"proseFindings":1}. Removing V180 or using a missing local link triggered rejection. The prose finding is uniform punctuation in the required SPEC table/invariant format; no wording defect was identified. These checks do not prove any new product behavior.
 
 [REPORTED, PR reviews] The open OAuth stack needs pre-auth budgets, bounded metadata fetches, current public-tool compatibility, and a consent-origin/schema decision. Market PRs retain unique integrity work but restore the obsolete live stack. Docs/deck PRs retain unique records or publication changes with stale scope. Preserve those branches rather than merging their old diffs.
+
+### Cleanup evidence
+
+[VERIFIED, git worktree removal] Removed FalconOS-mcp-preflight-20261013, FalconOS-pr-public-backend-20261012, FalconOS-skill-repro-20261013, FalconOS-pr-devnet-cap-20261012, FalconOS-pr-yield-network-20261012 and falconos-mvp. Heads were ancestors of main or matched merged PR #67/#68 with merge commits on main. No staged or unique source changes were discarded. Only reviewed dependency links and generated output needed force removal. Local and remote branches were retained.
+
+[VERIFIED, correction] Initial inspection treated falconos-mvp data as potentially unique. git ls-files data counted 21 tracked files, its head was an ancestor of main, and the only untracked files were generated web/dist-mvp output. The worktree was removed after those checks; its data remains in Git history.
+
+[VERIFIED, git inventory] git worktree prune removed 24 registrations whose gitdir targets no longer existed. unlink removed FundLabsSSD, a symlink to /Volumes/Sarthi MAC; the mounted volume and FalconOS checkout remained present. No volume contents were deleted.
+
+| Preserved listed path | Observed reason |
+| --- | --- |
+| FalconOS-pr-mcp-schema-20261012 | Modified MCP contracts, package files and tests. |
+| FalconOS-pr-public-mcp-20261012 | Modified status plus untracked mcp-architecture.html and local Wrangler cache. |
+| FalconOS-pr-receipt-privacy-20261012 | Modified MCP and Mesh receipt code/tests. |
+| FalconOS-pr-transaction-decode-20261012 | Modified HTTP/release docs plus untracked decoder and tests. |
+| FalconOS-pr-wallet-status-20261012 | Modified server/HTTP/release files and untracked wallet-status test. |
+| FalconOS-pr-yield-utf8-20261012 | Modified provider parser and its tests. |
+| FalconOS-privy-sign-only | Modified hardening source/docs/tests plus untracked release/test files. |
+| FalconOS-skill-agent-flow-20261012 | Modified status record. |
+| falconos-wip-backup-2026-10-05.tgz | gzip integrity passed; archive contains yield-agent-plugin-plan.html, absent from origin/main. |
+
+[VERIFIED, preservation check] All eight dirty worktrees failed a reverse-apply check against a disposable index of main. That check cannot prove semantic uniqueness; it only means complete preservation was not established. Some untracked files match main, but others do not. No dirty worktree was reset, stashed or deleted.
+
+[VERIFIED, PR state changes] GitHub confirmed eight closures and accepted blocker comments on #3, #4, #11, #25, #28, #43, #44, #45 and #62. The closed PRs retain their branches and history. No old PR passed current-boundary review for a new merge.
+
 
 ## Falcon bot MVP: 2026-10-03
 [VERIFIED, correction] The first heading used 2026-10-04. The date command returned 2026-10-03, so task IDs below use the corrected date.
