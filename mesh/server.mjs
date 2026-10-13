@@ -3,7 +3,7 @@ import { createApi, parseOrigins, parseTokenHashes } from './http.mjs';
 import { createStore } from './store.mjs';
 import { createPublicGraphService } from './public-graph.mjs';
 import { createLendingStore } from './lending-store.mjs';
-import { prepareLending, verifySignedLending, readLendingReceipt } from './kamino.mjs';
+import { prepareLending, verifySignedLending, verifyLendingValidity, readLendingReceipt } from './kamino.mjs';
 import { createWalletAuth } from './wallet-auth.mjs';
 import { createYieldService } from './yield-data.mjs';
 import { createSupabaseSessionVerifier } from './auth.mjs';
@@ -25,7 +25,12 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5, conn
 pool.on('error', () => process.stderr.write('Mesh database connection failed.\n'));
 const store = createStore(pool);
 const publicGraph = createPublicGraphService({ store });
-const lending = createLendingStore(pool, { meshStore: store, prepareLending, verifySignedLending, readLendingReceipt });
+const lending = createLendingStore(pool, { meshStore: store, prepareLending,
+  verifySignedLending: async (intent, transactionBase64) => {
+    const signature = verifySignedLending(intent, transactionBase64);
+    await verifyLendingValidity(intent);
+    return signature;
+  }, readLendingReceipt });
 const yieldService = createYieldService();
 const walletAuth = createWalletAuth(pool, { allowedOrigins });
 const verifySupabaseToken = createSupabaseSessionVerifier({

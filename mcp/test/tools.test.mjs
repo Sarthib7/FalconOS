@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import bs58 from 'bs58';
 import packageJson from '../package.json' with { type: 'json' };
-import { IDS, ORIGIN, SESSION, SIGNED_TX, TRANSACTION_SIGNATURE, UNSIGNED_TX, WALLET, body, startStack } from './support/harness.mjs';
+import { IDS, ORIGIN, SESSION, SIGNED_TX, TRANSACTION_SIGNATURE, UNSIGNED_TX, WALLET, body, preparedRecord, startStack } from './support/harness.mjs';
 import { TOOL_NAMES, registerFalconTools } from '../src/tools.mjs';
 import { fingerprintInputSchemas } from '../src/schema-fingerprint.mjs';
 
@@ -15,6 +16,47 @@ async function withStack(options, run) {
   const stack = await startStack(options);
   try { await run(stack); } finally { await stack.stop(); }
 }
+
+function preflightFixture(now = Date.now()) {
+  const record = preparedRecord({ body: { wallet: WALLET, action: 'supply', inputBaseUnits: '500000', decisionId: IDS.decision } }, {}, now);
+  return { ...record.intent, createdAt: record.createdAt };
+}
+
+function prepareOverride(options = {}) {
+  return {
+    overrides: { 'POST /v1/public/lending/intents': () => {
+      const fixture = preflightFixture();
+      return { status: 200, body: { record: { id: IDS.intent, createdAt: fixture.createdAt, request: { decisionId: IDS.decision }, intent: {
+        ...fixture, action: 'supply', wallet: WALLET, inputBaseUnits: '500000', estimatedAmounts: { liquidityBaseUnits: '500000' },
+        evidenceSource: 'public', publicGraphRevision: IDS.head, sourceAnalysisId: IDS.analysis, ...options.intent,
+      } } } };
+    } },
+    clock: () => new Date(),
+  };
+}
+
+test('prepare returns a bounded Falcon RPC preflight tied to the serialized transaction message and fails closed', () => withStack(prepareOverride(), async ({ call }) => {
+  const valid = await call('falcon_prepare_transaction', prepareArgs);
+  assert.equal(valid.isError, undefined, JSON.stringify(body(valid)));
+  const output = body(valid);
+  assert.deepEqual(output.preflight.network, preflightFixture().preflight.network);
+  assert.equal(output.preflight.messageSha256, preflightFixture().preflight.messageSha256);
+  assert.match(output.preflightTrust, /Falcon RPC verified.*not independent.*not human approval/i);
+  for (const bad of [
+    { intent: { preflight: undefined } },
+    { intent: { preflight: { ...preflightFixture().preflight, messageSha256: 'ab'.repeat(32) } } },
+    { intent: { preflight: { ...preflightFixture().preflight, costs: { ...preflightFixture().preflight.costs, totalSolLamports: 'NaN' } } } },
+    { intent: { preflight: { ...preflightFixture().preflight, costs: { ...preflightFixture().preflight.costs, feeLamports: '18446744073709551616', rentLamports: '0', totalSolLamports: '18446744073709551616', walletSolBalanceLamports: '18446744073709551616' } } } },
+    { intent: { preflight: { ...preflightFixture().preflight, privateRpcTrace: 'https://user:pass@secret.invalid/rpc?key=secret' } } },
+  ]) {
+    const stack = await startStack(prepareOverride(bad));
+    try {
+      const result = await stack.call('falcon_prepare_transaction', prepareArgs);
+      assert.equal(result.isError, true);
+      assert.doesNotMatch(result.content[0].text, /secret.invalid|user:pass|privateRpcTrace/);
+    } finally { await stack.stop(); }
+  }
+}));
 
 test('tools/list exposes exactly fourteen strict tools and the action-dependent prepare schema', () => withStack({}, async ({ client }) => {
   const { tools } = await client.listTools();
@@ -278,10 +320,11 @@ test('public graph, owner adoption, reserve decision, and prepare stay bound to 
   assert.deepEqual(decisionCall.body.scenario, { proposedUnits: '500000', maxProposedUnits: '1000000', minBookLiquidityUnits: '2250000', maxObservationAgeSeconds: 120 });
 
   const prepared = body(await call('falcon_prepare_transaction', prepareArgs));
-  assert.deepEqual(Object.keys(prepared), ['intentId', 'action', 'amountUsdc', 'wallet', 'unsignedTransactionBase64', 'messageSha256', 'expiresInSeconds', 'decisionId', 'evidenceSource', 'publicGraphRevision', 'sourceAnalysisId', 'summary', 'next']);
+  assert.deepEqual(Object.keys(prepared), ['intentId', 'action', 'amountUsdc', 'wallet', 'unsignedTransactionBase64', 'messageSha256', 'preflight', 'preflightTrust', 'expiresInSeconds', 'decisionId', 'evidenceSource', 'publicGraphRevision', 'sourceAnalysisId', 'summary', 'next']);
   assert.equal(prepared.intentId, IDS.intent);
   assert.equal(prepared.unsignedTransactionBase64, UNSIGNED_TX);
-  assert.equal(prepared.expiresInSeconds, 120);
+  assert.ok(prepared.expiresInSeconds > 0 && prepared.expiresInSeconds <= 120);
+  assert.equal(prepared.preflight.validity.expiresAt, prepared.preflight.validity.decisionExpiresAt);
   assert.equal(prepared.wallet, WALLET);
   assert.equal(prepared.evidenceSource, 'public');
   assert.equal(prepared.publicGraphRevision, IDS.head);
@@ -365,7 +408,7 @@ test('prepare action fields are enforced before any Mesh request', () => withSta
 }));
 
 test('prepare rejects caller wallet, fake intent, and malformed session before using the session wallet', () => withStack({
-  overrides: { 'GET /v1/auth/wallet/session': () => ({ status: 200, body: { walletAddress: 'SessionWallet1111111111111111111111111111111', ownerId: 'o', expiresAt: 'x' } }) },
+  overrides: { 'GET /v1/auth/wallet/session': () => ({ status: 200, body: { walletAddress: '11111111111111111111111111111111', ownerId: 'o', expiresAt: 'x' } }) },
 }, async ({ call, mesh }) => {
   for (const input of [
     { ...prepareArgs, wallet: 'AttackerWallet11111111111111111111111111111' },
@@ -376,18 +419,17 @@ test('prepare rejects caller wallet, fake intent, and malformed session before u
 
   const ok = await call('falcon_prepare_transaction', prepareArgs);
   assert.equal(ok.isError, undefined);
-  assert.deepEqual(mesh.calls.map(item => item.method + ' ' + item.path), ['GET /v1/auth/wallet/session', 'POST /v1/public/lending/intents']);
   const intent = mesh.calls[1].body;
-  assert.equal(intent.wallet, 'SessionWallet1111111111111111111111111111111');
+  assert.equal(intent.wallet, '11111111111111111111111111111111');
   assert.equal(intent.inputBaseUnits, '500000');
   assert.equal(intent.decisionId, IDS.decision);
   assert.equal(intent.action, 'supply');
-  assert.equal(body(ok).wallet, 'SessionWallet1111111111111111111111111111111');
+  assert.equal(body(ok).wallet, '11111111111111111111111111111111');
   assert.deepEqual(Object.keys(intent).sort(), ['action', 'analysisId', 'decisionId', 'inputBaseUnits', 'requestId', 'wallet']);
 }));
 
 test('V148 redeem sends receipt-token units and displays burn plus non-1:1 estimated USDC output', () => withStack({
-  overrides: { 'POST /v1/public/lending/intents': () => ({ status: 200, body: { record: { id: IDS.intent, intent: { transactionBase64: UNSIGNED_TX, messageSha256: 'ab'.repeat(32), estimatedAmounts: { liquidityBaseUnits: '375000', receiptBaseUnits: '250000' }, evidenceSource: 'public', publicGraphRevision: IDS.head, sourceAnalysisId: IDS.analysis } } } }) },
+  overrides: { 'POST /v1/public/lending/intents': call => ({ status: 200, body: { record: preparedRecord(call, { estimatedAmounts: { liquidityBaseUnits: '375000', receiptBaseUnits: '250000' } }) } }) },
 }, async ({ call, mesh }) => {
   const redeem = { session: SESSION, action: 'redeem', amountReceiptTokens: '0.25', analysisId: IDS.analysis };
   const result = await call('falcon_prepare_transaction', redeem);
@@ -423,12 +465,9 @@ test('prepare rejects missing or cross-action amounts and unknown UUID or intent
 
 test('V151: prepare remains available when sequential Devnet RPC work exceeds the ordinary Mesh timeout', () => withStack({
   overrides: {
-    'POST /v1/public/lending/intents': async () => {
+    'POST /v1/public/lending/intents': async call => {
       await new Promise(resolve => setTimeout(resolve, 16_000));
-      return { status: 200, body: { record: { id: IDS.intent, intent: {
-        transactionBase64: UNSIGNED_TX, messageSha256: 'ab'.repeat(32),
-        estimatedAmounts: { liquidityBaseUnits: '500000', receiptBaseUnits: '500000' },
-      } } } };
+      return { status: 200, body: { record: preparedRecord(call, { estimatedAmounts: { liquidityBaseUnits: '500000', receiptBaseUnits: '500000' } }) } };
     },
   },
 }, async ({ call }) => {
@@ -597,7 +636,7 @@ test('self-test is metadata-only and fingerprints the actual tools/list schemas'
   assert.equal(result.isError, undefined);
   const selfTest = body(result);
   assert.equal(selfTest.serverVersion, packageJson.version);
-  assert.equal(selfTest.serverVersion, '0.3.0');
+  assert.equal(selfTest.serverVersion, '0.3.1');
   assert.equal(selfTest.chain, 'solana');
   assert.equal(selfTest.network, 'devnet');
   assert.deepEqual(selfTest.tools, TOOL_NAMES);

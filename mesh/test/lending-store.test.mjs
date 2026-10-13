@@ -6,7 +6,7 @@ import { createStore } from '../store.mjs';
 import { MeshError } from '../domain.mjs';
 import { captureSource } from '../live.mjs';
 import { createLendingStore } from '../lending-store.mjs';
-import { ADAPTER_VERSION } from '../kamino-wire.mjs';
+import { ADAPTER_VERSION, buildLendingTransaction, deriveAccounts } from '../kamino-wire.mjs';
 import { createKaminoBrowserFixture } from './support/kamino-fixtures.mjs';
 
 const connectionString = process.env.FALCON_MESH_TEST_DATABASE_URL;
@@ -30,11 +30,26 @@ async function publicFetch(url, init) {
     context: { slot: 123 }, value: { owner: 'BPFLoaderUpgradeab1e11111111111111111111111', executable: true, data: [Buffer.alloc(36, 1).toString('base64'), 'base64'], space: 36 },
   } });
 }
-function intent(request) {
+function intent(request, oracleAgeSeconds = 3600) {
+  const blockhash = '11111111111111111111111111111111';
+  const transaction = buildLendingTransaction({ ...request, blockhash, lastValidBlockHeight: 123456789,
+    accounts: deriveAccounts(request.wallet), createDestinationAta: false });
+  const transactionBase64 = Buffer.from(transaction.serialize()).toString('base64');
+  const messageSha256 = createHash('sha256').update(transaction.message.serialize()).digest('hex');
+  const oracleExpiresAt = later(oracleAgeSeconds);
   return { schemaVersion: 1, network: 'devnet', genesisHash: GENESIS, walletControl: 'unverified',
     policyVersion: 'mesh-public-evidence/1', adapterVersion: ADAPTER_VERSION, ...request,
-    transactionBase64: Buffer.from('fixture unsigned message').toString('base64'), messageSha256: 'a'.repeat(64),
-    snapshot: { capturedAt: AT, graph: { nodes: [], edges: [] } }, estimatedAmounts: { liquidityBaseUnits: '1', receiptBaseUnits: '1' } };
+    transactionBase64, messageSha256, blockhash, lastValidBlockHeight: 123456789, createDestinationAta: false,
+    snapshot: { capturedAt: AT, slot: 123, decoded: { oraclePublishTime: AT, oracleMaxAgeSeconds: String(oracleAgeSeconds) }, graph: { nodes: [], edges: [] } },
+    estimatedAmounts: { liquidityBaseUnits: '1', receiptBaseUnits: '1' },
+    preflight: { schemaVersion: 1, status: 'VERIFIED', verification: 'falcon-rpc', messageSha256, checkedAt: AT,
+      network: { chain: 'solana', network: 'devnet', genesisHash: GENESIS, rpcHost: 'api.devnet.solana.com', snapshotSlot: 123 },
+      simulation: { slot: 123, err: null, unitsConsumed: 92000, liquidityDeltaBaseUnits: '-1', receiptDeltaBaseUnits: '1', vaultLiquidityDeltaBaseUnits: '1' },
+      costs: { feeLamports: '1', feeQuoteSlot: 123, rentLamports: '0', totalSolLamports: '1', walletSolBalanceLamports: '10000000',
+        destinationAta: deriveAccounts(request.wallet).walletReceipt, createsDestinationAta: false, accountSize: 165 },
+      validity: { blockhash, lastValidBlockHeight: 123456789, observedBlockHeight: 123456788,
+        oraclePublishTime: AT, oracleExpiresAt, intentExpiresAt: null, decisionExpiresAt: null, expiresAt: oracleExpiresAt } },
+  };
 }
 async function fixture(overrides = {}) {
   let clock = AT;
@@ -48,12 +63,12 @@ async function fixture(overrides = {}) {
   sources.push(await meshStore.captureSource(owner, { requestId: randomUUID(), connectorId: 'solana-devnet-reserve-liquidity', expectedRevisionId: null }));
   const analysis = await meshStore.createAnalysis(owner, { requestId: randomUUID(), observationId: 'observation:live:solana-devnet-klend', maxHops: 3 }, clock, 'live');
   // A real REVIEW decision from the evaluator: the proposal is far inside the 252145908-unit fixture book.
-  const decision = await meshStore.createDecision(owner, { requestId: randomUUID(), scenario: { proposedUnits: '5', maxProposedUnits: '10', minBookLiquidityUnits: '1', maxObservationAgeSeconds: 300 } }, clock);
+  const decision = await meshStore.createDecision(owner, { requestId: randomUUID(), scenario: { proposedUnits: '5', maxProposedUnits: '10', minBookLiquidityUnits: '1', maxObservationAgeSeconds: overrides.maxObservationAgeSeconds ?? 300 } }, clock);
   assert.equal(decision.analysis.status, 'REVIEW');
   assert.equal(analysis.analysis.status, 'OBSERVED');
   const dependencies = {
     meshStore, now: () => clock,
-    prepareLending: async request => { counts.prepare += 1; return overrides.prepare ? overrides.prepare(request) : intent(request); },
+    prepareLending: async request => { counts.prepare += 1; return overrides.prepare ? overrides.prepare(request) : intent(request, overrides.oracleAgeSeconds ?? 3600); },
     verifySignedLending: async (prepared, transactionBase64) => {
       counts.verify += 1;
       if (overrides.verify) return overrides.verify(prepared, transactionBase64);
@@ -83,19 +98,31 @@ test('V101: prepared intent retains the exact request and original analysis acro
   assert.equal(record.requestId, f.input.requestId);
   assert.equal(record.analysisId, f.analysis.id);
   assert.deepEqual(record.request, { wallet: WALLET, action: 'supply', inputBaseUnits: '1', decisionId: f.decision.id });
-  assert.deepEqual(record.intent, intent({ wallet: WALLET, action: 'supply', inputBaseUnits: '1' }));
+  assert.equal(record.intent.preflight.status, 'VERIFIED');
+  assert.equal(record.intent.preflight.validity.intentExpiresAt, later(120));
+  assert.equal(record.intent.preflight.validity.decisionExpiresAt, later(300));
+  assert.equal(record.intent.preflight.validity.expiresAt, later(120));
+  assert.equal(record.intent.preflight.validity.oracleExpiresAt, later(300));
   assert.equal(record.createdAt, AT);
   const freshPool = new Pool({ connectionString, max: 1, connectionTimeoutMillis: 5000 });
   try { assert.deepEqual(await createLendingStore(freshPool, f.dependencies).get(f.owner, record.id), { record, events: [] }); }
   finally { await freshPool.end(); }
   assert.equal((await f.store.list(f.owner))[0].status, 'PREPARED');
 });
+test('V171: owner observation-age cap of 120 seconds clamps a 150-second oracle bound', async () => {
+  const f = await fixture({ oracleAgeSeconds: 150, maxObservationAgeSeconds: 120 });
+  const record = await f.store.prepare(f.owner, f.input);
+  assert.equal(record.intent.preflight.validity.oracleExpiresAt, later(120));
+  assert.equal(record.intent.preflight.validity.intentExpiresAt, later(120));
+  assert.equal(record.intent.preflight.validity.decisionExpiresAt, later(120));
+  assert.equal(record.intent.preflight.validity.expiresAt, later(120));
+});
 
 test('V101: preparation retry returns its original result without fresh evidence or another adapter call', async () => {
   const f = await fixture();
   const first = await f.store.prepare(f.owner, f.input);
   f.setTime(later(1000));
-  assert.deepEqual(await f.store.prepare(f.owner, f.input), first);
+  await assert.rejects(f.store.prepare(f.owner, f.input), code('CONFLICT'));
   assert.equal(f.counts.prepare, 1);
   for (const changes of [{ inputBaseUnits: '2' }, { analysisId: randomUUID() }]) {
     await assert.rejects(f.store.prepare(f.owner, { ...f.input, ...changes }), code('CONFLICT'));

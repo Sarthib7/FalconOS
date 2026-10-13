@@ -1,4 +1,5 @@
 import { once } from 'node:events';
+import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import bs58 from 'bs58';
@@ -16,7 +17,35 @@ export const IDS = {
   intent: '44444444-4444-4444-8444-444444444444',
   head: '55555555-5555-4555-8555-555555555555',
 };
-export const UNSIGNED_TX = 'AQAAunsignedTransactionBytesForTests//AAAA==';
+// Structural transport fixture only. The complete producer uses the Mesh replay fixture.
+export function fixtureWire(wallet = WALLET) {
+  const message = Buffer.concat([Buffer.from([0x80, 1, 0, 0, 1]), Buffer.from(bs58.decode(wallet)), Buffer.alloc(32), Buffer.from([0, 0])]);
+  return { transactionBase64: Buffer.concat([Buffer.from([1]), Buffer.alloc(64), message]).toString('base64'), messageSha256: createHash('sha256').update(message).digest('hex') };
+}
+export const UNSIGNED_TX = fixtureWire().transactionBase64;
+export const UNSIGNED_MESSAGE_SHA256 = fixtureWire().messageSha256;
+
+export function preparedRecord(call, extra = {}, now = Date.now()) {
+  const at = offset => new Date(now + offset).toISOString();
+  const decisionId = call.body.decisionId ?? null;
+  const intentExpiry = at(120_000), decisionExpiry = decisionId ? at(80_000) : null, oracleExpiry = at(110_000);
+  const expiry = decisionExpiry ?? oracleExpiry;
+  const wire = fixtureWire(call.body.wallet);
+  const amount = BigInt(call.body.inputBaseUnits);
+  const liquidity = call.body.action === 'supply' ? -amount : BigInt(extra.estimatedAmounts?.liquidityBaseUnits ?? amount);
+  const receipt = call.body.action === 'supply' ? amount : -amount;
+  return { id: IDS.intent, createdAt: at(0), request: { decisionId }, intent: {
+    action: call.body.action, wallet: call.body.wallet, inputBaseUnits: call.body.inputBaseUnits,
+    ...wire, evidenceSource: 'public', publicGraphRevision: IDS.head, sourceAnalysisId: IDS.analysis, ...extra,
+    preflight: {
+      schemaVersion: 1, status: 'VERIFIED', verification: 'falcon-rpc', messageSha256: wire.messageSha256, checkedAt: at(0),
+      network: { chain: 'solana', network: 'devnet', genesisHash: 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG', rpcHost: 'api.devnet.solana.com', snapshotSlot: 100 },
+      simulation: { slot: 101, err: null, unitsConsumed: 1000, liquidityDeltaBaseUnits: liquidity.toString(), receiptDeltaBaseUnits: receipt.toString(), vaultLiquidityDeltaBaseUnits: (-liquidity).toString() },
+      costs: { feeLamports: '5000', feeQuoteSlot: 100, rentLamports: '0', totalSolLamports: '5000', walletSolBalanceLamports: '10000000', destinationAta: '11111111111111111111111111111111', createsDestinationAta: false, accountSize: 165 },
+      validity: { blockhash: '11111111111111111111111111111111', lastValidBlockHeight: 200, observedBlockHeight: 199, oraclePublishTime: at(-1000), oracleExpiresAt: oracleExpiry, intentExpiresAt: intentExpiry, decisionExpiresAt: decisionExpiry, expiresAt: expiry },
+    },
+  } };
+}
 export const SIGNED_TX = 'AQBBsignedTransactionBytesForTests//BBBB==';
 export const TRANSACTION_SIGNATURE = bs58.encode(Buffer.from(Array.from({ length: 64 }, (_, index) => (index * 5 + 1) % 256)));
 
@@ -75,10 +104,7 @@ function defaults() {
         },
       },
     } }),
-    'POST /v1/public/lending/intents': () => json({ record: { id, intent: {
-      transactionBase64: UNSIGNED_TX, messageSha256: 'ab'.repeat(32),
-      evidenceSource: 'public', publicGraphRevision: IDS.head, sourceAnalysisId: IDS.analysis,
-    } } }),
+    'POST /v1/public/lending/intents': call => json({ record: preparedRecord(call, { estimatedAmounts: { liquidityBaseUnits: '500000', receiptBaseUnits: '500000' } }) }),
     ['POST /v1/lending/intents/' + id + '/submit']: () => json({ event: event('SUBMITTED', { signature: TRANSACTION_SIGNATURE, transactionSha256: 'cd'.repeat(32), transactionBase64: SIGNED_TX }) }),
     ['POST /v1/lending/intents/' + id + '/receipt']: () => json({ event: event('RECEIPT', { status: 'CONFIRMED', signature: TRANSACTION_SIGNATURE }) }),
     'GET /v1/decisions': () => json({ records: [{ id: IDS.decision, createdAt: '2026-10-05T10:00:00.000Z', analysis: { status: 'REVIEW', summary: 'Review the supply.', expiresAt: '2026-10-05T10:05:00.000Z' } }], limit: 20 }),

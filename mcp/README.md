@@ -138,3 +138,14 @@ Correction (2026-10-12): the two local 0.3.0 fixture paragraphs previously claim
 [VERIFIED, HTTPS byte comparison] Approved Pages deployment `31b1f779` serves the guide and manifest on `agents.falconos.markets`. Both return `200`, version `0.3.0`; the manifest requires MCP `0.3.0`. The 10888-byte guide SHA-256 is `1e036bc96d7014fb701a2bffb20bbd56bb9f53eb64de3c5c297c7335bb8fb8d7`, matching the built artifact. Pin this value through an independently trusted channel; a digest fetched beside the guide does not establish trust.
 
 [NOT DETERMINED] No funded supply/redeem or independent Explorer receipt was exercised. This release check used no wallet, signing, funding or broadcast. Custom graph configuration and the separate swap/send/receive/quote expansion are not part of these 14 tools.
+
+
+## Falcon-verified preflight release 0.3.1 (2026-10-13)
+
+[VERIFIED, source and local producer/HTTP SDK smoke] Existing `falcon_prepare_transaction` returns a complete `preflight` bound to the unchanged `messageSha256`. It includes pinned Devnet genesis and RPC provenance, successful exact-byte simulation and token effects, fee plus conditional destination-ATA rent, affordability and observed block-height/time limits. Inputs and the 14-tool inventory stay unchanged. No generic RPC proxy, user key handling or automatic broadcast was added.
+
+[VERIFIED, trust contract] `verification: "falcon-rpc"` means Falcon checked the data through its fixed Devnet RPC. It is not independent verification, human approval or future execution proof. Standard review no longer requires a client-owned RPC account. Clients still decode exact bytes, inspect complete proof and obtain each human signature approval. Offline decode retains requested-context-only network metadata and false signing/readiness flags. The human alone broadcasts; final CONFIRMED must match the registered signature and independent Devnet Explorer evidence.
+
+[VERIFIED, failure boundaries] Incomplete/malformed/hash-mismatched or already-signed upstream packets return `PREFLIGHT_UNAVAILABLE` without an unsigned transaction. Scalar cost overflow, inconsistent token effects and signer/blockhash mismatches fail closed. The store retains original proof and earliest expiry. First registration checks live validity separately from historical receipt-safe cryptographic verification. A 120-second ceiling is not a guaranteed blockhash lifetime.
+
+[VERIFIED, local gate] `npm run verify:mcp`: `tests 63`, `pass 63`, `fail 0`. `REAL_PRODUCER_PG_HTTP_MCP_PREFLIGHT_SMOKE_OK` crossed actual producer, owned PostgreSQL, Mesh HTTP and MCP HTTP using the official SDK. Missing and altered upstream proof returned `PREFLIGHT_UNAVAILABLE`. RPC/account data and authentication in that smoke were controlled fixtures; no live wallet, external RPC, signature or broadcast was exercised.

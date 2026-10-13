@@ -1103,3 +1103,27 @@ The demo used synthetic responses. No live API call occurred.
 [REPORTED, Luna cold reviews + VERIFIED scoped corrections] Reviewers identified proof-scope ambiguity for digest-only manifest URL checks, checkout-relative expected records and HTTP manifest coverage. The guide now requires independently obtained records and states CI is self-consistency only. CLI output labels metadata origin and whether it checked the canonical URL against an expected record. The HTTP regression fetches exact guide and manifest bytes instead of pinning tool-name wording. Neither review ran a funded wallet flow.
 [NOT DETERMINED] Branch commit/push/PR/merge/publication pending explicit approval. This patch did not change the live 0.3.1 release. The previously reported missing Devnet USDC and unavailable approved signing tool still block full execution. No automatic key creation, funding, signing or broadcast is authorized.
 [VERIFIED, subsequent approval] User approved committing and pushing `fix/skill-repro-20261013` to `Sarthib7/FalconOS` and opening one PR. Prior pending-approval text records the earlier state. Exact-head CI must run; leave the PR open. Merge, deployment and wallet actions remain unauthorized.
+
+
+## Falcon-owned MCP preflight feature: 2026-10-13
+
+[VERIFIED, scope] Status: In Progress. Owner: coordinator. Branch `feat/mcp-preflight-20261013` is isolated from main0efc8aeba44accb2779efb57c18f1dd17403682c. User approved scoped code, guide, PR and gated merge; no deployment or wallet action. SPEC I20/V171-V173/T80/B109 additions were explicitly approved.
+[REPORTED, Luna plan refutation] Existing producer suite19passed and MCP suite59passed before changes. The reviewers confirmed missing cost/expiry projection and requested fail-closed upstream validation. These baseline counts do not verify the new feature.
+[PLANNED, ownership] Luna producer owns Mesh adapter/store/server composition and directly affected fixtures. Luna MCP owns bounded public preflight validation/projection and version0.3.1. Luna guide owns skill0.3.3/requiredMCP0.3.1. Lead owns release digest/CI, shared contracts, documentation and final smoke/review/PR/merge. No shared-file writers.
+[VERIFIED, test environment] Owned local PostgreSQL17 cluster and UTF-8 disposable database initialized from the complete schema3 migration history. Restricted-role candidate applied there only. Production database credentials were not used.
+[PLANNED, next] Integrate stable slices, verify malformed/missing/unaffordable/tampered preflight failures and real local HTTP SDK path, create exact rendered digest, run focused relevant gates, then publish one PR and merge only after exact-head CI. No live transaction was signed or broadcast.
+
+
+### Local implementation proof and publication gate
+
+[VERIFIED, code and smoke complete] T80 records completed source behavior and local proof. The separate approved PR and gated merge remain required delivery steps. No deployment is authorized. Relevant gates returned `mesh: PASS` (tests 244/pass 244/fail 0), `mcp: PASS` (tests 63/pass 63/fail 0), and `web: PASS` (pass 309/fail 0/skipped 1). Agents-site: tests 3/pass 3/fail 0.
+
+[VERIFIED, lead smoke] `REAL_PRODUCER_PG_HTTP_MCP_PREFLIGHT_SMOKE_OK` crossed actual producer, disposable PostgreSQL, Mesh HTTP and MCP HTTP official SDK. Missing and hash-altered upstream proof returned `PREFLIGHT_UNAVAILABLE`. This was controlled account/RPC replay and fixture authentication, not live-chain execution. No live wallet, external RPC, signature or broadcast ran.
+
+[VERIFIED, regression evidence] New malformed/raw-binding consumer tests were tests 3/pass 1/fail 2 before the fix and tests 3/pass 3/fail 0 after it. Zero rent for required ATA creation was tests 1/pass 0/fail 1 before the guard and tests 1/pass 1/fail 0 after it. These checks cover real rejection behavior, not wiring or wording.
+
+[VERIFIED, guide artifact] Skill 0.3.3 requires MCP 0.3.1. Actual local GET guide/manifest and HEAD guide returned 200; bytes 19027, SHA-256 `a244d5a120dd655984ac7825ee3ebdef86a8f5a477b53aba19c885cf1c3afc7f`. The final record was refreshed after prose refinement. Previous interim digest was stale; the local HTTP bytes now match.
+
+[REPORTED, Luna cold review] Producer-focused tests 21/pass 21/fail 0; consumer/prepare tests 37/pass 37/fail 0; release tests 5/pass 5/fail 0. The cold reviewer found the interim digest mismatch, now corrected by lead HTTP proof. It also noted pre-existing receipt re-poll behavior, which this focused preflight change does not alter. Review is not live-chain attestation.
+
+[PLANNED, remaining delivery] One scoped commit/PR, clean exact-ref skill rebuild, exact-head CI and repository/container gates, then approved merge. The original human-approved funded supply and independent Explorer goal remains unproved and is not redefined by this release.

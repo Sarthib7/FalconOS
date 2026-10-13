@@ -106,3 +106,12 @@ The service single-flights captures per process and reuses a complete persisted 
 Authenticated `POST /v1/public/graph/adopt` copies the current public source rows into the requesting owner namespace while preserving revision IDs, source bytes, hashes, and original observation/capture timestamps. `POST /v1/public/decisions/reserve` requires that owner's current adopted public program analysis. `POST /v1/public/lending/intents` is a separate prepare path: supply requires the matching current public reserve decision, while redeem remains ungated. Public intents are bound to the shared public head; submission and registered retries recheck that head before returning or registering a signature and reject stale transactions with a do-not-broadcast warning. Existing private/operator lending byte and history responses remain unchanged and owner-scoped.
 
 The read-only Devnet endpoints `POST /v1/wallet/status` and `POST /v1/transactions/decode` use bounded request bodies and the same anonymous lookup budget. They report observed account status or decode known transaction instructions; they do not sign or submit transactions. The reserved public namespace cannot be configured as an authenticated owner.
+
+
+## Transaction preflight (2026-10-13)
+
+[VERIFIED, source and local behavior tests] `prepareLending` quotes the exact serialized message fee, conditional 165-byte destination-ATA rent and observed block height while simulating unchanged unsigned bytes. Missing/null/invalid/unaffordable costs reject preparation. Rent is zero only when no account creation is needed. Existing pinned genesis, account/oracle identity, freshness, balance effects and 1 USDC supply cap remain.
+
+[VERIFIED, persistence tests] The JSON intent carries complete preflight evidence. Commit binds the 120-second ceiling and applicable decision expiry, clamps oracle age to the owner maximum when required, and preserves the earliest expiry through reuse. First signed registration combines byte/signature verification with live height validity. Historical confirmed receipts retain cryptographic verification without a new live-expiry rejection. Schema 3 and migration history are unchanged.
+
+[VERIFIED, local gate] `npm run verify:mesh`: `tests 244`, `pass 244`, `fail 0`, `skipped 0`, against an owned disposable PostgreSQL 17 database. Isolated release linkage returned `mesh-release-inputs` PASS with 27 declared files. These checks use controlled RPC/account fixtures, not a funded Devnet transaction or production database.

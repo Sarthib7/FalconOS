@@ -7,15 +7,13 @@ import { createStore } from '../store.mjs';
 import { captureSource } from '../live.mjs';
 import { createLendingStore } from '../lending-store.mjs';
 import { createApi } from '../http.mjs';
-import { ADAPTER_VERSION } from '../kamino-wire.mjs';
-import { createKaminoBrowserFixture } from './support/kamino-fixtures.mjs';
+import { createLendingIntentFixture, createKaminoBrowserFixture } from './support/kamino-fixtures.mjs';
 
 const connectionString = process.env.FALCON_MESH_TEST_DATABASE_URL;
 if (!connectionString) throw new Error('FALCON_MESH_TEST_DATABASE_URL must name a disposable Postgres database with the full mesh migration history.');
 const pool = new Pool({ connectionString, max: 8, connectionTimeoutMillis: 5000, statement_timeout: 10000 });
 const AT = '2026-09-27T12:00:00.000Z';
 const WALLET = Keypair.generate().publicKey.toBase58();
-const GENESIS = 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG';
 const NOT_REVIEW = 'A fresh REVIEW reserve decision for this amount is required.';
 // The fixed reserve fixture book is 252145908 base units; every proposal here is far inside it.
 const SCENARIO = { proposedUnits: '500000', maxProposedUnits: '10000000', minBookLiquidityUnits: '1000000', maxObservationAgeSeconds: 300 };
@@ -24,12 +22,7 @@ const later = seconds => new Date(Date.parse(AT) + seconds * 1000).toISOString()
 const makeOwner = () => `gate_${randomUUID().replaceAll('-', '')}`;
 const sha = value => createHash('sha256').update(value).digest('hex');
 
-function intent(request) {
-  return { schemaVersion: 1, network: 'devnet', genesisHash: GENESIS, walletControl: 'unverified',
-    policyVersion: 'mesh-public-evidence/1', adapterVersion: ADAPTER_VERSION, ...request,
-    transactionBase64: Buffer.from('fixture unsigned message').toString('base64'), messageSha256: sha('fixture'),
-    snapshot: { capturedAt: AT, graph: { nodes: [], edges: [] } }, estimatedAmounts: { liquidityBaseUnits: '1', receiptBaseUnits: '1' } };
-}
+function intent(request) { return createLendingIntentFixture(request, () => AT); }
 
 async function fixture() {
   let clock = AT;
@@ -116,18 +109,15 @@ test('C2: a NO_DATA decision cannot authorize supply', async () => {
   await assertNoIntent(f);
 });
 
-test('C2: an expired REVIEW decision cannot authorize supply (injected clock)', async () => {
+test('C2: an expired REVIEW decision cannot authorize supply at its exact expiry', async () => {
   const f = await fixture();
   const decision = await f.decide({ ...SCENARIO, maxObservationAgeSeconds: 60 });
   assert.equal(decision.analysis.status, 'REVIEW');
   assert.equal(decision.analysis.expiresAt, later(60));
   f.setTime(later(60));
-  const atExpiry = await f.store.prepare(f.owner, f.supply(decision.id));
-  assert.equal(atExpiry.request.decisionId, decision.id, 'a decision is still usable at the instant it expires');
-  f.setTime(later(61));
-  await assert.rejects(f.store.prepare(f.owner, f.supply(decision.id)), error => error.code === 'CONFLICT' && /expired/i.test(error.message) && error.message !== NOT_REVIEW);
-  assert.equal(f.prepared.length, 1);
-  assert.equal((await f.store.list(f.owner)).length, 1);
+  await assert.rejects(f.store.prepare(f.owner, f.supply(decision.id)), error => error.code === 'CONFLICT' && /expired/i.test(error.message));
+  assert.equal(f.prepared.length, 0);
+  assert.equal((await f.store.list(f.owner)).length, 0);
 });
 
 test('C2: another owner decision, an unknown id and a non-decision analysis id fail with the same message', async () => {
@@ -161,15 +151,16 @@ test('C2: redeem with a decisionId is INVALID_INPUT, redeem without one is never
   assert.equal((await f.store.prepare(f.owner, { ...bare, requestId: randomUUID(), action: 'redeem' })).request.action, 'redeem');
 });
 
-test('C2: a supply replay is idempotent for identical arguments and a CONFLICT for another decisionId', async () => {
+test('C2: expired supply replay preserves history without resetting validity', async () => {
   const f = await fixture();
   const first = await f.decide();
   const second = await f.decide();
   const input = f.supply(first.id);
   const record = await f.store.prepare(f.owner, input);
   f.setTime(later(1000));
-  assert.deepEqual(await f.store.prepare(f.owner, input), record, 'a replay returns the original record even after the decision and evidence expired');
-  assert.equal(f.prepared.length, 1);
+  await assert.rejects(f.store.prepare(f.owner, input), error => error.code === 'CONFLICT' && /expired/i.test(error.message));
+  assert.equal(f.prepared.length, 1, 'expired idempotent retry never re-runs the adapter or resets its expiry');
+  assert.equal((await f.store.get(f.owner, record.id)).record.intent.preflight.validity.intentExpiresAt, later(120));
   await assert.rejects(f.store.prepare(f.owner, { ...input, decisionId: second.id }), error => error.code === 'CONFLICT' && /different arguments/.test(error.message));
   assert.equal((await f.store.list(f.owner)).length, 1);
 });

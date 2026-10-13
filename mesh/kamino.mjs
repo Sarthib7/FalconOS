@@ -22,6 +22,7 @@ const u128 = (bytes, offset) => u64(bytes, offset) + (u64(bytes, offset + 8) << 
 const address = (bytes, offset) => new PublicKey(bytes.subarray(offset, offset + 32)).toBase58();
 const slotNumber = value => Number.isSafeInteger(value) && value > 0;
 const unsigned = value => typeof value === 'string' && /^(0|[1-9][0-9]{0,19})$/.test(value) && BigInt(value) <= 18446744073709551615n;
+const isoSeconds = value => new Date(Number(value) * 1000).toISOString();
 
 function fromBase64(value, limit = BODY_LIMIT) {
   check(typeof value === 'string' && value.length <= Math.ceil(limit / 3) * 4, 'Base64 data exceeds its limit.');
@@ -173,7 +174,8 @@ function decodeSnapshot(result, a, at, action, amount) {
     collateralSupplyBaseUnits: collateralSupply.toString(), receiptMintSupplyBaseUnits: receiptMintSupply.toString(),
     walletLiquidityBaseUnits: (walletLiquidity ?? 0n).toString(), walletReceiptBaseUnits: (walletReceipt ?? 0n).toString(),
     walletLiquidityExists: walletLiquidity !== null, walletReceiptExists: walletReceipt !== null,
-    chainTimestamp: chainTime.toString(), oraclePublishTime: publishTime.toString(),
+    chainTimestamp: chainTime.toString(), oraclePublishTime: publishTime.toString(), oracleMaxAgeSeconds: maxAge.toString(),
+    walletSolBalanceLamports: walletAccount.lamports.toString(),
     oraclePrice: oracle.readBigInt64LE(73).toString(), oracleExponent: oracle.readInt32LE(89),
     createDestinationAta: action === 'supply' ? walletReceipt === null : walletLiquidity === null,
   };
@@ -220,7 +222,10 @@ async function prepare(input, { fetchImpl, now, exchanges }) {
   const decoded = decodeSnapshot(response, accounts, capturedAt, action, amount);
   const slot = response.context.slot;
   const latest = await rpc('getLatestBlockhash', [{ commitment: 'confirmed', minContextSlot: slot }]);
-  check(slotNumber(latest?.context?.slot) && latest.context.slot >= slot && latest.value, 'Blockhash context is invalid.');
+  check(slotNumber(latest?.context?.slot) && latest.context.slot >= slot && latest.value
+    && typeof latest.value.blockhash === 'string' && new PublicKey(latest.value.blockhash).toBase58() === latest.value.blockhash
+    && Number.isSafeInteger(latest.value.lastValidBlockHeight) && latest.value.lastValidBlockHeight > 0,
+  'Blockhash context is invalid.');
   const { blockhash, lastValidBlockHeight } = latest.value;
   const prepared = {
     schemaVersion: 1, network: 'devnet', genesisHash: C.genesisHash, walletControl: 'unverified',
@@ -231,10 +236,15 @@ async function prepare(input, { fetchImpl, now, exchanges }) {
   const transaction = buildLendingTransaction(prepared);
   prepared.transactionBase64 = Buffer.from(transaction.serialize()).toString('base64');
   prepared.messageSha256 = sha256(transaction.message.serialize());
-  const simulated = await rpc('simulateTransaction', [prepared.transactionBase64, {
-    encoding: 'base64', commitment: 'confirmed', sigVerify: false, replaceRecentBlockhash: false, minContextSlot: slot,
-    accounts: { encoding: 'base64', addresses: [accounts.walletLiquidity, accounts.walletReceipt, accounts.liquidityVault] },
-  }]);
+  const [simulated, feeQuote, rentLamports, observedBlockHeight] = await Promise.all([
+    rpc('simulateTransaction', [prepared.transactionBase64, {
+      encoding: 'base64', commitment: 'confirmed', sigVerify: false, replaceRecentBlockhash: false, minContextSlot: slot,
+      accounts: { encoding: 'base64', addresses: [accounts.walletLiquidity, accounts.walletReceipt, accounts.liquidityVault] },
+    }]),
+    rpc('getFeeForMessage', [Buffer.from(transaction.message.serialize()).toString('base64'), { commitment: 'confirmed' }]),
+    decoded.createDestinationAta ? rpc('getMinimumBalanceForRentExemption', [165, { commitment: 'confirmed' }]) : Promise.resolve(0),
+    rpc('getBlockHeight', [{ commitment: 'confirmed' }]),
+  ]);
   check(slotNumber(simulated?.context?.slot) && simulated.context.slot >= slot && simulated.value?.err === null
     && Array.isArray(simulated.value.accounts) && simulated.value.accounts.length === 3, 'Lending simulation failed or returned incomplete accounts.');
   const [usdc, receipt, vault] = simulated.value.accounts;
@@ -249,8 +259,38 @@ async function prepare(input, { fetchImpl, now, exchanges }) {
   check(liquidity > 0n && collateral > 0n && (action === 'supply' ? liquidity <= amount : collateral === amount)
     && (action === 'supply' ? afterVault - beforeVault : beforeVault - afterVault) === liquidity,
   'Simulated balances are inconsistent. Prepare a fresh intent.');
-  prepared.simulation = { slot: simulated.context.slot, err: null, unitsConsumed: simulated.value.unitsConsumed ?? null };
+  const unitsConsumed = simulated.value.unitsConsumed ?? null;
+  check(unitsConsumed === null || Number.isSafeInteger(unitsConsumed) && unitsConsumed >= 0, 'Simulation compute usage is invalid.');
+  check(slotNumber(feeQuote?.context?.slot) && feeQuote.context.slot >= slot
+    && Number.isSafeInteger(feeQuote.value) && feeQuote.value >= 0
+    && Number.isSafeInteger(rentLamports) && rentLamports >= 0 && (!decoded.createDestinationAta || rentLamports > 0)
+    && Number.isSafeInteger(observedBlockHeight) && observedBlockHeight >= 0 && observedBlockHeight <= lastValidBlockHeight,
+  'Transaction cost or block-height evidence is invalid.');
+  const fee = BigInt(feeQuote.value);
+  const rent = BigInt(rentLamports);
+  const total = fee + rent;
+  const walletBalance = BigInt(decoded.walletSolBalanceLamports);
+  check(total <= 18446744073709551615n && total <= walletBalance, 'Wallet SOL balance is insufficient for transaction fees and rent.');
+  const oracleExpiresAt = isoSeconds(BigInt(decoded.oraclePublishTime) + BigInt(decoded.oracleMaxAgeSeconds));
+  const checkedAt = stamp(now);
+  check(Date.parse(oracleExpiresAt) > Date.parse(checkedAt), 'Oracle price has expired.');
+  const destinationAta = action === 'supply' ? accounts.walletReceipt : accounts.walletLiquidity;
+  prepared.simulation = { slot: simulated.context.slot, err: null, unitsConsumed,
+    liquidityDeltaBaseUnits: (afterLiquidity - beforeLiquidity).toString(),
+    receiptDeltaBaseUnits: (afterReceipt - beforeReceipt).toString(),
+    vaultLiquidityDeltaBaseUnits: (afterVault - beforeVault).toString() };
   prepared.estimatedAmounts = { liquidityBaseUnits: liquidity.toString(), receiptBaseUnits: collateral.toString() };
+  prepared.preflight = {
+    schemaVersion: 1, status: 'VERIFIED', verification: 'falcon-rpc', messageSha256: prepared.messageSha256, checkedAt,
+    network: { chain: 'solana', network: 'devnet', genesisHash: C.genesisHash, rpcHost: 'api.devnet.solana.com', snapshotSlot: slot },
+    simulation: prepared.simulation,
+    costs: { feeLamports: fee.toString(), feeQuoteSlot: feeQuote.context.slot, rentLamports: rent.toString(),
+      totalSolLamports: total.toString(), walletSolBalanceLamports: walletBalance.toString(), destinationAta,
+      createsDestinationAta: decoded.createDestinationAta, accountSize: 165 },
+    validity: { blockhash, lastValidBlockHeight, observedBlockHeight,
+      oraclePublishTime: isoSeconds(BigInt(decoded.oraclePublishTime)), oracleExpiresAt,
+      intentExpiresAt: null, decisionExpiresAt: null, expiresAt: oracleExpiresAt },
+  };
   return prepared;
 }
 
@@ -309,6 +349,24 @@ export function verifyLendingVersions(intent) {
     throw new MeshError('CONFLICT', 'Prepared lending intent was built against a different policy or adapter version. Prepare it again.');
   }
 }
+export async function verifyLendingValidity(intent, { fetchImpl = globalThis.fetch, now = () => new Date().toISOString() } = {}) {
+  const preflight = intent?.preflight;
+  const validity = preflight?.validity;
+  const at = stamp(now);
+  check(preflight?.status === 'VERIFIED' && preflight.verification === 'falcon-rpc'
+    && preflight.messageSha256 === intent.messageSha256 && /^[a-f0-9]{64}$/.test(intent.messageSha256)
+    && validity && typeof validity.expiresAt === 'string' && Number.isFinite(Date.parse(validity.expiresAt))
+    && Date.parse(validity.expiresAt) > Date.parse(at)
+    && typeof validity.intentExpiresAt === 'string' && Date.parse(validity.intentExpiresAt) > Date.parse(at)
+    && Number.isSafeInteger(validity.lastValidBlockHeight) && validity.lastValidBlockHeight > 0,
+  'Prepared lending validity has expired or is invalid. Prepare a new transaction.');
+  const rpc = createRpc(fetchImpl, now, []);
+  check(await rpc('getGenesisHash') === C.genesisHash, 'RPC is not Solana Devnet.');
+  const height = await rpc('getBlockHeight', [{ commitment: 'confirmed' }]);
+  check(Number.isSafeInteger(height) && height >= 0 && height <= validity.lastValidBlockHeight,
+    'Prepared transaction blockhash has expired. Prepare a new transaction.');
+}
+
 
 function receiptBalance(list, transaction, account, mint, owner, allowMissing = false) {
   check(Array.isArray(list) && list.length <= transaction.message.staticAccountKeys.length, 'Transaction token balances are missing.');

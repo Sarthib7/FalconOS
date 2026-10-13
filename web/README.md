@@ -200,3 +200,14 @@ After creating the Pages project, open **Pages → the project → Custom domain
 [NOT DETERMINED] This patch has not been committed to its branch, pushed, merged or deployed. No signing key or Git signing setting changed. No wallet lookup, funding, account creation, transaction signing, broadcast or Explorer confirmation ran. Publication requires explicit approval for this artifact.
 
 [VERIFIED, subsequent approval] User approved one commit/push and open PR for `fix/skill-repro-20261013`. The pending-approval statement above records the earlier local-only state. Leave the PR open; merge, deployment and wallet actions are outside this approval.
+
+
+## Falcon preflight skill 0.3.3 (2026-10-13)
+
+[VERIFIED, rendered artifact] Skill 0.3.3 requires MCP 0.3.1 and keeps 14 tools. The guide uses complete Falcon-verified preflight as standard review data, without a client RPC key. It preserves the required Falcon wallet-status check, exact human limits, separate signatures, sign-only output, human broadcast and final independent Explorer proof. The offline decoder remains unable to attest network from bytes.
+
+[VERIFIED, local HTTP] `GUIDE033_REAL_HTTP_AND_RECORD_OK`: GET guide/manifest and HEAD guide returned 200, bytes 19027, SHA-256 `a244d5a120dd655984ac7825ee3ebdef86a8f5a477b53aba19c885cf1c3afc7f`. The versioned record is `web/skills/releases/0.3.3.json`; CI rebuilds its exact candidate commit. Same-origin delivery and candidate self-consistency are not publisher authentication.
+
+[VERIFIED, local gate] `npm run verify:web`: `web: PASS`, `pass 309`, `fail 0`, `skipped 1`. Requested agents-site check: `tests 3/pass 3/fail 0`. The preview used canonical build environment and rendered from source. No hosted 0.3.3 publication or funded supply is proven by this check.
+
+[VERIFIED, record correction] The interim 0.3.3 digest record became stale after guide refinement. The final canonical render replaced it and matched the actual local HTTP bytes above. This was a release-record update, not a renderer or production-drift finding.

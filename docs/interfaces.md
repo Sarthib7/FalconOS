@@ -316,3 +316,21 @@ Verification: [VERIFIED, local runs] From mesh/, full schema initialization prin
 [VERIFIED, source: `mesh/http.mjs`, `mesh/wallet-auth.mjs`] `POST /v1/auth/wallet/challenge` accepts `{ address }` and returns a challenge ID, message, and expiry. `POST /v1/auth/wallet/verify` accepts `{ challengeId, signature }` and returns a session token, wallet address, owner ID, and expiry. `GET /v1/auth/wallet/session` restores the identity from a bearer token. `POST /v1/auth/wallet/logout` revokes that token.
 
 [VERIFIED, source: `mesh/migrations/0003_wallet_auth.sql`, `mesh/wallet-auth.mjs`] Challenges expire after five minutes and cannot be reused. Sessions last 30 minutes; PostgreSQL stores a SHA-256 token hash. The server derives the owner ID from the wallet address. The signature authorizes login only, not a transaction.
+
+
+## MCP prepared transaction preflight, 2026-10-13
+
+[VERIFIED, source and controlled local HTTP proof] Interface ID: `MCP-PREFLIGHT-1`. Provider: Mesh lending adapter and intent store. Consumer: MCP 0.3.1 `falcon_prepare_transaction` and skill 0.3.3. Inputs and 14-tool inventory stay unchanged. No generic RPC proxy, wallet keys, automatic signatures or broadcast. JSON intent storage reuses schema 3.
+
+[VERIFIED, shared contract] `preflight` carries `schemaVersion:1`, `status:VERIFIED`, `verification:falcon-rpc`, exact messageSha256 and checkedAt. Network: chain/network/genesisHash/rpcHost/snapshotSlot. Simulation: slot, null err, unitsConsumed and signed decimal liquidity, receipt and vault deltas. Costs: decimal feeLamports/rentLamports/totalSolLamports/walletSolBalanceLamports, feeQuoteSlot, destinationAta, createsDestinationAta and accountSize 165. Validity: blockhash/lastValidBlockHeight/observedBlockHeight, oraclePublishTime/oracleExpiresAt, and store-bound intentExpiresAt/nullable decisionExpiresAt/earliest expiresAt.
+
+[VERIFIED, producer checks] Quote the exact serialized message. Query rent only for actual destination-ATA creation. Reject invalid/null fee, invalid rent, unsafe integer/overflow, insufficient SOL, unsuccessful/inconsistent simulation, incoherent slots and expired height/time. Keep raw RPC exchanges private. Wire ADAPTER_VERSION and analysis POLICY_VERSION are unchanged.
+
+[VERIFIED, trust and expiry] Falcon-verified is not independent of Falcon. Standard human review uses Falcon preflight without a client RPC account. Additional wallet/RPC verification is optional. Offline decode retains NETWORK_NOT_ATTESTED and false approval flags. The human approves each signature, signs only and broadcasts. Final Falcon CONFIRMED plus independent Devnet Explorer proof remains required. Height validity may end before the 120-second intent ceiling.
+
+[VERIFIED, local verification] Relevant gates: Mesh tests 244/pass 244/fail 0; MCP tests 63/pass 63/fail 0; web pass 309/fail 0/skipped 1. The real producer, PostgreSQL store, Mesh HTTP and MCP HTTP SDK smoke rejected missing and hash-altered proof. RPC/account data and authentication were controlled fixtures. No live wallet or production writes.
+
+### Least confident decisions
+
+1. [INFERRED] Clients can use Falcon-verified review data as the standard trust source without a separate RPC connection. It does not add independent cryptographic assurance.
+2. [INFERRED] Time expiry and observed height are enough review data for the existing interface. A blockhash may still expire before human approval; clients must never reuse changed bytes under an old approval.
