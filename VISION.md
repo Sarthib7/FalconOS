@@ -1,4 +1,31 @@
-# FalconOS Vision
+# FalconOS Vision: Agent Platform for Capital Operations
+
+**Status:** Product destination, not current capability
+**Updated:** 2026-10-05
+**Authority:** User direction and repository evidence. Not legal advice or an operating offer.
+
+## Current Product Direction (2026-10-05)
+
+Source: VERIFIED, user direction, 2026-10-05. FalconOS has two delivery paths. Individuals can use lower-cost Falcon plugins through their existing agent environment. Companies, startups, teams, and institutions can use a Falcon-hosted account with a dedicated Falcon Agent.
+
+Source: VERIFIED, user direction, 2026-10-05. The organization service manages agent infrastructure and decision graphs. Its intended work includes treasury, budgets, compliance workflows, CFO tasks, stocks, and hedging. Exact packages and prices remain NOT DETERMINED.
+
+Source: VERIFIED, user direction, 2026-10-05. Customer funds stay in customer-controlled wallets or financial accounts connected to FalconOS. FalconOS does not take custody or pool customer capital in this product model.
+
+Source: INFERRED, architecture direction. Each customer gets a distinct agent identity and isolated mandate and account state. Agents use one shared Decision Engine, specialist capabilities, and decision-graph infrastructure. Do not create a separate reasoning engine per customer.
+
+Source: NOT DETERMINED. Wallet connection does not define transaction authority. Signing, delegated permissions, automation limits, revocation, recovery, and incident controls need a separate design. The current implementation remains limited to capabilities recorded in SPEC.md and component documentation.
+
+Source: INFERRED, future scope. Agents may assess stocks, ETFs, tokenized assets, AMMs, liquidity pools, staking, perpetuals, and other markets when evidence, access, and controls support them. Listing a market here does not mean FalconOS currently supports it.
+
+Source: NOT DETERMINED. Non-custodial operation does not settle licensing, advisory, execution, or compliance requirements. Review the exact service model in each target jurisdiction before launch.
+
+Source: INFERRED, product positioning. The organization cloud tier is the higher-value operating service. The individual plugin tier is a lower-cost entry path. This is a positioning hypothesis, not validated demand or pricing evidence.
+
+## Historical baseline
+
+The earlier vision below is retained as history. It does not define the current two-tier product direction. See ADRs 0008 and 0009.
+
 
 > [VERIFIED, user direction, 2026-09-05] Historical vision. The user changed the scope to multichain trading with Obsidian research and continuous discovery. [Current context](CONTEXT.md) and [build plan](plans/roadmap.md) now govern implementation. The original text below is preserved as a reference.
 

@@ -1,5 +1,15 @@
 # FalconOS phased plan
 
+## Product scope update: two-tier agent platform, 2026-10-05
+
+[VERIFIED, user direction, 2026-10-05] Individuals use lower-cost Falcon plugins through their existing agent environment. Companies, startups, teams, and institutions use a Falcon-hosted workspace with a dedicated Falcon Agent for treasury, budgets, compliance workflows, CFO work, stocks, and hedging.
+
+[VERIFIED, user direction, 2026-10-05] Funds remain in customer-controlled wallets or financial accounts connected to FalconOS. FalconOS operates agent infrastructure and decision graphs; it does not take custody or pool customer capital in this product direction.
+
+[INFERRED, architecture direction] Keep one shared Decision Engine behind both delivery paths. Isolate each hosted organization's identity, agent state, mandate, evidence, and account data. Do not treat this as implemented until the spec and code define and prove it.
+
+[NOT DETERMINED] Hosted provider, pricing, plugin packaging, signing or delegated authority, automated trade limits, jurisdiction coverage, and compliance duties. Do not infer that non-custody removes these launch questions.
+
 [VERIFIED, user request, 2026-09-05] This plan replaces the earlier slice summary with indexed tasks, checkpoints, tests, and pass criteria. The user requested a local build and a proper execution plan. [CONTEXT.md](../CONTEXT.md) remains the product scope. No SPEC.md is created by this plan.
 
 [VERIFIED, scope correction] The earlier roadmap marked the first slice "Completed, prototype". That described implemented code and local checks. It did not establish asset metadata, sustained source access, or an agent decision loop. This plan preserves P0 completion and leaves CP1A and CP1B open.
@@ -11,6 +21,8 @@
 [REPORTED, team roles, 2026-09-05] Root only orchestrates and reports. GPT-5.6 Luna agents implement and measure. Their reports retain their own provenance.
 
 ## Product path
+
+[ARCHIVED, superseded 2026-10-05] The 2026-09-18 direction below is retained for history. The current two-tier, customer-controlled-account direction appears at the top of this file and in [ADR 0008](../docs/adrs/0008-two-tier-agent-platform.md) and [ADR 0009](../docs/adrs/0009-customer-controlled-assets.md).
 
 [VERIFIED, user-confirmed product direction, 2026-09-18] FalconOS is the umbrella product, with Falcon Investment Council as its current module in the agent-first market intelligence and risk advisory category. The present roadmap is advisory-only/read-only and makes no custody, pooling, signing, allocation, or execution claims. Future direction may include pooled investing, curated portfolios, custom ETFs or stock baskets, custody, allocation, and execution. A possible regulated entity would be a separate Falcon investment-management brand, potentially Falcon Hedge Fund.
 
