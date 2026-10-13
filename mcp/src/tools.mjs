@@ -6,6 +6,7 @@ import { sessionKey } from './limiter.mjs';
 import { ToolError } from './mesh-client.mjs';
 import { SignatureError, normalizeSignature } from './signature.mjs';
 import { fingerprintInputSchemas } from './schema-fingerprint.mjs';
+import { projectVerifiedPreflight } from './preflight.mjs';
 
 export const TOOL_NAMES = Object.freeze([
   'falcon_public_graph', 'falcon_connect', 'falcon_connect_verify', 'falcon_disconnect', 'falcon_yield_opportunities',
@@ -361,20 +362,28 @@ export function registerFalconTools(server, { mesh, limiter }) {
       requestId: mesh.newRequestId(), analysisId: args.analysisId, wallet: walletAddress, action: args.action, inputBaseUnits,
       ...(args.decisionId !== undefined && { decisionId: args.decisionId }),
     }, args.session, 60_000);
+    const preflight = projectVerifiedPreflight(record.intent, {
+      action: args.action, wallet: walletAddress, amountBaseUnits: inputBaseUnits, decisionId: args.decisionId,
+      storedDecisionId: record.request?.decisionId,
+      createdAt: record.createdAt,
+    });
+    if (!preflight) throw new ToolError('PREFLIGHT_UNAVAILABLE', 'Falcon could not verify a complete, current Devnet transaction preflight. Do not sign this transaction.');
     const estimatedUsdc = args.action === 'redeem' ? baseUnitsToUsdc(record.intent?.estimatedAmounts?.liquidityBaseUnits) : null;
+    const expiresInSeconds = Math.max(0, Math.ceil((Date.parse(preflight.validity.expiresAt) - Date.now()) / 1000));
     return {
       intentId: record.id, action: args.action,
       ...(args.action === 'supply' ? { amountUsdc: args.amountUsdc } : { amountReceiptTokens: args.amountReceiptTokens, estimatedUsdc }),
       wallet: walletAddress,
       unsignedTransactionBase64: record.intent?.transactionBase64 ?? null, messageSha256: record.intent?.messageSha256 ?? null,
-      expiresInSeconds: PREPARED_TTL_SECONDS, decisionId: args.decisionId ?? null,
+      preflight, preflightTrust: 'Falcon RPC verified for Devnet; this is not independent verification and not human approval.',
+      expiresInSeconds, decisionId: args.decisionId ?? null,
       evidenceSource: record.intent?.evidenceSource ?? null,
       publicGraphRevision: record.intent?.publicGraphRevision ?? null,
       sourceAnalysisId: record.intent?.sourceAnalysisId ?? null,
       summary: args.action === 'supply'
         ? `Unsigned Devnet supply of ${args.amountUsdc} USDC for wallet ${walletAddress}. Nothing has been signed or sent.`
         : `Unsigned Devnet redeem burns ${args.amountReceiptTokens} receipt tokens for wallet ${walletAddress}; estimated ${estimatedUsdc ?? 'unknown'} USDC output. Nothing has been signed or sent.`,
-      next: `Devnet only. Show the action, amount and wallet to your human. Only the human may choose to sign with signTransaction (not signAndSendTransaction) within ${PREPARED_TTL_SECONDS} seconds. Then call falcon_submit_signed with intentId and those human-signed base64 bytes; the human alone broadcasts them.`,
+      next: `Devnet only. Show the action, amount and wallet to your human. Only the human may choose to sign with signTransaction (not signAndSendTransaction) within ${expiresInSeconds} seconds. Then call falcon_submit_signed with intentId and those human-signed base64 bytes; the human alone broadcasts them.`,
     };
   });
 

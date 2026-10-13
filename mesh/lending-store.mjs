@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { PublicKey } from '@solana/web3.js';
 import { MeshError } from './domain.mjs';
+import { LENDING_CONFIG as C, deriveAccounts, deserializeLendingTransaction, validateLendingTransaction } from './kamino-wire.mjs';
 import { analyzeLiveGraph, CONNECTORS } from './live.mjs';
 import { verifyLendingVersions } from './kamino.mjs';
 import { RESERVE_DECISION_MARKER } from './scenario.mjs';
@@ -88,9 +89,10 @@ async function requireDecision(db, owner, input, graphRevision, at) {
   if (decision?.kind !== 'reserve_scenario_decision' || decision.mode !== 'live' || decision.status !== 'REVIEW' || typeof decision.expiresAt !== 'string') {
     fail('CONFLICT', 'A fresh REVIEW reserve decision for this amount is required.');
   }
-  if (Date.parse(decision.expiresAt) < Date.parse(at)) fail('CONFLICT', 'The reserve decision has expired. Save a new decision before supplying.');
+  if (Date.parse(decision.expiresAt) <= Date.parse(at)) fail('CONFLICT', 'The reserve decision has expired. Save a new decision before supplying.');
   if (decision.graphRevision !== graphRevision) fail('CONFLICT', 'Reserve decision evidence changed. Save a new decision before supplying.');
   if (BigInt(input.request.inputBaseUnits) > BigInt(decision.scenario.proposedUnits)) fail('CONFLICT', 'The amount exceeds the proposal in the reserve decision. Save a new decision for this amount.');
+  return { expiresAt: decision.expiresAt, maxObservationAgeSeconds: decision.scenario.maxObservationAgeSeconds };
 }
 function requireAnalysis(record, at) {
   if (!record || record.graph?.mode !== 'live' || record.analysis?.mode !== 'live' || record.analysis.status !== 'OBSERVED'
@@ -105,6 +107,93 @@ function signedBytes(value) {
   const bytes = Buffer.from(value, 'base64');
   if (!bytes.length || bytes.length > 1232 || bytes.toString('base64') !== value) fail('INVALID_INPUT', 'Signed transaction encoding is invalid.');
   return bytes;
+}
+const preflightKeys = ['schemaVersion', 'status', 'verification', 'messageSha256', 'checkedAt', 'network', 'simulation', 'costs', 'validity'];
+const networkKeys = ['chain', 'network', 'genesisHash', 'rpcHost', 'snapshotSlot'];
+const simulationKeys = ['slot', 'err', 'unitsConsumed', 'liquidityDeltaBaseUnits', 'receiptDeltaBaseUnits', 'vaultLiquidityDeltaBaseUnits'];
+const costKeys = ['feeLamports', 'feeQuoteSlot', 'rentLamports', 'totalSolLamports', 'walletSolBalanceLamports', 'destinationAta', 'createsDestinationAta', 'accountSize'];
+const validityKeys = ['blockhash', 'lastValidBlockHeight', 'observedBlockHeight', 'oraclePublishTime', 'oracleExpiresAt', 'intentExpiresAt', 'decisionExpiresAt', 'expiresAt'];
+const U64_MAX = 18446744073709551615n;
+function unsignedDecimal(value) { return typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value) && BigInt(value) <= U64_MAX; }
+function signedDecimal(value) { return typeof value === 'string' && /^(0|-?[1-9][0-9]*)$/.test(value) && BigInt(value) >= -U64_MAX && BigInt(value) <= U64_MAX; }
+function safeSlot(value) { return Number.isSafeInteger(value) && value > 0; }
+function minTime(...values) { return new Date(Math.min(...values.map(value => Date.parse(value)))).toISOString(); }
+function validatePreparedPreflight(intent, request) {
+  const invalid = () => fail('INVALID_INPUT', 'Prepared Falcon preflight does not match the lending request.');
+  try {
+    const pre = intent?.preflight;
+    exact(pre, preflightKeys); exact(pre.network, networkKeys); exact(pre.simulation, simulationKeys);
+    exact(pre.costs, costKeys); exact(pre.validity, validityKeys);
+    if (pre.schemaVersion !== 1 || pre.status !== 'VERIFIED' || pre.verification !== 'falcon-rpc'
+        || !/^[a-f0-9]{64}$/.test(pre.messageSha256) || pre.messageSha256 !== intent.messageSha256
+        || typeof intent.transactionBase64 !== 'string' || !intent.transactionBase64) invalid();
+    const txBytes = signedBytes(intent.transactionBase64);
+    const tx = deserializeLendingTransaction(txBytes);
+    validateLendingTransaction(tx, intent);
+    if (createHash('sha256').update(tx.message.serialize()).digest('hex') !== pre.messageSha256) invalid();
+    if (intent.schemaVersion !== 1 || intent.network !== 'devnet' || intent.genesisHash !== C.genesisHash
+        || intent.wallet !== request.wallet || intent.action !== request.action || intent.inputBaseUnits !== request.inputBaseUnits) invalid();
+    if (pre.network.chain !== 'solana' || pre.network.network !== 'devnet' || pre.network.genesisHash !== C.genesisHash
+        || pre.network.rpcHost !== 'api.devnet.solana.com' || !safeSlot(pre.network.snapshotSlot)
+        || pre.network.snapshotSlot !== intent.snapshot?.slot) invalid();
+    if (!safeSlot(pre.simulation.slot) || pre.simulation.slot < pre.network.snapshotSlot || pre.simulation.err !== null
+        || pre.simulation.unitsConsumed !== null && (!Number.isSafeInteger(pre.simulation.unitsConsumed) || pre.simulation.unitsConsumed < 0)
+        || !signedDecimal(pre.simulation.liquidityDeltaBaseUnits) || !signedDecimal(pre.simulation.receiptDeltaBaseUnits)
+        || !signedDecimal(pre.simulation.vaultLiquidityDeltaBaseUnits)) invalid();
+    const liquidityDelta = BigInt(pre.simulation.liquidityDeltaBaseUnits);
+    const receiptDelta = BigInt(pre.simulation.receiptDeltaBaseUnits);
+    const vaultDelta = BigInt(pre.simulation.vaultLiquidityDeltaBaseUnits);
+    if (liquidityDelta === 0n || receiptDelta === 0n || vaultDelta !== -liquidityDelta
+        || intent.action === 'supply' && (liquidityDelta >= 0n || receiptDelta <= 0n)
+        || intent.action === 'redeem' && (liquidityDelta <= 0n || receiptDelta >= 0n)) invalid();
+    if (!unsignedDecimal(pre.costs.feeLamports) || !unsignedDecimal(pre.costs.rentLamports) || !unsignedDecimal(pre.costs.totalSolLamports)
+        || !unsignedDecimal(pre.costs.walletSolBalanceLamports) || !safeSlot(pre.costs.feeQuoteSlot)
+        || pre.costs.feeQuoteSlot < pre.network.snapshotSlot || pre.costs.accountSize !== 165
+        || typeof pre.costs.createsDestinationAta !== 'boolean' || pre.costs.createsDestinationAta !== intent.createDestinationAta) invalid();
+    const accounts = deriveAccounts(request.wallet);
+    const destination = request.action === 'supply' ? accounts.walletReceipt : accounts.walletLiquidity;
+    if (pre.costs.destinationAta !== destination || BigInt(pre.costs.totalSolLamports) !== BigInt(pre.costs.feeLamports) + BigInt(pre.costs.rentLamports)
+        || BigInt(pre.costs.totalSolLamports) > BigInt(pre.costs.walletSolBalanceLamports)
+        || (pre.costs.createsDestinationAta ? BigInt(pre.costs.rentLamports) <= 0n : BigInt(pre.costs.rentLamports) !== 0n)) invalid();
+    const v = pre.validity;
+    if (typeof v.blockhash !== 'string' || new PublicKey(v.blockhash).toBase58() !== v.blockhash
+        || v.blockhash !== intent.blockhash || !Number.isSafeInteger(v.lastValidBlockHeight) || v.lastValidBlockHeight <= 0
+        || !Number.isSafeInteger(v.observedBlockHeight) || v.observedBlockHeight < 0 || v.observedBlockHeight > v.lastValidBlockHeight
+        || v.lastValidBlockHeight !== intent.lastValidBlockHeight) invalid();
+    timestamp(pre.checkedAt); timestamp(v.oraclePublishTime); timestamp(v.oracleExpiresAt); timestamp(v.expiresAt);
+    const oracleAgeSeconds = (Date.parse(v.oracleExpiresAt) - Date.parse(v.oraclePublishTime)) / 1000;
+    if (!Number.isSafeInteger(oracleAgeSeconds) || oracleAgeSeconds <= 0
+        || Number(intent.snapshot?.decoded?.oracleMaxAgeSeconds) !== oracleAgeSeconds
+        || v.expiresAt !== v.oracleExpiresAt || v.intentExpiresAt !== null || v.decisionExpiresAt !== null) invalid();
+    return pre;
+  } catch (error) {
+    if (error instanceof MeshError) throw error;
+    invalid();
+  }
+}
+function bindPreflightExpiry(intent, committedAt, decision = null) {
+  const preflight = intent.preflight;
+  const decisionExpiresAt = decision === null ? null : timestamp(decision.expiresAt);
+  const producerAgeSeconds = (Date.parse(preflight.validity.oracleExpiresAt) - Date.parse(preflight.validity.oraclePublishTime)) / 1000;
+  const ownerAgeSeconds = decision === null ? producerAgeSeconds : decision.maxObservationAgeSeconds;
+  if (!Number.isSafeInteger(ownerAgeSeconds) || ownerAgeSeconds <= 0) fail('CONFLICT', 'Reserve decision observation age is invalid.');
+  const oracleExpiresAt = new Date(Date.parse(preflight.validity.oraclePublishTime) + Math.min(producerAgeSeconds, ownerAgeSeconds) * 1000).toISOString();
+  const ceiling = new Date(Date.parse(committedAt) + 120000).toISOString();
+  const intentExpiresAt = decisionExpiresAt === null ? ceiling : minTime(ceiling, decisionExpiresAt);
+  const expiresAt = minTime(oracleExpiresAt, intentExpiresAt);
+  if (Date.parse(expiresAt) <= Date.parse(committedAt)) fail('CONFLICT', 'Prepared preflight evidence expired before commit.');
+  return { ...intent, preflight: { ...preflight, validity: { ...preflight.validity, oracleExpiresAt,
+    intentExpiresAt, decisionExpiresAt, expiresAt } } };
+}
+function requireBoundPreflight(intent, at, createdAt) {
+  const v = intent?.preflight?.validity;
+  if (!v || !timestamp(v.intentExpiresAt) || !timestamp(v.expiresAt) || v.decisionExpiresAt !== null && !timestamp(v.decisionExpiresAt)) {
+    fail('CONFLICT', 'Prepared preflight validity is missing or malformed.');
+  }
+  const expected = minTime(v.oracleExpiresAt, v.intentExpiresAt);
+  if (v.expiresAt !== expected || v.decisionExpiresAt && Date.parse(v.intentExpiresAt) > Date.parse(v.decisionExpiresAt)
+      || createdAt && Date.parse(v.intentExpiresAt) > Date.parse(createdAt) + 120000) fail('CONFLICT', 'Prepared preflight validity bounds changed.');
+  if (Date.parse(v.expiresAt) <= Date.parse(at) || Date.parse(v.intentExpiresAt) <= Date.parse(at)) fail('CONFLICT', 'Prepared intent has expired. Prepare a new transaction.');
 }
 
 export function createLendingStore(pool, { meshStore, prepareLending, verifySignedLending, readLendingReceipt, now = () => new Date().toISOString() }) {
@@ -132,6 +221,7 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
 
   function reuseIntent(row, input) {
     if (!sameRequest(row, input)) fail('CONFLICT', 'Lending request ID already has different arguments.');
+    requireBoundPreflight(row.intent, stamp(), new Date(row.created_at).toISOString());
     return storedRecord(row);
   }
   function reuseEvent(row, id, kind, transactionSha256) {
@@ -143,6 +233,7 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
   function requireUnexpired(row, at) {
     const age = Date.parse(at) - new Date(row.created_at).getTime();
     if (age < 0 || age > 120000) fail('CONFLICT', 'Prepared intent has expired. Prepare a new transaction.');
+    requireBoundPreflight(row.intent, at, new Date(row.created_at).toISOString());
   }
   async function currentUnderLock(client, owner, analysis, at, publicBinding = false) {
     requireAnalysis(analysis, at);
@@ -181,8 +272,9 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
         || typeof decision.expiresAt !== 'string') {
       fail('CONFLICT', 'A fresh REVIEW public reserve decision for this analysis and amount is required.');
     }
-    if (Date.parse(decision.expiresAt) < Date.parse(at)) fail('CONFLICT', 'The public reserve decision has expired. Save a new decision before supplying.');
+    if (Date.parse(decision.expiresAt) <= Date.parse(at)) fail('CONFLICT', 'The public reserve decision has expired. Save a new decision before supplying.');
     if (BigInt(input.request.inputBaseUnits) > BigInt(decision.scenario.proposedUnits)) fail('CONFLICT', 'The amount exceeds the proposal in the reserve decision. Save a new decision for this amount.');
+    return { expiresAt: decision.expiresAt, maxObservationAgeSeconds: decision.scenario.maxObservationAgeSeconds };
   }
 
   async function loadPublicAnalysis(client, owner, id) {
@@ -264,20 +356,20 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
       const at = stamp();
       requireAnalysis(analysis, at);
       // Fail before the adapter spends any RPC; the same rule is enforced again under the owner lock below.
-      if (normalized.decisionId) await requireDecision(pool, owner, normalized, analysis.analysis.graphRevision, at);
+      const decisionExpiresAt = normalized.decisionId
+        ? await requireDecision(pool, owner, normalized, analysis.analysis.graphRevision, at) : null;
       const current = await meshStore.getGraph(owner, at, 'live');
       if (current.revision !== analysis.graph.revision) fail('CONFLICT', 'Live source heads changed. Refresh and analyze them again.');
       const intent = await prepareLending(normalized.request);
-      const encoded = jsonObject(intent);
-      if (intent.schemaVersion !== 1 || intent.network !== 'devnet' || ['wallet', 'action', 'inputBaseUnits'].some(key => intent[key] !== normalized.request[key])) {
-        fail('INVALID_INPUT', 'Prepared intent does not match the lending request.');
-      }
+      validatePreparedPreflight(intent, normalized.request);
       return write(owner, async client => {
         const winner = await findRequest(client, owner, normalized.requestId);
         if (winner) return reuseIntent(winner, normalized);
         const committedAt = stamp();
         await currentUnderLock(client, owner, analysis, committedAt);
-        if (normalized.decisionId) await requireDecision(client, owner, normalized, analysis.analysis.graphRevision, committedAt);
+        const committedDecisionExpiresAt = normalized.decisionId
+          ? await requireDecision(client, owner, normalized, analysis.analysis.graphRevision, committedAt) : null;
+        const encoded = jsonObject(bindPreflightExpiry(intent, committedAt, committedDecisionExpiresAt));
         const result = await client.query(`
           INSERT INTO falcon_mesh.lending_intents (owner_id, id, request_id, analysis_id, created_at, request, intent)
           VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb) RETURNING *`,
@@ -300,21 +392,18 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
         const analysis = await loadPublicAnalysis(client, owner, normalized.analysisId);
         if (!analysis) fail('CONFLICT', 'A current adopted public program analysis is required.');
         await currentUnderLock(client, owner, analysis, preflightAt, true);
-        if (normalized.decisionId) await requirePublicDecision(client, owner, normalized, analysis.graph.revision, preflightAt);
-        return { analysis };
+        const decisionExpiresAt = normalized.decisionId
+          ? await requirePublicDecision(client, owner, normalized, analysis.graph.revision, preflightAt) : null;
+        return { analysis, decisionExpiresAt };
       }, true);
       if (preflight.existing) return reuseIntent(preflight.existing, normalized);
 
       const prepared = await prepareLending(normalized.request);
-      if (prepared.schemaVersion !== 1 || prepared.network !== 'devnet'
-          || ['wallet', 'action', 'inputBaseUnits'].some(key => prepared[key] !== normalized.request[key])) {
-        fail('INVALID_INPUT', 'Prepared intent does not match the lending request.');
-      }
+      validatePreparedPreflight(prepared, normalized.request);
       const intent = {
         ...prepared, evidenceSource: 'public',
         publicGraphRevision: preflight.analysis.graph.revision, sourceAnalysisId: preflight.analysis.id,
       };
-      const encoded = jsonObject(intent);
       return write(owner, async client => {
         const winner = await findRequest(client, owner, normalized.requestId);
         if (winner) {
@@ -327,7 +416,9 @@ export function createLendingStore(pool, { meshStore, prepareLending, verifySign
         if (!analysis) fail('CONFLICT', 'A current adopted public program analysis is required.');
         await currentUnderLock(client, owner, analysis, committedAt, true);
         if (analysis.graph.revision !== intent.publicGraphRevision) fail('CONFLICT', 'The public graph changed during preparation. Prepare again.');
-        if (normalized.decisionId) await requirePublicDecision(client, owner, normalized, analysis.graph.revision, committedAt);
+        const committedDecisionExpiresAt = normalized.decisionId
+          ? await requirePublicDecision(client, owner, normalized, analysis.graph.revision, committedAt) : null;
+        const encoded = jsonObject(bindPreflightExpiry(intent, committedAt, committedDecisionExpiresAt));
         const result = await client.query('INSERT INTO falcon_mesh.lending_intents (owner_id, id, request_id, analysis_id, created_at, request, intent) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb) RETURNING *',
           [owner, randomUUID(), normalized.requestId, normalized.analysisId, committedAt, jsonObject(normalized.stored, 4096), encoded]);
         return storedRecord(result.rows[0]);

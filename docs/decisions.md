@@ -102,3 +102,21 @@
 
 1. [INFERRED] The explicit API source list will need updates when its module boundary changes. Native linkage should make omissions visible.
 2. [NOT DETERMINED] Source checks alone cannot establish a working Docker image or hosted service. Those proofs remain separate.
+
+
+## Falcon-owned preflight, 2026-10-13
+
+[VERIFIED, explicit user scope] Owner: coordinator. The user requested MCP and skill refinements, one PR and merge to main. This approval does not include deployment, wallet signatures, funding, provider keys or network-permission changes.
+
+[VERIFIED, pre-change source on main0efc8aeba44accb2779efb57c18f1dd17403682c] `mesh/kamino.mjs:208-255` checked Devnet genesis, coherent accounts and exact-message simulation. `mcp/src/tools.mjs:365-378` omitted that proof and native lifetime data. Fee and rent quoting were absent. External Client Agent transport failures remain REPORTED, not a reproduced Falcon server outage.
+
+[VERIFIED, implemented design and local fixture proof] The existing prepare interface now returns bounded preflight. The 14 tools and inputs are unchanged. The producer quotes exact-message fee and conditional destination-ATA rent and observes real height. The store binds earliest intent/decision/oracle expiry. MCP projection omits raw RPC bodies and credentials. Storage remains schema 3.
+
+[VERIFIED, accepted trust decision] Falcon-verified preflight is standard review data. Clients do not need separate RPC credentials for the basic flow. It is not independent of Falcon and never authorizes a signature. Wallet/RPC checks provide optional additional assurance. User-held keys, separate signature approval, sign-only output, human broadcast and final independent Explorer proof remain. Offline decode cannot attest network from bytes.
+
+[VERIFIED, rejected alternatives] A generic RPC proxy and mandatory client RPC accounts are outside this change. No provider key or network permission was created.
+
+### Least confident decisions
+
+1. [INFERRED] Server-verified review data is sufficient as the standard trust source. It does not provide independent cryptographic assurance.
+2. [INFERRED] Height and earliest time bounds provide usable signing guidance. They cannot guarantee a blockhash stays valid through a human pause.

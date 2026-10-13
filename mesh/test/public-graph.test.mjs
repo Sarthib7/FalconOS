@@ -6,7 +6,7 @@ import { Keypair } from '@solana/web3.js';
 import { createApi, parseTokenHashes } from '../http.mjs';
 import { createLendingStore } from '../lending-store.mjs';
 import { captureSource } from '../live.mjs';
-import { ADAPTER_VERSION } from '../kamino-wire.mjs';
+import { createLendingIntentFixture } from './support/kamino-fixtures.mjs';
 import { createPublicGraphService, PUBLIC_OWNER_ID, publicGraphView } from '../public-graph.mjs';
 import { createStore } from '../store.mjs';
 import { createKaminoBrowserFixture } from './support/kamino-fixtures.mjs';
@@ -78,11 +78,7 @@ function makeLender(h) {
     prepareLending: async request => {
       prepareCount += 1;
       await prepareHook();
-      return {
-        schemaVersion: 1, network: 'devnet', policyVersion: 'mesh-public-evidence/1', adapterVersion: ADAPTER_VERSION,
-        ...request, transactionBase64: Buffer.from('unsigned fixture').toString('base64'),
-        snapshot: { capturedAt: h.clock(), graph: { nodes: [], edges: [] } },
-      };
+      return createLendingIntentFixture(request, h.clock);
     },
     verifySignedLending: async () => {
       verifyCount += 1;

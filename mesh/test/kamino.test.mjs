@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import { LENDING_CONFIG as C, ADAPTER_VERSION, deriveAccounts, buildLendingTransaction, validateLendingTransaction, deserializeLendingTransaction } from '../kamino-wire.mjs';
-import { prepareLending, verifySignedLending, verifyLendingVersions, readLendingReceipt } from '../kamino.mjs';
+import { prepareLending, verifySignedLending, verifyLendingVersions, verifyLendingValidity, readLendingReceipt } from '../kamino.mjs';
 
 // These deterministic keys are test-only. No RPC call or real wallet is used.
 const signer = Keypair.fromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1));
@@ -29,7 +29,7 @@ function editBytes(account, edit) {
 }
 
 function capture({ action = 'supply', inputBaseUnits = '1000000', receiptMissing = false, liquidityMissing = false,
-  snapshotEdit, simulationEdit, genesis = C.genesisHash, responseEdit } = {}) {
+  snapshotEdit, simulationEdit, genesis = C.genesisHash, responseEdit, fee = 2000000, rent = 3000000, height = lifetime.lastValidBlockHeight - 1 } = {}) {
   const accounts = structuredClone(fixture.accounts);
   accounts[a.walletLiquidity] = liquidityMissing ? null : token(C.liquidityMint, wallet, 5000000n);
   accounts[a.walletReceipt] = receiptMissing ? null : token(C.receiptMint, wallet, 2000000n);
@@ -44,6 +44,9 @@ function capture({ action = 'supply', inputBaseUnits = '1000000', receiptMissing
       result = { context: { slot: fixture.slot }, value: request.params[0].map(id => structuredClone(accounts[id])) };
       snapshotEdit?.(result);
     } else if (request.method === 'getLatestBlockhash') result = { context: { slot: fixture.slot }, value: lifetime };
+    else if (request.method === 'getFeeForMessage') result = { context: { slot: fixture.slot }, value: fee };
+    else if (request.method === 'getMinimumBalanceForRentExemption') result = rent;
+    else if (request.method === 'getBlockHeight') result = height;
     else if (request.method === 'simulateTransaction') {
       const tx = deserializeLendingTransaction(Buffer.from(request.params[0], 'base64'));
       assert.equal(tx.message.recentBlockhash, blockhash);
@@ -112,7 +115,24 @@ function receiptRpc(receipt, genesis = C.genesisHash, height = lifetime.lastVali
 
 test('V97,V99: preparation retains coherent chain evidence and builds the exact obligation-free ABI', async () => {
   const { intent, mock } = await prepared({ receiptMissing: true });
-  assert.deepEqual(mock.calls.map(c => c.method), ['getGenesisHash', 'getMultipleAccounts', 'getLatestBlockhash', 'simulateTransaction']);
+  assert.equal(intent.preflight.schemaVersion, 1);
+  assert.equal(intent.preflight.status, 'VERIFIED');
+  assert.equal(intent.preflight.verification, 'falcon-rpc');
+  assert.equal(intent.preflight.messageSha256, intent.messageSha256);
+  assert.equal(intent.preflight.network.rpcHost, 'api.devnet.solana.com');
+  assert.equal(intent.preflight.costs.totalSolLamports, '5000000');
+  assert.equal(intent.preflight.costs.walletSolBalanceLamports, '100000000');
+  assert.equal(intent.preflight.costs.feeLamports, '2000000');
+  assert.equal(intent.preflight.costs.rentLamports, '3000000');
+  assert.equal(intent.preflight.costs.destinationAta, a.walletReceipt);
+  assert.equal(intent.preflight.costs.createsDestinationAta, true);
+  assert.equal(intent.preflight.costs.accountSize, 165);
+  assert.equal(intent.preflight.simulation.liquidityDeltaBaseUnits, '-1000000');
+  assert.equal(intent.preflight.simulation.receiptDeltaBaseUnits, '1000000');
+  assert.equal(intent.preflight.simulation.vaultLiquidityDeltaBaseUnits, '1000000');
+  assert.equal(intent.preflight.validity.intentExpiresAt, null);
+  assert.equal(intent.preflight.validity.observedBlockHeight, 123456788);
+  assert.equal(intent.preflight.validity.decisionExpiresAt, null);
   assert.equal(intent.walletControl, 'unverified'); assert.equal(intent.snapshot.slot, fixture.slot);
   assert.equal(intent.accounts.marketAuthority, '7Aoc3MHQkYSB5y3g3ipyFKWF2TBsYdvqNWHbQ2btWXJt');
   assert.equal(intent.createDestinationAta, true); assert.ok(Object.isFrozen(intent.snapshot.graph.nodes));
@@ -130,6 +150,13 @@ test('V97,V99: preparation retains coherent chain evidence and builds the exact 
     wallet, C.reserve, C.market, a.marketAuthority, C.liquidityMint, C.liquidityVault, C.receiptMint,
     a.walletLiquidity, a.walletReceipt, C.tokenProgram, C.tokenProgram, C.instructionsSysvar,
   ]);
+});
+
+test('Falcon RPC preflight fails closed on unaffordable, null-fee, over-height and null-rent evidence', async () => {
+  for (const options of [{ fee: 100000001 }, { fee: null }, { height: lifetime.lastValidBlockHeight + 1 }, { rent: null, receiptMissing: true }, { rent: 0, receiptMissing: true }]) {
+    const mock = capture(options);
+    await assert.rejects(prepareLending(mock.input, { fetchImpl: mock.fetchImpl, now }), { code: 'INVALID_INPUT' });
+  }
 });
 
 test('V97: redeem uses receipt units and exact redemption account order', async () => {
@@ -238,6 +265,26 @@ test('V97: signed registration proves the sole wallet signature and rejects alte
   assert.throws(() => verifySignedLending({ ...intent, messageSha256: '0'.repeat(64) }, valid.transactionBase64), { code: 'INVALID_INPUT' });
   assert.throws(() => deserializeLendingTransaction(new Uint8Array(1233)), /limit/);
 });
+test('Live validity is separate from receipt-safe cryptographic verification', async () => {
+  const { intent } = await prepared();
+  const valid = signed(intent);
+  const expired = { ...intent, preflight: { ...intent.preflight, validity: {
+    ...intent.preflight.validity, intentExpiresAt: '2020-01-01T00:00:00.000Z', expiresAt: '2020-01-01T00:00:00.000Z',
+  } } };
+  assert.equal(verifySignedLending(expired, valid.transactionBase64), valid.signature);
+  await assert.rejects(verifyLendingValidity(expired, { fetchImpl: async () => { throw new Error('should not call RPC'); }, now }));
+  const bound = { ...intent, preflight: { ...intent.preflight, validity: {
+    ...intent.preflight.validity, intentExpiresAt: intent.preflight.validity.oracleExpiresAt,
+  } } };
+  const rpcAtHeight = height => async (_url, { body }) => {
+    const request = JSON.parse(body);
+    const result = request.method === 'getGenesisHash' ? C.genesisHash : height;
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: request.id, result }));
+  };
+  await verifyLendingValidity(bound, { fetchImpl: rpcAtHeight(lifetime.lastValidBlockHeight - 1), now });
+  await assert.rejects(verifyLendingValidity(bound, { fetchImpl: rpcAtHeight(lifetime.lastValidBlockHeight + 1), now }), /blockhash has expired/);
+});
+
 
 test('V97: receipt verifies transaction-local deltas, including new ATA and rounded supply debit', async () => {
   for (const receiptMissing of [false, true]) {

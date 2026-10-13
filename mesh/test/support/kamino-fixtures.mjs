@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { PublicKey } from '@solana/web3.js';
-import { LENDING_CONFIG as C, deriveAccounts, deserializeLendingTransaction } from '../../kamino-wire.mjs';
+import { LENDING_CONFIG as C, ADAPTER_VERSION, deriveAccounts, buildLendingTransaction, deserializeLendingTransaction } from '../../kamino-wire.mjs';
 import { CONNECTORS } from '../../live.mjs';
 
 // Controlled replay only. Time, wallet balances, simulation, and receipts are fixtures.
@@ -61,6 +61,10 @@ export function createKaminoBrowserFixture(wallet, now = () => new Date().toISOS
           assert.ok(Object.hasOwn(accounts, id), `Missing fixture account ${id}`); return accounts[id];
         }) });
         if (request.method === 'getLatestBlockhash') return response(request, { context: { slot: fixture.slot }, value: { blockhash, lastValidBlockHeight: 123456789 } });
+        if (request.method === 'getFeeForMessage') return response(request, { context: { slot: fixture.slot }, value: 5000 });
+        if (request.method === 'getMinimumBalanceForRentExemption') return response(request, 2039280);
+        if (request.method === 'getBlockHeight') return response(request, 123456788);
+
         assert.equal(request.method, 'simulateTransaction');
         const tx = deserializeLendingTransaction(Buffer.from(request.params[0], 'base64'));
         assert.equal(tx.message.recentBlockhash, blockhash);
@@ -96,5 +100,35 @@ export function createKaminoBrowserFixture(wallet, now = () => new Date().toISOS
         return response(request, value);
       };
     },
+  };
+}
+export function createLendingIntentFixture(request, now = () => new Date().toISOString(), oracleAgeSeconds = 3600) {
+  const accounts = deriveAccounts(request.wallet);
+  const blockhash = new PublicKey(new Uint8Array(32)).toBase58();
+  const lastValidBlockHeight = 123456789;
+  const transaction = buildLendingTransaction({ ...request, accounts, blockhash, lastValidBlockHeight, createDestinationAta: false });
+  const transactionBase64 = Buffer.from(transaction.serialize()).toString('base64');
+  const messageSha256 = createHash('sha256').update(transaction.message.serialize()).digest('hex');
+  const at = now();
+  const oracleExpiresAt = new Date(Date.parse(at) + oracleAgeSeconds * 1000).toISOString();
+  const amount = BigInt(request.inputBaseUnits);
+  const liquidityDelta = request.action === 'supply' ? -amount : amount;
+  const receiptDelta = -liquidityDelta;
+  const vaultDelta = -liquidityDelta;
+  const destinationAta = request.action === 'supply' ? accounts.walletReceipt : accounts.walletLiquidity;
+  return {
+    schemaVersion: 1, network: 'devnet', genesisHash: C.genesisHash, walletControl: 'unverified',
+    policyVersion: 'mesh-public-evidence/1', adapterVersion: ADAPTER_VERSION,
+    ...request, accounts, createDestinationAta: false, blockhash, lastValidBlockHeight, transactionBase64, messageSha256,
+    snapshot: { capturedAt: at, slot: fixture.slot, decoded: { oraclePublishTime: at, oracleMaxAgeSeconds: String(oracleAgeSeconds) }, graph: { nodes: [], edges: [] } },
+    estimatedAmounts: { liquidityBaseUnits: amount.toString(), receiptBaseUnits: amount.toString() },
+    preflight: { schemaVersion: 1, status: 'VERIFIED', verification: 'falcon-rpc', messageSha256, checkedAt: at,
+      network: { chain: 'solana', network: 'devnet', genesisHash: C.genesisHash, rpcHost: 'api.devnet.solana.com', snapshotSlot: fixture.slot },
+      simulation: { slot: fixture.slot, err: null, unitsConsumed: 92000, liquidityDeltaBaseUnits: liquidityDelta.toString(),
+        receiptDeltaBaseUnits: receiptDelta.toString(), vaultLiquidityDeltaBaseUnits: vaultDelta.toString() },
+      costs: { feeLamports: '5000', feeQuoteSlot: fixture.slot, rentLamports: '0', totalSolLamports: '5000',
+        walletSolBalanceLamports: '100000000', destinationAta, createsDestinationAta: false, accountSize: 165 },
+      validity: { blockhash, lastValidBlockHeight, observedBlockHeight: lastValidBlockHeight - 1,
+        oraclePublishTime: at, oracleExpiresAt, intentExpiresAt: null, decisionExpiresAt: null, expiresAt: oracleExpiresAt } },
   };
 }

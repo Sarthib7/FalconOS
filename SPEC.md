@@ -326,6 +326,7 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - [VERIFIED source + local DB fixtures] Authenticated POST `/v1/public/graph/adopt` creates owner-bound program/reserve records from exact shared source revisions and original timestamps. POST `/v1/public/decisions/reserve` binds explicit analysisId and owner scenario. POST `/v1/public/lending/intents` requires that public source and current matching private decision for supply.
 - [VERIFIED source + local fixtures] POST `/v1/wallet/status` and `/v1/transactions/decode` provide bounded read-only preflight. Wallet funding/signing/broadcast remain human-only. Existing private operator byte/history APIs stay unchanged.
 - [VERIFIED schema inspection] Reserved service namespace and shared/exclusive PostgreSQL head locks reuse schema3; no migration. Custom graph configuration deferred.
+- [PLANNED, explicitly approved preflight contract] Existing MCP `falcon_prepare_transaction` returns bounded Falcon-verified network/genesis, exact-message simulation/token effects, affordable fee/rent quotes and real block-height/time validity. Inputs and 14-tool inventory unchanged; MCP0.3.1, skill0.3.3 requires0.3.1. No client RPC key required for standard review. Falcon proof is not independent proof; human approvals, sign-only wallet, human broadcast and final independent Devnet Explorer remain. Reuse JSON intent storage; no migration.
 
 ## §V INVARIANTS
 
@@ -567,6 +568,9 @@ V167: [INFERRED client rollout contract] MCP0.3.0 exposes14 strict tools and def
 V168: [INFERRED independent provider fix] Malformed UTF-8 provider data must yield NO_DATA, not altered READY data.
 V169: [VERIFIED local HTTP budget test] Anonymous graph source/global reservations precede storage; exhausted budget returns429 without DB/capture work.
 V170: [VERIFIED local CLI regression] ∀ skill rebuild CLI invocation, ordinary or symlink → validate immutable ref and expected digest; invalid ref returns structured FAIL and exit1, never silent success without running verification.
+V171: [VERIFIED, source and local fixture/HTTP proof; not live-chain execution] ∀ prepared lending intent → preflight binds pinned Devnet genesis, successful unchanged-byte simulation, token effects and affordable fee/rent quotes to messageSha256; missing/null/malformed/incoherent/unaffordable proof rejects before returning an unsigned intent.
+V172: [VERIFIED, source and local fixture/HTTP proof; not human signing] ∀ MCP prepare → bounded Falcon-verified preflight only; no raw RPC bodies, credentials, independent-proof or signature-approval claim. Offline decode remains context-only and safeToSign false; user-held keys, separate signature approval and human broadcast unchanged.
+V173: [VERIFIED, source and local fixture/HTTP proof] ∀ preflight validity → real observed block height and lastValidBlockHeight plus earliest intent/decision/oracle time bound; expiresAt is not a blockhash lifetime guarantee; stale state rejects reuse or registration.
 
 
 ## §T TASKS
@@ -654,6 +658,7 @@ T76|x|bound wallet-session lookups, introspection and logout with source/global 
 T77|x|align MCP prepare deadline with bounded Devnet RPC sequence|V151,V97,V99
 T78|x|add local /mesh same-tab wallet entry + MCP read-only quickstart; preserve operator-token fallback, public install origin, and transaction gates|I15,I19,V152
 T79|x|serve agents SKILLS from the shared template with Codex TOML/CLI setup, wallet sign-in vs transaction-signature boundary, and signed-bytes retention for broadcast retry; bake live MCP/skill URLs into build:agents|I19,V146,V147
+T80|x|add Falcon-owned exact-byte preflight costs, validity and safe MCP projection; refine guide trust policy; prove positive/negative behavior and HTTP SDK smoke; delivery PR/merge tracked in status.md, no deployment|I20,V147,V155,V157,V158,V164,V165,V171,V172,V173
 
 ## §B BUGS
 
@@ -766,5 +771,6 @@ B105|2026-10-12|[INFERRED privacy risk; before-change failure not independently 
 B106|2026-10-12|[VERIFIED source] per-owner captured heads alone could not attest shared public head; added authoritative binding|V162,V165
 B107|2026-10-12|[REPORTED review + VERIFIED budget test] anonymous public graph GET omitted pre-storage source/global reservation|V169
 B108|2026-10-13|[VERIFIED before/after CLI test: tests1/pass0/fail1 then tests1/pass1/fail0] lexical argv path differed from canonical module URL; symlink invocation skipped verification and returned exit0 with no output|V170
+B109|2026-10-13|[VERIFIED source: mcp/src/tools.mjs365-378, mesh/kamino.mjs208-255; REPORTED external RPC failures] MCP prepare omitted producer network/simulation/lifetime proof and lacked fee/rent quotes, forcing client RPC setup|V171,V172,V173
 
 Correction (2026-10-12): B102, B103 and B105 previously claimed VERIFIED historical regressions. The lead did not observe those before-change failures. Current passing tests do not prove that history. The records now state inferred risks, not measured prior failures.
