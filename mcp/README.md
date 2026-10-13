@@ -61,6 +61,8 @@ Policy metadata is fixed: `policyDefinitionId` = `decision:mesh-reserve-scenario
 
 [VERIFIED, local evidence] `npm run verify:mcp` returned `tests 65, pass 65, fail 0`. Removing the capabilities response made the new regression return `tests 1, pass 0, fail 1`; restoration returned the full suite to passing. `T81_REAL_HTTP_MCP_AND_SKILL_OK` exercised the actual HTTP MCP server with the official SDK while Mesh readiness returned 503, rejected a swap request, and verified the served guide/manifest digest. No wallet, live provider, signing, broadcast or deployment was exercised.
 
+[VERIFIED, review delivery] Capability discovery is in [PR #76](https://github.com/Sarthib7/FalconOS/pull/76), open and unmerged at this update. Implementation commit `7c18c6249d51ed73e18caa980f62e9e7d6650de3` passed exact-head CI and its pinned skill rebuild. The [T81 delivery record](../status.md#t81-capability-discovery-2026-10-13) links those results and states their limits. This is not a hosted 0.4.0 release claim.
+
 
 ## Configuration
 
