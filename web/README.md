@@ -41,7 +41,7 @@ npm --prefix web run preview:local
 
 ## Current agent skill
 
-[VERIFIED, source: `web/skills/SKILLS.md`] Version 0.3.1 requires MCP 0.3.0 and lists all 14 tools. The anonymous public graph is the initial inspection step and needs no signer, wallet, funds or login. Human scenario inputs and action-specific full-execution prerequisites precede owner adoption. Owner-only advisory/history does not require funds or transaction signing. Custom graphs stay deferred; human approval remains separate for every signature and broadcast.
+[VERIFIED, source and local HTTP] Skill 0.4.0 requires MCP 0.4.0 and retains 14 tools. It checks capability schema v1 before an owner action and explains unavailable scope instead of inferring support. Public evidence remains anonymous. Human inputs and contextual checks precede owner adoption; each signature and broadcast needs separate approval. Capability metadata does not establish readiness.
 
 [VERIFIED, source: `web/scripts/skills-release.mjs`, `web/scripts/skills-plugin.mjs`] The shared renderer emits `/SKILLS.md`, `/SKILLS.manifest.json` (`version`, `requiredMcpVersion`, `canonicalSkillUrl` and exact rendered-byte `sha256`) plus Cloudflare Pages integrity headers. The guide includes the pinned Privy CLI 0.3.7 exact-byte sign-only examples and does not contain its own digest.
 
@@ -211,3 +211,9 @@ After creating the Pages project, open **Pages → the project → Custom domain
 [VERIFIED, local gate] `npm run verify:web`: `web: PASS`, `pass 309`, `fail 0`, `skipped 1`. Requested agents-site check: `tests 3/pass 3/fail 0`. The preview used canonical build environment and rendered from source. No hosted 0.3.3 publication or funded supply is proven by this check.
 
 [VERIFIED, record correction] The interim 0.3.3 digest record became stale after guide refinement. The final canonical render replaced it and matched the actual local HTTP bytes above. This was a release-record update, not a renderer or production-drift finding.
+
+## Capability discovery skill 0.4.0 (2026-10-13)
+
+[VERIFIED, rendered artifact and actual HTTP] `T81_REAL_HTTP_MCP_AND_SKILL_OK` returned GET guide/manifest and HEAD guide HTTP 200. Rendered guide: 20412 bytes, SHA-256 `8e43a82b47f6e22b1a5600a04d2497da0d24c5cc016e2b06bf8c1574819c06da`. The manifest, header and versioned record `web/skills/releases/0.4.0.json` matched. CI's pinned rebuild targets that record; publisher authentication remains separate.
+
+[VERIFIED, local suite] `npm run verify:web` returned `web: PASS` with `pass 309, fail 0, skipped 1`. The website release-input check reported eight routes. These results do not establish hosted 0.4.0 publication, provider availability or a funded transaction.

@@ -29,7 +29,7 @@ Or register it with the Codex CLI:
 codex mcp add falconos --url https://mcp.falconos.markets/mcp
 ```
 
-[VERIFIED, source: mcp/src/tools.mjs] After restarting the client, inspect its active tools and call `falcon_self_test({})`. The current source reports 14 registered tools and a schema fingerprint; check the connected server rather than relying on an old tool list. Self-test metadata does not prove signer, funds or transaction readiness. `codex mcp list` confirms registration only.
+[VERIFIED, source and local HTTP] After restarting the client, inspect its active tools and call `falcon_self_test({})`. MCP 0.4.0 adds capability schema v1 to the existing 14-tool inventory and input-schema fingerprint. Check supported scopes, unavailable reasons and approval rules before an owner action. Metadata does not prove health, signer support, funds or transaction readiness. `codex mcp list` confirms registration only. See the [capability contract](mcp/README.md#capability-discovery-040).
 
 **JSON config** (any MCP client that supports Streamable HTTP):
 ```json

@@ -1,5 +1,21 @@
 # Status
 
+## T81 capability discovery: 2026-10-13
+
+[VERIFIED, local implementation] Owner: coordinator. Status: Completed. T81 extends self-test with capability schema v1, explicit unsupported reasons, authority and contextual checks. MCP and skill versions are 0.4.0. Tool count remains 14; published inputs and fingerprint remain unchanged. Source branch: feat/mcp-capabilities-t81, based on main c84584c. This is local completion, not a hosted release.
+
+[VERIFIED, local verification] `npm run verify:mcp` returned `tests 65, pass 65, fail 0`. `npm run verify:web` returned `pass 309, fail 0, skipped 1` and the eight-route release-input check passed. Removing only the capabilities response made the new regression return `tests 1, pass 0, fail 1`; the restored source passed the full MCP suite.
+
+[VERIFIED, actual HTTP] `T81_REAL_HTTP_MCP_AND_SKILL_OK` used the official MCP SDK against the real loopback server. It reported 0.4.0, 14 tools, capability schema 1 and unchanged fingerprint `sha256:8a5230bd2cd9cf373b9a84706759723742a1c9cdf94f482f3752cb427674c09c`. Mesh readiness returned 503 while discovery succeeded with all readiness fields not_checked. A swap request was rejected. GET guide/manifest and HEAD guide returned 200; the 20412-byte guide matched its release digest `8e43a82b47f6e22b1a5600a04d2497da0d24c5cc016e2b06bf8c1574819c06da`.
+
+[VERIFIED, pinned rebuild] Implementation commit `7c18c6249d51ed73e18caa980f62e9e7d6650de3` passed `npm run verify:skill-rebuild` against `web/skills/releases/0.4.0.json`. Output: `status: PASS`, `version: 0.4.0`, `canonicalUrlCheckedAgainstExpectedRecord: true`. The rebuilt digest matched the local HTTP evidence above. Wrong and old release digests were rejected. This proves candidate consistency, not publisher authentication.
+
+[VERIFIED, GitHub readback] [CI run 38340501851](https://github.com/Sarthib7/FalconOS/actions/runs/38340501851) and [Verify web run 38340501832](https://github.com/Sarthib7/FalconOS/actions/runs/38340501832) returned `status: completed`, `conclusion: success` for that exact implementation commit. This evidence applies to `7c18c62`; later commits require their own checks.
+
+[VERIFIED, delivery state at this update] [PR #76](https://github.com/Sarthib7/FalconOS/pull/76) is open for review on `feat/mcp-capabilities-t81`. The user selected review-only delivery. The implementation is pushed but unmerged, and hosted 0.4.0 publication is not verified.
+
+[INFERRED, remaining gates] Review and merge need separate approval. Deployment and skill publication remain separate from merge. T82 still needs a separately approved funded Devnet supply/redemption proof; T83 still needs shared Council integration. No live provider, wallet, signing, broadcast, migration or deployment was exercised by the T81 checks.
+
 ## MCP plan and repository cleanup: 2026-10-13
 
 [VERIFIED, user approval] Owner: coordinator. The user approved the MCP plan/docs update, merging eligible PRs and removing completed pushed worktrees. Product choices: Solana execution, cross-market advice, owner approval for each action. This approval does not include deployment, mainnet, migrations, wallet signatures or funding.

@@ -39,7 +39,7 @@ Replace `YOUR-MCP-HOST` with the deployment hostname. Any MCP client that speaks
 | `falcon_activity` | Reads the owner-scoped decision/intent trail. |
 | `falcon_wallet_status` | Public read-only Devnet wallet account snapshot and human-only faucet guidance. |
 | `falcon_decode_transaction` | Public bounded Devnet transaction decode. No signing, simulation, or broadcast. |
-| `falcon_self_test` | Metadata-only version, tool names/count and schema fingerprint; not health/readiness. |
+| `falcon_self_test` | Metadata-only version, tool inventory/schema fingerprint and capability schema v1; supported scopes, unavailable reasons, authority and contextual checks. Not health/readiness. |
 
 ### Public graph contract
 
@@ -48,6 +48,21 @@ Replace `YOUR-MCP-HOST` with the deployment hostname. Any MCP client that speaks
 The public graph response must not expose source content/raw exchanges, owner records, wallets, sessions, or private/custom graph data. `OBSERVED` is technical evidence, not a personalized `REVIEW`, owner mandate, recommendation, or approval. A current `NO_DATA` result never falls back to older successful evidence.
 
 Policy metadata is fixed: `policyDefinitionId` = `decision:mesh-reserve-scenario/1`, `policyVersion` = `mesh-reserve-scenario/2`. Program analysis uses technical `mesh-public-evidence/1`; reserve analysis uses technical `mesh-reserve-liquidity/1`. These identifiers and versions are not owner limits or mandates.
+
+### Capability discovery (0.4.0)
+
+[VERIFIED, source and local HTTP smoke] `falcon_self_test({})` returns `capabilities.schemaVersion: 1` and `verification: "metadata-only"`. The input remains empty and the tool inventory stays at 14. The input-schema fingerprint is unchanged. Metadata makes no Mesh or provider request; successful discovery can coexist with HTTP 503 from `/readyz`.
+
+[VERIFIED, response contract] `supported` entries name their ID, domain, chain/network, actions and tool references. Current support is fixed Kamino Devnet evidence, Devnet supply/redeem preparation/registration/reconciliation, and optional Solana mainnet yield discovery. The discovery entry has `executionSupported: false`. The lending entry reports the existing 1-USDC supply cap; Mesh still enforces policy and limits.
+
+[VERIFIED, response contract] `unavailable` entries name unsupported scopes with machine-readable `code` and human-readable `reason`. They cover Solana swaps, stocks/perps advice, Solana mainnet execution, EVM execution and brokerage orders. `defaultSupport: "unsupported"` means absent scopes are unsupported too. Null chain/network fields in unavailable entries do not grant support for any network. Existing strict tool schemas still reject unsupported inputs before Mesh.
+
+[VERIFIED, authority contract] `authority` requires human approval for each signature and broadcast, a human-controlled wallet and human-only broadcast. Custody and delegated execution remain false. `contextualChecks` names wallet-status, decode, preflight and receipt tools; each keeps its own input and trust boundary. Signer, funding and transaction readiness stay `not_checked`. A manifest is neither human consent nor transaction verification.
+
+[VERIFIED, local evidence] `npm run verify:mcp` returned `tests 65, pass 65, fail 0`. Removing the capabilities response made the new regression return `tests 1, pass 0, fail 1`; restoration returned the full suite to passing. `T81_REAL_HTTP_MCP_AND_SKILL_OK` exercised the actual HTTP MCP server with the official SDK while Mesh readiness returned 503, rejected a swap request, and verified the served guide/manifest digest. No wallet, live provider, signing, broadcast or deployment was exercised.
+
+[VERIFIED, review delivery] Capability discovery is in [PR #76](https://github.com/Sarthib7/FalconOS/pull/76), open and unmerged at this update. Implementation commit `7c18c6249d51ed73e18caa980f62e9e7d6650de3` passed exact-head CI and its pinned skill rebuild. The [T81 delivery record](../status.md#t81-capability-discovery-2026-10-13) links those results and states their limits. This is not a hosted 0.4.0 release claim.
+
 
 ## Configuration
 
