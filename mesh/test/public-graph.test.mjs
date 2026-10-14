@@ -296,6 +296,49 @@ test('public decisions, prepare and submit remain bound to the shared public hea
   assert.equal(lender.verifyCount(), verifyCountAfterRegistration, 'a stale registered retry stops before adapter verification');
 });
 
+test('failed stale capture cannot invalidate a newer public graph head', async t => {
+  const h = await harness(t);
+  const original = await h.publicGraph.get();
+  const originalBundle = await h.store.getPublicBundle();
+  assert.equal(original.status, 'OBSERVED');
+  assert.ok(originalBundle);
+
+  const captureStarted = deferred();
+  const releaseCapture = deferred();
+  const staleService = createPublicGraphService({
+    store: h.store,
+    capture: async () => {
+      captureStarted.resolve();
+      await releaseCapture.promise;
+      throw new Error('stale capture failed');
+    },
+    now: h.clock,
+  });
+  h.setTime(new Date(Date.parse(h.time()) + 61_000).toISOString());
+
+  const failedRequest = staleService.get();
+  await captureStarted.promise;
+
+  const newer = await h.publicGraph.get();
+  assert.equal(newer.status, 'OBSERVED');
+  const newerBundle = await h.store.getPublicBundle();
+  assert.ok(newerBundle);
+  assert.notDeepEqual(newerBundle.sources, originalBundle.sources, 'the concurrent refresh publishes a newer complete head');
+
+  releaseCapture.resolve();
+  const failed = await failedRequest;
+  assert.equal(failed.status, 'NO_DATA');
+
+  const retainedBundle = await h.store.getPublicBundle();
+  assert.deepEqual(retainedBundle?.sources, newerBundle.sources, 'the stale failure must retain the exact newer head');
+  const capturesBeforeRead = h.captures();
+  const usable = await h.publicGraph.get();
+  assert.equal(usable.status, 'OBSERVED');
+  const bySourceKey = (sources) => sources.map(({ content, ...metadata }) => metadata).sort((left, right) => left.sourceKey.localeCompare(right.sourceKey));
+  assert.deepEqual(bySourceKey(usable.graph.sources), bySourceKey(newerBundle.sources));
+  assert.equal(h.captures(), capturesBeforeRead, 'the retained newer head is usable without recapture');
+});
+
 test('failed current captures and stale source views return NO_DATA without last-good fallback', async t => {
   const h = await harness(t);
   const first = await h.publicGraph.get();

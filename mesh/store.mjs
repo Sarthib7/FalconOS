@@ -305,8 +305,8 @@ export function createStore(pool, { capture = captureLiveSource, now = () => new
       return publishPublicBundle(revisions, expectedSources);
     },
 
-    async invalidatePublicBundle() {
-      return invalidatePublicBundle();
+    async invalidatePublicBundle(expectedSources) {
+      return invalidatePublicBundle(expectedSources);
     },
 
     async adoptPublicGraph(owner, input, at) {
