@@ -339,6 +339,140 @@ test('failed stale capture cannot invalidate a newer public graph head', async t
   assert.equal(h.captures(), capturesBeforeRead, 'the retained newer head is usable without recapture');
 });
 
+test('V181: a successful stale capture can publish after a failing capture invalidates its snapshot', async t => {
+  const h = await harness(t);
+  await h.publicGraph.get();
+  const staleBundle = await h.store.getPublicBundle();
+  const capturesBeforeRefresh = h.captures();
+  h.setTime(new Date(Date.parse(h.time()) + 61_000).toISOString());
+
+  const failedCaptureStarted = deferred();
+  const releaseFailedCapture = deferred();
+  const failingService = createPublicGraphService({
+    store: h.store,
+    capture: async () => {
+      failedCaptureStarted.resolve();
+      await releaseFailedCapture.promise;
+      throw new Error('concurrent capture failed');
+    },
+    now: h.clock,
+  });
+
+  const successfulPublishStarted = deferred();
+  const releaseSuccessfulPublish = deferred();
+  const publishExpectedSources = [];
+  const successfulStore = {
+    getPublicBundle: () => h.store.getPublicBundle(),
+    invalidatePublicBundle: (...args) => h.store.invalidatePublicBundle(...args),
+    publishPublicBundle: async (revisions, expectedSources) => {
+      publishExpectedSources.push(expectedSources);
+      if (publishExpectedSources.length === 1) {
+        successfulPublishStarted.resolve();
+        await releaseSuccessfulPublish.promise;
+      }
+      return h.store.publishPublicBundle(revisions, expectedSources);
+    },
+  };
+  const successfulService = createPublicGraphService({ store: successfulStore, capture: h.capture, now: h.clock });
+
+  const failedRequest = failingService.get();
+  await failedCaptureStarted.promise;
+  const successfulRequest = successfulService.get();
+  await successfulPublishStarted.promise;
+
+  releaseFailedCapture.resolve();
+  assert.equal((await failedRequest).status, 'NO_DATA');
+  assert.equal(await h.store.getPublicBundle(), null, 'the failing request invalidates the stale snapshot first');
+
+  releaseSuccessfulPublish.resolve();
+  const successful = await successfulRequest;
+  assert.equal(successful.status, 'OBSERVED', 'the captured revisions retry publication against the empty head');
+  assert.equal(publishExpectedSources.length, 2, 'the successful capture retries exactly once');
+  assert.deepEqual(publishExpectedSources[0], staleBundle.sources);
+  assert.equal(publishExpectedSources[1], null, 'the retry uses the empty-head CAS');
+  assert.equal(h.captures(), capturesBeforeRefresh + 3, 'the retry reuses captured revisions without recapturing');
+  const publishedBundle = await h.store.getPublicBundle();
+  assert.ok(publishedBundle);
+  assert.notDeepEqual(publishedBundle.sources, staleBundle.sources);
+  const identities = sources => sources.map(({ sourceKey, revisionId }) => ({ sourceKey, revisionId }))
+    .sort((left, right) => left.sourceKey.localeCompare(right.sourceKey));
+  assert.deepEqual(identities(successful.graph.sources), identities(publishedBundle.sources));
+});
+
+test('V181: a lost empty-head retry returns a usable concurrent winner without recapturing', async t => {
+  const h = await harness(t);
+  await h.publicGraph.get();
+  const staleBundle = await h.store.getPublicBundle();
+  const capturesBeforeRace = h.captures();
+  h.setTime(new Date(Date.parse(h.time()) + 61_000).toISOString());
+
+  const failedCaptureStarted = deferred();
+  const releaseFailedCapture = deferred();
+  const failingService = createPublicGraphService({
+    store: h.store,
+    capture: async () => {
+      failedCaptureStarted.resolve();
+      await releaseFailedCapture.promise;
+      throw new Error('concurrent capture failed');
+    },
+    now: h.clock,
+  });
+
+  const successfulPublishStarted = deferred();
+  const releaseSuccessfulPublish = deferred();
+  const publishExpectedSources = [];
+  const concurrentService = createPublicGraphService({ store: h.store, capture: h.capture, now: h.clock });
+  let interceptEmptyBundle = true;
+  let concurrentWinner;
+  let capturesAtWinner;
+  const successfulStore = {
+    getPublicBundle: async () => {
+      const bundle = await h.store.getPublicBundle();
+      if (interceptEmptyBundle && bundle === null) {
+        interceptEmptyBundle = false;
+        concurrentWinner = await concurrentService.get();
+        capturesAtWinner = h.captures();
+      }
+      return bundle;
+    },
+    invalidatePublicBundle: (...args) => h.store.invalidatePublicBundle(...args),
+    publishPublicBundle: async (revisions, expectedSources) => {
+      publishExpectedSources.push(expectedSources);
+      if (publishExpectedSources.length === 1) {
+        successfulPublishStarted.resolve();
+        await releaseSuccessfulPublish.promise;
+      }
+      return h.store.publishPublicBundle(revisions, expectedSources);
+    },
+  };
+  const successfulService = createPublicGraphService({ store: successfulStore, capture: h.capture, now: h.clock });
+
+  const failedRequest = failingService.get();
+  await failedCaptureStarted.promise;
+  const successfulRequest = successfulService.get();
+  await successfulPublishStarted.promise;
+
+  releaseFailedCapture.resolve();
+  assert.equal((await failedRequest).status, 'NO_DATA');
+  assert.equal(await h.store.getPublicBundle(), null, 'the failing request invalidates the shared snapshot first');
+  releaseSuccessfulPublish.resolve();
+
+  const successful = await successfulRequest;
+  assert.equal(concurrentWinner?.status, 'OBSERVED');
+  assert.equal(successful.status, 'OBSERVED', 'a lost empty-head retry returns the usable winner');
+  assert.equal(publishExpectedSources.length, 2);
+  assert.deepEqual(publishExpectedSources[0], staleBundle.sources);
+  assert.equal(publishExpectedSources[1], null);
+  const winnerBundle = await h.store.getPublicBundle();
+  assert.ok(winnerBundle);
+  const identities = sources => sources.map(({ sourceKey, revisionId }) => ({ sourceKey, revisionId }))
+    .sort((left, right) => left.sourceKey.localeCompare(right.sourceKey));
+  assert.deepEqual(identities(successful.graph.sources), identities(winnerBundle.sources));
+  assert.deepEqual(identities(concurrentWinner.graph.sources), identities(winnerBundle.sources));
+  assert.equal(h.captures(), capturesAtWinner, 'the failed retry neither overwrites the winner nor recaptures');
+  assert.equal(h.captures(), capturesBeforeRace + 6);
+});
+
 test('failed current captures and stale source views return NO_DATA without last-good fallback', async t => {
   const h = await harness(t);
   const first = await h.publicGraph.get();

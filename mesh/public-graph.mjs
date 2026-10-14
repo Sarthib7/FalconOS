@@ -74,6 +74,17 @@ export function createPublicGraphService({ store, capture = captureLiveSource, n
       if (error instanceof MeshError && error.code === 'CONFLICT') {
         const winner = await store.getPublicBundle();
         if (usableBundle(winner, now())) return winner;
+        if (winner === null) {
+          try {
+            return await store.publishPublicBundle(revisions, null);
+          } catch (retryError) {
+            if (retryError instanceof MeshError && retryError.code === 'CONFLICT') {
+              const retryWinner = await store.getPublicBundle();
+              if (usableBundle(retryWinner, now())) return retryWinner;
+            }
+            throw retryError;
+          }
+        }
       }
       throw error;
     }

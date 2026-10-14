@@ -593,6 +593,7 @@ V177: [INFERRED, planned I21] ∀ cross-market advice → advisory-only + execut
 V178: [INFERRED, planned I21] ∀ execution receipt → owner, intent, exact message and signature bind observed outcome; registration ≠ broadcast ≠ confirmation; pending/expired-unobserved remains uncertain, never successful or safe to retry as a new spend.
 V179: [INFERRED, planned I21 swaps] ∀ swap → quote provenance/expiry, mints, input units, enforced minimum output, route/accounts and costs bind approved message; unchanged-byte simulation and confirmed token deltas satisfy bounds; unsupported token/lookup-table form rejects before signing.
 V180: [INFERRED, planned release gate] ∀ wider execution release → T37/T82 owner-approved Devnet supply/redemption proof retained first; regression checks cover stale evidence, wrong owner/hash, expired validity and uncertain send; exact-head CI plus scenario proof required; deployment/mainnet/funding remain separate approvals.
+V181: ∀ concurrent public refresh from S0 → failed S0 invalidation cannot discard peer's captured bundle; retry publication only against an empty head; lost retry → usable winner or NO_DATA; never overwrite newer head.
 
 ## §T TASKS
 
@@ -801,3 +802,4 @@ B109|2026-10-13|[VERIFIED source: mcp/src/tools.mjs365-378, mesh/kamino.mjs208-2
 B110|2026-10-14|[VERIFIED local test] race assertion compared privacy-filtered graph metadata with content-bearing DB rows and mismatched ordering|V166; compare public metadata sorted by source key
 Correction (2026-10-12): B102, B103 and B105 previously claimed VERIFIED historical regressions. The lead did not observe those before-change failures. Current passing tests do not prove that history. The records now state inferred risks, not measured prior failures.
 B111|2026-10-14|[VERIFIED local test] new mcp-rust verification scope left expected status list and command count stale|update runner test expectations
+B112|2026-10-14|[VERIFIED local regression] failed stale invalidation removed S0 before peer CAS; successful capture returned NO_DATA|V181
