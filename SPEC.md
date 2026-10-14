@@ -798,5 +798,5 @@ B106|2026-10-12|[VERIFIED source] per-owner captured heads alone could not attes
 B107|2026-10-12|[REPORTED review + VERIFIED budget test] anonymous public graph GET omitted pre-storage source/global reservation|V169
 B108|2026-10-13|[VERIFIED before/after CLI test: tests1/pass0/fail1 then tests1/pass1/fail0] lexical argv path differed from canonical module URL; symlink invocation skipped verification and returned exit0 with no output|V170
 B109|2026-10-13|[VERIFIED source: mcp/src/tools.mjs365-378, mesh/kamino.mjs208-255; REPORTED external RPC failures] MCP prepare omitted producer network/simulation/lifetime proof and lacked fee/rent quotes, forcing client RPC setup|V171,V172,V173
-
 Correction (2026-10-12): B102, B103 and B105 previously claimed VERIFIED historical regressions. The lead did not observe those before-change failures. Current passing tests do not prove that history. The records now state inferred risks, not measured prior failures.
+B111|2026-10-14|[VERIFIED local test] new mcp-rust verification scope left expected status list and command count stale|update runner test expectations

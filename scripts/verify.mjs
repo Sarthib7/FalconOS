@@ -9,6 +9,7 @@ const scopes = {
   web: [['npm', '--prefix', 'web', 'test'], [process.execPath, 'web/scripts/verify-release.mjs']],
   mesh: [[process.execPath, 'mesh/check-release.mjs'], ['npm', '--prefix', 'mesh', 'test']],
   mcp: [['npm', '--prefix', 'mcp', 'test']],
+  'mcp-rust': [['cargo', 'fmt', '--all', '--check', '--manifest-path', 'mcp-rust/Cargo.toml'], ['cargo', 'test', '--locked', '--manifest-path', 'mcp-rust/Cargo.toml']],
   engine: [['cargo', 'test', '--offline', '--locked', '--manifest-path', 'engine/Cargo.toml']],
 };
 

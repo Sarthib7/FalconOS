@@ -63,7 +63,9 @@ jobs:
           npm ci --prefix mcp
 
       - name: Fetch locked Rust dependencies
-        run: cargo fetch --locked --manifest-path engine/Cargo.toml
+        run: |
+          cargo fetch --locked --manifest-path engine/Cargo.toml
+          cargo fetch --locked --manifest-path mcp-rust/Cargo.toml
 
       - name: Initialize disposable Mesh schema
         run: npm --prefix mesh run init-db
@@ -104,7 +106,7 @@ jobs:
           ROLLBACK;
           SQL
 
-      - name: Run six-scope repository verification
+      - name: Run seven-scope repository verification
         run: npm run verify
 
       - name: Run local MVP Mesh browser journey

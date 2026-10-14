@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "verification": "metadata-only",
+  "defaultSupport": "unsupported",
+  "authority": {"humanApproval":"each-signature-and-broadcast","signing":"human-controlled-wallet","broadcast":"human-only","custody":false,"delegatedExecution":false},
+  "supported": [
+    {"id":"public-market-evidence","domain":"lending","chain":"solana","network":"devnet","actions":["observe"],"scope":"fixed-kamino-reserve","tools":["falcon_public_graph"]},
+    {"id":"lending-execution","domain":"lending","chain":"solana","network":"devnet","actions":["supply","redeem"],"scope":"fixed-kamino-reserve","maxSupplyUsdc":"1","executionMode":"prepare-register-reconcile","tools":["falcon_refresh_evidence","falcon_reserve_decision","falcon_prepare_transaction","falcon_submit_signed","falcon_check_receipt","falcon_activity"]},
+    {"id":"yield-discovery","domain":"lending","chain":"solana","network":"mainnet-beta","actions":["discover"],"executionSupported":false,"tools":["falcon_yield_opportunities"]}
+  ],
+  "unavailable": [
+    {"id":"solana-swaps","domain":"swaps","chain":"solana","network":"devnet","actions":["swap"],"code":"MCP_INTEGRATION_UNAVAILABLE","reason":"No swap preparation or receipt adapter is exposed through Falcon MCP."},
+    {"id":"stocks-advice","domain":"stocks","chain":null,"network":null,"actions":["advise"],"code":"MCP_INTEGRATION_UNAVAILABLE","reason":"Stocks evidence and Council assessment are not connected to Falcon MCP."},
+    {"id":"perps-advice","domain":"perps","chain":null,"network":null,"actions":["advise","execute"],"code":"MCP_INTEGRATION_UNAVAILABLE","reason":"No perps advisory or execution tools are exposed through Falcon MCP."},
+    {"id":"solana-mainnet-execution","domain":"execution","chain":"solana","network":"mainnet-beta","actions":["execute"],"code":"EXECUTION_NETWORK_UNSUPPORTED","reason":"Execution preparation is Devnet only. Mainnet yield discovery does not enable mainnet transactions."},
+    {"id":"evm-execution","domain":"execution","chain":"evm","network":null,"actions":["execute"],"code":"EXECUTION_CHAIN_UNSUPPORTED","reason":"Falcon MCP has no EVM execution adapter."},
+    {"id":"brokerage-execution","domain":"stocks","chain":null,"network":null,"actions":["execute"],"code":"MCP_INTEGRATION_UNAVAILABLE","reason":"Falcon MCP has no brokerage account or order adapter."}
+  ],
+  "contextualChecks":{"wallet":"falcon_wallet_status","transactionDecode":"falcon_decode_transaction","transactionPreflight":"falcon_prepare_transaction","receipt":"falcon_check_receipt"}
+}

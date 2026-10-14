@@ -64,6 +64,8 @@ Policy metadata is fixed: `policyDefinitionId` = `decision:mesh-reserve-scenario
 [VERIFIED, review delivery] Capability discovery is in [PR #76](https://github.com/Sarthib7/FalconOS/pull/76), open and unmerged at this update. Implementation commit `7c18c6249d51ed73e18caa980f62e9e7d6650de3` passed exact-head CI and its pinned skill rebuild. The [T81 delivery record](../status.md#t81-capability-discovery-2026-10-13) links those results and states their limits. This is not a hosted 0.4.0 release claim.
 
 
+## Local Rust implementation
+Run `sh scripts/run-mcp-rust.sh` to start the side-by-side Rust 0.4.0 server. It builds the locked release binary and uses the same Mesh URL, MCP origin, bind host, and port settings as Node [VERIFIED, local source]. This does not switch the hosted service. Node `mcp/` remains in place until a separately approved cutover [VERIFIED, scope]. Client skills stay Markdown because MCP clients install the exact guide and verify its digest [VERIFIED, client contract].
 ## Configuration
 
 | Variable | Required | Default | Meaning |
