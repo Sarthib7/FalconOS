@@ -1,4 +1,18 @@
 # Status
+## Current state: 2026-10-14
+
+[VERIFIED, GitHub] PR #76 merged as `65707a3972cd628299ce224af59ee13b326e719c`. Post-merge CI run `38552133670` and Verify web run `38552133757` both returned `conclusion: success`. The T81 delivery record below still says open; that was true at its update and is now superseded. The hosted MCP probe at 2026-10-14 12:38Z still reported version `0.3.0`, so hosted 0.4.0 is not verified.
+
+[VERIFIED, local Postgres] `npm --prefix mesh test` printed `tests 245`, `pass 245`, `fail 0`. The race test `failed stale capture cannot invalidate a newer public graph head` passed. Removing expected-source forwarding in memory made it fail with `the stale failure must retain the exact newer head`. Test schema used a disposable PostgreSQL 17 database.
+
+[VERIFIED, read-only source probes] PreStocks returned mint `PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF`, symbol `OPENAI`, `markPrice: 1061.0339907815894`, `tokenPrice: 1424.8123643753079`, and no source timestamp fields. DexScreener returned the exact USDC pair price `2118.064` and liquidity `$113973.16`; it provided no price-update timestamp. These values differ, but their field semantics are not yet proven equivalent. The pool account owner matched Meteora DLMM program `LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo`; the account snapshot response returned slot `456853139`. This slot is an observation context, not the account's last-change time.
+
+[INFERRED, T83 scope] First result must describe this PreStocks token's market state only. It must not claim listed-share advice or OpenAI fair value. A Council assessment remains unimplemented.
+
+[BLOCKED, owner action] T82 still needs separately approved supply and redemption, signatures, broadcast, confirmed receipts, and independent Explorer proof. No deployment or financial action occurred here.
+Rust implementation follows the user request: `write the skills and mcp in rust and shell mostly to be fasttttt` [VERIFIED, user direction, 2026-10-14]. Rust MCP 0.4.0 now runs from the side-by-side `mcp-rust/` crate. Local tests verify its tool and capability parity. `web/skills/SKILLS.md` remains Markdown for client installation; `scripts/run-mcp-rust.sh` handles Cargo startup [VERIFIED, local source and tests].
+The user selected local Node 0.4.0 vs. Rust and p95 request latency [VERIFIED, user direction]. One local run returned Node p50 43.29 ms, p95 181.915 ms; Rust p50 11.94 ms, p95 43.99 ms. Rust p95 was 75.8% lower in this run. The same Node MCP client sent 100 warmups and 500 measured `tools/list` calls per server over persistent loopback Streamable HTTP. Normalized tool names and input schemas matched. Mesh was a local fake; `tools/list` made no Mesh calls. This sample excludes provider latency, cold start, concurrent load, and production conditions [VERIFIED, benchmark output and method]. No hosted switch occurred. The user authorized push to small PR branches, not direct pushes to `main` [VERIFIED, user direction]. Node removal and deployment remain unauthorized.
+PR #77 (https://github.com/Sarthib7/FalconOS/pull/77) merged at `3d19496e7e6d2dbf66296cc9d24d6a559d3834ff` on 2026-10-14T15:51:54Z. PR #78 (https://github.com/Sarthib7/FalconOS/pull/78) merged at `66f3815c7dd98fce5a1f5c533e5dc13e55757a2a` on 2026-10-14T16:54:29Z. PR #79 remains open for review [VERIFIED, GitHub].
 
 ## T81 capability discovery: 2026-10-13
 
