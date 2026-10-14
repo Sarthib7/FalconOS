@@ -156,6 +156,62 @@ async fn mesh_error_body_is_sanitized_and_readiness_reports_outage() {
     );
 }
 #[tokio::test]
+async fn test_v182_origin_host_does_not_bypass_configured_host_allowlist() {
+    let mut config = cfg("http://127.0.0.1:9".into());
+    config.origin = "https://origin.example".into();
+    config.host = "0.0.0.0".into();
+    config.allowed_hosts = vec!["allowed.example".into()];
+    let app = create_app(config).unwrap();
+    let request = |host: &str, origin: &str| {
+        Request::builder()
+            .method("POST")
+            .uri("/mcp")
+            .header("host", host)
+            .header("origin", origin)
+            .header("content-type", "application/json")
+            .header("accept", "application/json, text/event-stream")
+            .body(Body::from(
+                json!({"jsonrpc":"2.0","id":1,"method":"tools/list"}).to_string(),
+            ))
+            .unwrap()
+    };
+
+    let origin_as_host = app
+        .clone()
+        .oneshot(request("origin.example", "https://origin.example"))
+        .await
+        .unwrap();
+    assert_eq!(origin_as_host.status(), StatusCode::FORBIDDEN);
+    let body = axum::body::to_bytes(origin_as_host.into_body(), 8192)
+        .await
+        .unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&body).unwrap(),
+        json!({"jsonrpc":"2.0","error":{"code":-32000,"message":"Invalid Host: origin.example"},"id":null})
+    );
+
+    let invalid_origin = app
+        .clone()
+        .oneshot(request("allowed.example", "https://evil.example"))
+        .await
+        .unwrap();
+    assert_eq!(invalid_origin.status(), StatusCode::FORBIDDEN);
+    let body = axum::body::to_bytes(invalid_origin.into_body(), 8192)
+        .await
+        .unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&body).unwrap(),
+        json!({"jsonrpc":"2.0","error":{"code":-32000,"message":"Invalid Origin: evil.example"},"id":null})
+    );
+
+    let configured_host = app
+        .oneshot(request("allowed.example", "https://origin.example"))
+        .await
+        .unwrap();
+    assert_eq!(configured_host.status(), StatusCode::OK);
+}
+
+#[tokio::test]
 async fn body_host_origin_and_readiness_guards_fail_closed() {
     let app = create_app(cfg("http://127.0.0.1:9".into())).unwrap();
     let request = |host: &str, origin: &str, body: Body| {
@@ -186,7 +242,7 @@ async fn body_host_origin_and_readiness_guards_fail_closed() {
         ))
         .await
         .unwrap();
-    assert_eq!(bad_host.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(bad_host.status(), StatusCode::FORBIDDEN);
     let bad_origin = app
         .clone()
         .oneshot(request(

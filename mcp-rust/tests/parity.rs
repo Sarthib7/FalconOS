@@ -208,7 +208,12 @@ async fn host_origin_and_body_guards_fail_closed() {
         )
         .await
         .unwrap();
-    assert_eq!(resp.status(), reqwest::StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), reqwest::StatusCode::FORBIDDEN);
+    let body = axum::body::to_bytes(resp.into_body(), 8192).await.unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&body).unwrap(),
+        json!({"jsonrpc":"2.0","error":{"code":-32000,"message":"Invalid Host: evil.example"},"id":null})
+    );
     let resp = app
         .oneshot(
             axum::http::Request::builder()
@@ -222,4 +227,9 @@ async fn host_origin_and_body_guards_fail_closed() {
         .await
         .unwrap();
     assert_eq!(resp.status(), reqwest::StatusCode::FORBIDDEN);
+    let body = axum::body::to_bytes(resp.into_body(), 8192).await.unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&body).unwrap(),
+        json!({"jsonrpc":"2.0","error":{"code":-32000,"message":"Invalid Origin: evil.example"},"id":null})
+    );
 }
