@@ -365,6 +365,12 @@ pub(super) fn project_decision(v: &Value, args: &Value) -> Value {
 pub(super) fn public_event(e: &Value) -> Value {
     let mut data = e["data"].as_object().cloned().unwrap_or_default();
     data.remove("transactionBase64");
+    if data
+        .get("exchanges")
+        .is_some_and(|exchanges| !exchanges.is_array())
+    {
+        data.remove("exchanges");
+    }
     if let Some(xs) = data.get_mut("exchanges").and_then(Value::as_array_mut) {
         for x in xs {
             if let Some(o) = x["request"].as_object_mut() {

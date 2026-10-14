@@ -805,3 +805,4 @@ Correction (2026-10-12): B102, B103 and B105 previously claimed VERIFIED histori
 B111|2026-10-14|[VERIFIED local test] new mcp-rust verification scope left expected status list and command count stale|update runner test expectations
 B112|2026-10-14|[VERIFIED local regression] failed stale invalidation removed S0 before peer CAS; successful capture returned NO_DATA|V181
 B113|2026-10-14|[VERIFIED local regression] Rust Host guard admitted Origin host and returned non-Node HTTP/error shape|V182
+B114|2026-10-14|[VERIFIED local regression] Rust event projection retained opaque request/response bodies when exchanges was not an array|V166

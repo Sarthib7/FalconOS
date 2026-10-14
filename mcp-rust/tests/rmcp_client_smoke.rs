@@ -135,3 +135,68 @@ async fn rmcp_client_smokes_listing_calls_and_human_authority() {
             .is_none()
     );
 }
+async fn fake_mesh_with_malformed_exchanges(Path(path): Path<String>) -> Json<Value> {
+    if path.ends_with("/submit") {
+        return Json(json!({"event":{
+            "id":"12345678-1234-1234-1234-123456789012",
+            "requestId":"12345678-1234-1234-1234-123456789013",
+            "intentId":"12345678-1234-1234-1234-123456789014",
+            "createdAt":"2030-01-01T00:00:00.000Z","kind":"SIGNED_REGISTERED",
+            "data":{"transactionBase64":"private-wire-bytes","exchanges":{
+                "request":{"bodyBase64":"private-object-request"},
+                "response":{"bodyBase64":"private-object-response"}
+            }}
+        }}));
+    }
+    Json(json!({"status":"ready"}))
+}
+
+#[tokio::test]
+async fn rmcp_client_omits_malformed_exchanges_from_public_event() {
+    let upstream = Router::new().route("/{*path}", any(fake_mesh_with_malformed_exchanges));
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let fake_addr = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, upstream).await.unwrap() });
+
+    let config = Config {
+        mesh_url: format!("http://{fake_addr}"),
+        origin: "http://localhost:8792".into(),
+        host: "127.0.0.1".into(),
+        allowed_hosts: vec![],
+        port: 0,
+        rate_window: 60_000,
+        rate_session: 60,
+        rate_connect: 10,
+        rate_global: 300,
+    };
+    let app = create_app(config).unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+
+    let transport = StreamableHttpClientTransport::from_uri(format!("http://{addr}/mcp"));
+    let client = ().serve(transport).await.unwrap();
+    let signed = json!({
+        "session":"wsi1_12345678901234567890",
+        "intentId":"12345678-1234-1234-1234-123456789014",
+        "signedTransactionBase64":"c2lnbmVk"
+    })
+    .as_object()
+    .unwrap()
+    .clone();
+    let registered = client
+        .peer()
+        .call_tool(CallToolRequestParams::new("falcon_submit_signed").with_arguments(signed))
+        .await
+        .unwrap();
+    assert_eq!(registered.is_error, None);
+
+    let output = registered.structured_content.as_ref().unwrap();
+    assert!(
+        output["event"]["data"].get("exchanges").is_none(),
+        "V166: malformed exchanges are omitted from public events"
+    );
+    assert!(output["event"]["data"].get("transactionBase64").is_none());
+    assert!(!output.to_string().contains("private-object-request"));
+    assert!(!output.to_string().contains("private-object-response"));
+}
