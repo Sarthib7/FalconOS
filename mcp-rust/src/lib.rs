@@ -501,14 +501,22 @@ async fn mcp(State(st): State<Arc<AppState>>, req: Request<Body>) -> Response {
         );
     }
     if !host_allowed(headers, &st.config) {
-        return simple(
-            StatusCode::BAD_REQUEST,
-            "BAD_REQUEST",
-            "Invalid Host header.",
-        );
+        let host = headers
+            .get(header::HOST)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| Url::parse(&format!("http://{value}")).ok())
+            .and_then(|url| url.host_str().map(str::to_owned))
+            .unwrap_or_default();
+        return mcp_guard_error(format!("Invalid Host: {host}"));
     }
     if !origin_allowed(headers, &st.config) {
-        return simple(StatusCode::FORBIDDEN, "FORBIDDEN", "Origin not allowed.");
+        let origin = headers
+            .get(header::ORIGIN)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| Url::parse(value).ok())
+            .and_then(|url| url.host_str().map(str::to_owned))
+            .unwrap_or_default();
+        return mcp_guard_error(format!("Invalid Origin: {origin}"));
     }
     let len = headers
         .get(header::CONTENT_LENGTH)
@@ -558,9 +566,6 @@ async fn mcp(State(st): State<Arc<AppState>>, req: Request<Body>) -> Response {
             "::1".into(),
         ]);
     }
-    if let Ok(u) = Url::parse(&st.config.origin) {
-        hosts.push(u.host_str().unwrap_or("").to_string())
-    }
     hosts.sort();
     hosts.dedup();
     let config = StreamableHttpServerConfig::default()
@@ -595,10 +600,6 @@ fn host_allowed(h: &HeaderMap, c: &Config) -> bool {
     c.allowed_hosts
         .iter()
         .any(|x| x.eq_ignore_ascii_case(&host))
-        || Url::parse(&c.origin)
-            .ok()
-            .and_then(|u| u.host_str().map(str::to_ascii_lowercase))
-            .is_some_and(|x| x == host)
 }
 fn origin_allowed(h: &HeaderMap, c: &Config) -> bool {
     match h.get(header::ORIGIN) {
@@ -614,6 +615,17 @@ fn simple(status: StatusCode, code: &str, msg: &str) -> Response {
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         Json(json!({"error":{"code":code,"message":msg}})),
+    )
+        .into_response()
+}
+fn mcp_guard_error(message: String) -> Response {
+    (
+        StatusCode::FORBIDDEN,
+        [
+            (header::CACHE_CONTROL, "no-store"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+        ],
+        Json(json!({"jsonrpc":"2.0","error":{"code":-32000,"message":message},"id":null})),
     )
         .into_response()
 }
