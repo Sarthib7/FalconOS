@@ -176,7 +176,7 @@ jobs:
           trap 'docker stop falcon-mcp-rust-ci >/dev/null 2>&1 || true' EXIT
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:8792/healthz >/dev/null; then
-              node mcp/test/support/runtime-smoke.mjs http://127.0.0.1:8792/mcp
+              cargo run --locked --manifest-path mcp-rust/Cargo.toml --example smoke_http -- http://127.0.0.1:8792/mcp --mesh-unavailable
               exit 0
             fi
             sleep 1

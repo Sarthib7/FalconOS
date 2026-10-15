@@ -26,5 +26,5 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "time",
 url = "2"
 uuid = { version = "1", features = ["v4", "serde"] }
 [dev-dependencies]
-rmcp = { version = "=3.5.1", default-features = false, features = ["client", "transport-streamable-http-client-reqwest"] }
+rmcp = { version = "=3.5.1", default-features = false, features = ["client", "transport-streamable-http-client-reqwest", "reqwest"] }
 tower = { version = "0.5", features = ["util"] }
