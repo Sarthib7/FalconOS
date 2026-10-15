@@ -115,6 +115,8 @@ jobs:
           FALCON_CHROME_BIN="$CHROME_BIN" node web/test/mesh-browser.mjs
         env:
           FALCON_MESH_WEB_ROOT: web/dist-mvp
+          # [DEBUG-MCP-CI-SOCKET] Diagnostic branch only; retain the real 100-request guard.
+          FALCON_MESH_SOCKET_BOUNDARY: "99"
 
       - name: Build Mesh container
         run: docker build --file mesh/Dockerfile --tag falcon-mesh:ci mesh

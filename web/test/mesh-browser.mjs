@@ -62,6 +62,11 @@ const exceptions = [];
 const remoteRequests = [];
 const apiRequests = [];
 const networkTrace = [];
+const apiSocketTrace = [];
+let socketBoundaryProbed = false;
+let diagnosticPage;
+let browserFailureState = null;
+const browserVersions = { node: process.version };
 const pending = new Map();
 let staticServer;
 let apiServer;
@@ -142,11 +147,17 @@ function receive(data) {
     if (message.method === 'Network.loadingFailed') networkTrace.push({ event: 'failed', ...message.params });
     if (message.method === 'Network.responseReceived') {
       const target = requestDestination(message.params.response.url);
-      if (target?.origin === apiOrigin) networkTrace.push({ event: 'response', requestId: message.params.requestId, path: target.path, status: message.params.response.status });
+      const response = message.params.response;
+      if (target?.origin === apiOrigin) networkTrace.push({ event: 'response', requestId: message.params.requestId, path: target.path, status: response.status, connectionId: response.connectionId, connectionReused: response.connectionReused, protocol: response.protocol, timestamp: message.params.timestamp });
+    }
+    if (message.method === 'Network.responseReceivedExtraInfo') {
+      const { requestId, statusCode, headers } = message.params;
+      const allowOrigin = Object.entries(headers).find(([name]) => name.toLowerCase() === 'access-control-allow-origin')?.[1] ?? null;
+      networkTrace.push({ event: 'responseExtra', requestId, status: statusCode, allowOrigin, connection: Object.entries(headers).find(([name]) => name.toLowerCase() === 'connection')?.[1] ?? null, keepAlive: Object.entries(headers).find(([name]) => name.toLowerCase() === 'keep-alive')?.[1] ?? null });
     }
     if (message.method === 'Network.requestWillBeSent') {
       const target = requestDestination(message.params.request.url);
-      if (target?.origin === apiOrigin) apiRequests.push({ requestId: message.params.requestId, method: message.params.request.method, path: target.path, hasQuery: Boolean(target.search) });
+      if (target?.origin === apiOrigin) apiRequests.push({ requestId: message.params.requestId, method: message.params.request.method, path: target.path, hasQuery: Boolean(target.search), at: message.params.wallTime * 1000, type: message.params.type, initiatorType: message.params.initiator?.type, initiatorRequestId: message.params.initiator?.requestId });
     }
     if (message.method === 'Fetch.requestPaused') {
       if (message.params.request.url === LENDING_CONFIG.rpcUrl || message.params.request.url === `${LENDING_CONFIG.rpcUrl}/`) {
@@ -279,6 +290,23 @@ async function selectReviewDecision(p) {
 async function prepareIntent(p, amount) {
   const previous = await p.evaluate('document.getElementById("lending-raw").textContent');
   await selectReviewDecision(p);
+  // [DEBUG-MCP-CI-SOCKET] Opt-in read-only warmup at the existing socket limit.
+  const target = Number(process.env.FALCON_MESH_SOCKET_BOUNDARY || 0);
+  if (target && !socketBoundaryProbed) {
+    socketBoundaryProbed = true;
+    let matched = false;
+    for (let attempt = 0; attempt < 220; attempt++) {
+      const status = await p.evaluate(`fetch(${JSON.stringify(apiOrigin + '/healthz')}, {credentials:'omit'}).then(async response => { await response.arrayBuffer(); return response.status; })`);
+      assert.equal(status, 200, 'Socket-boundary probe health read must succeed');
+      const last = apiSocketTrace.findLast(event => event.event === 'finish' && event.path === '/healthz');
+      if (last?.ordinal === target) {
+        apiSocketTrace.push({ event: 'probeBoundary', socketId: last.socketId, ordinal: last.ordinal, at: Date.now() });
+        matched = true;
+        break;
+      }
+    }
+    assert.ok(matched, 'Socket-boundary probe must reach the requested existing ordinal');
+  }
   await p.evaluate(`document.getElementById('lending-amount').value = ${JSON.stringify(amount)}`);
   await p.click('lending-prepare');
   await p.wait(`!document.getElementById('lending-history-refresh').disabled && (document.getElementById('lending-message').dataset.error === 'true' || document.getElementById('lending-raw').textContent !== ${JSON.stringify(previous)})`);
@@ -354,6 +382,29 @@ try {
   await new Promise((resolve, reject) => { staticServer.once('error', reject); staticServer.listen(0, '127.0.0.1', resolve); });
   origin = `http://127.0.0.1:${staticServer.address().port}`;
   apiServer = createApi({ store, lending, tokenHashes: new Map([[createHash('sha256').update(credential).digest('hex'), owner], [createHash('sha256').update(otherCredential).digest('hex'), otherOwner]]), allowedOrigins: new Set([origin]), rateMaxPerOwner: 500, rateMaxGlobal: 1000 });
+  // [DEBUG-MCP-CI-SOCKET] Passive attribution only; leave server limits and responses unchanged.
+  const socketRecords = new WeakMap();
+  let socketSequence = 0;
+  apiSocketTrace.push({ event: 'limits', maxRequestsPerSocket: apiServer.maxRequestsPerSocket, keepAliveTimeout: apiServer.keepAliveTimeout, keepAliveTimeoutBuffer: apiServer.keepAliveTimeoutBuffer });
+  apiServer.on('connection', socket => {
+    const record = { id: ++socketSequence, requests: 0 };
+    socketRecords.set(socket, record);
+    apiSocketTrace.push({ event: 'connection', socketId: record.id, at: Date.now() });
+    socket.once('error', error => apiSocketTrace.push({ event: 'socketError', socketId: record.id, code: error.code, at: Date.now() }));
+    socket.once('close', hadError => apiSocketTrace.push({ event: 'socketClose', socketId: record.id, requests: record.requests, hadError, at: Date.now() }));
+  });
+  apiServer.prependListener('request', (request, response) => {
+    const socket = socketRecords.get(request.socket);
+    const identity = { socketId: socket?.id, ordinal: socket ? ++socket.requests : null, method: request.method, path: request.url?.split('?')[0] };
+    apiSocketTrace.push({ event: 'request', ...identity, at: Date.now() });
+    response.once('finish', () => apiSocketTrace.push({ event: 'finish', ...identity, status: response.statusCode, allowOrigin: response.getHeader('access-control-allow-origin') ?? null, connection: response.getHeader('connection') ?? null, at: Date.now() }));
+    response.once('close', () => apiSocketTrace.push({ event: 'responseClose', ...identity, completed: response.writableFinished, at: Date.now() }));
+    request.once('aborted', () => apiSocketTrace.push({ event: 'requestAborted', ...identity, at: Date.now() }));
+  });
+  apiServer.on('dropRequest', (request, socket) => {
+    const record = socketRecords.get(socket);
+    apiSocketTrace.push({ event: 'dropRequest', socketId: record?.id, ordinal: record ? ++record.requests : null, method: request.method, path: request.url?.split('?')[0], at: Date.now() });
+  });
   await new Promise((resolve, reject) => { apiServer.once('error', reject); apiServer.listen(apiPort, '127.0.0.1', resolve); });
   const anonymous = await fetch(`${apiOrigin}/v1/graph`, { redirect: 'error' });
   check('V92: the real API rejects an unauthenticated graph request', anonymous.status === 401);
@@ -370,6 +421,10 @@ try {
   chrome.stdio[4].on('data', receive);
 
   const p = await page();
+  diagnosticPage = p;
+  const browserVersion = await call('Browser.getVersion');
+  browserVersions.chrome = browserVersion.product;
+  browserVersions.protocol = browserVersion.protocolVersion;
   if (root.endsWith(sep + 'dist-mvp')) {
     check('V152: signed-out local MVP mesh exposes wallet sign-in and keeps the token fallback', await p.evaluate('!document.getElementById("wallet-signin-link").hidden && document.getElementById("wallet-signin-link").getAttribute("href") === "/" && document.getElementById("access-token").type === "password"'));
     const walletSignInUrl = await p.evaluate('document.getElementById("wallet-signin-link").href');
@@ -625,12 +680,20 @@ try {
 } catch (error) {
   if (checks.at(-1)?.pass !== false) checks.push({ name: safe(error instanceof Error ? error.message : String(error)), pass: false });
   process.exitCode = 1;
+  if (diagnosticPage) {
+    try {
+      browserFailureState = await diagnosticPage.evaluate(`Object.fromEntries(['mesh-error','source-inspector','source-facts','analysis-status','analysis-context','lending-message','lending-state','lending-prepare'].map(id => { const element=document.getElementById(id); return [id, element ? {text:element.textContent.slice(0,1200),hidden:element.hidden,disabled:element.disabled,error:element.dataset.error} : null]; }))`);
+      await screenshot(diagnosticPage, 'diagnostic-failure');
+    } catch (captureError) {
+      browserFailureState = { captureFailed: captureError.name };
+    }
+  }
 } finally {
   if (chrome) { try { await call('Browser.close'); } catch {} chrome.kill(); }
   await closeServer(apiServer);
   await closeServer(staticServer);
   await pool.end();
-  const report = safe({ passed: checks.filter((item) => item.pass).length, total: checks.length, checks, exceptions, remoteRequests, apiRequestCount: apiRequests.length, apiRequests, networkTrace, fixtureRpcMethods, broadcasts, artifactDir, root, owner, database: 'Explicit FALCON_MESH_TEST_DATABASE_URL; existing schema; unique test owner retained for inspection.', limitation: 'Controlled connector, balance, simulation, and receipt fixtures. Ephemeral wallet signs locally. No external RPC or real Devnet transaction occurred.' });
+  const report = safe({ passed: checks.filter((item) => item.pass).length, total: checks.length, checks, exceptions, remoteRequests, apiRequestCount: apiRequests.length, apiRequests, networkTrace, apiSocketTrace, browserFailureState, browserVersions, fixtureRpcMethods, broadcasts, artifactDir, root, owner, database: 'Explicit FALCON_MESH_TEST_DATABASE_URL; existing schema; unique test owner retained for inspection.', limitation: 'Controlled connector, balance, simulation, and receipt fixtures. Ephemeral wallet signs locally. No external RPC or real Devnet transaction occurred.' });
   await writeFile(`${artifactDir}/report.json`, JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 }
