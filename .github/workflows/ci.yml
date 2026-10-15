@@ -163,6 +163,27 @@ jobs:
           docker logs falcon-mcp-ci
           exit 1
 
+      - name: Build and smoke Rust MCP container
+        run: |
+          set -euo pipefail
+          docker build --file mcp-rust/Dockerfile --tag falcon-mcp-rust:ci mcp-rust
+          docker run --rm --detach --network host --name falcon-mcp-rust-ci \
+            --env PORT=8792 \
+            --env FALCON_MCP_ALLOWED_HOSTS=127.0.0.1 \
+            --env FALCON_MESH_API_URL=http://127.0.0.1:1 \
+            --env FALCON_MCP_ORIGIN=http://127.0.0.1:4183 \
+            falcon-mcp-rust:ci
+          trap 'docker stop falcon-mcp-rust-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8792/healthz >/dev/null; then
+              node mcp/test/support/runtime-smoke.mjs http://127.0.0.1:8792/mcp
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs falcon-mcp-rust-ci
+          exit 1
+
   web-build:
     name: Build web targets
     runs-on: ubuntu-24.04

@@ -66,6 +66,15 @@ Policy metadata is fixed: `policyDefinitionId` = `decision:mesh-reserve-scenario
 
 ## Local Rust implementation
 Run `sh scripts/run-mcp-rust.sh` to start the side-by-side Rust 0.4.0 server. It builds the locked release binary and uses the same Mesh URL, MCP origin, bind host, and port settings as Node [VERIFIED, local source]. This does not switch the hosted service. Node `mcp/` remains in place until a separately approved cutover [VERIFIED, scope]. Client skills stay Markdown because MCP clients install the exact guide and verify its digest [VERIFIED, client contract].
+
+### Rust container release
+
+Build with `docker build -t falcon-mcp-rust mcp-rust`. The image runs `/usr/local/bin/falcon-mcp-rust` as UID 65532. It contains neither Node nor wallet keys [VERIFIED, Dockerfile source].
+
+For an approved Railway cutover, upload only `mcp-rust/` as the service root. Its `railway.toml` selects its Dockerfile and `/healthz`. Keep the existing MCP domain, Mesh HTTPS URL, origin, Host allowlist, and injected `PORT`. Do not deploy the repository root or the Node `mcp/` directory as the Rust service. A source merge alone does not change the hosted runtime [VERIFIED, release configuration].
+
+CI builds the Rust image and calls it with the official MCP client. That smoke checks discovery and rejects an invalid selector; its intentionally unavailable Mesh must fail closed. Real Mesh integration evidence is separate from this container smoke [VERIFIED, CI configuration].
+
 ## Configuration
 
 | Variable | Required | Default | Meaning |
