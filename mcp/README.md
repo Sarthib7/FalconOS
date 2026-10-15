@@ -122,6 +122,7 @@ Tests need no database: `npm test` runs against fake Mesh servers.
 - **Stateless:** sessions and owner records live in Mesh; the MCP process stores nothing.
 - **Session privacy:** an authenticated tool receives the session argument in model context. Treat it as a short-lived password. Reuse it; `falcon_disconnect` revokes it.
 - **Per-instance limits:** authenticated calls are keyed by a session hash, sign-in/status by wallet, verification by challenge, plus the global cap. Public graph/decode/self-test use bounded public buckets; exceeding a limit returns `RATE_LIMITED` with `retryAfterSeconds`.
+  Retry hints are positive whole seconds, rounded up to the remaining fixed window [VERIFIED, V183 regression].
 - **Public read tools:** the live graph, wallet status, and transaction decode are unauthenticated read-only APIs. Wallet-status faucet links/checklist are human-only; Falcon never funds or creates accounts.
 - **Wallet authorization:** `/mcp` is reachable by anyone who can reach the host. The public graph needs no session. Owner-bound adoption, decisions, activity, and execution records require a valid wallet session. Preparation requires no transaction signature; the human alone signs and broadcasts afterward.
 - **Devnet only:** no mainnet, custody, Falcon-held keys, funding, or server-side broadcast.

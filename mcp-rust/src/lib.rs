@@ -198,15 +198,57 @@ impl Limiter {
             self.per_session
         };
         if v > limit || self.global >= self.limit_global {
-            return Err(self
-                .window
-                .saturating_sub(self.start.elapsed())
-                .as_secs()
-                .max(1));
+            return Err(retry_after_seconds(
+                self.window.saturating_sub(self.start.elapsed()),
+            ));
         }
         self.counts.insert(key, v);
         self.global += 1;
         Ok(())
+    }
+}
+fn retry_after_seconds(remaining: Duration) -> u64 {
+    remaining
+        .as_secs()
+        .saturating_add(u64::from(remaining.subsec_nanos() != 0))
+        .max(1)
+}
+
+#[cfg(test)]
+mod rate_window_tests {
+    use super::*;
+
+    #[test]
+    fn v183_retry_hints_round_up_fractional_seconds() {
+        for (remaining, expected) in [
+            (Duration::ZERO, 1),
+            (Duration::from_secs(1), 1),
+            (Duration::from_millis(1001), 2),
+            (Duration::from_millis(59_999), 60),
+        ] {
+            assert_eq!(retry_after_seconds(remaining), expected);
+        }
+    }
+
+    #[test]
+    fn expired_window_resets_session_wallet_and_global_quotas() {
+        let mut limiter = Limiter {
+            start: Instant::now(),
+            window: Duration::from_secs(3600),
+            global: 0,
+            limit_global: 2,
+            per_session: 1,
+            per_connect: 1,
+            counts: HashMap::new(),
+        };
+        assert_eq!(limiter.check("session:a".into(), false), Ok(()));
+        assert!(limiter.check("session:a".into(), false).is_err());
+        assert_eq!(limiter.check("wallet:w".into(), true), Ok(()));
+        assert!(limiter.check("session:b".into(), false).is_err());
+        limiter.start -= Duration::from_secs(7200);
+        assert_eq!(limiter.check("session:a".into(), false), Ok(()));
+        assert_eq!(limiter.check("wallet:w".into(), true), Ok(()));
+        assert!(limiter.check("session:b".into(), false).is_err());
     }
 }
 impl Mesh {
