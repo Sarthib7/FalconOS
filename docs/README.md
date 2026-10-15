@@ -5,7 +5,7 @@
 
 [VERIFIED, user-approved plan, 2026-10-13] Start new MCP work with [SPEC I21](../SPEC.md), the [active MCP roadmap](../plans/roadmap.md#active-mcp-plan-2026-10-13), and [MCP-OS-1](interfaces.md#agent-decision-and-execution-contract-2026-10-13). Scope: Solana execution, cross-market advice, owner approval for each action. The shared Council backend and swaps are planned, not shipped. Earlier autonomy and advisory-only product statements are historical where they conflict with this decision.
 
-[VERIFIED, T81 delivery] [Capability discovery](../mcp/README.md#capability-discovery-040) is implemented in [PR #76](https://github.com/Sarthib7/FalconOS/pull/76), open for review. The [delivery record](../status.md#t81-capability-discovery-2026-10-13) records local checks, the pinned rebuild and CI for implementation commit `7c18c62`. T82 settlement proof and T83 Council integration remain open; successful discovery does not establish execution readiness or a deployed release.
+[VERIFIED, hosted Rust smoke, 2026-10-15] [Capability discovery](../mcp-rust/README.md#capability-discovery-040) is live at the Rust MCP endpoint. The [cutover record](../status.md#rust-mcp-cutover-2026-10-15) records deployment `6697d4d3-6cab-47da-b2bd-841c0344975c` and read-only verification. T82 settlement proof and T83 Council integration remain open. Discovery and unsigned preparation do not establish funded execution readiness.
 
 
 ## Component map
