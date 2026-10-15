@@ -2,7 +2,7 @@
 
 [VERIFIED, approved direction, 2026-10-13] FalconOS is the decision and execution backend for agents. The selected scope is Solana execution and cross-market advice, with owner approval for every action. Falcon Investment Council supplies non-binding market intelligence and risk assessment. The [active plan](plans/roadmap.md#active-mcp-plan-2026-10-13) is specified in SPEC I21 and T81-T85; broader execution and a shared Council backend are not shipped capabilities.
 
-[VERIFIED, current source boundary: mcp/src/tools.mjs, mesh/limits.mjs] The MCP workflow exposes public evidence and owner-scoped Solana Devnet lending preparation. Supply is capped at 1 Devnet USDC. Falcon holds no keys and never signs or broadcasts. Humans approve each signature and broadcast through their own wallet/provider. [REPORTED, retained acceptance status: SPEC T37] A complete owner-wallet supply/redemption round trip remains unverified. Mainnet, custody and delegated execution are outside the current release.
+[VERIFIED, current source boundary: mcp-rust/src/lib.rs, mesh/limits.mjs] The MCP workflow exposes public evidence and owner-scoped Solana Devnet lending preparation. Supply is capped at 1 Devnet USDC. Falcon holds no keys and never signs or broadcasts. Humans approve each signature and broadcast through their own wallet/provider. A complete owner-wallet supply/redemption round trip remains unverified; see SPEC T82. Mainnet, custody and delegated execution are outside this release.
 
 ## Try it
 
@@ -29,7 +29,7 @@ Or register it with the Codex CLI:
 codex mcp add falconos --url https://mcp.falconos.markets/mcp
 ```
 
-[VERIFIED, source and local HTTP] After restarting the client, inspect its active tools and call `falcon_self_test({})`. MCP 0.4.0 adds capability schema v1 to the existing 14-tool inventory and input-schema fingerprint. Check supported scopes, unavailable reasons and approval rules before an owner action. Metadata does not prove health, signer support, funds or transaction readiness. `codex mcp list` confirms registration only. See the [capability contract](mcp/README.md#capability-discovery-040).
+[VERIFIED, source and hosted HTTP] After restarting the client, list tools and call `falcon_self_test({})`. Rust MCP 0.4.0 exposes capability schema v1 and 14 tools. Check supported scopes, unavailable reasons and approval rules before an owner action. Metadata does not prove signer support, funds or transaction readiness. `codex mcp list` confirms registration only. See the [capability contract](mcp-rust/README.md#capability-discovery-040).
 
 **JSON config** (any MCP client that supports Streamable HTTP):
 ```json
@@ -71,11 +71,11 @@ Falcon has no custom on-chain program. It uses Kamino's existing KLend program o
 | Reserve | `HRwMj8uuoGVWCanKzKvpTWN5ZvXjtjKGxcFbn2qTPKMW` |
 | Market | `6aaNTBEmwdN19AAdTwbNrWyUo6iEyiLguxCTePEzSqoH` |
 
-[VERIFIED, source: mcp/src/tools.mjs; authority: SPEC V147] Mesh reads Devnet reserve accounts and retains hashed evidence. It evaluates explicit owner limits and returns REVIEW, BLOCKED or NO_DATA. Supply preparation requires a fresh REVIEW decisionId and caps input at 1 Devnet USDC. Redemption forbids decisionId and uses receipt-token units. Both require separate human review and signing. The human broadcasts the exact registered bytes through their wallet/provider. Falcon holds no private key and never broadcasts.
+[VERIFIED, source: mcp-rust/src/lib.rs, mesh/lending-store.mjs; authority: SPEC V147] Mesh evaluates explicit owner limits and returns REVIEW, BLOCKED or NO_DATA. Supply preparation requires a fresh REVIEW decisionId and caps input at 1 Devnet USDC. Redemption forbids decisionId and uses receipt-token units. Both require separate human review and signing. The human broadcasts the exact registered bytes. Falcon holds no private key and never broadcasts.
 
 ## MCP tools
 
-[VERIFIED, source: mcp/src/tools.mjs] Selected lending workflow tools appear below. Use falcon_self_test for the complete registered inventory, including public evidence and inspection tools. Authenticated tools require session as an argument.
+[VERIFIED, source: mcp-rust/src/lib.rs] Selected lending tools appear below. Use `falcon_self_test` for the complete inventory, including public evidence and inspection. Authenticated tools require a session argument.
 
 | Tool | What it does |
 | ---- | ------------ |
@@ -103,12 +103,11 @@ Supply amounts are decimal USDC strings in `amountUsdc`; redeem amounts are deci
 
 ## Run locally
 
-Node 24.12 or later is required.
+Rust builds MCP. Node 24.12 or later remains required for Mesh and the web app.
 
 ```sh
 # Install packages
 npm --prefix mesh ci
-npm --prefix mcp ci
 npm --prefix web ci
 
 # Set up Postgres for Mesh
@@ -122,7 +121,7 @@ npm --prefix mesh run dev:local           # 127.0.0.1:8791
 # Terminal 2: MCP server
 FALCON_MESH_API_URL=http://127.0.0.1:8791 \
 FALCON_MCP_ORIGIN=http://127.0.0.1:5173 \
-npm --prefix mcp start                    # 127.0.0.1:8792
+sh scripts/run-mcp-rust.sh                # 127.0.0.1:8792
 
 # Terminal 3: bot page
 npm --prefix web run dev:bot              # 127.0.0.1:5194
@@ -134,13 +133,13 @@ Add the local MCP server to Claude Code:
 claude mcp add --transport http falconos http://127.0.0.1:8792/mcp
 ```
 
-See [mesh/README.md](mesh/README.md) and [mcp/README.md](mcp/README.md) for full configuration details and database prerequisites.
+See [mesh/README.md](mesh/README.md) and [mcp-rust/README.md](mcp-rust/README.md) for configuration and database prerequisites.
 
 ## Repository layout
 
 | Path | Purpose |
 | ---- | ------- |
-| `mcp/` | MCP server (Streamable HTTP, stateless, Railway) |
+| `mcp-rust/` | Rust MCP server (Streamable HTTP, stateless, Railway) |
 | `mesh/` | Mesh API and Kamino adapter (Railway, Supabase Postgres schema v3) |
 | `web/` | Bot page (`web/bot`), skill template (`web/skills/SKILLS.md`), site, dashboard |
 | `engine/` | Rust stocks dashboard |
@@ -151,21 +150,12 @@ See [mesh/README.md](mesh/README.md) and [mcp/README.md](mcp/README.md) for full
 
 ## Verification
 
-**Tests:** MCP 45/45, web focused 52/52, Mesh Kamino 18/18.
+Run `npm run verify:mcp` for the maintained Rust MCP checks. CI builds and smokes the Mesh and Rust MCP containers [VERIFIED, verification entrypoints].
 
-**CI:** `.github/workflows/ci.yml` builds and smokes Mesh and MCP containers.
+The [Rust cutover record](status.md#rust-mcp-cutover-2026-10-15) retains exact deployment and test evidence. Hosted reads proved 14 tools and an OBSERVED public graph. Local real-Mesh/PostgreSQL integration prepared unsigned supply and redeem transactions using external RPC fixtures [VERIFIED, retained smoke evidence].
 
-**Live end-to-end check against the hosted MCP with a generated wallet:**
-
-- 10 tools listed.
-- Wallet sign-in succeeded.
-- Opportunities returned with status READY.
-- Devnet evidence captured with status OBSERVED.
-- Decision returned REVIEW with five PASS checks: evidence, freshness, owner_cap, book_floor, proposal_vs_book.
-- Unsigned prepare correctly refused an unfunded wallet: `Wallet has no Devnet USDC token account.`
-- Activity and disconnect worked.
-- No signed Devnet transaction has been completed yet.
+No owner-funded Devnet transaction round trip has been completed by these checks. T82 still requires separately approved signing, broadcast, confirmed receipts and Explorer proof. Historical Node results remain in the [pre-retirement README](https://github.com/Sarthib7/FalconOS/blob/7ff245cb7849deea327474a65f14d2b7e398c1a8/README.md#verification).
 
 ---
 
-[SPEC.md](SPEC.md) | [status.md](status.md) | [docs/README.md](docs/README.md) | [mcp/README.md](mcp/README.md)
+[SPEC.md](SPEC.md) | [status.md](status.md) | [docs/README.md](docs/README.md) | [mcp-rust/README.md](mcp-rust/README.md)
