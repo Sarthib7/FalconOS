@@ -1,4 +1,4 @@
-use falcon_mcp_rust::TOOL_NAMES;
+use falcon_mcp_rust::{SCHEMA_FINGERPRINT, TOOL_NAMES};
 use rmcp::{ServiceExt, model::CallToolRequestParams, transport::StreamableHttpClientTransport};
 use serde_json::{Value, json};
 use std::time::Duration;
@@ -53,6 +53,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_ref()
         .ok_or("missing self-test metadata")?;
     assert_eq!(metadata["serverVersion"], "0.4.0");
+    assert_eq!(metadata["schemaFingerprint"], SCHEMA_FINGERPRINT);
+    assert_eq!(metadata["capabilities"]["schemaVersion"], 1);
+    assert_eq!(metadata["capabilities"]["verification"], "metadata-only");
+    assert_eq!(metadata["capabilities"]["defaultSupport"], "unsupported");
     assert_eq!(
         metadata["readiness"],
         json!({"signer":"not_checked","funding":"not_checked","transaction":"not_checked"})
