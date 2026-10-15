@@ -1,4 +1,18 @@
 # Status
+
+## Rust MCP cutover: 2026-10-15
+
+Owner: coordinator. Status: Completed. The user approved replacing hosted Node MCP with Rust. This supersedes the 2026-10-14 keep-Node decision; earlier entries remain historical [VERIFIED, user direction].
+
+PR 85 (https://github.com/Sarthib7/FalconOS/pull/85) merged as `b06d95013070ecd734b3e0b1e4ecfb00a4fada20`. Exact source head `d745fd429c358e15080910e711538b7bc478fc00` passed CI runs `38711613754`, `38711627720`, and Verify web `38711627674` [VERIFIED, GitHub]. The Linux image runs `/usr/local/bin/falcon-mcp-rust` as UID 65532; container inspection returned `NO_NODE_RUNTIME` [VERIFIED, local container].
+
+Railway MCP service `38cfbe6a-d919-4395-9fb4-c36f725ad9d4` in project `db493763-e9d5-493f-9332-8096489a0b40`, production environment `748545ba-ddb2-43f5-a8a1-b8963cc07097`, deployed only `mcp-rust/`. Deployment `6697d4d3-6cab-47da-b2bd-841c0344975c` returned `SUCCESS`; image digest `sha256:d0454bdb6383050e86578dbb925a5731dd329b6cc7701aab5b49cbb181d1f01d` [VERIFIED, Railway API]. The Mesh service, DNS and environment values were not changed. The previous Node deployment is `3552088e-ecd8-4f07-a9ef-0c45a52ef4e4`; Node source remains available for rollback [VERIFIED, release operations].
+
+Hosted acceptance at `https://mcp.falconos.markets`: `/healthz` returned `200 {"status":"alive"}` and `/readyz` returned `200 {"status":"ready"}`. The official MCP client discovered 14 tools, self-test version `0.4.0`, unchanged schema fingerprint, and `falcon_public_graph` returned `OBSERVED` with three sources and `executionReady=false`. A custom selector returned `INVALID_INPUT`; an untrusted Origin returned HTTP 403 / JSON-RPC error -32000 [VERIFIED, hosted smoke]. This proves live Rust-to-Mesh reads, not funded execution.
+
+A fresh-context Luna agent exercised actual Rust HTTP -> actual Mesh HTTP/store/lending -> disposable PostgreSQL 17. The coordinator replayed its smoke and observed `PASS`: public `OBSERVED` and outage `NO_DATA`, ephemeral local wallet login, evidence adoption, `REVIEW` and `BLOCKED`, invalid zero-amount rejection, and unsigned 0.5-USDC supply / 0.25-receipt-token redeem with preflight `VERIFIED` [VERIFIED, local process smoke]. Chain/provider data came only from the checked-in Kamino RPC fixture; the actual `mesh/kamino.mjs` transaction producer ran. No transaction signature, broadcast or receipt verification occurred. T82 still requires separately approved real Devnet signing, broadcast, reconciliation and Explorer proof.
+
+
 ## Current state: 2026-10-14
 
 [VERIFIED, GitHub] PR #76 merged as `65707a3972cd628299ce224af59ee13b326e719c`. Post-merge CI run `38552133670` and Verify web run `38552133757` both returned `conclusion: success`. The T81 delivery record below still says open; that was true at its update and is now superseded. The hosted MCP probe at 2026-10-14 12:38Z still reported version `0.3.0`, so hosted 0.4.0 is not verified.
