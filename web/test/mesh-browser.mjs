@@ -61,6 +61,7 @@ const checks = [];
 const exceptions = [];
 const remoteRequests = [];
 const apiRequests = [];
+const networkTrace = [];
 const pending = new Map();
 let staticServer;
 let apiServer;
@@ -138,9 +139,14 @@ function receive(data) {
       }
     }
     if (message.method === 'Runtime.exceptionThrown') exceptions.push(safe(message.params.exceptionDetails));
+    if (message.method === 'Network.loadingFailed') networkTrace.push({ event: 'failed', ...message.params });
+    if (message.method === 'Network.responseReceived') {
+      const target = requestDestination(message.params.response.url);
+      if (target?.origin === apiOrigin) networkTrace.push({ event: 'response', requestId: message.params.requestId, path: target.path, status: message.params.response.status });
+    }
     if (message.method === 'Network.requestWillBeSent') {
       const target = requestDestination(message.params.request.url);
-      if (target?.origin === apiOrigin) apiRequests.push({ method: message.params.request.method, path: target.path, hasQuery: Boolean(target.search) });
+      if (target?.origin === apiOrigin) apiRequests.push({ requestId: message.params.requestId, method: message.params.request.method, path: target.path, hasQuery: Boolean(target.search) });
     }
     if (message.method === 'Fetch.requestPaused') {
       if (message.params.request.url === LENDING_CONFIG.rpcUrl || message.params.request.url === `${LENDING_CONFIG.rpcUrl}/`) {
@@ -624,7 +630,7 @@ try {
   await closeServer(apiServer);
   await closeServer(staticServer);
   await pool.end();
-  const report = safe({ passed: checks.filter((item) => item.pass).length, total: checks.length, checks, exceptions, remoteRequests, apiRequestCount: apiRequests.length, fixtureRpcMethods, broadcasts, artifactDir, root, owner, database: 'Explicit FALCON_MESH_TEST_DATABASE_URL; existing schema; unique test owner retained for inspection.', limitation: 'Controlled connector, balance, simulation, and receipt fixtures. Ephemeral wallet signs locally. No external RPC or real Devnet transaction occurred.' });
+  const report = safe({ passed: checks.filter((item) => item.pass).length, total: checks.length, checks, exceptions, remoteRequests, apiRequestCount: apiRequests.length, apiRequests, networkTrace, fixtureRpcMethods, broadcasts, artifactDir, root, owner, database: 'Explicit FALCON_MESH_TEST_DATABASE_URL; existing schema; unique test owner retained for inspection.', limitation: 'Controlled connector, balance, simulation, and receipt fixtures. Ephemeral wallet signs locally. No external RPC or real Devnet transaction occurred.' });
   await writeFile(`${artifactDir}/report.json`, JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 }
