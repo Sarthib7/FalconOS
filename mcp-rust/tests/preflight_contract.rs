@@ -1,8 +1,7 @@
 use axum::{
     Json, Router,
-    body::Body,
     extract::{Path, State},
-    http::{Request, StatusCode},
+    http::StatusCode,
     routing::any,
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
@@ -22,68 +21,29 @@ const DECISION_ID: &str = "33333333-3333-4333-8333-333333333333";
 const INTENT_ID: &str = "44444444-4444-4444-8444-444444444444";
 
 #[derive(Clone)]
-struct FakeMesh(Arc<Mutex<FakeState>>);
-
-struct FakeState {
-    prepare_response: Value,
-    calls: Vec<Value>,
-}
+struct FakeMesh(Arc<Mutex<Value>>);
 
 impl FakeMesh {
     fn new(prepare_response: Value) -> Self {
-        Self(Arc::new(Mutex::new(FakeState {
-            prepare_response,
-            calls: Vec::new(),
-        })))
+        Self(Arc::new(Mutex::new(prepare_response)))
     }
 
     async fn set_prepare_response(&self, response: Value) {
-        self.0.lock().await.prepare_response = response;
-    }
-
-    async fn calls(&self) -> Vec<Value> {
-        self.0.lock().await.calls.clone()
+        *self.0.lock().await = response;
     }
 }
 
 async fn fake_mesh(
     State(fake): State<FakeMesh>,
     Path(path): Path<String>,
-    request: Request<Body>,
 ) -> (StatusCode, Json<Value>) {
-    let method = request.method().to_string();
-    let origin = request
-        .headers()
-        .get("origin")
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let authorization = request
-        .headers()
-        .get("authorization")
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let body = axum::body::to_bytes(request.into_body(), 65_536)
-        .await
-        .ok()
-        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
-        .unwrap_or(Value::Null);
-    let route = format!("/{path}");
-
-    let mut state = fake.0.lock().await;
-    state.calls.push(json!({
-        "method": method,
-        "route": route,
-        "origin": origin,
-        "authorization": authorization,
-        "body": body,
-    }));
-    let payload = match route.as_str() {
-        "/v1/auth/wallet/session" => json!({
+    let payload = match path.as_str() {
+        "v1/auth/wallet/session" => json!({
             "walletAddress": WALLET,
             "ownerId": "owner-test",
             "expiresAt": "2030-01-01T00:00:00.000Z"
         }),
-        "/v1/public/lending/intents" => state.prepare_response.clone(),
+        "v1/public/lending/intents" => fake.0.lock().await.clone(),
         _ => json!({"ok": true}),
     };
     (StatusCode::OK, Json(payload))
