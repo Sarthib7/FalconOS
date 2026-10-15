@@ -75,6 +75,8 @@ For an approved Railway cutover, upload only `mcp-rust/` as the service root. It
 
 CI builds the Rust image and calls it with the official MCP client. That smoke checks discovery and rejects an invalid selector; its intentionally unavailable Mesh must fail closed. Real Mesh integration evidence is separate from this container smoke [VERIFIED, CI configuration].
 
+The smoke client is Rust-only: `cargo run --locked --manifest-path mcp-rust/Cargo.toml --example smoke_http -- https://mcp.falconos.markets/mcp`. Add `--mesh-unavailable` only for a local test server with an intentionally unavailable Mesh. It makes public reads only; it never signs or broadcasts [VERIFIED, smoke source and local/hosted runs].
+
 ## Configuration
 
 | Variable | Required | Default | Meaning |
