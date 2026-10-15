@@ -128,7 +128,6 @@ async fn fixture_order_schema_and_self_test_match_node_040() {
     let expected: Value =
         serde_json::from_str(include_str!("../fixtures/node-self-test-0.4.0.json")).unwrap();
     assert_eq!(body, expected);
-    let _ = s;
 }
 #[tokio::test]
 async fn actual_mcp_call_has_projected_data_and_rejects_bad_boundaries() {

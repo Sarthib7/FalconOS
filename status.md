@@ -1206,3 +1206,7 @@ The demo used synthetic responses. No live API call occurred.
 [REPORTED, Luna cold review] Producer-focused tests 21/pass 21/fail 0; consumer/prepare tests 37/pass 37/fail 0; release tests 5/pass 5/fail 0. The cold reviewer found the interim digest mismatch, now corrected by lead HTTP proof. It also noted pre-existing receipt re-poll behavior, which this focused preflight change does not alter. Review is not live-chain attestation.
 
 [PLANNED, remaining delivery] One scoped commit/PR, clean exact-ref skill rebuild, exact-head CI and repository/container gates, then approved merge. The original human-approved funded supply and independent Explorer goal remains unproved and is not redefined by this release.
+
+## Rust MCP dead-code pass: 2026-10-15
+
+Owner: coordinator. Status: Completed. A fresh-context audit found no unused private Rust functions or imports. It removed only an inert `let _ = s;` in `mcp-rust/tests/parity.rs`; the HTTP status was already asserted. Formatting passed and `cargo test --locked` returned `11 passed` [VERIFIED, local]. Node MCP retirement is a separate cleanup; this pass changes no runtime code.
