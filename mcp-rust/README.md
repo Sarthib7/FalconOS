@@ -77,7 +77,7 @@ Treat sessions as short-lived passwords visible in the tool argument context. Re
 | `FALCON_MCP_RATE_MAX_GLOBAL` | no | `300` | Global tool-call limit per process. |
 
 The service routes `/mcp`, `/healthz`, and `/readyz`. Health reports process availability. Readiness probes Mesh, not wallets or funds. MCP requests enforce Host and configured Origin checks, an 8-KiB header cap, a 256-KiB body cap, and a bounded request read. Limit failures remain errors, not successful data [VERIFIED, source and HTTP tests].
-Rate hints round up the remaining fixed window to positive whole seconds. Expiry clears global and caller quotas together [VERIFIED, V183 tests].
+Current source rounds rate hints up to positive whole seconds. Expiry clears global and caller quotas together [VERIFIED, V183 tests and local image]. Hosted deployment `6697d4d3-6cab-47da-b2bd-841c0344975c` predates the rounding fix. This cleanup does not deploy that correction [VERIFIED, Railway readback].
 
 ## Run locally
 
