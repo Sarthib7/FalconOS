@@ -245,8 +245,9 @@ mod rate_window_tests {
         assert!(limiter.check("session:a".into(), false).is_err());
         assert_eq!(limiter.check("wallet:w".into(), true), Ok(()));
         assert!(limiter.check("session:b".into(), false).is_err());
-        limiter.start -= Duration::from_secs(7200);
+        limiter.window = Duration::ZERO;
         assert_eq!(limiter.check("session:a".into(), false), Ok(()));
+        limiter.window = Duration::from_secs(3600);
         assert_eq!(limiter.check("wallet:w".into(), true), Ok(()));
         assert!(limiter.check("session:b".into(), false).is_err());
     }
