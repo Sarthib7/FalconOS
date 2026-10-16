@@ -1224,3 +1224,18 @@ The demo used synthetic responses. No live API call occurred.
 ## Rust MCP dead-code pass: 2026-10-15
 
 Owner: coordinator. Status: Completed. A fresh-context audit found no unused private Rust functions or imports. It removed only an inert `let _ = s;` in `mcp-rust/tests/parity.rs`; the HTTP status was already asserted. Formatting passed and `cargo test --locked` returned `11 passed` [VERIFIED, local]. Node MCP retirement is a separate cleanup; this pass changes no runtime code.
+
+
+## Browser harness native CORS: 2026-10-15
+
+[VERIFIED, source and isolated Chrome probes] B116/V184 replace the test harness's CDP Fetch-based path with native app/API CORS and an exact RPC fixture bridge. Only configured app/API origins can use HTTP(S); the RPC fixture's native network path remains blocked. Responses bind Chrome's unique execution-context identity. Missing identity and unexpected callback/settlement failures cannot pass the harness. Production UI, API, financial policy, timeouts and socket limits are unchanged.
+
+[VERIFIED, local real Chrome] `node --test web/test/mesh-browser-transport.mjs` returned `tests 12`, `pass 12`, `fail 0`. Cases cover 48 serial/parallel native CORS exchanges, missing/wrong ACAO, HTTP/HTTPS wire denial with and without the bridge, omitted ports, redirects, aborts, context replacement and late errors. These are owned loopback tests, not external RPC or chain attestation.
+
+[VERIFIED, negative controls on the actual shared module] Changing the default deny to allow made the owned-listener case fail: `tests 1`, `fail 1`, TCP count `2 !== 0`. Changing response evaluation to numeric context IDs made the controlled replacement-context case fail: `tests 1`, `fail 1`, stale resolution `true !== false`. Both mutations were restored before the final positive run. The context-reuse case models the protocol race while evaluating real browser pages.
+
+[VERIFIED, real local Mesh/PG/browser journey] The unchanged journey returned `passed: 103`, `total: 103`, `exceptions: []`, `remoteRequests: []`, and three simulated fixture broadcasts. The initialized PostgreSQL 17 instance was disposable and stopped after the run. Actual store, lending and backend signature verification ran; provider and receipt data remained controlled fixtures. No external RPC or real Devnet transaction occurred.
+
+[VERIFIED, fast web suite and CI source] `npm --prefix web test` returned `tests 310`, `pass 309`, `fail 0`, `skipped 1`. The skipped site-build check needs its separate site build. CI retains the full repository and container commands; the new real-browser file is selected explicitly before the existing journey.
+
+[VERIFIED, investigation limit] Isolated Chrome 155 probes reproduced CORS-path rejections with the Fetch-based harness after valid preflight. This does not identify the exact historical PR95 packet or prove a Chromium engine root cause. The failed workflow was not rerun. Diagnostic branches and passive traces are excluded from this fix.

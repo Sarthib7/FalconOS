@@ -14,6 +14,7 @@ import { captureSource } from '../../mesh/live.mjs';
 import { prepareLending, verifySignedLending, readLendingReceipt } from '../../mesh/kamino.mjs';
 import { LENDING_CONFIG } from '../../mesh/kamino-wire.mjs';
 import { createKaminoBrowserFixture } from '../../mesh/test/support/kamino-fixtures.mjs';
+import { createFixtureTransport } from './support/fixture-transport.mjs';
 
 // Requires an initialized disposable database. This harness never creates or changes its schema.
 const databaseUrl = process.env.FALCON_MESH_TEST_DATABASE_URL;
@@ -66,6 +67,7 @@ let staticServer;
 let apiServer;
 let chrome;
 let origin;
+let fixtureTransport;
 let sequence = 0;
 let buffer = '';
 let stderr = '';
@@ -92,19 +94,25 @@ function requestDestination(url) {
   try { const target = new URL(url); return { origin: target.origin, path: target.pathname, search: target.search, protocol: target.protocol }; }
   catch { return null; }
 }
-async function fulfillDevnet(message) {
-  const { request, requestId } = message.params;
-  const headers = [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: origin },
-    { name: 'Access-Control-Allow-Headers', value: 'content-type' }, { name: 'Access-Control-Allow-Methods', value: 'POST, OPTIONS' }];
-  if (request.method === 'OPTIONS') return call('Fetch.fulfillRequest', { requestId, responseCode: 204, responseHeaders: headers }, message.sessionId);
+async function fixtureRpcResponse(request) {
+  assert.equal(new URL(request.url).href, new URL(LENDING_CONFIG.rpcUrl).href);
   assert.equal(request.method, 'POST');
   const rpc = JSON.parse(request.postData);
+  assert.ok(rpc && typeof rpc === 'object' && !Array.isArray(rpc));
+  assert.deepEqual(Object.keys(rpc).sort(), ['id', 'jsonrpc', 'method', 'params']);
+  assert.equal(rpc.jsonrpc, '2.0');
+  assert.ok(typeof rpc.id === 'string' || Number.isSafeInteger(rpc.id));
   fixtureRpcMethods.push(rpc.method);
   let result;
-  if (rpc.method === 'getGenesisHash') result = LENDING_CONFIG.genesisHash;
-  else if (rpc.method === 'getBlockHeight') result = 123456780;
-  else {
+  if (rpc.method === 'getGenesisHash') {
+    assert.deepEqual(rpc.params, []);
+    result = LENDING_CONFIG.genesisHash;
+  } else if (rpc.method === 'getBlockHeight') {
+    assert.deepEqual(rpc.params, [{ commitment: 'confirmed' }]);
+    result = 123456780;
+  } else {
     assert.equal(rpc.method, 'sendTransaction', 'No unregistered browser RPC method');
+    assert.ok(Array.isArray(rpc.params) && rpc.params.length === 2);
     const [transactionBase64, options] = rpc.params;
     assert.deepEqual(options, { encoding: 'base64', skipPreflight: false, preflightCommitment: 'confirmed', maxRetries: 2 });
     const signature = [...signedTransactions].find(([, bytes]) => bytes === transactionBase64)?.[0];
@@ -113,13 +121,13 @@ async function fulfillDevnet(message) {
     assert.ok(retained, 'The signature must be durable before broadcast');
     const saved = await lending.get(owner, retained.id);
     const submission = saved.events.find(event => event.kind === 'SUBMITTED');
+    assert.equal(submission.data.transactionBase64, transactionBase64);
     assert.equal(submission.data.transactionSha256, createHash('sha256').update(Buffer.from(transactionBase64, 'base64')).digest('hex'));
     broadcasts.push({ intentId: retained.id, signature, transactionSha256: submission.data.transactionSha256, registeredEventId: submission.id, uncertain: uncertainSend });
-    if (uncertainSend) return call('Fetch.failRequest', { requestId, errorReason: 'Failed' }, message.sessionId);
+    if (uncertainSend) return { errorReason: 'Failed' };
     result = signature;
   }
-  return call('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: headers,
-    body: Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: rpc.id, result })).toString('base64') }, message.sessionId);
+  return { payload: { jsonrpc: '2.0', id: rpc.id, result } };
 }
 function receive(data) {
   buffer += data.toString();
@@ -137,22 +145,12 @@ function receive(data) {
         else item.resolve(message.result);
       }
     }
+    fixtureTransport?.receive(message);
     if (message.method === 'Runtime.exceptionThrown') exceptions.push(safe(message.params.exceptionDetails));
     if (message.method === 'Network.requestWillBeSent') {
       const target = requestDestination(message.params.request.url);
       if (target?.origin === apiOrigin) apiRequests.push({ method: message.params.request.method, path: target.path, hasQuery: Boolean(target.search) });
-    }
-    if (message.method === 'Fetch.requestPaused') {
-      if (message.params.request.url === LENDING_CONFIG.rpcUrl || message.params.request.url === `${LENDING_CONFIG.rpcUrl}/`) {
-        void fulfillDevnet(message).catch(error => failPending(error));
-        continue;
-      }
-      const target = requestDestination(message.params.request.url);
-      const allowed = target && (!['http:', 'https:'].includes(target.protocol) || [origin, apiOrigin].includes(target.origin));
-      if (!allowed) remoteRequests.push(target ? `${target.origin}${target.path}` : 'unparseable destination');
-      void call(allowed ? 'Fetch.continueRequest' : 'Fetch.failRequest', {
-        requestId: message.params.requestId, ...(allowed ? {} : { errorReason: 'BlockedByClient' }),
-      }, message.sessionId).catch((error) => failPending(error));
+      else if (target && ['http:', 'https:'].includes(target.protocol) && target.origin !== origin) remoteRequests.push(target.origin + target.path);
     }
   }
 }
@@ -162,7 +160,7 @@ async function page() {
   const { sessionId } = await call('Target.attachToTarget', { targetId: target.targetId, flatten: true });
   const send = (method, params = {}) => call(method, params, sessionId);
   await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable');
-  await send('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
+  await fixtureTransport.install(send);
   // Ephemeral test wallet uses the real Wallet Standard discovery and browser Ed25519 API.
   // Only the test control flags are exposed. The test key remains in this injected closure.
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
@@ -352,6 +350,8 @@ try {
   const anonymous = await fetch(`${apiOrigin}/v1/graph`, { redirect: 'error' });
   check('V92: the real API rejects an unauthenticated graph request', anonymous.status === 401);
   await anonymous.arrayBuffer();
+  fixtureTransport = createFixtureTransport({ call, allowedOrigins: [origin, apiOrigin], rpcUrl: LENDING_CONFIG.rpcUrl, respond: fixtureRpcResponse,
+    onError(error) { exceptions.push(safe(error instanceof Error ? error.message : String(error))); process.exitCode = 1; failPending(error); } });
   chrome = spawn(process.env.FALCON_CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
     '--headless=new', '--disable-gpu', '--disable-background-networking', '--disable-component-update',
     '--disable-default-apps', '--disable-sync', '--disable-extensions', '--no-first-run',
@@ -615,12 +615,18 @@ try {
   check('V96: visible content and API URLs contain no access token', !copy.includes(credential) && !copy.includes(otherCredential) && apiRequests.every((request) => !request.hasQuery));
   await writeFile(`${artifactDir}/ui-copy.txt`, safe(copy));
   check('V96/V102: browser used only local services and explicitly intercepted Devnet fixture RPC', remoteRequests.length === 0 && fixtureRpcMethods.includes('sendTransaction'), remoteRequests);
+  await fixtureTransport.drain();
   check('V96: browser has no uncaught runtime exceptions', exceptions.length === 0, exceptions);
 } catch (error) {
   if (checks.at(-1)?.pass !== false) checks.push({ name: safe(error instanceof Error ? error.message : String(error)), pass: false });
   process.exitCode = 1;
 } finally {
+  try { await fixtureTransport?.drain(); } catch (error) {
+    if (checks.at(-1)?.pass !== false) checks.push({ name: 'V184: fixture transport has no late failure', pass: false, detail: safe(error instanceof Error ? error.message : String(error)) });
+    process.exitCode = 1;
+  }
   if (chrome) { try { await call('Browser.close'); } catch {} chrome.kill(); }
+  try { await fixtureTransport?.drain(); } catch { process.exitCode = 1; }
   await closeServer(apiServer);
   await closeServer(staticServer);
   await pool.end();

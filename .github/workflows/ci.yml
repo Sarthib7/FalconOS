@@ -112,6 +112,7 @@ jobs:
           npm --prefix web run build:mvp
           CHROME_BIN="$(command -v google-chrome)"
           test -n "$CHROME_BIN"
+          FALCON_CHROME_BIN="$CHROME_BIN" node --test web/test/mesh-browser-transport.mjs
           FALCON_CHROME_BIN="$CHROME_BIN" node web/test/mesh-browser.mjs
         env:
           FALCON_MESH_WEB_ROOT: web/dist-mvp
