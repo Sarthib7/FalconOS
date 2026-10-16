@@ -596,6 +596,7 @@ V180: [INFERRED, planned release gate] ∀ wider execution release → T37/T82 o
 V181: ∀ concurrent public refresh from S0 → failed S0 invalidation cannot discard peer's captured bundle; retry publication only against an empty head; lost retry → usable winner or NO_DATA; never overwrite newer head.
 V182: ∀ non-loopback MCP request → Host ∈ configured FALCON_MCP_ALLOWED_HOSTS; Origin never expands Host allowlist; rejected Host/Origin → HTTP403 JSON-RPC error -32000.
 V183: ∀ RATE_LIMITED → retryAfterSeconds = max(1, remaining fixed-window duration rounded up to whole seconds); reset clears global and caller quotas together.
+V184: ∀ controlled browser page → app/API use native CORS; only fixed RPC uses fixture bridge; all other HTTP(S) origins denied before wire, even if bridge absent; fixture replies bind the unique calling context; unexpected fixture/settlement failures cannot pass the harness.
 
 ## §T TASKS
 
@@ -808,3 +809,4 @@ B112|2026-10-14|[VERIFIED local regression] failed stale invalidation removed S0
 B113|2026-10-14|[VERIFIED local regression] Rust Host guard admitted Origin host and returned non-Node HTTP/error shape|V182
 B114|2026-10-14|[VERIFIED local regression] Rust event projection retained opaque request/response bodies when exchanges was not an array|V166
 B115|2026-10-15|[VERIFIED local regression] Rust rate hint truncated fractional seconds; 1001ms returned 1 instead of 2|V183
+B116|2026-10-15|[VERIFIED isolated Chrome 155 probes] CDP Fetch-based harness reproduced native CORS-path rejection after valid preflight; historical PR95 packet remains uncorrelated|V184
