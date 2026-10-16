@@ -345,8 +345,8 @@ async function openPage({ fixture = true, rpcUrl = rpcHttpUrl, respond, onError,
 async function closePage(page) {
   if (!activePages.has(page)) return;
   transportsBySession.delete(page.sessionId);
-  try { await call('Target.closeTarget', { targetId: page.targetId }); } catch {}
-  activePages.delete(page);
+  try { await call('Target.closeTarget', { targetId: page.targetId }); }
+  finally { activePages.delete(page); }
 }
 
 function corsFetchScript(path) {
@@ -446,6 +446,7 @@ after(async () => {
   for (const page of [...activePages]) await attempt(() => closePage(page));
   if (chrome) {
     await attempt(async () => {
+      let closeFailure;
       const waitForExit = async () => {
         let timer;
         try {
@@ -453,7 +454,7 @@ after(async () => {
         } finally { clearTimeout(timer); }
       };
       if (chrome.exitCode === null && chrome.signalCode === null) {
-        try { await call('Browser.close'); } catch {}
+        try { await call('Browser.close'); } catch (error) { closeFailure = error; }
         await waitForExit();
       }
       for (const signal of ['SIGTERM', 'SIGKILL']) {
@@ -465,8 +466,10 @@ after(async () => {
       for (const stream of chrome.stdio) stream?.destroy();
       await chromeClosed;
       if (chrome.exitCode !== 0 || chrome.signalCode !== null) {
-        throw new Error(`Chrome did not shut down cleanly: ${chrome.exitCode}/${chrome.signalCode}: ${stderr}`);
+        throw new Error(`Chrome did not shut down cleanly: ${chrome.exitCode}/${chrome.signalCode}: ${stderr}`, { cause: closeFailure });
       }
+      // A clean process exit can precede the Browser.close protocol reply.
+      if (closeFailure && closeFailure !== chromeExitError) throw closeFailure;
     });
   }
   await attempt(() => rejectPendingCommands(new Error('CDP harness cleanup')));
@@ -962,5 +965,20 @@ test('V184: missing unique context metadata fails before fixture work', { timeou
     assert.deepEqual(probeObservations.httpRequests, []);
   } finally {
     await closePage(page);
+  }
+});
+
+test('V184: page close errors preserve a live target failure', { timeout: testTimeout }, async () => {
+  const page = await openPage();
+  const targetId = page.targetId;
+  try {
+    page.targetId = 'missing-fixture-target';
+    await assert.rejects(closePage(page));
+    const { targetInfos } = await call('Target.getTargets');
+    assert.ok(targetInfos.some((target) => target.targetId === targetId));
+  } finally {
+    activePages.delete(page);
+    transportsBySession.delete(page.sessionId);
+    await call('Target.closeTarget', { targetId });
   }
 });

@@ -1245,3 +1245,7 @@ Owner: coordinator. Status: Completed. A fresh-context audit found no unused pri
 [VERIFIED, GitHub] At head `a90b9cc`, PR workflow `38902428714` passed all 12 browser cases, then failed profile removal with `ENOTEMPTY`. Push workflow `38902368773` passed. Both results are retained; the failed workflow was not rerun.
 
 [VERIFIED, source and local execution] Cleanup now waits for Chrome exit, releases its parent-owned stdio, and waits for stream closure before profile removal. Nonzero shutdown and removal errors still fail the harness. The corrected local command returned `tests 12`, `pass 12`, `fail 0` and exited 0. Earlier incomplete local runs remain unattributed and are not counted as passes.
+
+[VERIFIED, real Chrome] The live-target test failed before the change: `Missing expected rejection` (`tests 1`, `fail 1`). With unexpected target-close errors preserved, the full command completed `tests 13`, `pass 13`, `fail 0`, and exit 0.
+
+[VERIFIED, actual-hook probe with an owned Node child] The unexpected CDP error survived a clean exit. Removing its rethrow made the probe pass incorrectly, while the identical clean-exit reply error remained allowed. This tests error propagation only. It does not establish Chromium shutdown timing or the historical PR95 cause.
