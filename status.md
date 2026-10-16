@@ -1,5 +1,24 @@
 # Status
 
+## Node MCP retirement: 2026-10-15
+
+[VERIFIED, user approval and tracked change] Removed the 27 tracked files in the unused Node `mcp/` package, totaling 2,836 lines. This includes runtime source, Node-only tests/helpers, dependency manifests, and old Docker/Railway configuration. [PR 94](https://github.com/Sarthib7/FalconOS/pull/94) migrates active verification and documentation first; package deletion is a separate dependent change.
+
+[VERIFIED, GitHub] Safety migrations merged after exact-head CI: PR 89 (amount/action boundaries), PR 90 (startup configuration), PR 91 (rate limits and V183/B115), PR 92 (signatures/privacy), and PR 93 (unsigned preflight). The current `mcp` verification scope runs Rust formatting and tests. The active guide is `mcp-rust/README.md`.
+
+[VERIFIED, fresh isolated local build after deletion] `npm run verify:mcp` returned `mcp: PASS`; the target results total 28 passed, 0 failed. The repository runner returned `tests 6`, `pass 6`, `fail 0`. These tests cover unit, binary, and HTTP cases, not funded chain execution. The actual Rust client returned `{"graphError":null,"graphStatus":"OBSERVED","meshUnavailable":false,"result":"MCP_HTTP_SMOKE_PASS","serverVersion":"0.4.0","tools":14}` against hosted MCP.
+
+[VERIFIED, local Linux image] The corrected image returned `uid=65532 gid=65532 groups=65532` and `NO_NODE_RUNTIME`. Its independent Rust client reached real hosted Mesh reads. The current smoke executable also returned `MCP_HTTP_SMOKE_PASS` with `"graphError":"MESH_UNAVAILABLE"` when Mesh was deliberately unavailable. The rate-limit path returned `"retryAfterSeconds":60` after its quota was consumed.
+
+[VERIFIED, verification correction] A shared Cargo target printed `rate_window_tests::v183_retry_hints_round_up_fractional_seconds` for the pre-rebase checkout, which lacked that module. An isolated build of that checkout printed `0 tests, 0 benchmarks`. That shared-target run is excluded. The current results above use a fresh target, and merge gates use fresh-runner CI.
+
+[VERIFIED, retained scope] Rust compatibility fixtures, pinned skill/release data, and dated historical records remain. Node source remains in Git history. Railway deployment `6697d4d3-6cab-47da-b2bd-841c0344975c` still returned `SUCCESS`, with `source.repo: null`. This retirement does not redeploy production. The merged retry-hint correction is verified in source and the local image, not that hosted cutover image. T82 still requires separately approved real Devnet signing, broadcasts, receipts, and Explorer proof.
+
+[REPORTED, read-only agent audits] Backend and web audits did not establish another safe deletion. Gated routes and planned Council modules remain.
+
+[VERIFIED, scoped operations] The original dirty checkout was not edited by this work.
+
+
 ## Rust MCP cutover: 2026-10-15
 
 Owner: coordinator. Status: Completed. The user approved replacing hosted Node MCP with Rust. This supersedes the 2026-10-14 keep-Node decision; earlier entries remain historical [VERIFIED, user direction].
