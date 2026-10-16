@@ -1239,3 +1239,9 @@ Owner: coordinator. Status: Completed. A fresh-context audit found no unused pri
 [VERIFIED, fast web suite and CI source] `npm --prefix web test` returned `tests 310`, `pass 309`, `fail 0`, `skipped 1`. The skipped site-build check needs its separate site build. CI retains the full repository and container commands; the new real-browser file is selected explicitly before the existing journey.
 
 [VERIFIED, investigation limit] Isolated Chrome 155 probes reproduced CORS-path rejections with the Fetch-based harness after valid preflight. This does not identify the exact historical PR95 packet or prove a Chromium engine root cause. The failed workflow was not rerun. Diagnostic branches and passive traces are excluded from this fix.
+
+### Teardown follow-up: 2026-10-16
+
+[VERIFIED, GitHub] At head `a90b9cc`, PR workflow `38902428714` passed all 12 browser cases, then failed profile removal with `ENOTEMPTY`. Push workflow `38902368773` passed. Both results are retained; the failed workflow was not rerun.
+
+[VERIFIED, source and local execution] Cleanup now waits for Chrome exit, releases its parent-owned stdio, and waits for stream closure before profile removal. Nonzero shutdown and removal errors still fail the harness. The corrected local command returned `tests 12`, `pass 12`, `fail 0` and exited 0. Earlier incomplete local runs remain unattributed and are not counted as passes.

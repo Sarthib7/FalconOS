@@ -20,6 +20,8 @@ const activePages = new Set();
 const cleanupReleases = new Set();
 let profileDir;
 let chrome;
+let chromeClosed;
+let chromeExited;
 let chromeExitError;
 let cdpSequence = 0;
 let cdpBuffer = '';
@@ -274,6 +276,8 @@ async function startBrowser() {
     '--host-resolver-rules=MAP *.invalid ~NOTFOUND,EXCLUDE 127.0.0.1',
     '--remote-debugging-pipe', 'about:blank',
   ], { stdio: ['ignore', 'ignore', 'pipe', 'pipe', 'pipe'] });
+  chromeClosed = new Promise((resolve) => chrome.once('close', resolve));
+  chromeExited = new Promise((resolve) => { chrome.once('exit', resolve); chrome.once('error', resolve); });
   chrome.stderr.on('data', (data) => { stderr = (stderr + data.toString()).slice(-2_000); });
   chrome.on('error', (error) => {
     chromeExitError = error;
@@ -440,13 +444,30 @@ after(async () => {
   for (const release of [...cleanupReleases]) await attempt(release);
   for (const page of [...activePages]) await attempt(() => page.transport.drain());
   for (const page of [...activePages]) await attempt(() => closePage(page));
-  if (chrome && chrome.exitCode === null && chrome.signalCode === null) {
-    await attempt(async () => { try { await call('Browser.close'); } catch {} });
-    if (chrome.exitCode === null && chrome.signalCode === null) await attempt(() => chrome.kill('SIGTERM'));
-    if (chrome.exitCode === null && chrome.signalCode === null) {
-      await attempt(() => Promise.race([once(chrome, 'exit'), pause(2_000)]));
-      if (chrome.exitCode === null && chrome.signalCode === null) await attempt(() => chrome.kill('SIGKILL'));
-    }
+  if (chrome) {
+    await attempt(async () => {
+      const waitForExit = async () => {
+        let timer;
+        try {
+          await Promise.race([chromeExited, new Promise((resolve) => { timer = setTimeout(resolve, 2_000); })]);
+        } finally { clearTimeout(timer); }
+      };
+      if (chrome.exitCode === null && chrome.signalCode === null) {
+        try { await call('Browser.close'); } catch {}
+        await waitForExit();
+      }
+      for (const signal of ['SIGTERM', 'SIGKILL']) {
+        if (chrome.exitCode !== null || chrome.signalCode !== null) break;
+        chrome.kill(signal);
+        await waitForExit();
+      }
+      await chromeExited;
+      for (const stream of chrome.stdio) stream?.destroy();
+      await chromeClosed;
+      if (chrome.exitCode !== 0 || chrome.signalCode !== null) {
+        throw new Error(`Chrome did not shut down cleanly: ${chrome.exitCode}/${chrome.signalCode}: ${stderr}`);
+      }
+    });
   }
   await attempt(() => rejectPendingCommands(new Error('CDP harness cleanup')));
   await attempt(() => closeServer(httpsProbeServer));
