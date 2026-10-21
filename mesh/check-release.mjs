@@ -13,7 +13,7 @@ const RELEASE_INPUTS = [
   'yield-data.mjs', 'yield-domain.mjs', 'auth.mjs',
   'limits.mjs', 'wallet-status.mjs', 'transaction-inspection.mjs',
   'council/evidence.ts',
-  'research/near-source.mjs', 'research/near-model.mjs',
+  'research/near-source.mjs', 'research/near-model.mjs', 'research/service.mjs',
   'schema.sql', 'migrations/0002_lending.sql', 'migrations/0003_wallet_auth.sql', 'deploy/supabase-permissions.sql',
 ];
 

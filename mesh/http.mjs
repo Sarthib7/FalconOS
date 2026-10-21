@@ -39,6 +39,18 @@ function keys(value, expected) {
   }
 }
 
+const RESEARCH_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PUBLIC_NEAR_BASE = '/v1/public/research/near';
+const PUBLIC_NEAR_CASE_ID = /^\/v1\/public\/research\/near\/cases\/([^/]+)$/;
+const PUBLIC_NEAR_SOURCE_ID = /^\/v1\/public\/research\/near\/sources\/([^/]+)$/;
+const PUBLIC_NEAR_CASE_PATH = PUBLIC_NEAR_BASE + '/case';
+const PUBLIC_NEAR_REPLAY_PATH = PUBLIC_NEAR_BASE + '/replay';
+
+function normalizeResearchUuid(value) {
+  if (typeof value !== 'string' || !RESEARCH_UUID.test(value)) throw new MeshError('INVALID_INPUT', 'A valid UUID is required.');
+  return value.toLowerCase();
+}
+
 function requireSessionLendingWallet(walletSession, wallet) {
   if (walletSession && wallet !== walletSession.walletAddress) {
     throw new MeshError('UNAUTHORIZED', 'Lending wallet must match the authenticated session wallet.');
@@ -76,7 +88,7 @@ async function body(request, limit = BODY_LIMIT) {
 }
 
 export function createApi({
-  store, lending = null, yieldService = null, publicGraph = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
+  store, lending = null, yieldService = null, publicGraph = null, researchService = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
   rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600,
   walletLookupMaxPerSource = 240, walletLookupMaxGlobal = rateMaxGlobal, clock = () => Date.now(),
   walletStatus = readWalletStatus, transactionInspection = inspectTransaction,
@@ -176,6 +188,44 @@ export function createApi({
         const result = await (isStatus ? walletStatus(input) : transactionInspection(input));
         send(200, result); return;
       }
+      const publicResearchPath = url.pathname === PUBLIC_NEAR_BASE || url.pathname.startsWith(PUBLIC_NEAR_BASE + '/');
+      if (publicResearchPath) {
+        const caseMatch = PUBLIC_NEAR_CASE_ID.exec(url.pathname);
+        const sourceMatch = PUBLIC_NEAR_SOURCE_ID.exec(url.pathname);
+        const isCaseRoot = url.pathname === PUBLIC_NEAR_CASE_PATH;
+        const isReplay = url.pathname === PUBLIC_NEAR_REPLAY_PATH;
+        const expectedMethod = isReplay ? 'POST' : 'GET';
+        if ((!caseMatch && !sourceMatch && !isCaseRoot && !isReplay) || request.method !== expectedMethod) {
+          throw new MeshError('NOT_FOUND', 'Public research endpoint not found.');
+        }
+        reserveWalletLookup(request.socket.remoteAddress || 'unknown');
+        const hasCredential = ['authorization', 'cookie', 'proxy-authorization', 'x-api-key'].some(name => Object.hasOwn(request.headers, name));
+        const hasGetBody = !isReplay && (Number(request.headers['content-length'] || 0) > 0 || request.headers['transfer-encoding']);
+        if (hasCredential || hasGetBody) throw new MeshError('INVALID_INPUT', 'Public research endpoints do not accept credentials or GET bodies.');
+        if (!researchService) throw new MeshError('STORAGE_UNAVAILABLE', 'The research service is not configured.');
+        if (isCaseRoot) {
+          const result = await researchService.getPublicCase();
+          if (result == null) throw new MeshError('NOT_FOUND', 'Public research case not found.');
+          send(200, result); return;
+        }
+        if (caseMatch) {
+          const caseId = normalizeResearchUuid(caseMatch[1]);
+          const result = await researchService.getPublicCase(caseId);
+          if (result == null) throw new MeshError('NOT_FOUND', 'Public research case not found.');
+          send(200, result); return;
+        }
+        if (sourceMatch) {
+          const revisionId = normalizeResearchUuid(sourceMatch[1]);
+          const source = await researchService.getPublicSource(revisionId);
+          if (source == null) throw new MeshError('NOT_FOUND', 'Public research source not found.');
+          send(200, { ...source, executionReady: false }); return;
+        }
+        const input = await body(request); keys(input, ['caseId']);
+        const caseId = normalizeResearchUuid(input.caseId);
+        const result = await researchService.replayPublicCase({ caseId });
+        if (result == null) throw new MeshError('NOT_FOUND', 'Public research case not found.');
+        send(200, result); return;
+      }
       if (url.pathname.startsWith('/v1/auth/wallet/')) {
         if (!walletAuth) throw new MeshError('AUTH_UNAVAILABLE', 'Wallet authentication is not configured.');
         if (!origin || !allowedOrigins.has(origin)) throw new MeshError('ORIGIN_DENIED', 'A permitted browser origin is required.');
@@ -242,6 +292,16 @@ export function createApi({
       }
       if (!owner) throw new MeshError('UNAUTHORIZED', 'A valid mesh access token is required.');
       rateLimit(owner);
+      if (url.pathname === '/v1/research/near/adopt') {
+        if (request.method !== 'POST') throw new MeshError('NOT_FOUND', 'Research endpoint not found.');
+        const input = await body(request); keys(input, ['requestId', 'publicCaseId']);
+        const adoption = {
+          requestId: normalizeResearchUuid(input.requestId),
+          publicCaseId: normalizeResearchUuid(input.publicCaseId),
+        };
+        if (!researchService) throw new MeshError('STORAGE_UNAVAILABLE', 'The research service is not configured.');
+        send(200, await researchService.adoptCase(owner, adoption)); return;
+      }
       if (url.pathname === '/v1/public/graph/adopt') {
         if (request.method !== 'POST') throw new MeshError('NOT_FOUND', 'Endpoint not found.');
         const input = await body(request); keys(input, ['requestId', 'reserveRequestId']);

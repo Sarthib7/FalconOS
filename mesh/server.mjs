@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { createApi, parseOrigins, parseTokenHashes } from './http.mjs';
+import { createResearchService } from './research/service.mjs';
 import { createStore } from './store.mjs';
 import { createPublicGraphService } from './public-graph.mjs';
 import { createLendingStore } from './lending-store.mjs';
@@ -24,6 +25,7 @@ if (!Number.isInteger(rateMaxGlobal) || rateMaxGlobal < 1) throw new Error('FALC
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5, connectionTimeoutMillis: 5000, statement_timeout: 10000, idle_in_transaction_session_timeout: 15000 });
 pool.on('error', () => process.stderr.write('Mesh database connection failed.\n'));
 const store = createStore(pool);
+const researchService = createResearchService({ store });
 const publicGraph = createPublicGraphService({ store });
 const lending = createLendingStore(pool, { meshStore: store, prepareLending,
   verifySignedLending: async (intent, transactionBase64) => {
@@ -38,7 +40,7 @@ const verifySupabaseToken = createSupabaseSessionVerifier({
   publishableKey: process.env.FALCON_SUPABASE_PUBLISHABLE_KEY,
 });
 const server = createApi({
-  store, lending, yieldService, publicGraph, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken,
+  store, lending, yieldService, publicGraph, researchService, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken,
   walletStatus: readWalletStatus,
   transactionInspection: inspectTransaction,
 });
