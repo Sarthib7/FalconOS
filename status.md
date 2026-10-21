@@ -8,6 +8,16 @@ Owner: coordinator. Status: Completed (contract clarification only).
 
 [VERIFIED SOURCE SCOPE] Only contract and status documents changed. Capability metadata, runtime code, signing, spending, custody and execution authority were not changed. The legacy one-scan agent contract was intentionally unchanged. No new runtime support, live portfolio result, or test result is claimed for this documentation-only change. Remote CI and publication remain pending.
 
+## Discovery ranking correction: 2026-10-21
+
+Owner: coordinator. Status: Completed (implementation and local verification).
+
+[VERIFIED LOCAL, approved D2] Discovery and simulation now share the V125 comparator. Relevant yield suites reported `tests 17`, `pass 17`, `fail 0`, `skipped 0`. Keeping the new regression and restoring only the original pool-ID sort reported `tests 1`, `pass 0`, `fail 1`; the fix was restored before the passing run.
+
+[VERIFIED LIVE READ, provider-indexed scope only] The service retrieved DeFiLlama data at `2026-10-21T14:04:04.449Z`, returned READY with 63 eligible rows, and the independent ordering check returned true. These are provider-indexed results, not complete market coverage. Source market time remained unknown and executionReady remained false. Exactly the two configured provider GETs were made.
+
+[VERIFIED LOCAL] `node mesh/check-release.mjs` returned `{"status":"PASS","check":"mesh-release-inputs","declaredFiles":27,"isolatedLinkage":true,"databaseChecked":false,"dockerImageChecked":false}`. LSP diagnostics for the two changed runtime modules reported OK. Remote CI and publication remain pending. No financial action or deployment occurred.
+
 ## Public dashboard gate: 2026-10-21
 
 Owner: coordinator. Status: Completed (implementation and local verification).
