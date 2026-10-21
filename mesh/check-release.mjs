@@ -14,6 +14,7 @@ const RELEASE_INPUTS = [
   'limits.mjs', 'wallet-status.mjs', 'transaction-inspection.mjs',
   'council/evidence.ts', 'council/host.mjs',
   'research/near-source.mjs', 'research/near-model.mjs', 'research/service.mjs',
+  'research/review-store.mjs',
   'schema.sql', 'migrations/0002_lending.sql', 'migrations/0003_wallet_auth.sql', 'deploy/supabase-permissions.sql',
 ];
 
