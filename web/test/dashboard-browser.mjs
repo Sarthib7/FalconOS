@@ -15,9 +15,9 @@ import { simulateAllocation } from '../../mesh/yield-domain.mjs';
 // Every browser profile, storage record and source action is disposable.
 // The treasury is synthetic. Knowledge API responses are injected at the network layer for the default mesh origin.
 // Only fixture tokens are used. No wallet, real service or external HTTP is used.
-const root = resolve(process.env.FALCON_DASHBOARD_WEB_ROOT || fileURLToPath(new URL('../dist/', import.meta.url)));
+const root = resolve(process.env.FALCON_DASHBOARD_WEB_ROOT || fileURLToPath(new URL('../dist-dashboard-preview/', import.meta.url)));
 const sourceRoot = process.env.FALCON_DASHBOARD_SOURCE;
-if (!sourceRoot && !process.argv.includes('--case=agent')) throw new Error('Set FALCON_DASHBOARD_SOURCE to the OpenDesign project data root before running the dashboard browser harness.');
+if (!sourceRoot && (!process.argv.includes('--case=agent') || process.argv.includes('--source-only') || process.argv.includes('--source-regressions'))) throw new Error('Set FALCON_DASHBOARD_SOURCE to the OpenDesign project data root before running the dashboard browser harness.');
 const evidenceRoot = process.env.FALCON_DASHBOARD_EVIDENCE || '/private/tmp/falcon-dashboard-source-r9g2sbv8';
 await mkdir(evidenceRoot, { recursive: true });
 const artifactDir = await mkdtemp(`${evidenceRoot}/browser-`);
@@ -39,7 +39,7 @@ const prettyUnits = value => {
   const [whole, fraction] = formatUsdc(value).split('.');
   return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (fraction ? `.${fraction}` : '');
 };
-const apiOrigin = 'http://127.0.0.1:8791';
+const apiOrigin = 'https://dashboard-mesh.fixture.invalid';
 const MESH_TOKEN = 'dashboard-test-token-0123456789abcdef', BAD_TOKEN = 'x'.repeat(40);
 const CONNECTORS = [{ id: 'kamino-program-docs', label: 'Official Kamino program deployments', sourceUrl: 'https://raw.githubusercontent.com/Kamino-Finance/klend/master/README.md', network: null }, { id: 'solana-devnet-klend', label: 'Solana Devnet Kamino program account', sourceUrl: 'https://api.devnet.solana.com', network: 'devnet' }, { id: 'solana-devnet-reserve-liquidity', label: 'Devnet USDC reserve liquidity', sourceUrl: 'https://api.devnet.solana.com', network: 'devnet' }];
 let readyMode = 'ready', connectorsFail = false, connectorObservations = false;
@@ -241,7 +241,7 @@ async function page({ source = false, isolated = false, seed, path, reduced = tr
     throw Error(`Page condition timed out: ${expression}`);
   };
   const click = selector => evaluate(`(() => { const node = document.querySelector(${JSON.stringify(selector)}); if (!node) throw Error('Missing selector: '+${JSON.stringify(selector)}); node.click(); })()`);
-  const destination = path ?? (source ? '/__source__/falconos-workspace.html' : '/dashboard/');
+  const destination = path ?? (source ? '/__source__/falconos-workspace.html' : '/local-dashboard/');
   const condition = ready ?? 'document.readyState === "complete" && Boolean(document.querySelector("#view .panel"))';
   const open = async () => { await send('Page.navigate', { url: `${origin}${destination}` }); await wait(condition); await evaluate('document.fonts.ready.then(()=>true)'); };
   const reload = async () => {
@@ -357,7 +357,7 @@ async function legacyReferences() {
 
 try {
   const portedData = JSON.parse(await readFile(new URL('../dashboard/data.json', import.meta.url), 'utf8'));
-  if (!sourceRoot && targetCase === 'agent') sourceData = portedData;
+  if (targetCase === 'agent') sourceData = portedData;
   else {
     const html = await readFile(`${sourceRoot}/falconos-workspace.html`, 'utf8');
     const embedded = html.match(/<script id="cc-data" type="application\/json">([\s\S]*?)<\/script>/);
@@ -365,8 +365,8 @@ try {
     sourceData = JSON.parse(embedded[1]);
   }
   if (!sourceOnly && !sourceRegressions) {
-    await readFile(`${root}/dashboard/index.html`);
-    if (sourceRoot) check('V109: ported fixtures equal the exact parsed OpenDesign payload', JSON.stringify(portedData) === JSON.stringify(sourceData));
+    await readFile(`${root}/local-dashboard/index.html`);
+    if (sourceRoot && targetCase !== 'agent') check('V109: ported fixtures equal the exact parsed OpenDesign payload', JSON.stringify(portedData) === JSON.stringify(sourceData));
   }
   server = createServer(async (request, response) => {
     try {

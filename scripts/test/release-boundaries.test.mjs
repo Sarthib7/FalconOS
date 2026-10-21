@@ -17,7 +17,7 @@ async function checkout(t, component) {
   await cp(source, join(root, component), {
     recursive: true,
     filter: path => !relative(source, path).split('/').some(part =>
-      ['node_modules', '.local', '.git', 'dist', 'dist-mesh', 'dist-treasury'].includes(part)
+      ['node_modules', '.local', '.git', 'dist', 'dist-mesh', 'dist-treasury', 'dist-dashboard-preview'].includes(part)
       || part.startsWith('.env') || part.endsWith('.log')),
   });
   if (component === 'web') {
@@ -107,6 +107,56 @@ test('REPO-VERIFY-1: website rejects local routes copied through the public dire
   await mkdir(join(root, 'web/public/copilot'));
   await writeFile(join(root, 'web/public/copilot/index.html'), '<h1>Local copilot</h1>');
   rejected(check(WEB_CHECK, root), /Local route entered the production public directory: copilot/);
+});
+
+test('V185: release rejects restoring the simulator entry behind the public gate', async t => {
+  const root = await checkout(t, 'web');
+  await appendFile(join(root, 'web/dashboard/index.html'), '\n<script type="module" src="./main.jsx"></script>\n');
+  rejected(check(WEB_CHECK, root), /Simulator source entered the production build: dashboard\/(main\.jsx|App\.jsx|data\.json)/);
+});
+
+test('V185: release rejects simulator fixtures imported into another public chunk', async t => {
+  const root = await checkout(t, 'web');
+  await appendFile(join(root, 'web/mesh/app.mjs'), '\nimport privateSamples from "../dashboard/data.json"; globalThis.dashboardProbe = privateSamples;\n');
+  rejected(check(WEB_CHECK, root), /Simulator source entered the production build: dashboard\/data\.json/);
+});
+
+test('V185: release rejects executable inline code in the public dashboard', async t => {
+  const root = await checkout(t, 'web');
+  await appendFile(join(root, 'web/dashboard/index.html'), '\n<script>globalThis.dashboardProbe = true;</script>\n');
+  rejected(check(WEB_CHECK, root), /Public dashboard must remain static Soon HTML/);
+});
+
+test('V185: release rejects inline event handlers in the public dashboard', async t => {
+  const root = await checkout(t, 'web');
+  const page = join(root, 'web/dashboard/index.html');
+  const html = await readFile(page, 'utf8');
+  await writeFile(page, html.replace('</body>', '<button onclick="globalThis.dashboardProbe = true">Run</button>\n</body>'));
+  rejected(check(WEB_CHECK, root), /Public dashboard must remain static Soon HTML/);
+});
+
+test('V185: release rejects javascript URLs in the public dashboard', async t => {
+  const root = await checkout(t, 'web');
+  const page = join(root, 'web/dashboard/index.html');
+  const html = await readFile(page, 'utf8');
+  await writeFile(page, html.replace('</body>', '<a href="javascript:globalThis.dashboardProbe = true">Run</a>\n</body>'));
+  rejected(check(WEB_CHECK, root), /Public dashboard must remain static Soon HTML/);
+});
+
+test('V185: release rejects a local dashboard page added as a production input', async t => {
+  const root = await checkout(t, 'web');
+  await writeFile(join(root, 'web/local-dashboard/index.html'), '<h1>Local dashboard preview</h1>');
+  const config = join(root, 'web/vite.config.js');
+  await writeFile(config, (await readFile(config, 'utf8')).replace("main: entry('./index.html'),",
+    "main: entry('./index.html'), localDashboard: entry('./local-dashboard/index.html'),"));
+  rejected(check(WEB_CHECK, root), /Local route entered the production build: local-dashboard\/index\.html/);
+});
+
+test('V185: release rejects dashboard source copied through the public directory', async t => {
+  const root = await checkout(t, 'web');
+  await mkdir(join(root, 'web/public/dashboard'));
+  await cp(join(root, 'web/dashboard/data.json'), join(root, 'web/public/dashboard/data.json'));
+  rejected(check(WEB_CHECK, root), /Local route entered the production public directory: dashboard/);
 });
 
 test('REPO-VERIFY-1: complete API checkout links in isolation without database configuration', async t => {

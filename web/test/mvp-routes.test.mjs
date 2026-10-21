@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { access, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,10 +35,6 @@ async function listen(server) {
   });
 }
 
-function scriptSrc(html) {
-  return html.match(/<script[^>]+src="([^"]+\.js)"/)?.[1];
-}
-
 test('unified MVP build serves the bot at the domain root and Mesh at /mesh/', async t => {
   const server = staticServer(mvpRoot);
   await listen(server);
@@ -48,50 +44,27 @@ test('unified MVP build serves the bot at the domain root and Mesh at /mesh/', a
   const [botResponse, meshResponse] = await Promise.all([fetch(base), fetch(`${base}/mesh/`)]);
   assert.equal(botResponse.status, 200);
   assert.equal(meshResponse.status, 200);
-  const [botHtml, meshHtml] = await Promise.all([botResponse.text(), meshResponse.text()]);
-  assert.match(botHtml, /<title>Falcon · Solana Yield Agent<\/title>/);
-  assert.match(meshHtml, /<title>Falcon \| Knowledge mesh<\/title>/);
-  assert.match(meshHtml, /id="lending-terminal"/);
-  assert.doesNotMatch(botHtml, /<title>Falcon \| Knowledge mesh<\/title>/);
-  assert.doesNotMatch(botHtml, /FalconOS · Your rules\. Every move explained\./);
-
-  const botScript = scriptSrc(botHtml);
-  const meshScript = scriptSrc(meshHtml);
-  assert.ok(botScript, 'bot route must load its JavaScript bundle');
-  assert.ok(meshScript, 'mesh route must load its JavaScript bundle');
-  assert.notEqual(botScript, meshScript);
-
-  for (const script of [botScript, meshScript]) {
-    const asset = await fetch(new URL(script, base));
-    assert.equal(asset.status, 200);
-    assert.match(asset.headers.get('content-type') ?? '', /javascript/);
-  }
+  assert.match(botResponse.headers.get("content-type") ?? "", /text\/html/);
+  assert.match(meshResponse.headers.get("content-type") ?? "", /text\/html/);
 });
 
-const hasSite = await access(resolve(siteRoot, 'index.html')).then(() => true, () => false);
-
-test('main-site build keeps treasury landing at / and does not serve the bot', {
-  skip: hasSite ? false : 'run npm --prefix web run build:site first',
-}, async t => {
+test('V185: public dashboard stays Soon and never boots the simulator', async t => {
   const server = staticServer(siteRoot);
   await listen(server);
   t.after(() => new Promise(resolve => server.close(resolve)));
   const base = `http://127.0.0.1:${server.address().port}`;
 
-  const [homeResponse, dashboardResponse] = await Promise.all([fetch(base), fetch(`${base}/dashboard/`)]);
-  assert.equal(homeResponse.status, 200);
-  assert.equal(dashboardResponse.status, 200);
-  const [homeHtml, dashboardHtml] = await Promise.all([homeResponse.text(), dashboardResponse.text()]);
-  assert.match(homeHtml, /<title>FalconOS · Your rules\. Every move explained\.<\/title>/);
-  assert.doesNotMatch(homeHtml, /<title>Falcon · Solana Yield Agent<\/title>/);
-  assert.match(dashboardHtml, /<title>Control Centre · FalconOS<\/title>/);
-  assert.doesNotMatch(dashboardHtml, /<title>Falcon · Solana Yield Agent<\/title>/);
-
-  for (const html of [homeHtml, dashboardHtml]) {
-    const script = scriptSrc(html);
-    assert.ok(script, 'each main-site route must load its JavaScript bundle');
-    const asset = await fetch(new URL(script, base));
-    assert.equal(asset.status, 200);
-    assert.match(asset.headers.get('content-type') ?? '', /javascript/);
+  for (const path of ['/dashboard/', '/dashboard/index.html', '/dashboard/?preview=1&recordMode=saved']) {
+    const response = await fetch(base + path);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type') ?? '', /text\/html/);
+    const html = await response.text();
+    assert.match(html, /<h1\b[^>]*>Soon<\/h1>/i, 'visitors must see the unavailable dashboard state');
+    assert.doesNotMatch(html, /<script\b/i, 'public dashboard must not start any application code');
+    assert.doesNotMatch(html, /<form\b|<input\b|<button\b/i, 'unavailable dashboard cannot offer active setup or trading controls');
+  }
+  for (const path of ['/local-dashboard/', '/local-dashboard/index.html', '/dashboard/main.jsx', '/dashboard/App.jsx', '/dashboard/data.json']) {
+    const response = await fetch(base + path);
+    assert.equal(response.status, 404, `local dashboard source must not be published: ${path}`);
   }
 });

@@ -4,7 +4,7 @@
 
 [VERIFIED, source: `landing/`, `index.html`] The current landing is a React port of OpenDesign project `886c2e41-d9d4-45e0-a67d-148f20cfca61`. It preserves the active treasury design, local fonts and synthetic scenarios. The source project stays unchanged.
 
-[VERIFIED, source: `dashboard/`, `vite.config.js`] The same build includes the React [Control Centre](dashboard/README.md) at `/dashboard/`. It has Overview, Decisions, Knowledge and Connections views. Its saved simulation has a separate storage key. Earlier advisory pages remain labelled HTML references under `/design-reference/`.
+[VERIFIED, local source and browser smoke, 2026-10-21] Production `/dashboard/` now builds as a static **Soon** page without application scripts. The React [Control Centre](dashboard/README.md) remains a separate local preview at `/local-dashboard/`. Correction: the earlier public simulator entry is withheld under approved design D1. This local change has not been deployed. Earlier advisory pages remain labeled HTML references under `/design-reference/`.
 
 [VERIFIED, retained release evidence, 2026-09-27] The site and signup completion are published at `https://falconos.markets/`. Release `9af809b` has `39/39` matching public assets. Signup persistence is verified separately from inbox delivery. See [the release record](../docs/verification/2026-09-27-cloudflare-email.md) and [current architecture map](../docs/README.md).
 
@@ -23,7 +23,7 @@ npm --prefix web run preview:local
 
 [VERIFIED, source: `local-web.mjs`, `waitlist-local.mjs`] Registration is stored in `web/.local/waitlist.sqlite`. The launcher generates a local salt. Both files are excluded from Git. An existing unknown database schema fails visibly. Optional `RESEND_API_KEY` and `WAITLIST_FROM_EMAIL` configure confirmation delivery. Without them, successful signup means the address was saved. Provider acceptance does not prove inbox delivery.
 
-[INFERRED, verification commands] Run `npm run verify:web` from the repository root for web tests and the in-memory release build. `npm run verify:release:web -- --root <checkout>` checks a different source checkout. The build permits only the two declared browser-safe mesh modules outside `web/`; dashboard Node tests also need `mesh/domain.mjs`. The check does not create `dist` or compile the Pages Function. Build the artifact separately before `node web/test/landing-browser.mjs`. That browser script uses temporary SQLite and provider fixtures. The `/mesh/` route also needs the [mesh API](../mesh/README.md).
+[INFERRED COMMANDS] From the repository root, `npm run verify:web` runs the integrated web test workflow. The web package's `pretest` builds the site, MVP and agents before mandatory V185 tests, so this workflow needs no separate site-build step. `npm run verify:release:web -- --root <checkout>` checks a different source checkout. Running `node web/scripts/verify-release.mjs` alone performs an in-memory release build; it does not write `web/dist/` or compile the Pages Function. For a direct `node web/test/landing-browser.mjs` run, build the artifact first with `npm --prefix web run build:site`; `npm run verify:web` already prepares it through `pretest`. That browser script uses temporary SQLite and provider fixtures. The `/mesh/` route also needs the [mesh API](../mesh/README.md).
 
 ## Personal Plugin public origin
 
@@ -100,7 +100,7 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 
 ## Public pages
 
-[VERIFIED, retained release and source, 2026-09-27] `/treasury/`, `/dashboard/`, and `/mesh/` are included in the published build. This supersedes the earlier pending-publication statement. Treasury and Control Centre use synthetic data and browser storage. The mesh viewer still needs a separately hosted API; a published page does not establish that connection. See [the route map](../docs/README.md) and [graph contract](../docs/decision-graph.md).
+[VERIFIED, retained historical release evidence, 2026-09-27] `/treasury/`, `/dashboard/`, and `/mesh/` were included in that published build. Treasury and Control Centre used synthetic data and browser storage. The 2026-10-21 D1 change replaces the public dashboard simulator with Soon in new builds; it does not establish that the hosted version changed. The mesh viewer still requires its separately hosted API.
 
 - `/`: React treasury landing, interactive synthetic graph scenarios, and waitlist.
 - `/product/`: firm model, advisory pipeline, and product boundaries.
@@ -109,6 +109,28 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 - `/app/`: wallet sign-in, Devnet balances, a saved token list, a manual Raydium route ticket, and browser-local order history.
 
 ## Dashboard access
+
+[VERIFIED, approved D1 contract] In the D1 production build, `/dashboard/` is unavailable to all visitors, including owners. Its static Soon response is normally HTTP 200, not a 401/403 authentication service. Query strings, hashes, or browser storage do not unlock it. Private owner access is a separate future feature. `/dash/` and `/app/` retain their existing Devnet behavior.
+
+Local simulator commands use a separate entry and output. Never upload `web/dist-dashboard-preview` as the main-site artifact.
+
+```bash
+npm --prefix web run dev:dashboard -- --port 5195 --strictPort
+# Open http://127.0.0.1:5195/local-dashboard/
+
+npm --prefix web run build:dashboard-preview
+npm --prefix web run preview:dashboard -- --host 127.0.0.1 --port 4195 --strictPort
+# Open http://127.0.0.1:4195/local-dashboard/
+```
+
+[INFERRED COMMANDS] From the repository root, run the integrated web verification workflow. Its package `pretest` builds the site, MVP and agents before mandatory V185 tests; no separate `build:site` command is needed. Running `node web/scripts/verify-release.mjs` alone performs only an in-memory build and does not write `web/dist/`. These checks do not deploy the local Soon route.
+
+```bash
+npm run verify:web
+CHROME_BIN="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" npm --prefix web run test:dashboard:browser -- --case=agent
+```
+
+[SOURCE-VERIFIED, test harness inputs] The agent-only browser case uses disposable fixtures and needs no OpenDesign source root. Full source-comparison, source-only and source-regressions checks require `FALCON_DASHBOARD_SOURCE` to point at the original OpenDesign data root; do not substitute a guessed path. Neither path authorizes provider access, wallet actions, or deployment.
 
 ### Separate graph preview
 
@@ -217,3 +239,16 @@ After creating the Pages project, open **Pages → the project → Custom domain
 [VERIFIED, rendered artifact and actual HTTP] `T81_REAL_HTTP_MCP_AND_SKILL_OK` returned GET guide/manifest and HEAD guide HTTP 200. Rendered guide: 20412 bytes, SHA-256 `8e43a82b47f6e22b1a5600a04d2497da0d24c5cc016e2b06bf8c1574819c06da`. The manifest, header and versioned record `web/skills/releases/0.4.0.json` matched. CI's pinned rebuild targets that record; publisher authentication remains separate.
 
 [VERIFIED, local suite] `npm run verify:web` returned `web: PASS` with `pass 309, fail 0, skipped 1`. The website release-input check reported eight routes. These results do not establish hosted 0.4.0 publication, provider availability or a funded transaction.
+
+## D1 local verification: 2026-10-21
+
+[VERIFIED, isolated local branch `fix/dashboard-gate-D1-20261021`, base `b65a38e`] `npm --prefix web test` returned `tests 311`, `pass 311`, `fail 0`, `skipped 0`. `node --test scripts/test/*.test.mjs` returned `tests 27`, `pass 27`, `fail 0`, `skipped 0`; seven cases planted executable code, private modules, fixture imports, or local output in the public release and were rejected. `node web/scripts/verify-release.mjs` returned `status: PASS`, `routes: 8`, `resolvedFiles: 109`, `artifactWritten: false`.
+
+[VERIFIED, kept-test negative direction] Restoring the original public module entry while keeping the new V185 route test returned `tests 1`, `pass 0`, `fail 1`, `skipped 0`: `visitors must see the unavailable dashboard state`. Restoring the fix made that route contract pass.
+
+[VERIFIED, fixture-only Brave journey] `CHROME_BIN="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" FALCON_DASHBOARD_SOURCE=/private/tmp/d1-nonexistent-opendesign-root npm --prefix web run test:dashboard:browser -- --case=agent` returned `passed: 6`, `total: 6`, `exceptions: []`, `remoteRequests: []`. The browser-test build uses only `https://dashboard-mesh.fixture.invalid`; production API configuration and its HTTPS guard remain unchanged. This proves the fixture agent case, not a live provider or full original-source comparison.
+
+[VERIFIED, actual local production artifact in Brave] `/dashboard/?preview=1&recordMode=saved#agent` rendered `Soon`, with `scripts: 0`, `activeControls: 0`, and `activeRequests: 0`. Existing preview, treasury, and session storage sentinels were unchanged. JavaScript-disabled reload still rendered Soon. Mobile viewport and page widths were both 390. Axe-core reported `violations: 0`.
+
+[NOT VERIFIED] Full OpenDesign source comparison was not run because its original data root was unavailable. No remote CI, deployment, live market-provider request, account configuration change, wallet signature, broadcast, or financial action occurred. The hosted dashboard is not changed by this local fix.
+

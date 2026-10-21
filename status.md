@@ -1,5 +1,19 @@
 # Status
 
+## D1 public dashboard withholding: 2026-10-21
+
+Owner: coordinator. Status: Completed.
+
+[VERIFIED, user approval] Design D1 withholds the public `/dashboard/` simulator and preserves it at `/local-dashboard/` in a separate local build. This is a static Soon page, not owner authentication. `/app/`, `/dash/`, Mesh/MCP, signing and financial authority remain unchanged.
+
+[VERIFIED, isolated local working branch `fix/dashboard-gate-D1-20261021`, base `b65a38e`] Web tests: `tests 311`, `pass 311`, `fail 0`, `skipped 0`. Repository tests: `tests 27`, `pass 27`, `fail 0`, `skipped 0`, including seven planted V185 boundary violations. Release checker: `status: PASS`, `routes: 8`, `resolvedFiles: 109`, `artifactWritten: false`. The kept-test/original-entry negative direction returned `tests 1`, `pass 0`, `fail 1`, `skipped 0`; the unavailable-dashboard assertion named the failure.
+
+[VERIFIED, fixture-only Brave] The local simulator agent case returned `passed: 6`, `total: 6`, `exceptions: []`, `remoteRequests: []`, even with an unavailable OpenDesign source-root argument. Its test-only build uses a reserved HTTPS fixture origin. The production API HTTPS/missing-configuration policy is unchanged. Full original-source comparison was not run; it still needs the original data root.
+
+[VERIFIED, actual local production artifact in Brave] Public query/hash dashboard rendered `Soon` with `scripts: 0`, `activeControls: 0`, `activeRequests: 0`; preview/treasury/session storage markers remained unchanged. JavaScript-disabled reload rendered Soon. Mobile widths were `390/390`; axe reported `violations: 0`.
+
+[VERIFIED, scope] No push, remote CI, deployment, migration, provider configuration change, signature, broadcast, or financial call occurred. The original dirty checkout was untouched. Cloudflare account and Pages project reads succeeded; Railway CLI reported Unauthorized/no linked project. Neither fact authorizes a release. The hosted dashboard remains outside this local completion claim.
+
 ## Node MCP retirement: 2026-10-15
 
 [VERIFIED, user approval and tracked change] Removed the 27 tracked files in the unused Node `mcp/` package, totaling 2,836 lines. This includes runtime source, Node-only tests/helpers, dependency manifests, and old Docker/Railway configuration. [PR 94](https://github.com/Sarthib7/FalconOS/pull/94) migrates active verification and documentation first; package deletion is a separate dependent change.

@@ -4,5 +4,6 @@ dist-treasury/
 dist-mesh/
 dist-mvp/
 dist-agents/
+dist-dashboard-preview/
 .wrangler/
 .local/

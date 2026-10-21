@@ -7,8 +7,9 @@ import { createServer } from 'vite';
 import main from '../vite.config.js';
 import mesh from '../vite.mesh.config.js';
 import treasury from '../vite.treasury.config.js';
+import dashboardPreview from '../vite.dashboard-preview.config.js';
 
-for (const [name, config] of Object.entries({ main, mesh, treasury })) {
+for (const [name, config] of Object.entries({ main, mesh, treasury, dashboardPreview })) {
   test(`V96/V105: ${name} dev server denies private local state and default secret paths`, async () => {
     const root = await mkdtemp(join(tmpdir(), 'falcon-dev-state-'));
     const marker = 'DISPOSABLE_MARKER_NOT_A_SECRET';

@@ -26,6 +26,9 @@ export async function verifyWebRelease(root = DEFAULT_ROOT) {
     if (!stat?.isFile()) throw new Error(`Website release input is missing or not a regular file: ${input}`);
   }
   const web = await realpath(resolve(root, 'web'));
+  const simulatorModules = new Set(await Promise.all(
+    ['dashboard/main.jsx', 'dashboard/App.jsx', 'dashboard/data.json'].map(path => realpath(resolve(web, path))),
+  ));
   const manifest = JSON.parse(await readFile(resolve(web, 'package.json'), 'utf8'));
   for (const dependency of Object.keys(manifest.dependencies || {})) {
     const installed = await lstat(resolve(web, 'node_modules', dependency, 'package.json')).catch(() => null);
@@ -58,6 +61,9 @@ export async function verifyWebRelease(root = DEFAULT_ROOT) {
           const path = id.split('?')[0];
           if (!isAbsolute(path)) continue;
           const actual = await realpath(path);
+          if (simulatorModules.has(actual)) {
+            throw new Error(`Simulator source entered the production build: ${relative(web, actual)}`);
+          }
           if (shared.has(actual)) observed.add(actual);
           if (!contains(web, actual) && !shared.has(actual)
               && !contains(dependencies, actual)) {
@@ -71,13 +77,21 @@ export async function verifyWebRelease(root = DEFAULT_ROOT) {
         for (const route of ROUTES) {
           if (!Object.hasOwn(bundle, route)) throw new Error(`Production route was not built: ${route}`);
         }
+        const dashboard = bundle['dashboard/index.html'];
+        const dashboardHtml = String(dashboard.source);
+        const hasExecutableDashboardCode = /<script\b/i.test(dashboardHtml)
+          || /<[^>]+(?:\s|\/)on[a-z][\w:-]*\s*=/i.test(dashboardHtml)
+          || /<[^>]+\b(?:href|xlink:href|src|action|formaction)\s*=\s*(?:["']\s*|)\s*javascript:/i.test(dashboardHtml);
+        if (dashboard.type !== 'asset' || hasExecutableDashboardCode) {
+          throw new Error('Public dashboard must remain static Soon HTML without executable code.');
+        }
         for (const output of Object.keys(bundle)) {
-          if (output.startsWith('copilot/') || output === 'local-terminal.html') {
+          if (output.startsWith('copilot/') || output.startsWith('local-dashboard/') || output === 'local-terminal.html') {
             throw new Error(`Local route entered the production build: ${output}`);
           }
         }
         if (publicDirectory) {
-          for (const output of ['copilot', 'local-terminal.html']) {
+          for (const output of ['copilot', 'local-terminal.html', 'local-dashboard', 'dashboard']) {
             if (await lstat(resolve(publicDirectory, output)).catch(() => null)) {
               throw new Error(`Local route entered the production public directory: ${output}`);
             }
