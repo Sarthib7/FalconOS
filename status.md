@@ -1,5 +1,13 @@
 # Status
 
+## Advisory allocation contract: 2026-10-21
+
+Owner: coordinator. Status: Completed (contract clarification only).
+
+[VERIFIED, approved D2 and user direction] Future nonbinding portfolio-weight and position-size proposals are permitted with independent risk review and explicit owner approval. SPEC I21/V177, the interface contract, and active roadmap now distinguish this permission from operational support. The first T83 risk slice stays allocation-free.
+
+[VERIFIED SOURCE SCOPE] Only contract and status documents changed. Capability metadata, runtime code, signing, spending, custody and execution authority were not changed. The legacy one-scan agent contract was intentionally unchanged. No new runtime support, live portfolio result, or test result is claimed for this documentation-only change. Remote CI and publication remain pending.
+
 ## Public dashboard gate: 2026-10-21
 
 Owner: coordinator. Status: Completed (implementation and local verification).

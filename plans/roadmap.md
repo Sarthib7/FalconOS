@@ -4,6 +4,10 @@
 
 [VERIFIED, user choices] Scope: "Solana execution, cross-market advice" and "Approve each action". The user approved updating this plan and the docs. [SPEC I21 and T81-T85](../SPEC.md) own the contract and task status. Owner: coordinator. Status: Planned. Earlier phase maps below are historical where they conflict with this section.
 
+[VERIFIED, user direction, 2026-10-21] Future cross-market advice MAY include nonbinding portfolio-weight and position-size proposals. Independent risk review and explicit owner approval remain required. An assessment or proposal never grants discretionary allocation or execution authority, custody, spending, signing, or broker, EVM, or perps execution authority. This is future advisory scope, not a claim of current runtime support.
+
+[INFERRED, future implementation boundary] Any future implementation must keep these outputs as nonbinding advice rather than allocation or execution actions. This entry does not change capability metadata or planned task status.
+
 [INFERRED, design] External agents call MCP. Mesh retains evidence, applies deterministic policy, and owns preparation and reconciliation. Council shares one evidence kernel with domain adapters. Wallet providers keep keys; humans approve, sign and broadcast each action. The public install origin and gated dashboard remain unchanged.
 
 [INFERRED, status ownership] Table states are the planning snapshot at 2026-10-13, not a second task tracker. Update active task status only in SPEC.md.
