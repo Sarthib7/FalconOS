@@ -46,7 +46,7 @@ function noPlan(input, status, reason, before, sourceSnapshot = null) {
     policy: input.policy ?? null, sourceSnapshot, before, after: before, allocations: [], flows: [],
     costs: { status: 'UNKNOWN', amountUnits: null, reason: 'Provider data does not include an executable route quote or transfer costs.' } };
 }
-function compare(a, b) {
+export function compareYieldOpportunities(a, b) {
   if (a.baseApyBps !== b.baseApyBps) return b.baseApyBps - a.baseApyBps;
   const aTvl = BigInt(a.tvlUsdCents), bTvl = BigInt(b.tvlUsdCents);
   if (aTvl !== bTvl) return aTvl > bTvl ? -1 : 1;
@@ -79,7 +79,7 @@ export function simulateAllocation(input) {
     seen.add(item.poolId); candidates.push(item);
   }
   if (!candidates.length) return noPlan(input, 'NO_DATA', 'No eligible Solana USDC lending opportunities were returned.', before, input.sourceSnapshot);
-  candidates.sort(compare);
+  candidates.sort(compareYieldOpportunities);
   const current = new Map(before.positions.map(position => [position.poolId, units(position.units, 'Position amount')]));
   const positionUnits = before.positions.reduce((sum, position) => sum + units(position.units, 'Position amount'), 0n);
   const deployable = units(before.idleUnits, 'Idle balance') + positionUnits;

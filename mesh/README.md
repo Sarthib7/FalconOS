@@ -34,6 +34,8 @@ pbcopy < mesh/.local/operator-token
 
 [VERIFIED, source: `yield-data.mjs` (`YIELD_ENDPOINTS`, `normalizeYieldCatalog`, `createYieldService`), `yield-domain.mjs` (`simulateAllocation`), `test/yield-data.test.mjs`] Provider catalogs use DeFiLlama pools and protocol endpoints. The normalizer labels provider-indexed Solana data as `mainnet-beta`; this is discovery context, not Devnet availability evidence. Eligible rows carry `discoveryOnly: true`, `executionSupported: false`, and `executionNetwork: null`; READY and NO_DATA catalogs state Devnet execution `supported: false`. The local simulator keeps `executionReady: false`, preserves the source snapshot labels, and reports route costs as `UNKNOWN`. Provider market time remains unknown (`providerAsOf: null`, `freshness: SOURCE_TIME_UNKNOWN`).
 
+[VERIFIED, D2 source and local V125 regression, 2026-10-21] Normalized catalog rows and simulated allocation use the same `compareYieldOpportunities` ordering: base APY descending, exact integer TVL descending, then pool ID. This ranks reported metrics only, not expected investment returns. Provider eligibility, unknown source market time, and disabled execution are unchanged.
+
 ## Bot wallet authentication
 
 [VERIFIED, source and local integration tests] The bot requests a server challenge, then asks Phantom to sign its exact origin-bound message through Wallet Standard `solana:signMessage`. This is a login proof. It does not approve a transaction, read balances, or move funds.
