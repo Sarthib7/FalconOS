@@ -4,7 +4,7 @@
 
 [VERIFIED, source: `landing/`, `index.html`] The current landing is a React port of OpenDesign project `886c2e41-d9d4-45e0-a67d-148f20cfca61`. It preserves the active treasury design, local fonts and synthetic scenarios. The source project stays unchanged.
 
-[VERIFIED, source: `dashboard/`, `vite.config.js`] The same build includes the React [Control Centre](dashboard/README.md) at `/dashboard/`. It has Overview, Decisions, Knowledge and Connections views. Its saved simulation has a separate storage key. Earlier advisory pages remain labelled HTML references under `/design-reference/`.
+[SOURCE-VERIFIED, source: `dashboard/index.html`, `local-dashboard/index.html`, `vite.config.js`] The production site entry for `/dashboard/` is static Soon HTML; it does not load the React Control Centre or provide owner authentication. The React [Control Centre](dashboard/README.md) remains available through the dedicated local `/local-dashboard/` preview. Earlier advisory pages remain labeled HTML references under `/design-reference/`.
 
 [VERIFIED, retained release evidence, 2026-09-27] The site and signup completion are published at `https://falconos.markets/`. Release `9af809b` has `39/39` matching public assets. Signup persistence is verified separately from inbox delivery. See [the release record](../docs/verification/2026-09-27-cloudflare-email.md) and [current architecture map](../docs/README.md).
 
@@ -23,7 +23,7 @@ npm --prefix web run preview:local
 
 [VERIFIED, source: `local-web.mjs`, `waitlist-local.mjs`] Registration is stored in `web/.local/waitlist.sqlite`. The launcher generates a local salt. Both files are excluded from Git. An existing unknown database schema fails visibly. Optional `RESEND_API_KEY` and `WAITLIST_FROM_EMAIL` configure confirmation delivery. Without them, successful signup means the address was saved. Provider acceptance does not prove inbox delivery.
 
-[INFERRED, verification commands] Run `npm run verify:web` from the repository root for web tests and the in-memory release build. `npm run verify:release:web -- --root <checkout>` checks a different source checkout. The build permits only the two declared browser-safe mesh modules outside `web/`; dashboard Node tests also need `mesh/domain.mjs`. The check does not create `dist` or compile the Pages Function. Build the artifact separately before `node web/test/landing-browser.mjs`. That browser script uses temporary SQLite and provider fixtures. The `/mesh/` route also needs the [mesh API](../mesh/README.md).
+[INFERRED COMMANDS] From the repository root, run `npm run verify:web` for the integrated web tests and in-memory release check. The web package's `pretest` builds the production site, MVP and agents before its test suite. `npm run verify:release:web -- --root <checkout>` checks a different source checkout. Running `node web/scripts/verify-release.mjs` alone performs an in-memory release build; it does not write `web/dist/` or compile the Pages Function. Build the artifact separately before running `node web/test/landing-browser.mjs`; the package pretest already builds the site for `npm --prefix web test`. That browser script uses temporary SQLite and provider fixtures. The `/mesh/` route also needs the [mesh API](../mesh/README.md).
 
 ## Personal Plugin public origin
 
@@ -100,11 +100,12 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 
 ## Public pages
 
-[VERIFIED, retained release and source, 2026-09-27] `/treasury/`, `/dashboard/`, and `/mesh/` are included in the published build. This supersedes the earlier pending-publication statement. Treasury and Control Centre use synthetic data and browser storage. The mesh viewer still needs a separately hosted API; a published page does not establish that connection. See [the route map](../docs/README.md) and [graph contract](../docs/decision-graph.md).
+[VERIFIED, retained historical release evidence, 2026-09-27] `/treasury/`, `/dashboard/`, and `/mesh/` were included in that published build, superseding the earlier pending-publication statement. Treasury and Control Centre used synthetic data and browser storage. The 2026-10-21 D1 source change replaces the public dashboard simulator with static Soon in new builds; it does not establish hosted route behavior. The mesh viewer still needs a separately hosted API; a published page does not establish that connection. See [the route map](../docs/README.md) and [graph contract](../docs/decision-graph.md).
 
 - `/`: React treasury landing, interactive synthetic graph scenarios, and waitlist.
 - `/product/`: firm model, advisory pipeline, and product boundaries.
 - `/research/`: evidence format, research checks, and unresolved proof.
+- `/dashboard/`: static Soon page; it does not provide owner authentication.
 - `/dash/`: dashboard entry with a link to the Devnet terminal.
 - `/app/`: wallet sign-in, Devnet balances, a saved token list, a manual Raydium route ticket, and browser-local order history.
 
@@ -120,9 +121,9 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 
 The public build includes the landing page, detail pages, the `/dash/` entry, and the `/app/` Devnet terminal. The local Vite server overrides `/dash/` and `/research/` with the localhost research terminal. `/app/` verifies wallet ownership in the browser and saves account preferences and order labels in that browser profile. It has no server session or cross-device sync. Its production trade module uses Solana Devnet and Raydium Devnet only. The stock council feed and historical strategy backtests are not connected to the production app.
 
-### Local Control Centre simulator preview
+### Public dashboard gate and local Control Centre preview
 
-PR1 adds a separate local entry and output for the React Control Centre. It does not change the public /dashboard/ route; any later public-route withholding is a separate follow-up. These commands do not deploy anything. Do not upload web/dist-dashboard-preview/ as the main-site artifact.
+[SOURCE-VERIFIED, current source] PR2 changes the production `/dashboard/` entry to static Soon HTML. It does not load the Control Centre or offer owner authentication. PR1's simulator remains in a separate local preview at `/local-dashboard/`. These commands do not deploy anything. Do not upload `web/dist-dashboard-preview/` as the main-site artifact.
 
 Run the local simulator:
 

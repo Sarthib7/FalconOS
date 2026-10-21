@@ -39,5 +39,8 @@ jobs:
       - name: Run web tests
         run: npm --prefix web test
 
-      - name: Build the production site
-        run: npm --prefix web run build:site
+      - name: Verify production release boundaries
+        run: node web/scripts/verify-release.mjs
+
+      - name: Verify public dashboard withholding
+        run: node --test web/test/mvp-routes.test.mjs

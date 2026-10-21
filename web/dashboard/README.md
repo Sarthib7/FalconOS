@@ -4,7 +4,7 @@
 
 ## Run and preview
 
-PR1 adds a separate local entry and output for the React Control Centre. It leaves the public /dashboard/ route unchanged; any later decision to withhold that route is a separate follow-up. The local preview output must not be uploaded as the main-site artifact.
+[SOURCE-VERIFIED, source: `dashboard/index.html`, `vite.config.js`] PR2 changes the production `/dashboard/` entry to a static Soon page. It does not provide owner login or private access. PR1's React Control Centre remains on the separate local `/local-dashboard/` preview. The local preview output must not be uploaded as the main-site artifact. This describes source behavior only, not hosted route behavior or deployment.
 
 From the FalconOS repository root, start the local simulator:
 
@@ -25,7 +25,9 @@ npm --prefix web run preview:dashboard -- --host 127.0.0.1 --port 4195 --strictP
 
 ## Verify
 
-Build the preview artifact before running its browser harness. The --case=agent Brave run is fixture-only and does not read FALCON_DASHBOARD_SOURCE. The default source-comparison run, --case=legacy, --case=clipboard, --case=fonts, --source-only and --source-regressions require FALCON_DASHBOARD_SOURCE to point to the original OpenDesign project data root.
+[SOURCE-VERIFIED, package scripts] `npm --prefix web test` runs the web package's `pretest`, which builds the production site, MVP and agents. The browser command below builds the separate dashboard preview with its fixture mesh URL before starting the harness. The Brave `--case=agent` uses fixtures only and does not read `FALCON_DASHBOARD_SOURCE`.
+
+[SOURCE-VERIFIED, test harness inputs] The default source-comparison run, `--case=legacy`, `--case=clipboard`, `--case=fonts`, `--source-only` and `--source-regressions` require `FALCON_DASHBOARD_SOURCE` to point to the original OpenDesign project data root. Do not substitute a guessed path.
 
 ```bash
 npm --prefix web run test:dashboard
