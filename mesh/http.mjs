@@ -8,7 +8,7 @@ import { PUBLIC_OWNER_ID } from './public-graph.mjs';
 
 const BODY_LIMIT = 1024 * 1024;
 const EVIDENCE_EXCHANGES = 2;
-const STATUSES = { INVALID_INPUT: 400, UNAUTHORIZED: 401, ORIGIN_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, TOO_LARGE: 413, RATE_LIMITED: 429, STORAGE_UNAVAILABLE: 503, AUTH_UNAVAILABLE: 503, INTERNAL_ERROR: 500 };
+const STATUSES = { INVALID_INPUT: 400, UNAUTHORIZED: 401, FORBIDDEN: 403, ORIGIN_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, TOO_LARGE: 413, RATE_LIMITED: 429, STORAGE_UNAVAILABLE: 503, AUTH_UNAVAILABLE: 503, INTERNAL_ERROR: 500 };
 
 export function parseTokenHashes(raw) {
   let value;
@@ -88,7 +88,7 @@ async function body(request, limit = BODY_LIMIT) {
 }
 
 export function createApi({
-  store, lending = null, yieldService = null, publicGraph = null, researchService = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
+  store, lending = null, yieldService = null, publicGraph = null, researchService = null, researchReviewService = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
   rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600,
   walletLookupMaxPerSource = 240, walletLookupMaxGlobal = rateMaxGlobal, clock = () => Date.now(),
   walletStatus = readWalletStatus, transactionInspection = inspectTransaction,
@@ -301,6 +301,16 @@ export function createApi({
         };
         if (!researchService) throw new MeshError('STORAGE_UNAVAILABLE', 'The research service is not configured.');
         send(200, await researchService.adoptCase(owner, adoption)); return;
+      }
+      if (url.pathname === '/v1/research/near/review') {
+        if (request.method !== 'POST') throw new MeshError('NOT_FOUND', 'Research endpoint not found.');
+        const input = await body(request, 1024); keys(input, ['requestId', 'analysisId']);
+        const review = {
+          requestId: normalizeResearchUuid(input.requestId),
+          analysisId: normalizeResearchUuid(input.analysisId),
+        };
+        if (!researchReviewService) throw new MeshError('STORAGE_UNAVAILABLE', 'The research review service is not configured.');
+        send(200, await researchReviewService.review(owner, review)); return;
       }
       if (url.pathname === '/v1/public/graph/adopt') {
         if (request.method !== 'POST') throw new MeshError('NOT_FOUND', 'Endpoint not found.');
