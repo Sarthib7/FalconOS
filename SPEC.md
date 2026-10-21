@@ -691,6 +691,7 @@ T83|.|[PLANNED] connect one real stocks risk assessment through shared backend e
 T84|.|[PLANNED] add verified native perps metadata and real source adapters through T83 kernel; independent risk review and MCP evidence retrieval; prove live NO_DATA and cited advisory paths|I7,I21,V176,V177
 T85|.|[PLANNED] after T82 add Solana swap adapter and MCP workflow with quote bounds, owner approval, unchanged-byte preflight and receipt reconciliation; retain Devnet release gate|I21,V175,V178-V180
 T86|x|[VERIFIED LOCAL D1 split] keep production /dashboard/ static Soon and simulator in separate local build; production module/output boundary and mandatory HTTP regressions enforced; web311/311, repository27/27, fixture-browser6/6; real local gate storage/no-JS/mobile/axe proof; hosted release tracked separately; /app/, /dash/, Mesh/MCP preserved|V104,V107,V185
+T87|x|[VERIFIED LOCAL D2] catalog and simulator share V125 comparator; relevant suites17/17, original pool-ID-only sort fails retained regression1/1, restored fix17/17; live provider sample63 eligible rows ordered; provider time unknown and execution disabled; remote CI/publication pending|I18,V125
 
 ## §B BUGS
 
@@ -815,3 +816,4 @@ B116|2026-10-15|[VERIFIED isolated Chrome 155 probes] CDP Fetch-based harness re
 B117|2026-10-21|[VERIFIED source and prior anonymous browser observation] public dashboard entry loaded main.jsx and sample-mode App without an access boundary; release checks required public simulator entry|V185; static public Soon, isolated local simulator, production-output and mandatory route regression checks
 B118|2026-10-21|[VERIFIED local axe-core 4.13.0] copied terminal navigation indices had contrast3.97 below4.5 on new Soon page|V50; remove decorative indices on this page, preserve shared terminal CSS
 B119|2026-10-21|[VERIFIED local fixture browser] production-built local simulator omitted HTTPS Mesh base; API correctly refused before fixture requests|V185; fixed reserved HTTPS origin for browser-test build and harness only; fixture-browser6/6, production API guard unchanged
+B120|2026-10-21|[VERIFIED source trace and local regression] discovery normalized catalog by poolId while consumers described its prefix as base-APY/TVL ranked; simulator used a different order|V125; shared comparator; retained regression with only original sort restored: tests1/pass0/fail1; fix restored: relevant tests17/pass17/fail0; live provider-indexed sample63 rows ordered, source market time unknown, executionReady=false

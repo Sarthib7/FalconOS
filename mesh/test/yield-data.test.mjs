@@ -64,6 +64,28 @@ test('V124/V154: eligible and excluded provider-indexed opportunities retain mai
   assert.deepEqual(excludedOnly.execution, { network: 'devnet', supported: false });
 });
 
+test('V125: provider service uses the allocator APY, TVL, and pool-ID order', async () => {
+  const pools = [
+    row({ pool: '11111111-1111-4111-8111-111111111111', apy: 4, apyBase: 4, tvlUsd: 4000000 }),
+    row({ pool: '22222222-2222-4222-8222-222222222222', apy: 6, apyBase: 6, tvlUsd: 1000000 }),
+    row({ pool: '33333333-3333-4333-8333-333333333333', apy: 6, apyBase: 6, tvlUsd: 2000000 }),
+    row({ pool: '44444444-4444-4444-8444-444444444444', apy: 6, apyBase: 6, tvlUsd: 2000000 }),
+  ];
+  const service = createYieldService({
+    now: () => retrievedAt,
+    fetchImpl: async url => url === YIELD_ENDPOINTS.pools
+      ? Response.json({ data: pools })
+      : Response.json(protocols),
+  });
+  const catalog = await service.getOpportunities();
+
+  assert.deepEqual(catalog.opportunities.map(item => item.poolId), [
+    '33333333-3333-4333-8333-333333333333',
+    '44444444-4444-4444-8444-444444444444',
+    '22222222-2222-4222-8222-222222222222',
+    '11111111-1111-4111-8111-111111111111',
+  ]);
+});
 test('V154: enriched discovery rows still simulate without Devnet execution claims', async () => {
   const service = createYieldService({
     now: () => retrievedAt,

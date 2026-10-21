@@ -1,4 +1,4 @@
-import { simulateAllocation } from './yield-domain.mjs';
+import { compareYieldOpportunities, simulateAllocation } from './yield-domain.mjs';
 
 export const YIELD_ENDPOINTS = Object.freeze({
   pools: 'https://yields.llama.fi/pools',
@@ -76,7 +76,7 @@ export function normalizeYieldCatalog({ pools, protocols, retrievedAt }) {
       retrievedAt, providerAsOf: null, freshness: 'SOURCE_TIME_UNKNOWN',
     });
   }
-  opportunities.sort((a, b) => a.poolId.localeCompare(b.poolId));
+  opportunities.sort(compareYieldOpportunities);
   const status = opportunities.length ? 'READY' : 'NO_DATA';
   return {
     ...CATALOG_CONTEXT,
