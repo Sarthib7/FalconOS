@@ -1,5 +1,19 @@
 # Status
 
+## Public dashboard gate: 2026-10-21
+
+Owner: coordinator. Status: Completed (implementation and local verification).
+
+[VERIFIED, approved D1 and source inspection] This cutover changes the production `/dashboard/` entry to static Soon HTML, without owner authentication. The simulator remains in the separate local `/local-dashboard/` build. `/dash/`, `/app/`, Mesh/MCP and financial authority remain unchanged.
+
+[VERIFIED, GitHub and Cloudflare reads] Preparatory PR 98 passed all exact-head checks at `7238183d8be5513e8086d77d49c9ca67b1ee9130` and merged as `0e2ca4853de228010b8ebf74877ffe5c0d68df6e`. Cloudflare production reported that merge commit deployed successfully. The public dashboard still returned the legacy Control Centre, as expected for that preparatory slice; the local preview path returned public landing HTML rather than the local simulator.
+
+[VERIFIED LOCAL, rebased on `0e2ca4853de228010b8ebf74877ffe5c0d68df6e`] Web suite: `tests 311`, `pass 311`, `fail 0`, `skipped 0`. Repository suite: `tests 27`, `pass 27`, `fail 0`, `skipped 0`, including seven planted V185 build faults. Release check: `status: PASS`, `routes: 8`, `resolvedFiles: 109`, `artifactWritten: false`. Restoring only the original simulator entry made the retained V185 HTTP test fail: `tests 1`, `pass 0`, `fail 1`, `visitors must see the unavailable dashboard state`. The approved gate was restored before the passing union run.
+
+[VERIFIED LOCAL, Brave] Fixture-only agent journey: `passed: 6`, `total: 6`, `exceptions: []`, `remoteRequests: []`, with an unavailable original-source root. The actual production artifact rendered Soon under query/hash variants with `scripts: 0`, `activeControls: 0`, and no script/fetch/XHR requests. Preview, treasury and session storage markers were unchanged. No-JS reload rendered Soon; mobile widths were `390/390`; axe reported `violations: 0`.
+
+[NOT VERIFIED in this pre-publication record] This entry records local implementation proof, not hosted cutover. Exact-head remote CI and the main deployment will be checked through the PR for `fix/dashboard-public-gate-20261021`. Full OpenDesign source comparison was not run because the original data root was unavailable. No production migration, owner-wallet signature, chain broadcast, financial action or provider-configuration change was performed. The original dirty checkout remains untouched.
+
 ## Node MCP retirement: 2026-10-15
 
 [VERIFIED, user approval and tracked change] Removed the 27 tracked files in the unused Node `mcp/` package, totaling 2,836 lines. This includes runtime source, Node-only tests/helpers, dependency manifests, and old Docker/Railway configuration. [PR 94](https://github.com/Sarthib7/FalconOS/pull/94) migrates active verification and documentation first; package deletion is a separate dependent change.
@@ -1268,3 +1282,4 @@ Owner: coordinator. Status: Completed. A fresh-context audit found no unused pri
 [VERIFIED, real Chrome] The live-target test failed before the change: `Missing expected rejection` (`tests 1`, `fail 1`). With unexpected target-close errors preserved, the full command completed `tests 13`, `pass 13`, `fail 0`, and exit 0.
 
 [VERIFIED, actual-hook probe with an owned Node child] The unexpected CDP error survived a clean exit. Removing its rethrow made the probe pass incorrectly, while the identical clean-exit reply error remained allowed. This tests error propagation only. It does not establish Chromium shutdown timing or the historical PR95 cause.
+

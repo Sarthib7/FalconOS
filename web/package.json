@@ -23,7 +23,7 @@
     "build": "npm run build:site",
     "build:treasury": "vite build --config vite.treasury.config.js",
     "build:mesh": "vite build --config vite.mesh.config.js",
-    "pretest": "npm run build:mvp && npm run build:agents",
+    "pretest": "npm run build:site && npm run build:mvp && npm run build:agents",
     "test": "node --test test/*.test.mjs",
     "test:browser": "node test/treasury-browser.mjs && npm run test:dashboard:browser",
     "test:dashboard": "node --test test/dashboard.test.mjs",
