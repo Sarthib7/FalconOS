@@ -12,7 +12,7 @@ const RELEASE_INPUTS = [
   'live.mjs', 'scenario.mjs', 'kamino.mjs', 'kamino-wire.mjs', 'init-db.mjs',
   'yield-data.mjs', 'yield-domain.mjs', 'auth.mjs',
   'limits.mjs', 'wallet-status.mjs', 'transaction-inspection.mjs',
-  'council/evidence.ts',
+  'council/evidence.ts', 'council/host.mjs',
   'research/near-source.mjs', 'research/near-model.mjs', 'research/service.mjs',
   'schema.sql', 'migrations/0002_lending.sql', 'migrations/0003_wallet_auth.sql', 'deploy/supabase-permissions.sql',
 ];
