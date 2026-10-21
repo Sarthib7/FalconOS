@@ -4,30 +4,33 @@
 
 ## Run and preview
 
-[INFERRED, commands] From the FalconOS repository root, run:
+PR1 adds a separate local entry and output for the React Control Centre. It leaves the public /dashboard/ route unchanged; any later decision to withhold that route is a separate follow-up. The local preview output must not be uploaded as the main-site artifact.
+
+From the FalconOS repository root, start the local simulator:
 
 ```bash
-npm --prefix web run dev:local
+npm --prefix web run dev:dashboard -- --port 5195 --strictPort
+# Open http://127.0.0.1:5195/local-dashboard/
 ```
 
-[VERIFIED, 2026-10-03, source: `web/local-web.mjs`, `App.jsx`; browser check: `node web/test/dashboard-browser.mjs --case=agent`] Open `http://127.0.0.1:4183/dashboard/`. Direct links include `#decisions`, `#operate`, `#knowledge`, `#connections` and `#agent`. Use one web server on port 4183 at a time.
+Direct links preserve #decisions, #operate, #knowledge, #connections and #agent on /local-dashboard/.
 
-[INFERRED, built preview] Stop development before starting preview:
+To build and serve the separate preview artifact, first stop the dev server:
 
 ```bash
-npm --prefix web run build:site
-npm --prefix web run preview:local
+npm --prefix web run build:dashboard-preview
+npm --prefix web run preview:dashboard -- --host 127.0.0.1 --port 4195 --strictPort
+# Open http://127.0.0.1:4195/local-dashboard/
 ```
 
 ## Verify
 
-[INFERRED, commands] The browser harness uses Chrome, temporary profiles and loopback servers. It blocks external HTTP.
+Build the preview artifact before running its browser harness. The --case=agent Brave run is fixture-only and does not read FALCON_DASHBOARD_SOURCE. The default source-comparison run, --case=legacy, --case=clipboard, --case=fonts, --source-only and --source-regressions require FALCON_DASHBOARD_SOURCE to point to the original OpenDesign project data root.
 
 ```bash
 npm --prefix web run test:dashboard
 npm --prefix web test
-npm --prefix web run build:site
-npm --prefix web run test:dashboard:browser
+CHROME_BIN="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" npm --prefix web run test:dashboard:browser -- --case=agent
 ```
 
 ## Data and services
@@ -42,11 +45,13 @@ npm --prefix web run test:dashboard:browser
 
 [INFERRED, design contract] See [Control Centre](../../docs/control-centre.md) for persistence, history, export and verification requirements.
 
-[VERIFIED, local checks] Web suite: `tests 161`, `pass 161`, `fail 0`. Final Chrome run: `passed:95`, `total:95`, `exceptions:[]`. See [verification and screenshots](../../docs/verification/2026-09-27-dashboard.md).
+[REPORTED, historical records] The entries below quote earlier verification reports. They were not rerun for this local-preview change.
 
-[VERIFIED, 2026-09-30, local] The earlier `161/95` figures describe the 2026-09-27 four-view port. This checkout's web suite returned `tests 187`, `pass 187`, `fail 0`. A controlled browser run returned `passed:132`, `total:132` across original source comparison and the additive Operate route. The real local Operate view loaded one saved `REVIEW` record with four checks and 11 graph nodes. No wallet signature, hosted API connection or live trade was tested by that browser fixture.
+[HISTORICAL VERIFICATION, 2026-09-27] Web suite: tests 161, pass 161, fail 0. Final Chrome run: passed:95, total:95, exceptions:[]. See [verification and screenshots](../../docs/verification/2026-09-27-dashboard.md). This is a dated result, not a current-checkout result.
 
-[VERIFIED, later 2026-09-30 browser check] After the graph-first return flow, the controlled dashboard browser reported `passed:134`, `total:134`. It checks that Operate opens the newest saved graph without another POST and shows every decision lane at desktop width. The earlier `132/132` run remains a dated intermediate result.
+[HISTORICAL VERIFICATION, 2026-09-30] The earlier 161/95 figures describe the 2026-09-27 four-view port. The 2026-09-30 web suite returned tests 187, pass 187, fail 0. A controlled browser run returned passed:132, total:132 across original source comparison and the additive Operate route. The real local Operate view loaded one saved REVIEW record with four checks and 11 graph nodes. No wallet signature, hosted API connection or live trade was tested by that browser fixture. This is historical evidence, not a current-checkout result.
 
-[VERIFIED, final local browser check] The controlled dashboard browser returned `passed:136`, `total:136`. It now checks that the latest saved graph opens in view and that Knowledge labels reserve book liquidity as not withdrawable. The earlier counts remain dated intermediate runs.
-[VERIFIED, 2026-10-03, source: `Agent.jsx`, `agent-store.mjs`, `mesh/http.mjs`; browser check: `node web/test/dashboard-browser.mjs --case=agent` reported `passed: 6`, `total: 6`] The gated Yield Agent reads the mesh yield catalog and handles typed discovery, simulation, and explanation requests. Its Cash Trace shows proposed flows, base APY, retrieval time, unknown costs, and venue limits. It stores simulated balances and receipts in browser storage. It does not sign transactions or move funds. The browser test uses fixture responses. It does not verify live provider data or transaction execution.
+[HISTORICAL VERIFICATION, later 2026-09-30 browser check] After the graph-first return flow, the controlled dashboard browser reported passed:134, total:134. It checked that Operate opened the newest saved graph without another POST and showed every decision lane at desktop width. The earlier 132/132 run remains a dated intermediate result; this is not a current-checkout result.
+
+[HISTORICAL VERIFICATION, final recorded local browser run] The controlled dashboard browser returned passed:136, total:136. It checked that the latest saved graph opened in view and that Knowledge labeled reserve book liquidity as not withdrawable. The earlier counts remain dated intermediate runs. This is historical evidence, not a current-checkout result.
+[HISTORICAL SOURCE AND BROWSER EVIDENCE, 2026-10-03] The previous dev:local recipe in web/local-web.mjs served http://127.0.0.1:4183/dashboard/; the App.jsx local route was paired with it. Its agent browser run node web/test/dashboard-browser.mjs --case=agent reported passed: 6, total: 6. The historical source files were Agent.jsx, agent-store.mjs, and mesh/http.mjs. The gated Yield Agent read the mesh yield catalog and handled typed discovery, simulation, and explanation requests. Its Cash Trace showed proposed flows, base APY, retrieval time, unknown costs, and venue limits. It stored simulated balances and receipts in browser storage and did not sign transactions or move funds. The browser test used fixture responses and did not verify live provider data or transaction execution. This is historical evidence, not a current-checkout result.

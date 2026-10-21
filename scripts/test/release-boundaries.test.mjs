@@ -17,7 +17,7 @@ async function checkout(t, component) {
   await cp(source, join(root, component), {
     recursive: true,
     filter: path => !relative(source, path).split('/').some(part =>
-      ['node_modules', '.local', '.git', 'dist', 'dist-mesh', 'dist-treasury'].includes(part)
+      ['node_modules', '.local', '.git', 'dist', 'dist-mesh', 'dist-treasury', 'dist-dashboard-preview'].includes(part)
       || part.startsWith('.env') || part.endsWith('.log')),
   });
   if (component === 'web') {

@@ -120,6 +120,29 @@ Because the repository is a monorepo, set the root directory to `web`; the comma
 
 The public build includes the landing page, detail pages, the `/dash/` entry, and the `/app/` Devnet terminal. The local Vite server overrides `/dash/` and `/research/` with the localhost research terminal. `/app/` verifies wallet ownership in the browser and saves account preferences and order labels in that browser profile. It has no server session or cross-device sync. Its production trade module uses Solana Devnet and Raydium Devnet only. The stock council feed and historical strategy backtests are not connected to the production app.
 
+### Local Control Centre simulator preview
+
+PR1 adds a separate local entry and output for the React Control Centre. It does not change the public /dashboard/ route; any later public-route withholding is a separate follow-up. These commands do not deploy anything. Do not upload web/dist-dashboard-preview/ as the main-site artifact.
+
+Run the local simulator:
+
+```bash
+npm --prefix web run dev:dashboard -- --port 5195 --strictPort
+# Open http://127.0.0.1:5195/local-dashboard/
+
+npm --prefix web run build:dashboard-preview
+npm --prefix web run preview:dashboard -- --host 127.0.0.1 --port 4195 --strictPort
+# Open http://127.0.0.1:4195/local-dashboard/
+```
+
+The dashboard browser's fixture-only Brave case is:
+
+```bash
+CHROME_BIN="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" npm --prefix web run test:dashboard:browser -- --case=agent
+```
+
+The --case=agent run uses ported fixtures and does not read FALCON_DASHBOARD_SOURCE. The default source-comparison run, --case=legacy, --case=clipboard, --case=fonts, --source-only, and --source-regressions require FALCON_DASHBOARD_SOURCE to point to the original OpenDesign project data root.
+
 ## Waitlist pipeline
 
 The landing form posts to `POST /api/waitlist`. The Pages Function is `web/functions/api/waitlist.js`.
