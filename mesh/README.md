@@ -8,6 +8,14 @@
 
 [VERIFIED LOCAL] The permanent clock regression failed against the original source (`tests1, pass0, fail1`) and passed with this store fix (`tests1, pass1, fail0`). These store checks do not establish native model-host, container or hosted readiness.
 
+[VERIFIED SOURCE, R4 native host] Production review composition uses the pinned SDK18.12.5 in an owned Bun1.3.14 worker. Configure an absolute `FALCON_MESH_COUNCIL_BUN` path and normal OMP credential broker discovery. `FALCON_MESH_RESEARCH_REVIEW_OWNERS` defaults to `[]`; wallet login does not grant inference. Legacy CLI-based business review was removed. No signing, custody or spending authority is added.
+
+[VERIFIED LOCAL; LIMITED PROOF] SDK fixture checks reported `8 pass, 0 fail, 60 expect() calls`. An isolated removal of call binding made the native rejection test fail (`0 pass, 1 fail`). Real-account body preflight stopped with zero provider dispatch. Live Lead and a later strict diagnostic Risk returned accepted bindings separately; the original job retained NO_DATA. No single retained job with two accepted responses or built-image success is claimed. CI checks the actual packaged worker and missing Bun/worker/SDK failures without credentials or provider access.
+
+```bash
+npm ci --prefix mesh/council/runtime --ignore-scripts --no-audit --no-fund
+```
+
 ## Run
 
 [INFERRED, fresh local setup] Run these commands from the repository root. Use a new local database. Review `schema.sql`, both migrations, and the permission candidate before explicit initialization.

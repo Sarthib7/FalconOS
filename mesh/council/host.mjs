@@ -3,10 +3,24 @@ import { canonicalBytes, freezeDeep, sha256, stableStringify } from "./evidence.
 
 export const COUNCIL_MODEL = "gpt-6-luna";
 export const COUNCIL_REASONING_EFFORT = "max";
-export const COUNCIL_POLICY_VERSION = "codex-readonly/1";
+export const COUNCIL_POLICY_VERSION = "council-streamsimple/2";
+export const COUNCIL_LIMITS = Object.freeze({
+  runMs: 300000,
+  preflightMs: 30000,
+  callMs: 120000,
+  firstEventMs: 30000,
+  idleMs: 30000,
+  streamBytes: 2097152,
+  requestBytes: 65536,
+  modelJsonBytes: 49152,
+  ipcInputBytes: 196608,
+  ipcOutputBytes: 65536,
+  ipcErrorBytes: 16384,
+  killGraceMs: 500,
+});
 
-const MAX_REQUEST_BYTES = 64 * 1024;
-const MAX_MODEL_RESULT_BYTES = 48 * 1024;
+const MAX_REQUEST_BYTES = COUNCIL_LIMITS.requestBytes;
+const MAX_MODEL_RESULT_BYTES = COUNCIL_LIMITS.modelJsonBytes;
 const MAX_JSON_DEPTH = 32;
 const MAX_JSON_NODES = 12000;
 const MAX_JSON_STRING_BYTES = MAX_REQUEST_BYTES;
@@ -32,12 +46,9 @@ const RISK_RESPONSE_KEYS = [
   "status", "reason", "citations", "missingEvidence", "executionReady",
 ];
 const PREFLIGHT_KEYS = [
-  "status", "policyVersion", "requestedModel", "requestedReasoningEffort",
-  "executableVersion", "checkedAt", "policyHash", "verifiedControls", "reasons",
-];
-const CONTROL_KEYS = [
-  "userConfigIsolated", "webSearchDisabled", "commandToolsDisabled", "patchToolsDisabled",
-  "inheritedMcpDisabled", "readOnlySandbox", "boundedIO", "controlledProbePassed",
+  "schemaVersion", "policyVersion", "status", "checkedAt", "sdkVersion", "provider",
+  "modelId", "api", "effort", "endpoint", "transportMode", "bodyAudit",
+  "payloadObservationCount", "fetchFenceCallCount", "providerDispatchCount", "reasons",
 ];
 
 function isRecord(value) {
@@ -353,29 +364,44 @@ function noData(runId, snapshotHash, reason, lead = null, risk = null, reasons =
   );
 }
 
-function validatePreflight(value, nowText) {
+export function validatePreflight(value, nowText) {
   try {
-    assertSafeJson(value, MAX_REQUEST_BYTES, "preflight result");
+    assertSafeJson(value, COUNCIL_LIMITS.modelJsonBytes, "preflight result");
   } catch {
     return false;
   }
   if (!exactKeys(value, PREFLIGHT_KEYS)
-      || !["VERIFIED", "NO_DATA"].includes(value.status)
+      || value.schemaVersion !== 2
       || value.policyVersion !== COUNCIL_POLICY_VERSION
-      || value.requestedModel !== COUNCIL_MODEL
-      || value.requestedReasoningEffort !== COUNCIL_REASONING_EFFORT
-      || !(value.executableVersion === null || boundedString(value.executableVersion, 1, 128))
+      || !["VERIFIED", "NO_DATA"].includes(value.status)
       || !canonicalTime(value.checkedAt)
       || Date.parse(value.checkedAt) > Date.parse(nowText)
-      || !(value.policyHash === null || HASH_PATTERN.test(value.policyHash))
-      || !exactKeys(value.verifiedControls, CONTROL_KEYS)
-      || CONTROL_KEYS.some(key => typeof value.verifiedControls[key] !== "boolean")
+      || !(value.sdkVersion === null || value.sdkVersion === "18.12.5")
+      || !(value.provider === null || value.provider === "openai-codex")
+      || !(value.modelId === null || value.modelId === COUNCIL_MODEL)
+      || !(value.api === null || value.api === "openai-codex-responses")
+      || !(value.effort === null || value.effort === COUNCIL_REASONING_EFFORT)
+      || !(value.endpoint === null || value.endpoint === "https://chatgpt.com/backend-api/codex/responses")
+      || !(value.transportMode === null || value.transportMode === "sse-only")
+      || !["PASS", "NOT_RUN", "REJECTED"].includes(value.bodyAudit)
+      || ![value.payloadObservationCount, value.fetchFenceCallCount, value.providerDispatchCount]
+        .every(count => Number.isInteger(count) && count >= 0 && count <= 8)
       || !validStringArray(value.reasons, 0, MAX_REASONS, 512)) return false;
-  const allControls = CONTROL_KEYS.every(key => value.verifiedControls[key]);
   if (value.status === "VERIFIED") {
-    return allControls && value.policyHash !== null && value.executableVersion === "0.160.0" && value.reasons.length === 0;
+    return value.sdkVersion === "18.12.5"
+      && value.provider === "openai-codex"
+      && value.modelId === COUNCIL_MODEL
+      && value.api === "openai-codex-responses"
+      && value.effort === COUNCIL_REASONING_EFFORT
+      && value.endpoint === "https://chatgpt.com/backend-api/codex/responses"
+      && value.transportMode === "sse-only"
+      && value.bodyAudit === "PASS"
+      && value.payloadObservationCount === 1
+      && value.fetchFenceCallCount === 0
+      && value.providerDispatchCount === 0
+      && value.reasons.length === 0;
   }
-  return value.reasons.length > 0 || !allControls;
+  return value.reasons.length > 0;
 }
 
 function createRequestBase(runId, callId, snapshotHash, snapshot) {
@@ -419,9 +445,21 @@ export async function runCouncilReview({
     return noData(runId, snapshotHash, "A trusted review transport is unavailable.");
   }
 
+  const leadRequest = freezeDeep({
+    ...createRequestBase(runId, randomUUID(), snapshotHash, frozenSnapshot),
+    role: "lead",
+  });
+  try {
+    if (canonicalBytes(leadRequest).byteLength > MAX_REQUEST_BYTES) {
+      return noData(runId, snapshotHash, "Lead request exceeds the 64 KiB review packet limit.");
+    }
+  } catch {
+    return noData(runId, snapshotHash, "Lead request cannot be serialized safely.");
+  }
+
   let preflight;
   try {
-    preflight = await transport.preflight();
+    preflight = await transport.preflight({ auditRequest: leadRequest });
   } catch {
     return noData(runId, snapshotHash, "Review host preflight failed.");
   }
@@ -445,18 +483,6 @@ export async function runCouncilReview({
   if (assessment.status !== "REVIEW") {
     if (assessment.reasons.length) assessment.reasons.forEach(reason => addReason(reasons, reason));
     else addReason(reasons, "Investment assessment is NO_DATA.");
-  }
-
-  let leadRequest = freezeDeep({
-    ...createRequestBase(runId, randomUUID(), snapshotHash, frozenSnapshot),
-    role: "lead",
-  });
-  try {
-    if (canonicalBytes(leadRequest).byteLength > MAX_REQUEST_BYTES) {
-      return noData(runId, snapshotHash, "Lead request exceeds the 64 KiB review packet limit.");
-    }
-  } catch {
-    return noData(runId, snapshotHash, "Lead request cannot be serialized safely.");
   }
 
   let leadRaw = null;

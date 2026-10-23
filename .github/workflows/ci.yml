@@ -47,6 +47,21 @@ jobs:
             package-lock.json
             web/package-lock.json
             mesh/package-lock.json
+            mesh/council/runtime/package-lock.json
+
+      - name: Install Brave for browser checks
+        run: |
+          sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+          sudo curl -fsSLo /etc/apt/sources.list.d/brave-browser-release.sources https://brave-browser-apt-release.s3.brave.com/brave-browser.sources
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y brave-browser
+          brave-browser --version
+          echo "FALCON_CHROME_BIN=$(command -v brave-browser)" >> "$GITHUB_ENV"
+
+      - name: Set up isolated Council Bun runtime
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
 
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v2
@@ -59,6 +74,7 @@ jobs:
           npm ci
           npm ci --prefix web
           npm ci --prefix mesh
+          npm ci --prefix mesh/council/runtime --ignore-scripts --no-audit --no-fund
 
       - name: Fetch locked Rust dependencies
         run: |
@@ -107,18 +123,55 @@ jobs:
       - name: Run repository verification
         run: npm run verify
 
+      - name: Verify native Council worker controls
+        run: npm --prefix mesh/council/runtime test
+
       - name: Run local MVP Mesh browser journey
         run: |
           npm --prefix web run build:mvp
-          CHROME_BIN="$(command -v google-chrome)"
-          test -n "$CHROME_BIN"
-          FALCON_CHROME_BIN="$CHROME_BIN" node --test web/test/mesh-browser-transport.mjs
-          FALCON_CHROME_BIN="$CHROME_BIN" node web/test/mesh-browser.mjs
+          node --test web/test/mesh-browser-transport.mjs
+          node web/test/mesh-browser.mjs
         env:
           FALCON_MESH_WEB_ROOT: web/dist-mvp
 
       - name: Build Mesh container
         run: docker build --file mesh/Dockerfile --tag falcon-mesh:ci mesh
+
+      - name: Smoke actual packaged Council worker without provider access
+        run: |
+          set -euo pipefail
+          mounts=(
+            --rm --network none
+            --volume "$PWD/mesh/test/council-image-smoke.mjs:/tmp/council-image-smoke.mjs:ro"
+            --volume "$PWD/mesh/council/runtime/test/fixture-broker.mjs:/tmp/fixture-broker.mjs:ro"
+            --volume "$PWD/mesh/test/fixtures/council-image-case.json:/tmp/council-image-case.json:ro"
+          )
+          timeout 90s docker run "${mounts[@]}" falcon-mesh:ci \
+            node /tmp/council-image-smoke.mjs /tmp/council-image-case.json /tmp/fixture-broker.mjs
+          for component in bun worker sdk; do
+            if timeout 90s docker run "${mounts[@]}" --user 0 \
+              --env FALCON_MISSING_COMPONENT="$component" --entrypoint sh falcon-mesh:ci -eu -c '
+                case "$FALCON_MISSING_COMPONENT" in
+                  bun) rm /usr/local/bin/bun ;;
+                  worker) rm /app/council/runtime/worker.ts ;;
+                  sdk) rm -r /app/council/runtime/node_modules/@oh-my-pi/pi-ai ;;
+                  *) exit 2 ;;
+                esac
+                if node /tmp/council-image-smoke.mjs /tmp/council-image-case.json /tmp/fixture-broker.mjs; then
+                  exit 0
+                else
+                  exit 42
+                fi
+              '; then
+              status=0
+            else
+              status=$?
+            fi
+            if [ "$status" -ne 42 ]; then
+              echo "Packaged $component removal did not produce the expected smoke failure (status $status)."
+              exit 1
+            fi
+          done
 
       - name: Smoke Mesh container against disposable PostgreSQL
         run: |
