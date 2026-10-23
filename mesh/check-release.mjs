@@ -8,14 +8,14 @@ const DEFAULT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 // This is the source contract for the mesh-only release, not a Dockerignore parser.
 const RELEASE_INPUTS = [
   'package.json', 'package-lock.json', 'Dockerfile', '.dockerignore', 'railway.toml',
-  'server.mjs', 'http.mjs', 'store.mjs', 'public-graph.mjs', 'lending-store.mjs', 'wallet-auth.mjs', 'domain.mjs',
+  'server.mjs', 'http.mjs', 'activity.mjs', 'store.mjs', 'public-graph.mjs', 'lending-store.mjs', 'wallet-auth.mjs', 'domain.mjs',
   'live.mjs', 'scenario.mjs', 'kamino.mjs', 'kamino-wire.mjs', 'init-db.mjs',
   'yield-data.mjs', 'yield-domain.mjs', 'auth.mjs',
   'limits.mjs', 'wallet-status.mjs', 'transaction-inspection.mjs',
   'council/evidence.ts', 'council/host.mjs',
   'council/omp-host.mjs', 'council/runtime/worker.ts', 'council/runtime/policy.ts',
   'council/runtime/package.json', 'council/runtime/package-lock.json',
-  'research/near-source.mjs', 'research/near-model.mjs', 'research/service.mjs',
+  'research/near-source.mjs', 'research/near-model.mjs', 'research/service.mjs', 'research/activity.mjs',
   'research/review-store.mjs', 'research/review-jobs.mjs',
   'schema.sql', 'migrations/0002_lending.sql', 'migrations/0003_wallet_auth.sql', 'deploy/supabase-permissions.sql',
 ];

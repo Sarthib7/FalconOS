@@ -10,11 +10,17 @@
 
 [VERIFIED SOURCE, R4 native host] Production review composition uses the pinned SDK18.12.5 in an owned Bun1.3.14 worker. Configure an absolute `FALCON_MESH_COUNCIL_BUN` path and normal OMP credential broker discovery. `FALCON_MESH_RESEARCH_REVIEW_OWNERS` defaults to `[]`; wallet login does not grant inference. Legacy CLI-based business review was removed. No signing, custody or spending authority is added.
 
-[VERIFIED LOCAL; LIMITED PROOF] SDK fixture checks reported `8 pass, 0 fail, 60 expect() calls`. An isolated removal of call binding made the native rejection test fail (`0 pass, 1 fail`). Real-account body preflight stopped with zero provider dispatch. Live Lead and a later strict diagnostic Risk returned accepted bindings separately; the original job retained NO_DATA. No single retained job with two accepted responses or built-image success is claimed. CI checks the actual packaged worker and missing Bun/worker/SDK failures without credentials or provider access.
+[VERIFIED LOCAL; LIMITED PROOF] SDK fixture checks reported `8 pass, 0 fail, 60 expect() calls`. An isolated removal of call binding made the native rejection test fail (`0 pass, 1 fail`). Real-account body preflight stopped with zero provider dispatch. Live Lead and a later strict diagnostic Risk returned accepted bindings separately; the original job retained NO_DATA. No single retained job with two accepted responses is claimed.
+
+[VERIFIED CI] Native head `2591fff156f4cb1753b2969654fb4a17c6f4d00a` passed all workflows. Its mandatory container job exercised the real packaged worker and missing Bun/worker/SDK cases without credentials or provider access. [CI run40002915619](https://github.com/Sarthib7/FalconOS/actions/runs/40002915619) proves that image check, not hosted configuration or funded execution.
 
 ```bash
 npm ci --prefix mesh/council/runtime --ignore-scripts --no-audit --no-fund
 ```
+
+[VERIFIED SOURCE, D4 activity] Private `GET /v1/activity` returns the canonical decision/intent trail plus retained research. `GET /v1/research/near/activity` returns the research summaries alone. Server auth selects owner; each history list is bounded to20 records and serialized output to1MiB. Neither read starts capture, publication, review, preflight or provider work. Existing expiry housekeeping may record UNKNOWN. See [the shared read contract](../docs/interfaces.md#owner-activity-read-2026-10-23).
+
+[VERIFIED LOCAL] Mesh reported `tests324, pass324, fail0`; Rust reported29passed. Actual source Mesh auth through native MCP returned HTTP200, research schema1, the bound retained public case and one adopted owner record; the QA session was revoked. Broadening the research owner predicate only in an isolated copy made the permanent privacy test fail (`tests1, pass0, fail1`, capped returned rows20 versus expected1).
 
 ## Run
 

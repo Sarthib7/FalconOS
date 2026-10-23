@@ -19,7 +19,7 @@ const DECISION: &str = "12345678-1234-1234-1234-123456789013";
 #[derive(Clone)]
 struct FakeMesh {
     calls: Arc<Mutex<Vec<Value>>>,
-    activity_records: Option<Value>,
+    activity_response: Option<Value>,
 }
 
 async fn mesh(
@@ -38,24 +38,30 @@ async fn mesh(
         "body": body,
     }));
 
-    if path == "v1/lending/intents" {
-        Json(
-            fake.activity_records
-                .clone()
-                .unwrap_or_else(|| json!({"records": []})),
-        )
+    if path == "v1/activity" {
+        Json(fake.activity_response.clone().unwrap_or_else(|| {
+            json!({
+                "trail": [],
+                "counts": {"decisions": 0, "intents": 0},
+                "limit": 20,
+                "research": {
+                    "schemaVersion": 1, "briefing": null, "adopted": [], "reviews": [],
+                    "limit": 20, "executionReady": false
+                }
+            })
+        }))
     } else {
         Json(json!({"ok": true}))
     }
 }
 
-async fn stack(activity_records: Option<Value>) -> (String, Arc<Mutex<Vec<Value>>>) {
+async fn stack(activity_response: Option<Value>) -> (String, Arc<Mutex<Vec<Value>>>) {
     let calls = Arc::new(Mutex::new(Vec::new()));
     let upstream = Router::new()
         .route("/{*path}", any(mesh))
         .with_state(FakeMesh {
             calls: calls.clone(),
-            activity_records,
+            activity_response,
         });
     let upstream_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let upstream_addr = upstream_listener.local_addr().unwrap();
@@ -278,7 +284,7 @@ async fn prepare_amounts_are_positive_and_follow_action_specific_inputs() {
 }
 
 #[tokio::test]
-async fn activity_formats_base_units_exactly_and_omits_malformed_values() {
+async fn activity_delegates_to_mesh_projection_and_keeps_research() {
     let cases = [
         ("zero", "supply", json!("0"), json!("0")),
         ("one", "redeem", json!("1"), json!("0.000001")),
@@ -293,23 +299,38 @@ async fn activity_formats_base_units_exactly_and_omits_malformed_values() {
         ("leading-zero", "supply", json!("01"), Value::Null),
         ("numeric", "redeem", json!(5), Value::Null),
     ];
-    let records = cases
+    let trail = cases
         .iter()
         .enumerate()
-        .map(|(index, (_, action, base_units, _))| {
-            json!({
+        .map(|(index, (_, action, _, expected))| {
+            let created_at = "2030-01-01T00:00:00.000Z";
+            let amount_key = if *action == "redeem" {
+                "amountReceiptTokens"
+            } else {
+                "amountUsdc"
+            };
+            let mut intent = json!({
                 "id": format!("00000000-0000-0000-0000-{index:012x}"),
-                "createdAt": "2030-01-01T00:00:00.000Z",
-                "request": {
-                    "action": action,
-                    "wallet": "11111111111111111111111111111111",
-                    "inputBaseUnits": base_units,
-                },
+                "createdAt": created_at,
+                "action": action,
+                "wallet": "11111111111111111111111111111111",
                 "status": "READY",
-            })
+                "transactionSignature": null,
+            });
+            intent[amount_key] = expected.clone();
+            json!({"at": created_at, "decision": null, "intent": intent})
         })
         .collect::<Vec<_>>();
-    let (url, _) = stack(Some(json!({"records": records}))).await;
+    let activity = json!({
+        "trail": trail,
+        "counts": {"decisions": 0, "intents": cases.len()},
+        "limit": 20,
+        "research": {
+            "schemaVersion": 1, "briefing": null, "adopted": [], "reviews": [],
+            "limit": 20, "executionReady": false
+        }
+    });
+    let (url, calls) = stack(Some(activity.clone())).await;
     let response = call(
         &Client::new(),
         &url,
@@ -319,21 +340,10 @@ async fn activity_formats_base_units_exactly_and_omits_malformed_values() {
     )
     .await;
     assert!(response["result"].get("isError").is_none());
-
-    let trail = response["result"]["structuredContent"]["trail"]
-        .as_array()
-        .unwrap();
-    for (index, (label, action, _, expected)) in cases.iter().enumerate() {
-        let id = format!("00000000-0000-0000-0000-{index:012x}");
-        let row = trail
-            .iter()
-            .find(|entry| entry["intent"]["id"] == id)
-            .unwrap();
-        let amount_key = if *action == "redeem" {
-            "amountReceiptTokens"
-        } else {
-            "amountUsdc"
-        };
-        assert_eq!(row["intent"][amount_key], *expected, "case {label}");
-    }
+    assert_eq!(response["result"]["structuredContent"], activity);
+    let forwarded = calls.lock().await;
+    assert_eq!(forwarded.len(), 1);
+    assert_eq!(forwarded[0]["method"], "GET");
+    assert_eq!(forwarded[0]["path"], "/v1/activity");
+    assert_eq!(forwarded[0]["body"], Value::Null);
 }

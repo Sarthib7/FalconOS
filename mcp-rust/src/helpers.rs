@@ -395,49 +395,6 @@ pub(super) fn public_event(e: &Value) -> Value {
     }
     json!({"id":e["id"],"requestId":e["requestId"],"intentId":e["intentId"],"createdAt":e["createdAt"],"kind":e["kind"],"data":data})
 }
-pub(super) fn activity(d: &Value, i: &Value) -> Value {
-    let ds = d["records"].as_array().cloned().unwrap_or_default();
-    let its = i["records"].as_array().cloned().unwrap_or_default();
-    let mut by = BTreeMap::new();
-    for x in &ds {
-        by.insert(x["id"].as_str().unwrap_or("").to_string(),json!({"id":x["id"],"createdAt":x["createdAt"],"status":x["analysis"]["status"],"summary":x["analysis"]["summary"],"expiresAt":x["analysis"]["expiresAt"]}));
-    }
-    let mut used = std::collections::HashSet::new();
-    let mut trail = vec![];
-    for x in &its {
-        let did = x["request"]["decisionId"].as_str();
-        let decision = did.map(|id| {
-            used.insert(id.to_string());
-            by.get(id).cloned().unwrap_or(
-                json!({"id":id,"createdAt":null,"status":null,"summary":null,"expiresAt":null}),
-            )
-        });
-        let action = x["request"]["action"].as_str().unwrap_or("");
-        let mut intent = json!({"id":x["id"],"createdAt":x["createdAt"],"action":x["request"]["action"],"wallet":x["request"]["wallet"],"status":x["status"],"transactionSignature":x["signature"]});
-        intent[if action == "redeem" {
-            "amountReceiptTokens"
-        } else {
-            "amountUsdc"
-        }] = x["request"]["inputBaseUnits"]
-            .as_str()
-            .and_then(units_from_base)
-            .map(Value::from)
-            .unwrap_or(Value::Null);
-        trail.push(json!({"at":x["createdAt"],"decision":decision,"intent":intent}));
-    }
-    for (id, dec) in by {
-        if !used.contains(&id) {
-            trail.push(json!({"at":dec["createdAt"],"decision":dec,"intent":null}))
-        }
-    }
-    trail.sort_by(|a, b| {
-        b["at"]
-            .as_str()
-            .unwrap_or("")
-            .cmp(a["at"].as_str().unwrap_or(""))
-    });
-    json!({"trail":trail,"counts":{"decisions":ds.len(),"intents":its.len()},"limit":20})
-}
 
 #[cfg(test)]
 mod research_input_tests {

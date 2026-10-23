@@ -264,6 +264,19 @@ export function createStore(pool, { capture = captureLiveSource, now = () => new
       return { manifestRevisionId: head.revisionId, manifest, case: manifest.case };
     }, 'shared');
   }
+  async function getRetainedPublicResearchCase() {
+    return transaction(PUBLIC_OWNER_ID, false, async client => {
+      const result = await client.query(`
+        SELECT r.* FROM falcon_mesh.source_heads h
+        JOIN falcon_mesh.source_revisions r
+          ON r.owner_id = h.owner_id AND r.source_key = h.source_key AND r.revision_id = h.revision_id
+        WHERE h.owner_id = $1 AND h.source_key = $2`,
+      [PUBLIC_OWNER_ID, RESEARCH_SOURCE_KEY]);
+      if (!result.rows.length) return null;
+      return readResearchManifest(result.rows[0]).case;
+    }, 'shared');
+  }
+
 
   async function getPublicResearchCase(caseId) {
     const id = uuid(caseId);
@@ -573,6 +586,9 @@ export function createStore(pool, { capture = captureLiveSource, now = () => new
     async getPublicResearchBundle() {
       return getPublicResearchBundle();
     },
+    async getRetainedPublicResearchCase() {
+      return getRetainedPublicResearchCase();
+    },
 
     async getPublicResearchCase(caseId) {
       return getPublicResearchCase(caseId);
@@ -737,6 +753,23 @@ export function createStore(pool, { capture = captureLiveSource, now = () => new
       const result = await pool.query("SELECT id, created_at, analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND analysis->>'recordKind' LIKE 'near-research/adopted/%' ORDER BY created_at DESC, id DESC LIMIT 20", [owner]);
       return result.rows.map(row => ({ id: row.id, createdAt: new Date(row.created_at).toISOString(), analysis: row.analysis }));
     },
+    async listResearchActivityAnalyses(owner) {
+      ownerId(owner);
+      const result = await pool.query(`
+        SELECT id, created_at, analysis->>'snapshotHash' AS snapshot_hash,
+          analysis->'modelResult'->'investmentAssessment'->>'status' AS investment_status
+        FROM falcon_mesh.analyses
+        WHERE owner_id = $1 AND analysis->>'recordKind' = $2
+        ORDER BY created_at DESC, id DESC LIMIT 20`,
+      [owner, RESEARCH_ANALYSIS_KIND]);
+      return result.rows.map(row => ({
+        analysisId: row.id,
+        createdAt: new Date(row.created_at).toISOString(),
+        snapshotHash: row.snapshot_hash,
+        investmentStatus: row.investment_status,
+      }));
+    },
+
 
     async getDecision(owner, id) {
       ownerId(owner);

@@ -153,6 +153,24 @@ function envelope(claim, state, phase, result) {
     executionReady: false,
   };
 }
+function activityReview(job, recordedAt) {
+  const result = job.result;
+  return {
+    jobId: job.jobId,
+    requestId: job.requestId,
+    analysisId: job.analysisId,
+    snapshotHash: job.snapshotHash,
+    state: job.state,
+    phase: job.phase,
+    resultStatus: result?.status ?? null,
+    summary: typeof result?.lead?.thesis === 'string' ? result.lead.thesis : null,
+    riskReason: typeof result?.risk?.reason === 'string' ? result.risk.reason : null,
+    reasons: result?.reasons ?? [],
+    recordedAt,
+    executionReady: false,
+  };
+}
+
 function assertClaim(row) {
   const analysis = row?.analysis;
   if (!row || !isRecord(analysis) || analysis.recordKind !== CLAIM_KIND
@@ -222,7 +240,7 @@ export function createReviewJobStore(pool) {
     return result.rows[0] ? assertClaim(result.rows[0]) : null;
   }
 
-  async function terminalForClaim(client, owner, claim) {
+  async function terminalForActivity(client, owner, claim) {
     const result = await client.query(
       'SELECT id, request_id, created_at, analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND request_id = $2 LIMIT 1',
       [owner, claim.analysis.terminalRequestId],
@@ -240,23 +258,35 @@ export function createReviewJobStore(pool) {
     if (terminal.state === 'UNKNOWN' && (resultValue.status !== 'NO_DATA' || resultValue.proposal !== null)) {
       fail('STORAGE_UNAVAILABLE', 'Retained unknown review result is invalid.');
     }
-    return envelope(claim, terminal.state, 'TERMINAL', resultValue);
+    return {
+      job: envelope(claim, terminal.state, 'TERMINAL', resultValue),
+      recordedAt: new Date(row.created_at).toISOString(),
+    };
   }
 
-  async function phaseForClaim(client, owner, claim) {
+  async function terminalForClaim(client, owner, claim) {
+    return (await terminalForActivity(client, owner, claim))?.job ?? null;
+  }
+
+  async function latestPhaseForClaim(client, owner, claim) {
     const result = await client.query(
-      'SELECT analysis FROM falcon_mesh.analyses '
-        + 'WHERE owner_id = $1 AND analysis->>\'recordKind\' = $2 AND analysis->>\'jobId\' = $3 '
-        + 'ORDER BY (analysis->>\'phaseIndex\')::int DESC LIMIT 1',
+      `SELECT analysis, created_at FROM falcon_mesh.analyses
+       WHERE owner_id = $1 AND analysis->>'recordKind' = $2 AND analysis->>'jobId' = $3
+       ORDER BY (analysis->>'phaseIndex')::int DESC LIMIT 1`,
       [owner, PHASE_KIND, claim.id],
     );
-    if (!result.rows.length) return 'PREFLIGHT';
-    const analysis = result.rows[0].analysis;
+    if (!result.rows.length) return { phase: 'PREFLIGHT', recordedAt: new Date(claim.created_at).toISOString() };
+    const row = result.rows[0];
+    const analysis = row.analysis;
     if (!isRecord(analysis) || analysis.recordKind !== PHASE_KIND || analysis.jobId !== claim.id
         || !PHASES.has(analysis.phase) || analysis.phaseIndex !== PHASE_INDEX[analysis.phase]) {
       fail('STORAGE_UNAVAILABLE', 'Retained review phase record is invalid.');
     }
-    return analysis.phase;
+    return { phase: analysis.phase, recordedAt: new Date(row.created_at).toISOString() };
+  }
+
+  async function phaseForClaim(client, owner, claim) {
+    return (await latestPhaseForClaim(client, owner, claim)).phase;
   }
 
   async function insertRecord(client, owner, { id, requestId, at, graph, analysis }) {
@@ -339,6 +369,37 @@ export function createReviewJobStore(pool) {
   }
 
   return {
+    async listActivity(owner) {
+      ownerId(owner);
+      return transaction(owner, async client => {
+        const roots = await client.query(
+          "SELECT id, request_id, created_at, analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND analysis->>'recordKind' = $2 ORDER BY created_at DESC, id DESC LIMIT 20",
+          [owner, CLAIM_KIND],
+        );
+        const activity = [];
+        for (const row of roots.rows) {
+          const claim = assertClaim(row);
+          let retained = await terminalForActivity(client, owner, claim);
+          if (!retained) {
+            const clock = await databaseClock(client);
+            if (Date.parse(clock.at) >= Date.parse(claim.analysis.deadlineAt)) {
+              await appendTerminal(client, owner, claim, 'UNKNOWN', noDataResult(claim), clock.at);
+              retained = await terminalForActivity(client, owner, claim);
+              if (!retained) fail('STORAGE_UNAVAILABLE', 'Expired review state was not retained.');
+            } else {
+              const lastPhase = await latestPhaseForClaim(client, owner, claim);
+              retained = {
+                job: envelope(claim, 'PENDING', lastPhase.phase, null),
+                recordedAt: lastPhase.recordedAt,
+              };
+            }
+          }
+          activity.push(activityReview(retained.job, retained.recordedAt));
+        }
+        return activity;
+      });
+    },
+
     async lookup(owner, input) {
       ownerId(owner);
       exactKeys(input, ['requestId', 'analysisId'], 'Review lookup');
