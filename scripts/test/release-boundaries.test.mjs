@@ -10,6 +10,12 @@ const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const WEB_CHECK = join(ROOT, 'web/scripts/verify-release.mjs');
 const MESH_CHECK = join(ROOT, 'mesh/check-release.mjs');
 
+const NEAR_RESEARCH_RUNTIME_INPUTS = [
+  'council/evidence.ts', 'council/host.mjs',
+  'research/near-source.mjs', 'research/near-model.mjs', 'research/service.mjs',
+  'research/review-store.mjs', 'research/review-jobs.mjs',
+];
+
 async function checkout(t, component) {
   const root = await mkdtemp(join(tmpdir(), 'falcon-release-test-'));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -56,7 +62,7 @@ function rejected(result, diagnostic) {
 test('REPO-VERIFY-1: website-only checkout builds all production routes with its declared mesh inputs', async t => {
   const root = await checkout(t, 'web');
   const report = passed(check(WEB_CHECK, root));
-  assert.equal(report.routes, 8);
+  assert.equal(report.routes, 9);
   assert.equal(report.artifactWritten, false);
 });
 
@@ -171,6 +177,16 @@ test('REPO-VERIFY-1: API rejects an omitted transitive runtime file', async t =>
   const root = await checkout(t, 'mesh');
   await rm(join(root, 'mesh/live.mjs'));
   rejected(check(MESH_CHECK, root), /missing.*mesh\/live\.mjs/);
+});
+
+test('NEAR-RESEARCH-1: API rejects each omitted research runtime dependency', async t => {
+  const root = await checkout(t, 'mesh');
+  for (const input of NEAR_RESEARCH_RUNTIME_INPUTS) {
+    const target = join(root, 'mesh', input);
+    await rm(target);
+    rejected(check(MESH_CHECK, root), new RegExp('missing.*mesh/' + input));
+    await cp(join(ROOT, 'mesh', input), target);
+  }
 });
 
 test('REPO-VERIFY-1: API rejects an omitted lending migration', async t => {
