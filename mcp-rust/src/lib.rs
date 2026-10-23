@@ -37,7 +37,7 @@ use uuid::Uuid;
 mod helpers;
 use helpers::*;
 mod prep;
-pub const TOOL_NAMES: [&str; 14] = [
+pub const TOOL_NAMES: [&str; 19] = [
     "falcon_public_graph",
     "falcon_connect",
     "falcon_connect_verify",
@@ -52,18 +52,27 @@ pub const TOOL_NAMES: [&str; 14] = [
     "falcon_wallet_status",
     "falcon_decode_transaction",
     "falcon_self_test",
+    "falcon_research_case",
+    "falcon_replay_research_case",
+    "falcon_research_source",
+    "falcon_adopt_research_case",
+    "falcon_review_research_case",
 ];
 pub const SCHEMA_FINGERPRINT: &str =
-    "sha256:8a5230bd2cd9cf373b9a84706759723742a1c9cdf94f482f3752cb427674c09c";
+    "sha256:a30618874ed40da8ff60a1812177e203d34eeb6dde39d04673f02ab366c262f3";
 const SESSION_RE: &str = r"^wsi1_[A-Za-z0-9_-]{20,}$";
 const UUID_RE: &str =
     r"^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$";
 const WALLET_RE: &str = r"^[1-9A-HJ-NP-Za-km-z]{32,44}$";
 const USDC_RE: &str = r"^(0|[1-9]\d*)(\.\d{1,6})?$";
 const BODY_LIMIT: usize = 256 * 1024;
-const FIXTURE: &str = include_str!("../fixtures/node-0.4.0.json");
-const SELF_TEST_FIXTURE: &str = include_str!("../fixtures/node-self-test-0.4.0.json");
-const INSTRUCTIONS: &str = "FalconOS Solana Devnet tools. The public live market graph is the first functional call and needs no wallet, funds, login, or signer. Call falcon_self_test({}) for versioned capability scope and specific unavailable reasons. Unlisted capabilities are unsupported; metadata does not prove backend availability or action readiness. Call falcon_public_graph({}) first. It reads only fixed public-market evidence; OBSERVED is technical data, not a personalized REVIEW, recommendation, or execution approval. NO_DATA never falls back to an older graph. Custom graph selection is not supported. Policy identifiers and version are graph metadata, not owner mandates or durable decision IDs. Never invent proposed amount, owner maximum, book floor, or evidence-age limit. Reuse an existing unexpired session. Only sign a new wallet-ownership message when one is required for owner-bound adoption, decisions, or execution records; sessions last 30 minutes. For owner-bound flow: falcon_refresh_evidence adopts the public graph into program and reserve records at one exact graphRevision; falcon_reserve_decision requires that analysisId and explicit human-provided scenario values; falcon_prepare_transaction uses the public-only lending route. Supply needs the returned REVIEW decisionId and stays capped at 1 USDC (1000000 base units) on Devnet. Redeem needs fresh adopted public evidence but no decision. For every signature, show the exact message or transaction and get separate human approval. Falcon never holds keys, signs, or broadcasts. The human alone signs and broadcasts the exact registered transaction. falcon_wallet_status, falcon_decode_transaction, falcon_public_graph, and falcon_self_test are public read-only tools. Self-test is metadata only, not health, signer, funds, or transaction readiness.";
+const FIXTURE: &str = include_str!("../fixtures/node-0.5.0.json");
+const INSTRUCTIONS: &str = concat!(
+    "Falcon MCP exposes publisher-reported NEAR/mainnet research separately from legacy Solana/Devnet lending and execution tools. NEAR case/source content and replay results are publisher-reported, not independently verified. Public case/replay/source calls accept no session, owner data, or auth. Adoption and review require a Falcon owner session; review also requires a verified host/operator grant and promptly returns the retained async job envelope instead of waiting for model completion. Review does not authorize execution. Metadata/configuration do not establish runtime readiness or grant verification. ",
+    "Unlisted capabilities are unsupported. For the legacy Devnet flow, call falcon_public_graph({}) first; it reads only fixed public-market evidence. OBSERVED is technical data, not a personalized REVIEW, recommendation, or execution approval. NO_DATA never falls back to an older graph. Custom graph selection is not supported. Policy identifiers and version are graph metadata, not owner mandates or durable decision IDs. Never invent proposed amount, owner maximum, book floor, or evidence-age limit. ",
+    "Reuse an existing unexpired session. Only sign a new wallet-ownership message when one is required for owner-bound adoption, decisions, or execution records; sessions last 30 minutes. For owner-bound Devnet flow: falcon_refresh_evidence adopts the public graph into program and reserve records at one exact graphRevision; falcon_reserve_decision requires that analysisId and explicit human-provided scenario values; falcon_prepare_transaction uses the public-only lending route. Supply needs the returned REVIEW decisionId and stays capped at 1 USDC (1000000 base units) on Devnet. Redeem needs fresh adopted public evidence but no decision. ",
+    "For every signature, show the exact message or transaction and get separate human approval. Falcon never holds keys, signs, or broadcasts. The human alone signs and broadcasts the exact registered transaction. falcon_wallet_status, falcon_decode_transaction, falcon_public_graph, and falcon_self_test are public read-only tools. falcon_self_test reports metadata only; it does not test health, backend readiness, signer, funds, execution readiness, or a verified research grant."
+);
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -106,7 +115,10 @@ impl Config {
             || m.query().is_some()
             || m.fragment().is_some()
         {
-            return Err("FALCON_MESH_API_URL must be an http(s) URL without credentials, query, or fragment.".into());
+            return Err(
+				"FALCON_MESH_API_URL must be an http(s) URL without credentials, query, or fragment."
+					.into(),
+			);
         }
         let loopback = matches!(
             m.host_str(),
@@ -119,11 +131,17 @@ impl Config {
         }
         let bind_loop = matches!(host.as_str(), "localhost" | "127.0.0.1" | "::1" | "[::1]");
         if !bind_loop && allowed_hosts.is_empty() {
-            return Err("FALCON_MCP_ALLOWED_HOSTS is required when FALCON_MCP_HOST is not a loopback address.".into());
+            return Err(
+				"FALCON_MCP_ALLOWED_HOSTS is required when FALCON_MCP_HOST is not a loopback address."
+					.into(),
+			);
         }
         let hostname=Regex::new(r"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$|^\[[0-9a-f:]+\]$").unwrap();
         if allowed_hosts.iter().any(|h| !hostname.is_match(h)) {
-            return Err("FALCON_MCP_ALLOWED_HOSTS must list bare hostnames without scheme, port or wildcard.".into());
+            return Err(
+				"FALCON_MCP_ALLOWED_HOSTS must list bare hostnames without scheme, port or wildcard."
+					.into(),
+			);
         }
         fn n(name: &str, default: u64, min: u64, max: u64) -> Result<u64, String> {
             let x = std::env::var(name).unwrap_or_default();
@@ -454,6 +472,46 @@ fn fingerprint(tools: &[ToolDef]) -> String {
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
+fn self_test_capabilities() -> &'static Value {
+    static CAPABILITIES: OnceLock<Value> = OnceLock::new();
+    CAPABILITIES.get_or_init(|| {
+        let mut metadata: Value =
+            serde_json::from_str(include_str!("../fixtures/capabilities.json"))
+                .expect("checked in capability contract");
+        metadata["configurationProvesReadiness"] = json!(false);
+        metadata["supported"]
+			.as_array_mut()
+			.expect("capability scopes are an array")
+			.extend([
+				json!({
+					 "id": "near-public-research",
+					 "domain": "research",
+					 "chain": "near",
+					 "network": "mainnet",
+					 "evidence": "publisher-reported",
+					 "actions": ["read", "replay", "read-source"],
+					 "executionSupported": false,
+					 "tools": ["falcon_research_case", "falcon_replay_research_case", "falcon_research_source"]
+				}),
+				json!({
+					 "id": "near-owner-bound-research",
+					 "domain": "research",
+					 "chain": "near",
+					 "network": "mainnet",
+					 "evidence": "publisher-reported",
+					 "actions": ["adopt", "review"],
+					 "authorization": {
+						  "adopt": "authenticated-owner-session",
+						  "review": "authenticated-owner-session-and-verified-host-operator-grant"
+					 },
+					 "reviewMode": "retained-asynchronous-job-envelope",
+					 "executionSupported": false,
+					 "tools": ["falcon_adopt_research_case", "falcon_review_research_case"]
+				}),
+			]);
+        metadata
+    })
+}
 fn tool_defs() -> &'static [ToolDef] {
     static TOOLS: OnceLock<Vec<ToolDef>> = OnceLock::new();
     TOOLS.get_or_init(|| serde_json::from_str(FIXTURE).expect("checked in Node tool fixture"))
@@ -680,7 +738,7 @@ struct FalconHandler {
 impl ServerHandler for FalconHandler {
     fn get_info(&self) -> ServerConfig {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::new("falcon-mcp", "0.4.0"))
+            .with_server_info(Implementation::new("falcon-mcp", env!("CARGO_PKG_VERSION")))
             .with_instructions(INSTRUCTIONS)
     }
     async fn list_tools(
@@ -783,24 +841,179 @@ async fn dispatch(st: &AppState, name: &str, args: &Value) -> Result<Value, Tool
         async move { client.post(&path, body, session.as_deref(), ms).await }
     };
     match name {
- "falcon_public_graph"=>{let x=g("/v1/public/graph/live",None,15000).await?;Ok(project_graph(&x))},
- "falcon_connect"=>{
-  let x=p("/v1/auth/wallet/challenge",json!({"address":args["wallet"]}),None,15000).await?;
-  let origin=Url::parse(&mesh.origin).ok();let hostname=origin.as_ref().and_then(Url::host_str).unwrap_or("");let host=match origin.as_ref().and_then(|u|u.port()){Some(port)=>format!("{hostname}:{port}"),None=>hostname.to_owned()};let expires=x["expiresAt"].as_str().unwrap_or("");
-  Ok(json!({"challengeId":x["challengeId"],"message":x["message"],"expiresAt":x["expiresAt"],"next":format!("Show the message to your human. Check that it names {host} and contains no transaction, transfer or spending language. The human alone signs these exact UTF-8 message bytes with wallet signMessage, then provides the 64-byte signature to falcon_connect_verify. The challenge expires at {expires}.")}))
- },
- "falcon_connect_verify"=>{let sig=normalize_signature(args["signature"].as_str().unwrap_or(""))?;let x=p("/v1/auth/wallet/verify",json!({"challengeId":args["challengeId"],"signature":sig}),None,15000).await.map_err(|e|if e.code=="UNAUTHORIZED"{ToolFailure{code:e.code,message:format!("{} Call falcon_connect for a new challenge and sign it again.",e.message),retry:e.retry}}else{e})?;Ok(json!({"session":x["sessionToken"],"walletAddress":x["walletAddress"],"expiresAt":x["expiresAt"],"note":"Pass this session to the other falcon_ tools and reuse it until it expires or is revoked; do not sign in again while it remains valid. It lasts 30 minutes and anyone holding it can act as this wallet in Falcon on Devnet. Do not share it. Call falcon_disconnect when finished."}))},
- "falcon_disconnect"=>{p("/v1/auth/wallet/logout",json!({}),sess,15000).await?;Ok(json!({"disconnected":true}))},
- "falcon_yield_opportunities"=>{let mut x=g("/v1/yield/opportunities",sess,15000).await?;let mut limits=vec!["Yield data is indexed by a third-party provider and may be stale, incomplete or wrong.","APY is a reported rate, not a realized return.","Nothing here is guaranteed. Execution through Falcon is Devnet only."].into_iter().map(Value::from).collect::<Vec<_>>();if let Some(a)=x["limits"].as_array(){limits.extend(a.iter().filter(|v|v.is_string()).cloned())}x["limits"]=json!(limits);Ok(x)},
- "falcon_refresh_evidence"=>{let x=p("/v1/public/graph/adopt",json!({"requestId":id(),"reserveRequestId":id()}),sess,15000).await?;Ok(project_adoption(&x))},
- "falcon_reserve_decision"=>{let x=p("/v1/public/decisions/reserve",json!({"requestId":id(),"analysisId":args["analysisId"],"scenario":{"proposedUnits":to_units(args["proposedUsdc"].as_str().unwrap())?,"maxProposedUnits":to_units(args["maxUsdc"].as_str().unwrap())?,"minBookLiquidityUnits":to_units(args["minBookLiquidityUsdc"].as_str().unwrap())?,"maxObservationAgeSeconds":args["maxEvidenceAgeSeconds"]}}),sess,15000).await?;Ok(project_decision(&x,args))},
- "falcon_prepare_transaction"=>prep::prepare(mesh,args).await,
- "falcon_submit_signed"=>{let ident=args["intentId"].as_str().unwrap().to_ascii_lowercase();let rid=args.get("requestId").and_then(Value::as_str).map(str::to_owned).unwrap_or_else(id);let x=p(&format!("/v1/lending/intents/{ident}/submit"),json!({"requestId":rid,"transactionBase64":args["signedTransactionBase64"]}),sess,15000).await?;Ok(json!({"event":public_event(&x["event"]),"next":"Falcon has registered the signed bytes but has not broadcast them and does not return them. Keep the signedTransactionBase64 provided by the human. The human alone reviews and broadcasts those same bytes to Solana Devnet with their own wallet or RPC. If interrupted, the human retries identical bytes while the blockhash remains valid, then call falcon_check_receipt."}))},
- "falcon_check_receipt"=>{let ident=args["intentId"].as_str().unwrap().to_ascii_lowercase();let rid=args.get("requestId").and_then(Value::as_str).map(str::to_owned).unwrap_or_else(id);let x=p(&format!("/v1/lending/intents/{ident}/receipt"),json!({"requestId":rid}),sess,15000).await?;Ok(json!({"event":public_event(&x["event"])}))},
- "falcon_activity"=>{let (d,i)=tokio::join!(g("/v1/decisions",sess,15000),g("/v1/lending/intents",sess,15000));Ok(activity(&d?,&i?))},
- "falcon_wallet_status"=>{let mut b=json!({"wallet":args["wallet"],"chain":"solana","network":"devnet"});if let Some(a)=args.get("forAction"){b["forAction"]=a.clone()}p("/v1/wallet/status",b,None,60000).await},
- "falcon_decode_transaction"=>p("/v1/transactions/decode",json!({"transactionBase64":args["transactionBase64"],"chain":"solana","network":"devnet"}),None,15000).await,
- "falcon_self_test"=>{let expected:Value=serde_json::from_str(SELF_TEST_FIXTURE).unwrap();Ok(json!({"serverVersion":"0.4.0","chain":"solana","network":"devnet","tools":TOOL_NAMES,"toolCount":14,"schemaFingerprint":fingerprint(tool_defs()),"capabilities":expected["capabilities"],"readiness":{"signer":"not_checked","funding":"not_checked","transaction":"not_checked"}}))},
- _=>Err(ToolFailure{code:"NOT_FOUND".into(),message:"Unknown tool.".into(),retry:None})
- }
+		"falcon_public_graph" => {
+			let x = g("/v1/public/graph/live", None, 15000).await?;
+			Ok(project_graph(&x))
+		},
+		"falcon_connect" => {
+			let x =
+				p("/v1/auth/wallet/challenge", json!({"address":args["wallet"]}), None, 15000).await?;
+			let origin = Url::parse(&mesh.origin).ok();
+			let hostname = origin.as_ref().and_then(Url::host_str).unwrap_or("");
+			let host = match origin.as_ref().and_then(|u| u.port()) {
+				Some(port) => format!("{hostname}:{port}"),
+				None => hostname.to_owned(),
+			};
+			let expires = x["expiresAt"].as_str().unwrap_or("");
+			Ok(
+				json!({"challengeId":x["challengeId"],"message":x["message"],"expiresAt":x["expiresAt"],"next":format!("Show the message to your human. Check that it names {host} and contains no transaction, transfer or spending language. The human alone signs these exact UTF-8 message bytes with wallet signMessage, then provides the 64-byte signature to falcon_connect_verify. The challenge expires at {expires}.")}),
+			)
+		},
+		"falcon_connect_verify" => {
+			let sig = normalize_signature(args["signature"].as_str().unwrap_or(""))?;
+			let x = p(
+				"/v1/auth/wallet/verify",
+				json!({"challengeId":args["challengeId"],"signature":sig}),
+				None,
+				15000,
+			)
+			.await
+			.map_err(|e| {
+				if e.code == "UNAUTHORIZED" {
+					ToolFailure {
+						code: e.code,
+						message: format!(
+							"{} Call falcon_connect for a new challenge and sign it again.",
+							e.message
+						),
+						retry: e.retry,
+					}
+				} else {
+					e
+				}
+			})?;
+			Ok(
+				json!({"session":x["sessionToken"],"walletAddress":x["walletAddress"],"expiresAt":x["expiresAt"],"note":"Pass this session to the other falcon_ tools and reuse it until it expires or is revoked; do not sign in again while it remains valid. It lasts 30 minutes and anyone holding it can act as this wallet in Falcon on Devnet. Do not share it. Call falcon_disconnect when finished."}),
+			)
+		},
+		"falcon_disconnect" => {
+			p("/v1/auth/wallet/logout", json!({}), sess, 15000).await?;
+			Ok(json!({"disconnected":true}))
+		},
+		"falcon_yield_opportunities" => {
+			let mut x = g("/v1/yield/opportunities", sess, 15000).await?;
+			let mut limits = vec![
+				"Yield data is indexed by a third-party provider and may be stale, incomplete or wrong.",
+				"APY is a reported rate, not a realized return.",
+				"Nothing here is guaranteed. Execution through Falcon is Devnet only.",
+			]
+			.into_iter()
+			.map(Value::from)
+			.collect::<Vec<_>>();
+			if let Some(a) = x["limits"].as_array() {
+				limits.extend(a.iter().filter(|v| v.is_string()).cloned())
+			}
+			x["limits"] = json!(limits);
+			Ok(x)
+		},
+		"falcon_refresh_evidence" => {
+			let x = p(
+				"/v1/public/graph/adopt",
+				json!({"requestId":id(),"reserveRequestId":id()}),
+				sess,
+				15000,
+			)
+			.await?;
+			Ok(project_adoption(&x))
+		},
+		"falcon_reserve_decision" => {
+			let x=p("/v1/public/decisions/reserve",json!({"requestId":id(),"analysisId":args["analysisId"],"scenario":{"proposedUnits":to_units(args["proposedUsdc"].as_str().unwrap())?,"maxProposedUnits":to_units(args["maxUsdc"].as_str().unwrap())?,"minBookLiquidityUnits":to_units(args["minBookLiquidityUsdc"].as_str().unwrap())?,"maxObservationAgeSeconds":args["maxEvidenceAgeSeconds"]}}),sess,15000).await?;
+			Ok(project_decision(&x, args))
+		},
+		"falcon_prepare_transaction" => prep::prepare(mesh, args).await,
+		"falcon_submit_signed" => {
+			let ident = args["intentId"].as_str().unwrap().to_ascii_lowercase();
+			let rid = args
+				.get("requestId")
+				.and_then(Value::as_str)
+				.map(str::to_owned)
+				.unwrap_or_else(id);
+			let x = p(
+				&format!("/v1/lending/intents/{ident}/submit"),
+				json!({"requestId":rid,"transactionBase64":args["signedTransactionBase64"]}),
+				sess,
+				15000,
+			)
+			.await?;
+			Ok(
+				json!({"event":public_event(&x["event"]),"next":"Falcon has registered the signed bytes but has not broadcast them and does not return them. Keep the signedTransactionBase64 provided by the human. The human alone reviews and broadcasts those same bytes to Solana Devnet with their own wallet or RPC. If interrupted, the human retries identical bytes while the blockhash remains valid, then call falcon_check_receipt."}),
+			)
+		},
+		"falcon_check_receipt" => {
+			let ident = args["intentId"].as_str().unwrap().to_ascii_lowercase();
+			let rid = args
+				.get("requestId")
+				.and_then(Value::as_str)
+				.map(str::to_owned)
+				.unwrap_or_else(id);
+			let x = p(
+				&format!("/v1/lending/intents/{ident}/receipt"),
+				json!({"requestId":rid}),
+				sess,
+				15000,
+			)
+			.await?;
+			Ok(json!({"event":public_event(&x["event"])}))
+		},
+		"falcon_activity" => {
+			let (d, i) =
+				tokio::join!(g("/v1/decisions", sess, 15000), g("/v1/lending/intents", sess, 15000));
+			Ok(activity(&d?, &i?))
+		},
+		"falcon_wallet_status" => {
+			let mut b = json!({"wallet":args["wallet"],"chain":"solana","network":"devnet"});
+			if let Some(a) = args.get("forAction") {
+				b["forAction"] = a.clone()
+			}
+			p("/v1/wallet/status", b, None, 60000).await
+		},
+		"falcon_decode_transaction" => {
+			p(
+				"/v1/transactions/decode",
+				json!({"transactionBase64":args["transactionBase64"],"chain":"solana","network":"devnet"}),
+				None,
+				15000,
+			)
+			.await
+		},
+		"falcon_research_case" => {
+			let path = args
+				.get("caseId")
+				.and_then(Value::as_str)
+				.map(|case_id| format!("/v1/public/research/near/cases/{case_id}"))
+				.unwrap_or_else(|| "/v1/public/research/near/case".into());
+			g(&path, None, 45000).await
+		},
+		"falcon_replay_research_case" => {
+			p("/v1/public/research/near/replay", json!({"caseId":args["caseId"]}), None, 45000).await
+		},
+		"falcon_research_source" => {
+			let revision_id = args["revisionId"].as_str().unwrap();
+			g(&format!("/v1/public/research/near/sources/{revision_id}"), None, 45000).await
+		},
+		"falcon_adopt_research_case" => {
+			p(
+				"/v1/research/near/adopt",
+				json!({"requestId":args["requestId"],"publicCaseId":args["publicCaseId"]}),
+				sess,
+				45000,
+			)
+			.await
+		},
+		"falcon_review_research_case" => {
+			p(
+				"/v1/research/near/review",
+				json!({"requestId":args["requestId"],"analysisId":args["analysisId"]}),
+				sess,
+				15000,
+			)
+			.await
+		},
+		"falcon_self_test" => Ok(
+			json!({"serverVersion":env!("CARGO_PKG_VERSION"),"tools":TOOL_NAMES,"toolCount":TOOL_NAMES.len(),"schemaFingerprint":fingerprint(tool_defs()),"capabilities":self_test_capabilities(),"readiness":{"signer":"not_checked","funding":"not_checked","transaction":"not_checked","researchReviewGrant":"not_checked"}}),
+		),
+		_ => {
+			Err(ToolFailure { code: "NOT_FOUND".into(), message: "Unknown tool.".into(), retry: None })
+		},
+	}
 }

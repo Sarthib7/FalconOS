@@ -1,0 +1,671 @@
+[
+  {
+    "name": "falcon_public_graph",
+    "title": "Read the public market graph",
+    "description": "Read the fixed Solana Devnet market graph and technical program/reserve observations for the legacy lending tools. Anonymous and read-only; no wallet, funds, login, or signer. OBSERVED is not a personalized decision or execution approval. No custom graph selector is accepted.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_connect",
+    "title": "Start wallet sign-in",
+    "description": "Step 1 of sign-in. Pass your base58 Solana wallet address. Show the returned message to your human; the human must check the host and sign the exact UTF-8 message with wallet signMessage before falcon_connect_verify.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "wallet": {
+          "type": "string",
+          "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+          "description": "Your Solana wallet address, base58."
+        }
+      },
+      "required": [
+        "wallet"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_connect_verify",
+    "title": "Finish wallet sign-in",
+    "description": "Step 2 of sign-in. Pass the challengeId and the Ed25519 signature of the message (64 bytes, base64 or base58). Returns a session token valid for 30 minutes. This is the only tool that returns a session.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "challengeId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "challengeId returned by falcon_connect."
+        },
+        "signature": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Signature of the exact message, 64 bytes, base64 or base58."
+        }
+      },
+      "required": [
+        "challengeId",
+        "signature"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_disconnect",
+    "title": "End session",
+    "description": "Revoke the session at Falcon. The wallet key is not involved.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session token returned by falcon_connect_verify."
+        }
+      },
+      "required": [
+        "session"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_yield_opportunities",
+    "title": "Read yield opportunities",
+    "description": "Read the current Solana lending yield opportunities from Falcon. Read-only. Data is provider-indexed and APY is not a realized return.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session token returned by falcon_connect_verify."
+        }
+      },
+      "required": [
+        "session"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_refresh_evidence",
+    "title": "Adopt public Devnet evidence",
+    "description": "Adopt the exact current fixed public graph revision into owner-bound program and reserve records. Returns both owner analysis IDs, graphRevision, evidenceSource, and technical analysis results. It does not recapture or substitute older evidence.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session token returned by falcon_connect_verify."
+        }
+      },
+      "required": [
+        "session"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_reserve_decision",
+    "title": "Get reserve decision",
+    "description": "Evaluate a human-proposed Devnet supply against the public graph evidence adopted by falcon_refresh_evidence. Requires its analysisId and explicit proposed amount, maximum, book-liquidity floor, and maximum evidence age; no owner limits are defaulted. REVIEW is not execution approval.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session token returned by falcon_connect_verify."
+        },
+        "analysisId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "Program analysisId returned by falcon_refresh_evidence for the public graph revision."
+        },
+        "proposedUsdc": {
+          "type": "string",
+          "maxLength": 40,
+          "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$",
+          "description": "proposedUsdc as a decimal USDC string, at most 6 decimals, no exponent or sign."
+        },
+        "maxUsdc": {
+          "type": "string",
+          "maxLength": 40,
+          "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$",
+          "description": "maxUsdc as a decimal USDC string, at most 6 decimals, no exponent or sign."
+        },
+        "minBookLiquidityUsdc": {
+          "type": "string",
+          "maxLength": 40,
+          "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$",
+          "description": "minBookLiquidityUsdc as a decimal USDC string, at most 6 decimals, no exponent or sign."
+        },
+        "maxEvidenceAgeSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300,
+          "description": "Oldest acceptable evidence age in seconds, 1 to 300; supplied by the human."
+        }
+      },
+      "required": [
+        "session",
+        "analysisId",
+        "proposedUsdc",
+        "maxUsdc",
+        "minBookLiquidityUsdc",
+        "maxEvidenceAgeSeconds"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_prepare_transaction",
+    "title": "Prepare unsigned Devnet transaction",
+    "description": "Prepare a Devnet supply or redeem only from an adopted public graph analysis. Supply requires amountUsdc and the durable decisionId returned by a matching public REVIEW; redeem requires amountReceiptTokens and forbids amountUsdc and decisionId. The wallet is derived from the session. The human alone chooses whether to sign and broadcasts; this unsigned intent expires in about 120 seconds.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session returned by falcon_connect_verify."
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "supply",
+            "redeem"
+          ]
+        },
+        "amountUsdc": {
+          "type": "string",
+          "maxLength": 40,
+          "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$",
+          "description": "Decimal USDC amount with at most 6 fractional digits; required for supply and forbidden for redeem."
+        },
+        "amountReceiptTokens": {
+          "type": "string",
+          "maxLength": 40,
+          "pattern": "^(0|[1-9]\\d*)(\\.\\d{1,6})?$",
+          "description": "Decimal receipt-token burn amount with at most 6 fractional digits; required for redeem and forbidden for supply."
+        },
+        "analysisId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "UUID returned by falcon_refresh_evidence; required for supply and redeem."
+        },
+        "decisionId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "Durable UUID returned by falcon_reserve_decision for supply; forbidden for redeem. Graph-local policy identifiers are not substitutes."
+        }
+      },
+      "required": [
+        "session",
+        "action",
+        "analysisId"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "supply"
+              }
+            },
+            "required": [
+              "action"
+            ]
+          },
+          "then": {
+            "required": [
+              "amountUsdc",
+              "decisionId"
+            ],
+            "not": {
+              "required": [
+                "amountReceiptTokens"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "redeem"
+              }
+            },
+            "required": [
+              "action"
+            ]
+          },
+          "then": {
+            "required": [
+              "amountReceiptTokens"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "amountUsdc"
+                  ]
+                },
+                {
+                  "required": [
+                    "decisionId"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_submit_signed",
+    "title": "Register signed transaction",
+    "description": "Register wallet-signed transaction bytes (base64) with Falcon. Falcon verifies them against the prepared intent and never broadcasts. Only the human may broadcast the same signed bytes to Solana Devnet.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session token returned by falcon_connect_verify."
+        },
+        "intentId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "intentId returned by falcon_prepare_transaction."
+        },
+        "signedTransactionBase64": {
+          "type": "string",
+          "maxLength": 4096,
+          "description": "The signed transaction, base64."
+        },
+        "requestId": {
+          "description": "Optional idempotency key. Reuse it only to retry the same submission.",
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$"
+        }
+      },
+      "required": [
+        "session",
+        "intentId",
+        "signedTransactionBase64"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_check_receipt",
+    "title": "Check transaction receipt",
+    "description": "Ask Falcon to reconcile the registered transaction against Solana Devnet and record the result.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session token returned by falcon_connect_verify."
+        },
+        "intentId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "intentId returned by falcon_prepare_transaction."
+        },
+        "requestId": {
+          "description": "Optional idempotency key. Reuse it only to retry the same check.",
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$"
+        }
+      },
+      "required": [
+        "session",
+        "intentId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_activity",
+    "title": "Read activity trail",
+    "description": "Read the recent decisions and prepared transactions for this wallet, joined by decision, with each transaction's latest status. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session token returned by falcon_connect_verify."
+        }
+      },
+      "required": [
+        "session"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_wallet_status",
+    "title": "Read Devnet wallet status",
+    "description": "Public read-only account inspection for a base58 Solana wallet on Devnet; no wallet session or Bearer token is sent. Returns the Mesh status fields and human-only faucet guidance. It does not prove signing or transaction readiness.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "wallet": {
+          "type": "string",
+          "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+          "description": "Base58 Solana wallet address to inspect."
+        },
+        "forAction": {
+          "description": "Optional action context for the read-only status response.",
+          "type": "string",
+          "enum": [
+            "supply",
+            "redeem"
+          ]
+        },
+        "chain": {
+          "default": "solana",
+          "description": "Solana only.",
+          "type": "string",
+          "const": "solana"
+        },
+        "network": {
+          "default": "devnet",
+          "description": "Devnet only.",
+          "type": "string",
+          "const": "devnet"
+        }
+      },
+      "required": [
+        "wallet"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_decode_transaction",
+    "title": "Decode a Solana transaction",
+    "description": "Public read-only Devnet transaction inspection. Accepts bounded base64 bytes and returns decoded message/signature context and risk flags; no session, signing, simulation, or broadcast occurs. Context attestation reflects only the requested chain and network.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "transactionBase64": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 1644,
+          "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+          "description": "Base64-encoded serialized Solana transaction, maximum 1644 characters (1232 bytes)."
+        },
+        "chain": {
+          "default": "solana",
+          "description": "Solana only.",
+          "type": "string",
+          "const": "solana"
+        },
+        "network": {
+          "default": "devnet",
+          "description": "Devnet only.",
+          "type": "string",
+          "const": "devnet"
+        }
+      },
+      "required": [
+        "transactionBase64"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_self_test",
+    "title": "Read MCP metadata self-test",
+    "description": "Metadata-only report of server version, tool schemas, publisher-reported NEAR/mainnet research scope, and legacy Solana/Devnet tool scope, including the verified host/operator grant required for research review. Unlisted capabilities are unsupported. It does not probe Mesh, health, backend readiness, signer support, funds, transaction readiness, or whether a research grant is configured or verified.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_research_case",
+    "title": "Read a public NEAR research case",
+    "description": "Read the latest or a saved publisher-reported NEAR/mainnet public research case. Anonymous: no session, owner data, or authorization token is accepted or sent. Omit caseId to read the latest case or provide a UUID to read one saved case. Publisher-reported content is not independently verified and does not establish portfolio status or execution readiness.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "caseId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "Optional public case UUID; omit to read the latest case."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_replay_research_case",
+    "title": "Replay a public NEAR research case",
+    "description": "Request a replay of a publisher-reported NEAR/mainnet public research case. Anonymous: no session, owner data, or authorization token is accepted or sent. This returns the bounded backend report and is not independent verification, a recommendation, or execution approval.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "caseId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "Public case UUID to replay."
+        }
+      },
+      "required": [
+        "caseId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_research_source",
+    "title": "Read a public NEAR research source",
+    "description": "Read one publisher-reported NEAR/mainnet public source revision. Anonymous: no session, owner data, or authorization token is accepted or sent. Returned source material is publisher-reported and does not establish portfolio status or execution readiness.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "revisionId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "Publisher source revision UUID to read."
+        }
+      },
+      "required": [
+        "revisionId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_adopt_research_case",
+    "title": "Adopt a NEAR research case",
+    "description": "Create an authenticated owner-bound adoption for a public NEAR/mainnet research case. Requires a Falcon wallet session. Supply and reuse the exact requestId to retry the same adoption; this tool never generates an idempotency key. Adoption is not spending or execution authorization.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": {
+          "type": "string",
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session token returned by falcon_connect_verify."
+        },
+        "requestId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry."
+        },
+        "publicCaseId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "UUID of the public research case to adopt."
+        }
+      },
+      "required": [
+        "session",
+        "requestId",
+        "publicCaseId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "falcon_review_research_case",
+    "title": "Request a NEAR research review",
+    "description": "Submit an authenticated asynchronous review of an adopted analysis for a public NEAR/mainnet research case. Requires a Falcon wallet session and a verified host/operator grant. Returns the retained job envelope promptly; it does not wait for model computation. Supply and reuse the exact requestId to retry the same submission. A review is not spending or execution authorization.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": {
+          "type": "string",
+          "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$",
+          "description": "Session token returned by falcon_connect_verify."
+        },
+        "requestId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry."
+        },
+        "analysisId": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$",
+          "description": "UUID of the adopted research analysis to review."
+        }
+      },
+      "required": [
+        "session",
+        "requestId",
+        "analysisId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": true
+    }
+  }
+]

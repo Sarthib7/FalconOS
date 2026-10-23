@@ -1,8 +1,10 @@
 # Falcon MCP server
 
-Falcon's Rust server is a stateless Streamable HTTP adapter to Mesh. It exposes fixed public Solana Devnet evidence and owner-bound lending records. Mesh owns decisions and transaction policy. Falcon holds no wallet keys, signs no transactions, funds no accounts, and never broadcasts [VERIFIED, runtime source and hosted read smoke].
+Falcon's Rust server is a stateless Streamable HTTP adapter to Mesh. Current source0.5.0 adds retained publisher-reported NEAR research to the existing public Solana Devnet evidence and owner-bound lending tools. Mesh owns models, decisions and transaction policy. Falcon holds no wallet keys, signs no transactions, funds no accounts and never broadcasts [VERIFIED SOURCE; hosted0.5.0 not verified].
 
 The hosted endpoint is `https://mcp.falconos.markets/mcp`. Railway deployment `6697d4d3-6cab-47da-b2bd-841c0344975c` replaced the Node runtime with Rust. See the [cutover record](../status.md#rust-mcp-cutover-2026-10-15) for evidence and limits [VERIFIED, Railway readback].
+
+The dated deployment record above does not prove a hosted0.5.0 rollout. Check the actual server version before using the new research tools. This source change does not authorize production activation [VERIFIED, scope boundary].
 
 ## Install
 
@@ -19,9 +21,9 @@ Generic client configuration:
 {"mcpServers":{"falconos":{"type":"http","url":"https://mcp.falconos.markets/mcp"}}}
 ```
 
-Restart the client after changing its configuration. List tools and call `falcon_self_test({})`. The first functional call is `falcon_public_graph({})`, which needs no wallet or session. Client registration and metadata do not prove backend, signer, funding, or transaction readiness [VERIFIED, protocol contract].
+Restart the client after changing its configuration. List tools and call `falcon_self_test({})`. Use `falcon_research_case({})` for the public NEAR case, or `falcon_public_graph({})` for fixed Devnet evidence. Both public reads need no wallet or session. Registration and metadata do not prove backend, signer, funding, transaction or model-host readiness [VERIFIED SOURCE].
 
-## Tools (14)
+## Tools (0.5.0 source:19)
 
 | Tool | Contract |
 | --- | --- |
@@ -39,6 +41,11 @@ Restart the client after changing its configuration. List tools and call `falcon
 | `falcon_wallet_status` | Public Devnet account snapshot and human-only faucet guidance. |
 | `falcon_decode_transaction` | Public bounded Devnet transaction inspection. No signing, simulation, or broadcast. |
 | `falcon_self_test` | Version, schema fingerprint, and capability metadata. No backend or wallet probe. |
+| `falcon_research_case` | Public latest or immutable case. Optional `caseId`; no owner/session fields. |
+| `falcon_replay_research_case` | Replays saved raw evidence and the pinned deterministic model for `caseId`. No inference. |
+| `falcon_research_source` | Public immutable raw-source envelope for `revisionId`, limited to the research family. |
+| `falcon_adopt_research_case` | Owner-bound adoption with supplied `session`, `requestId` and `publicCaseId`. |
+| `falcon_review_research_case` | Operator-granted, fail-closed review job using supplied `session`, `requestId` and `analysisId`. |
 
 ### Public graph contract
 
@@ -46,13 +53,21 @@ The anonymous graph calls Mesh `GET /v1/public/graph/live` without a session, Be
 
 `OBSERVED` is technical evidence, not a personalized REVIEW, recommendation, owner mandate, or approval. Current `NO_DATA` never substitutes an older successful graph. Public output excludes source content, raw exchanges, wallets, sessions, and owner records. Mesh may reuse a complete graph head for 60 seconds; repeated calls do not force a new capture [VERIFIED, Mesh source and tests].
 
-### Capability discovery (0.4.0)
+### Capability discovery (0.5.0)
 
-Self-test accepts `{}` and returns 14 tool names, capability schema version 1, `verification: "metadata-only"`, and `defaultSupport: "unsupported"`. It makes no Mesh request. Signer, funding, and transaction readiness remain `not_checked`, even when HTTP readiness succeeds [VERIFIED, Rust parity and self-test checks].
+Self-test accepts `{}` and returns19 tool names, capability schema version1, `verification: "metadata-only"` and `defaultSupport: "unsupported"`. It makes no Mesh request. Signer, funding, transaction and researchReviewGrant readiness remain `not_checked`; HTTP readiness cannot verify those prerequisites [VERIFIED SOURCE].
 
-The supported scopes are fixed Kamino Devnet evidence, Devnet lending preparation/registration/reconciliation, and mainnet yield discovery without execution. Unsupported scopes include swaps, stocks/perps advice, mainnet execution, EVM execution, and brokerage orders. Match the exact domain, action, chain, and network before proceeding. Missing capability entries grant no support [VERIFIED, versioned capability contract].
+Match each capability's domain, chain and network. Existing public-market-evidence, lending-execution and yield-discovery identifiers retain their scope. NEAR research is publisher-reported mainnet context, with executionSupported false. Review requires both owner authentication and an operator grant plus a verified host. Unsupported stocks/perps advice, swaps, mainnet execution, EVM and brokerage actions keep specific unavailable reasons. No top-level chain/network default applies to every tool [VERIFIED SOURCE].
 
-The tool-schema snapshot is `fixtures/node-0.4.0.json`; the self-test snapshot is `fixtures/node-self-test-0.4.0.json`. Their names identify the compatibility baseline, not a Node runtime dependency. Runtime fingerprinting uses the registered schemas [VERIFIED, Rust source].
+Current tool schemas are in `fixtures/node-0.5.0.json`. Self-test derives the package version, inventory and schema fingerprint from current source; it does not return a copied historical self-test snapshot [VERIFIED SOURCE].
+
+### Retained NEAR research contract
+
+Public case, source and replay calls are read-only and accept no credentials. The latest-case call can reuse a capture for 24 hours. Saved case IDs bind immutable source references and a deterministic model version. Replay uses those saved inputs rather than a new publisher fetch. Publisher data status OBSERVED is separate from investmentAssessment NO_DATA; neither volume nor fees proves native-token demand or reconciled net capture [VERIFIED, Mesh source and local live HTTP smoke].
+
+Adoption requires an owner session and an explicit request ID. It retains the same snapshot without adding research source heads to the owner's legacy lending graph. Review additionally needs an operator grant and verified model-host controls. It returns a retained job envelope with state PENDING, COMPLETE or UNKNOWN, phase and result. Repeating the same request ID reads that job. Conflicting reuse stops; a lost reply, process failure or UNKNOWN never starts another model run automatically [VERIFIED SOURCE; review runtime checks pending].
+
+Case and raw-source hashes have different meanings. Keep decimal strings, native units, source query IDs and window/date labels unchanged. Captured time does not attest publisher freshness. The public /research/near/ page renders these records through fixed same-origin public proxies. It has no wallet, private review control or signing authority. Dashboard access remains Soon [VERIFIED SOURCE; browser verification pending].
 
 ## Decision and execution boundaries
 

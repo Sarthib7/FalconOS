@@ -40,9 +40,8 @@ async fn self_test_is_metadata_only_and_never_calls_mesh() {
     let body = response.json::<Value>().await.unwrap();
     let content: Value =
         serde_json::from_str(body["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
-    assert_eq!(
-        content["readiness"],
-        json!({"signer":"not_checked","funding":"not_checked","transaction":"not_checked"})
-    );
+    for field in ["signer", "funding", "transaction", "researchReviewGrant"] {
+        assert_eq!(content["readiness"][field], "not_checked");
+    }
     assert_eq!(calls.load(Ordering::SeqCst), 0);
 }
