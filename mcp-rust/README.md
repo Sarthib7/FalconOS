@@ -37,7 +37,7 @@ Restart the client after changing its configuration. List tools and call `falcon
 | `falcon_prepare_transaction` | Prepares unsigned Devnet supply/redeem from current adopted evidence. |
 | `falcon_submit_signed` | Registers exact human-signed bytes. Does not broadcast or return signed bytes. |
 | `falcon_check_receipt` | Reconciles a registered transaction against Devnet. |
-| `falcon_activity` | Reads the owner's decision and intent history. |
+| `falcon_activity` | Reads canonical owner decision/intent history and bounded retained research without starting work. |
 | `falcon_wallet_status` | Public Devnet account snapshot and human-only faucet guidance. |
 | `falcon_decode_transaction` | Public bounded Devnet transaction inspection. No signing, simulation, or broadcast. |
 | `falcon_self_test` | Version, schema fingerprint, and capability metadata. No backend or wallet probe. |
@@ -60,6 +60,8 @@ Self-test accepts `{}` and returns 19 tool names, capability schema version 1, `
 Match each capability's domain, chain and network. Existing public-market-evidence, lending-execution and yield-discovery identifiers retain their scope. NEAR research is publisher-reported mainnet context, with executionSupported false. Review requires both owner authentication and an operator grant plus a verified host. Unsupported stocks/perps advice, swaps, mainnet execution, EVM and brokerage actions keep specific unavailable reasons. No top-level chain/network default applies to every tool [VERIFIED SOURCE].
 
 Current tool schemas are in `fixtures/node-0.5.0.json`. Self-test derives the package version, inventory and schema fingerprint from current source; it does not return a copied historical self-test snapshot [VERIFIED SOURCE].
+
+[VERIFIED SOURCE, D4 activity read] `falcon_activity` delegates to private Mesh `GET /v1/activity`. The backend owns one projection and derives the owner from existing authentication. Its added `research` field contains retained briefing, adopted assessments and review summaries. Reading it never starts or resumes inference. PENDING is the last recorded phase, UNKNOWN stays unconfirmed, and COMPLETE is not approval. Inputs and financial-authority rules are unchanged.
 
 ### Retained NEAR research contract
 

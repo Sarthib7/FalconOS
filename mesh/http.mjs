@@ -5,8 +5,12 @@ import { CONNECTORS } from './live.mjs';
 import { readWalletStatus } from './wallet-status.mjs';
 import { inspectTransaction } from './transaction-inspection.mjs';
 import { PUBLIC_OWNER_ID } from './public-graph.mjs';
+import { projectActivity } from './activity.mjs';
+
 
 const BODY_LIMIT = 1024 * 1024;
+const ACTIVITY_LIMIT_BYTES = 1024 * 1024;
+
 const EVIDENCE_EXCHANGES = 2;
 const STATUSES = { INVALID_INPUT: 400, UNAUTHORIZED: 401, FORBIDDEN: 403, ORIGIN_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, TOO_LARGE: 413, RATE_LIMITED: 429, STORAGE_UNAVAILABLE: 503, AUTH_UNAVAILABLE: 503, INTERNAL_ERROR: 500 };
 
@@ -88,7 +92,7 @@ async function body(request, limit = BODY_LIMIT) {
 }
 
 export function createApi({
-  store, lending = null, yieldService = null, publicGraph = null, researchService = null, researchReviewService = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
+  store, lending = null, yieldService = null, publicGraph = null, researchService = null, researchReviewService = null, researchActivity = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
   rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600,
   walletLookupMaxPerSource = 240, walletLookupMaxGlobal = rateMaxGlobal, clock = () => Date.now(),
   walletStatus = readWalletStatus, transactionInspection = inspectTransaction,
@@ -139,9 +143,13 @@ export function createApi({
     };
   };
   const server = createServer({ maxHeaderSize: 8192, requestTimeout: 15000, headersTimeout: 10000 }, async (request, response) => {
-    const send = (status, payload) => {
+    const send = (status, payload, maxBytes = null) => {
+      const serialized = JSON.stringify(payload);
+      if (maxBytes !== null && Buffer.byteLength(serialized, 'utf8') > maxBytes) {
+        throw new MeshError('TOO_LARGE', 'Activity response exceeds 1 MiB.');
+      }
       response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
-      response.end(JSON.stringify(payload));
+      response.end(serialized);
     };
     try {
       const origin = request.headers.origin;
@@ -292,6 +300,31 @@ export function createApi({
       }
       if (!owner) throw new MeshError('UNAUTHORIZED', 'A valid mesh access token is required.');
       rateLimit(owner);
+      if (url.pathname === '/v1/research/near/activity' || url.pathname === '/v1/activity') {
+        if (request.method !== 'GET') throw new MeshError('NOT_FOUND', 'Activity endpoint not found.');
+        if (Number(request.headers['content-length'] || 0) > 0 || request.headers['transfer-encoding']) {
+          request.resume();
+          throw new MeshError('INVALID_INPUT', 'Activity endpoints do not accept request bodies.');
+        }
+        if (!researchActivity || typeof researchActivity.get !== 'function') {
+          throw new MeshError('STORAGE_UNAVAILABLE', 'The activity service is not configured.');
+        }
+        if (url.pathname === '/v1/research/near/activity') {
+          send(200, await researchActivity.get(owner), ACTIVITY_LIMIT_BYTES);
+          return;
+        }
+        if (typeof store?.listDecisions !== 'function' || typeof lending?.list !== 'function') {
+          throw new MeshError('STORAGE_UNAVAILABLE', 'The activity service is not configured.');
+        }
+        const [decisions, intents, research] = await Promise.all([
+          store.listDecisions(owner),
+          lending.list(owner),
+          researchActivity.get(owner),
+        ]);
+        send(200, projectActivity({ decisions, intents, research }), ACTIVITY_LIMIT_BYTES);
+        return;
+      }
+
       if (url.pathname === '/v1/research/near/adopt') {
         if (request.method !== 'POST') throw new MeshError('NOT_FOUND', 'Research endpoint not found.');
         const input = await body(request); keys(input, ['requestId', 'publicCaseId']);

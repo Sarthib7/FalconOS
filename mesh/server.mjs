@@ -14,6 +14,8 @@ import { COUNCIL_LIMITS } from './council/host.mjs';
 import { createOmpTransport } from './council/omp-host.mjs';
 import { createReviewJobStore } from './research/review-store.mjs';
 import { createResearchReviewService } from './research/review-jobs.mjs';
+import { createResearchActivity } from './research/activity.mjs';
+
 
 function parseReviewOwners(value) {
   if (value === undefined) return [];
@@ -43,6 +45,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5, conn
 pool.on('error', () => process.stderr.write('Mesh database connection failed.\n'));
 const store = createStore(pool);
 const reviewJobStore = createReviewJobStore(pool);
+const researchActivity = createResearchActivity({ store, reviewJobStore });
 
 let reviewTransport;
 let researchReviewService;
@@ -79,7 +82,7 @@ const verifySupabaseToken = createSupabaseSessionVerifier({
 let server;
 try {
   server = createApi({
-    store, lending, yieldService, publicGraph, researchService, researchReviewService, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken,
+    store, lending, yieldService, publicGraph, researchService, researchReviewService, researchActivity, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken,
     walletStatus: readWalletStatus,
     transactionInspection: inspectTransaction,
   });

@@ -1,5 +1,17 @@
 # First research slice interfaces
 
+## Owner activity read, 2026-10-23
+
+[APPROVED D4; VERIFIED LOCAL API] Interface ID: DASHBOARD-D4-ACTIVITY. Owner: coordinator. Providers: authenticated Mesh retained reads. Consumer: Rust falcon_activity; the owner dashboard is a separate next slice. Status: In Progress (exact-head CI pending).
+
+[CONTRACT] GET /v1/research/near/activity accepts no caller owner, query or body. Existing server auth resolves owner. Return {schemaVersion:1,briefing,adopted,reviews,limit:20,executionReady:false}. briefing is null or {caseId,capturedAt,status,investmentStatus,reasons,executionReady:false} from a retained public case, never a new capture. adopted entries are {analysisId,createdAt,snapshotHash,investmentStatus}; reviews are {jobId,requestId,analysisId,snapshotHash,state,phase,resultStatus,summary,riskReason,reasons,recordedAt,executionReady:false}. Bound each history list to20 newest records.
+
+[CONTRACT] GET /v1/activity preserves {trail,counts,limit:20} and adds that research DTO. Counts describe returned records, not lifetime totals. The canonical Mesh projection preserves exact decimal intent units. Rust delegates to this fixed read instead of duplicating the join. Both reads cap serialized output at1MiB and fail TOO_LARGE; existing stricter transport caps apply.
+
+[CONTRACT] Owner data never comes from caller-selected IDs. No capture, publication, model preflight, claim/start/retry/resume or provider call occurs on read. Existing DB-time expiry housekeeping may settle an expired claim. PENDING is the last recorded step, UNKNOWN remains unconfirmed, and COMPLETE does not grant financial authority. Return no source bodies, signed bytes, RPC bodies, credentials or hidden reasoning. Existing typed auth/validation/storage errors apply.
+
+[VERIFIED LOCAL] Actual PostgreSQL tests cover populated own/foreign research, decisions and intents, latest phase timestamps, UNKNOWN expiry, empty briefing/no-start traps and oversize output. Rust contract checks preserve the tool input and route to the canonical projection. Hosted behavior and current-head CI remain separate.
+
 ## Retained NEAR research case and review transport, 2026-10-21
 
 [VERIFIED USER APPROVAL; implementation In Progress] Interface ID: NEAR-RESEARCH-1. Owner: coordinator. Provider: Mesh research service and Council host. Consumers: Rust MCP0.5.0 and read-only React /research/near/. D3 and D3.1 approve this contract; approval is not runtime or hosted verification.

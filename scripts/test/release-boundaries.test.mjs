@@ -11,9 +11,9 @@ const WEB_CHECK = join(ROOT, 'web/scripts/verify-release.mjs');
 const MESH_CHECK = join(ROOT, 'mesh/check-release.mjs');
 
 const NEAR_RESEARCH_RUNTIME_INPUTS = [
-  'council/evidence.ts', 'council/host.mjs',
+  'council/evidence.ts', 'council/host.mjs', 'activity.mjs',
   'research/near-source.mjs', 'research/near-model.mjs', 'research/service.mjs',
-  'research/review-store.mjs', 'research/review-jobs.mjs',
+  'research/activity.mjs', 'research/review-store.mjs', 'research/review-jobs.mjs',
 ];
 
 const NATIVE_COUNCIL_RUNTIME_INPUTS = [

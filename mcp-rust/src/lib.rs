@@ -27,7 +27,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     sync::{Arc, Mutex, OnceLock},
     time::{Duration, Instant},
 };
@@ -955,11 +955,7 @@ async fn dispatch(st: &AppState, name: &str, args: &Value) -> Result<Value, Tool
 			.await?;
 			Ok(json!({"event":public_event(&x["event"])}))
 		},
-		"falcon_activity" => {
-			let (d, i) =
-				tokio::join!(g("/v1/decisions", sess, 15000), g("/v1/lending/intents", sess, 15000));
-			Ok(activity(&d?, &i?))
-		},
+		"falcon_activity" => g("/v1/activity", sess, 15000).await,
 		"falcon_wallet_status" => {
 			let mut b = json!({"wallet":args["wallet"],"chain":"solana","network":"devnet"});
 			if let Some(a) = args.get("forAction") {
