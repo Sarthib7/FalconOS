@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import { MeshError } from '../domain.mjs';
 import { PUBLIC_OWNER_ID } from '../public-graph.mjs';
@@ -39,11 +40,17 @@ function canonicalTime(value, name) {
   }
   return Date.parse(value);
 }
-function currentTime(now) {
-  let value;
-  try { value = now(); } catch { fail('STORAGE_UNAVAILABLE', 'Review storage clock is unavailable.'); }
-  canonicalTime(value, 'Review storage clock');
-  return value;
+async function databaseClock(client) {
+  const startedAtMonotonicMs = performance.now();
+  const result = await client.query(`SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS now`);
+  const sampledAtMonotonicMs = performance.now();
+  const at = result.rows?.[0]?.now;
+  canonicalTime(at, 'PostgreSQL review clock');
+  return {
+    at,
+    sampledAtMonotonicMs,
+    queryRttMs: sampledAtMonotonicMs - startedAtMonotonicMs,
+  };
 }
 function deadlineDuration(value) {
   if (!Number.isSafeInteger(value) || value < 1 || value > MAX_RUN_DEADLINE_MS) {
@@ -160,7 +167,7 @@ function assertClaim(row) {
   return row;
 }
 
-export function createReviewJobStore(pool, { now = () => new Date().toISOString() } = {}) {
+export function createReviewJobStore(pool) {
   if (!pool || typeof pool.connect !== 'function') throw new TypeError('Review job store requires a PostgreSQL pool.');
 
   async function transaction(owner, work) {
@@ -263,16 +270,6 @@ export function createReviewJobStore(pool, { now = () => new Date().toISOString(
   }
 
   async function appendTerminal(client, owner, claim, state, resultValue, at) {
-    let finalState = state;
-    let terminalAt = at;
-    let terminalResult = validateControllerResult(resultValue, claim);
-    if (finalState === 'COMPLETE') {
-      terminalAt = currentTime(now);
-      if (Date.parse(terminalAt) >= Date.parse(claim.analysis.deadlineAt)) {
-        finalState = 'UNKNOWN';
-        terminalResult = validateControllerResult(noDataResult(claim), claim);
-      }
-    }
     const terminal = {
       schemaVersion: 1,
       recordKind: TERMINAL_KIND,
@@ -280,15 +277,15 @@ export function createReviewJobStore(pool, { now = () => new Date().toISOString(
       requestId: claim.request_id,
       analysisId: claim.analysis.analysisId,
       snapshotHash: claim.analysis.snapshotHash,
-      state: finalState,
+      state,
       phase: 'TERMINAL',
-      result: terminalResult,
+      result: resultValue,
       executionReady: false,
     };
     const inserted = await insertRecord(client, owner, {
       id: randomUUID(),
       requestId: claim.analysis.terminalRequestId,
-      at: terminalAt,
+      at,
       graph: {
         schemaVersion: 1,
         domain: 'near-thesis',
@@ -298,19 +295,21 @@ export function createReviewJobStore(pool, { now = () => new Date().toISOString(
       },
       analysis: terminal,
     });
-    if (inserted) return envelope(claim, finalState, 'TERMINAL', terminal.result);
+    if (inserted) return envelope(claim, state, 'TERMINAL', terminal.result);
     const retained = await terminalForClaim(client, owner, claim);
     if (retained) return retained;
     conflict('Review terminal identity is already used by another owner record.');
   }
 
-  async function pendingOrExpire(client, owner, claim, at) {
+  async function pendingOrExpire(client, owner, claim) {
     const terminal = await terminalForClaim(client, owner, claim);
-    if (terminal) return terminal;
-    if (Date.parse(at) >= Date.parse(claim.analysis.deadlineAt)) {
-      return appendTerminal(client, owner, claim, 'UNKNOWN', noDataResult(claim), at);
+    if (terminal) return { job: terminal, at: null };
+    const clock = await databaseClock(client);
+    if (Date.parse(clock.at) >= Date.parse(claim.analysis.deadlineAt)) {
+      const job = await appendTerminal(client, owner, claim, 'UNKNOWN', noDataResult(claim), clock.at);
+      return { job, at: clock.at };
     }
-    return envelope(claim, 'PENDING', await phaseForClaim(client, owner, claim), null);
+    return { job: envelope(claim, 'PENDING', await phaseForClaim(client, owner, claim), null), at: clock.at };
   }
 
   async function unresolvedClaim(client, owner) {
@@ -353,7 +352,7 @@ export function createReviewJobStore(pool, { now = () => new Date().toISOString(
           if (claim.analysis.analysisId !== analysisId) conflict();
           const adopted = await loadAdopted(client, owner, analysisId);
           await matchesExisting(client, owner, row, requestId, analysisId, adopted);
-          return pendingOrExpire(client, owner, claim, currentTime(now));
+          return (await pendingOrExpire(client, owner, claim)).job;
         }
         await loadAdopted(client, owner, analysisId);
         return null;
@@ -374,17 +373,18 @@ export function createReviewJobStore(pool, { now = () => new Date().toISOString(
           if (claim.analysis.analysisId !== analysisId) conflict();
           const adopted = await loadAdopted(client, owner, analysisId);
           await matchesExisting(client, owner, prior, requestId, analysisId, adopted);
-          return { job: await pendingOrExpire(client, owner, claim, currentTime(now)), claimed: false, snapshot: null };
+          return { job: (await pendingOrExpire(client, owner, claim)).job, claimed: false, snapshot: null };
         }
 
         const adopted = await loadAdopted(client, owner, analysisId);
-        const at = currentTime(now);
         const pending = await unresolvedClaim(client, owner);
         if (pending) {
-          const pendingState = await pendingOrExpire(client, owner, pending, at);
-          if (pendingState.state === 'PENDING') conflict('Another owner review job is still unresolved.');
+          const pendingState = await pendingOrExpire(client, owner, pending);
+          if (pendingState.job.state === 'PENDING') conflict('Another owner review job is still unresolved.');
         }
 
+        const clock = await databaseClock(client);
+        const at = clock.at;
         const jobId = randomUUID();
         const deadlineAt = new Date(Date.parse(at) + runDeadlineMs).toISOString();
         const terminalRequestId = deterministicUuid(jobId, 'terminal');
@@ -417,7 +417,7 @@ export function createReviewJobStore(pool, { now = () => new Date().toISOString(
           if (raced?.analysis?.recordKind === CLAIM_KIND) {
             const claim = assertClaim(raced);
             if (claim.analysis.analysisId !== analysisId || claim.analysis.snapshotHash !== adopted.snapshotHash) conflict();
-            return { job: await pendingOrExpire(client, owner, claim, currentTime(now)), claimed: false, snapshot: null };
+            return { job: (await pendingOrExpire(client, owner, claim)).job, claimed: false, snapshot: null };
           }
           conflict();
         }
@@ -426,6 +426,9 @@ export function createReviewJobStore(pool, { now = () => new Date().toISOString(
           job: envelope(claim, 'PENDING', 'PREFLIGHT', null),
           claimed: true,
           snapshot: adopted.snapshot,
+          deadlineAt,
+          remainingMs: Math.max(0, runDeadlineMs - Math.ceil(clock.queryRttMs)),
+          sampledAtMonotonicMs: clock.sampledAtMonotonicMs,
         };
       });
     },
@@ -437,10 +440,7 @@ export function createReviewJobStore(pool, { now = () => new Date().toISOString(
       return transaction(owner, async client => {
         const claim = await claimById(client, owner, jobId);
         if (!claim) fail('NOT_FOUND', 'Review job was not found.');
-        const at = currentTime(now);
-        const terminal = await terminalForClaim(client, owner, claim);
-        if (terminal) return terminal;
-        const job = await pendingOrExpire(client, owner, claim, at);
+        const { job, at } = await pendingOrExpire(client, owner, claim);
         if (job.state !== 'PENDING') return job;
         const currentIndex = PHASE_INDEX[job.phase];
         const nextIndex = PHASE_INDEX[phase];
@@ -485,11 +485,16 @@ export function createReviewJobStore(pool, { now = () => new Date().toISOString(
         if (!claim) fail('NOT_FOUND', 'Review job was not found.');
         const terminal = await terminalForClaim(client, owner, claim);
         if (terminal) return terminal;
-        const at = currentTime(now);
-        if (Date.parse(at) >= Date.parse(claim.analysis.deadlineAt)) {
-          return appendTerminal(client, owner, claim, 'UNKNOWN', noDataResult(claim), at);
+        const clock = await databaseClock(client);
+        if (Date.parse(clock.at) >= Date.parse(claim.analysis.deadlineAt)) {
+          return appendTerminal(client, owner, claim, 'UNKNOWN', noDataResult(claim), clock.at);
         }
-        return appendTerminal(client, owner, claim, 'COMPLETE', result, at);
+        const resultValue = validateControllerResult(result, claim);
+        const completionClock = await databaseClock(client);
+        if (Date.parse(completionClock.at) >= Date.parse(claim.analysis.deadlineAt)) {
+          return appendTerminal(client, owner, claim, 'UNKNOWN', noDataResult(claim), completionClock.at);
+        }
+        return appendTerminal(client, owner, claim, 'COMPLETE', resultValue, completionClock.at);
       });
     },
   };

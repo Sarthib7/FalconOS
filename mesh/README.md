@@ -4,6 +4,10 @@
 
 [VERIFIED, source: `package.json`, `schema.sql`, migrations `0002_lending.sql` and `0003_wallet_auth.sql`] Use Node 24.12 or later and PostgreSQL. The current local schema is version 3. Startup checks the schema and does not change it.
 
+[VERIFIED SOURCE, R4 clock fix] PostgreSQL time sampled after the owner lock creates review deadlines and decides expiry. Process wall-clock skew cannot expire a retained claim early. New claim metadata carries a conservative remaining budget and monotonic sample for runner integration. Public job envelopes and immutable history remain unchanged.
+
+[VERIFIED LOCAL] The permanent clock regression failed against the original source (`tests1, pass0, fail1`) and passed with this store fix (`tests1, pass1, fail0`). These store checks do not establish native model-host, container or hosted readiness.
+
 ## Run
 
 [INFERRED, fresh local setup] Run these commands from the repository root. Use a new local database. Review `schema.sql`, both migrations, and the permission candidate before explicit initialization.
