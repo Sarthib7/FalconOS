@@ -50,7 +50,7 @@ export default function App() {
   return (
     <div className="agents-page">
       <header className="agents-nav">
-        <a className="agents-brand" href="/" aria-label="FalconOS">
+        <a className="agents-brand" href="/install/" aria-label="FalconOS">
           <img src={falconMark} alt="" />
           <span><b>FALCON</b><strong>OS</strong></span>
         </a>
@@ -97,7 +97,7 @@ export default function App() {
       </main>
 
       <footer className="agents-footer">
-        <a className="agents-brand" href="/" aria-label="FalconOS home"><img src={falconMark} alt="" /><span><b>FALCON</b><strong>OS</strong></span></a>
+        <a className="agents-brand" href="/install/" aria-label="FalconOS home"><img src={falconMark} alt="" /><span><b>FALCON</b><strong>OS</strong></span></a>
         <p>Setup guide only. No wallet connection here.</p>
       </footer>
     </div>

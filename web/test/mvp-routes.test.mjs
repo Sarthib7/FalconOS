@@ -9,10 +9,22 @@ const mvpRoot = resolve(fileURLToPath(new URL('../dist-mvp/', import.meta.url)))
 const siteRoot = resolve(fileURLToPath(new URL('../dist/', import.meta.url)));
 const types = new Map([['.css', 'text/css'], ['.html', 'text/html'], ['.js', 'text/javascript'], ['.svg', 'image/svg+xml'], ['.ttf', 'font/ttf']]);
 
-function staticServer(root) {
+async function staticServer(root) {
+  const redirects = (await readFile(resolve(root, '_redirects'), 'utf8')).trim().split(/\r?\n/)
+    .map(line => {
+      const [source, target, status] = line.trim().split(/\s+/);
+      return { source, target, status: Number(status) };
+    });
   return createServer(async (request, response) => {
     const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
-    const relative = pathname === '/' ? 'index.html' : pathname.endsWith('/') ? `${pathname.slice(1)}index.html` : pathname.slice(1);
+    const redirect = redirects.find(({ source }) => source.endsWith('/*')
+      ? pathname.startsWith(source.slice(0, -1)) : pathname === source);
+    if (redirect) {
+      response.writeHead(redirect.status, { location: redirect.target }).end();
+      return;
+    }
+    const relative = pathname === '/' ? 'index.html' : pathname.endsWith('/') ? `${pathname.slice(1)}index.html`
+      : extname(pathname) ? pathname.slice(1) : `${pathname.slice(1)}/index.html`;
     const path = resolve(root, relative);
     if (path !== root && !path.startsWith(`${root}${sep}`)) {
       response.writeHead(403).end();
@@ -39,61 +51,63 @@ function scriptSrc(html) {
   return html.match(/<script[^>]+src="([^"]+\.js)"/)?.[1];
 }
 
-test('unified MVP build serves the bot at the domain root and Mesh at /mesh/', async t => {
-  const server = staticServer(mvpRoot);
+async function assertDashboardRedirect(base, path) {
+  const response = await fetch(base + path, { redirect: 'manual' });
+  assert.equal(response.status, 302, path);
+  assert.equal(response.headers.get('location'), '/dashboard/', path);
+}
+
+test('V190: MVP root and retired application routes lead to the owner dashboard gate', async t => {
+  const server = await staticServer(mvpRoot);
   await listen(server);
   t.after(() => new Promise(resolve => server.close(resolve)));
   const base = `http://127.0.0.1:${server.address().port}`;
 
-  const [botResponse, meshResponse] = await Promise.all([fetch(base), fetch(`${base}/mesh/`)]);
-  assert.equal(botResponse.status, 200);
-  assert.equal(meshResponse.status, 200);
-  const [botHtml, meshHtml] = await Promise.all([botResponse.text(), meshResponse.text()]);
-  assert.match(botResponse.headers.get('content-type') ?? '', /text\/html/);
-  assert.match(meshResponse.headers.get('content-type') ?? '', /text\/html/);
+  for (const path of ['/', '/index.html', '/app', '/app/', '/app/index.html?old=1', '/dash/', '/mesh/',
+    '/treasury/', '/research/', '/research/near/', '/bot/']) await assertDashboardRedirect(base, path);
 
-  const botScript = scriptSrc(botHtml);
-  const meshScript = scriptSrc(meshHtml);
-  assert.ok(botScript, 'bot route must load its JavaScript bundle');
-  assert.ok(meshScript, 'mesh route must load its JavaScript bundle');
-  assert.notEqual(botScript, meshScript);
+  const dashboardResponse = await fetch(base + '/dashboard/', { redirect: 'manual' });
+  assert.equal(dashboardResponse.status, 200);
+  assert.match(dashboardResponse.headers.get('content-type') ?? '', /text\/html/);
+  const dashboardHtml = await dashboardResponse.text();
+  const dashboardScript = scriptSrc(dashboardHtml);
+  assert.ok(dashboardScript, 'the route must load the owner dashboard bundle');
+  assert.equal((await fetch(new URL(dashboardScript, base))).status, 200);
 
-  for (const script of [botScript, meshScript]) {
-    const asset = await fetch(new URL(script, base));
-    assert.equal(asset.status, 200);
-    assert.match(asset.headers.get('content-type') ?? '', /javascript/);
+  for (const route of ['app/index.html', 'dash/index.html', 'mesh/index.html', 'treasury/index.html',
+    'research/near/index.html', 'bot/index.html']) {
+    await assert.rejects(readFile(resolve(mvpRoot, route)), { code: 'ENOENT' }, route);
   }
 });
 
-test('V185: public dashboard stays Soon and omits local simulator from production artifact', async t => {
-  const server = staticServer(siteRoot);
+test('V185: production dashboard loads the owner module without exposing simulator sources', async t => {
+  const server = await staticServer(siteRoot);
   await listen(server);
   t.after(() => new Promise(resolve => server.close(resolve)));
   const base = `http://127.0.0.1:${server.address().port}`;
 
-  for (const path of ['/dashboard/', '/dashboard/index.html', '/dashboard/?preview=1&recordMode=saved']) {
-    const response = await fetch(base + path);
+  for (const path of ['/dashboard', '/dashboard/', '/dashboard/index.html', '/dashboard/?preview=1&recordMode=saved']) {
+    const response = await fetch(base + path, { redirect: 'manual' });
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type') ?? '', /text\/html/);
-    const html = await response.text();
-    assert.match(html, /<h1\b[^>]*>Soon<\/h1>/i, 'visitors must see the unavailable dashboard state');
-    assert.doesNotMatch(html, /<script\b/i, 'public dashboard must not start any application code');
-    assert.doesNotMatch(html, /<form\b|<input\b|<button\b/i, 'unavailable dashboard cannot offer active setup or trading controls');
+    const script = scriptSrc(await response.text());
+    assert.ok(script, 'dashboard entry must load its owner bundle');
+    assert.equal((await fetch(new URL(script, base))).status, 200);
   }
-  // Local 404s prove artifact omission, not Cloudflare 404s; the coordinator observed excluded paths returning public landing HTML with HTTP 200.
-  for (const path of ['/local-dashboard/', '/local-dashboard/index.html', '/dashboard/main.jsx', '/dashboard/App.jsx', '/dashboard/data.json']) {
-    const response = await fetch(base + path);
+  for (const path of ['/local-dashboard/', '/local-dashboard/index.html', '/dashboard/main.jsx',
+    '/dashboard/App.jsx', '/dashboard/data.json', '/design-reference/falconos-capital.html', '/dash-snapshot.json']) {
+    const response = await fetch(base + path, { redirect: 'manual' });
     assert.equal(response.status, 404, `local artifact must omit dashboard source: ${path}`);
   }
 });
 
-test('public NEAR research route is served from the production website artifact', async t => {
-  const server = staticServer(siteRoot);
+test('V190: site route manifest sends retired workspaces to the dashboard gate while retaining marketing', async t => {
+  const server = await staticServer(siteRoot);
   await listen(server);
   t.after(() => new Promise(resolve => server.close(resolve)));
   const base = 'http://127.0.0.1:' + server.address().port;
-  const response = await fetch(base + '/research/near/');
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get('content-type'), 'text/html');
-  assert.ok((await response.arrayBuffer()).byteLength > 0);
+
+  for (const path of ['/app', '/app/', '/app/index.html?legacy=1', '/dash/', '/mesh/', '/treasury/',
+    '/research/near/', '/bot/']) await assertDashboardRedirect(base, path);
+  assert.equal((await fetch(base + '/research/', { redirect: 'manual' })).status, 200);
 });

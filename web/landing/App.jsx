@@ -183,7 +183,7 @@ function PageTransition({ reduced }) {
   const trigger = useRef(null);
   function reset(restore = false) { setDestination(null); setHandedOff(false); if (restore) trigger.current?.focus({ preventScroll: true }); }
   useEffect(() => {
-    const pages = { '/product/': 'Portfolio preview', '/research/': 'Research preview', '/mesh/': 'Knowledge mesh', '/treasury/': 'Treasury simulation' };
+    const pages = { '/product/': 'Product overview', '/research/': 'Research overview', '/dashboard/': 'Owner dashboard' };
     const click = event => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || reduced || destination) return;
       const link = event.target.closest?.('a[href]');

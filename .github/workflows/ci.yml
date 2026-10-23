@@ -126,13 +126,18 @@ jobs:
       - name: Verify native Council worker controls
         run: npm --prefix mesh/council/runtime test
 
-      - name: Run local MVP Mesh browser journey
+      - name: Run local system Mesh browser journey
         run: |
-          npm --prefix web run build:mvp
+          npm --prefix web run build:mesh
           node --test web/test/mesh-browser-transport.mjs
           node web/test/mesh-browser.mjs
         env:
-          FALCON_MESH_WEB_ROOT: web/dist-mvp
+          FALCON_MESH_WEB_ROOT: web/dist-mesh
+
+      - name: Exercise production owner dashboard and real wallet auth
+        run: |
+          VITE_MESH_API_URL=https://127.0.0.1:8792 npm --prefix web run build:site
+          node web/test/owner-dashboard-browser.mjs
 
       - name: Build Mesh container
         run: docker build --file mesh/Dockerfile --tag falcon-mesh:ci mesh

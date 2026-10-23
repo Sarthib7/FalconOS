@@ -1,18 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { deriveMetrics, normalizeSnapshot, validOhlc, validPrice } from '../snapshot.mjs';
 
-const html = await readFile(new URL('../dash/index.html', import.meta.url), 'utf8');
-
-test('dashboard route links to the Devnet terminal and states its execution boundary', () => {
-  assert.match(html, /href="\/app\/"/);
-  assert.match(html, /Open Devnet terminal/);
-  assert.match(html, /Solana Devnet/);
-  assert.match(html, /Manual approval/);
-  assert.match(html, /Strategy automation/);
-  assert.doesNotMatch(html, /Login \(Soon\)/);
-});
 
 test('validOhlc rejects zero and negative price values', () => {
   const valid = [[1, 1, 2, 0.5, 1.5], [2, 1.5, 2, 1, 1.75]];

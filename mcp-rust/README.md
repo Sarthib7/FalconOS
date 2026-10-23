@@ -37,7 +37,7 @@ Restart the client after changing its configuration. List tools and call `falcon
 | `falcon_prepare_transaction` | Prepares unsigned Devnet supply/redeem from current adopted evidence. |
 | `falcon_submit_signed` | Registers exact human-signed bytes. Does not broadcast or return signed bytes. |
 | `falcon_check_receipt` | Reconciles a registered transaction against Devnet. |
-| `falcon_activity` | Reads canonical owner decision/intent history and bounded retained research without starting work. |
+| `falcon_activity` | Reads canonical owner decision/intent history and retained research summaries without starting work. |
 | `falcon_wallet_status` | Public Devnet account snapshot and human-only faucet guidance. |
 | `falcon_decode_transaction` | Public bounded Devnet transaction inspection. No signing, simulation, or broadcast. |
 | `falcon_self_test` | Version, schema fingerprint, and capability metadata. No backend or wallet probe. |
@@ -61,15 +61,15 @@ Match each capability's domain, chain and network. Existing public-market-eviden
 
 Current tool schemas are in `fixtures/node-0.5.0.json`. Self-test derives the package version, inventory and schema fingerprint from current source; it does not return a copied historical self-test snapshot [VERIFIED SOURCE].
 
-[VERIFIED SOURCE, D4 activity read] `falcon_activity` delegates to private Mesh `GET /v1/activity`. The backend owns one projection and derives the owner from existing authentication. Its added `research` field contains retained briefing, adopted assessments and review summaries. Reading it never starts or resumes inference. PENDING is the last recorded phase, UNKNOWN stays unconfirmed, and COMPLETE is not approval. Inputs and financial-authority rules are unchanged.
-
 ### Retained NEAR research contract
 
 Public case, source and replay calls are read-only and accept no credentials. The latest-case call can reuse a capture for 24 hours. Saved case IDs bind immutable source references and a deterministic model version. Replay uses those saved inputs rather than a new publisher fetch. Publisher data status OBSERVED is separate from investmentAssessment NO_DATA; neither volume nor fees proves native-token demand or reconciled net capture [VERIFIED, Mesh source and local live HTTP smoke].
 
 Adoption requires an owner session and an explicit request ID. It retains the same snapshot without adding research source heads to the owner's legacy lending graph. Review requires owner authentication, a separately configured operator-principal grant, and verified native model-host controls. It returns a retained job envelope with state PENDING, COMPLETE or UNKNOWN, phase and result. Repeating the same request ID reads that job. Conflicting reuse stops; a lost reply, process failure or UNKNOWN never starts another model run automatically [VERIFIED SOURCE; review runtime checks pending].
 
-Case and raw-source hashes have different meanings. Keep decimal strings, native units, source query IDs and window/date labels unchanged. Captured time does not attest publisher freshness. The public /research/near/ page renders these records through fixed same-origin public proxies. Parent's local Brave/protocol smoke observed the production-built page with retained data at desktop width 1360 and mobile width 390, with no horizontal overflow. axe 4.13 reported two unresolved issues: `dlitem` at `Case.jsx:451` (`DataItem` outside `<dl>`) and `landmark-unique` at `Case.jsx:328` (repeated row-title regions). Backprop and repair remain pending; this is not hosted 0.5.0 verification. The page has no wallet, private review control or signing authority. Dashboard access remains Soon [VERIFIED SOURCE; VERIFIED, parent-observed evidence]. See the [2026-10-23 status record](../status.md#source-050-publication-evidence-2026-10-23).
+[VERIFIED SOURCE, D4] `falcon_activity` delegates to the canonical private Mesh `GET /v1/activity`. It adds bounded retained research without duplicating financial logic. Reading activity cannot create or resume a review. PENDING reports the last recorded phase, not a live process; UNKNOWN remains unconfirmed. No source bodies, signed bytes or hidden reasoning are returned. Existing input schemas and approval rules are unchanged.
+
+[CORRECTION, D4] The earlier public NEAR React workspace and Soon-only dashboard are superseded as human targets. Production human navigation leads to the owner dashboard. Agent/system MCP and HTTP research interfaces remain. The [earlier 0.5.0 browser record](../status.md#source-050-publication-evidence-2026-10-23) remains historical evidence, not the current human surface.
 
 ## Decision and execution boundaries
 

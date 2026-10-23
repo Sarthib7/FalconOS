@@ -9,7 +9,6 @@ const appSource = await readFile(new URL('../app/app.mjs', import.meta.url), 'ut
 const dataSource = await readFile(new URL('../app/data.mjs', import.meta.url), 'utf8');
 const legSource = await readFile(new URL('../app/leg-execution.mjs', import.meta.url), 'utf8');
 const tradeSource = await readFile(new URL('../app/devnet-execution.mjs', import.meta.url), 'utf8');
-const dashHtml = await readFile(new URL('../dash/index.html', import.meta.url), 'utf8');
 
 function encodeBase58(bytes) {
   const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -25,17 +24,8 @@ function encodeBase58(bytes) {
   return '1'.repeat(zeroes) + encoded;
 }
 
-test('dashboard entry opens the wallet terminal', () => {
-  assert.match(dashHtml, /href="\/app\/"/);
-  assert.match(html, /id="connect-wallet"/);
-  assert.match(html, /id="login-action"/);
-  assert.match(html, /id="portfolio"/);
-  assert.match(html, /id="trade"/);
-  assert.match(html, /id="strategy"/);
-  assert.match(html, /id="activity"/);
-});
 
-test('production trade UI has a fixed Devnet path and manual wallet sign step', () => {
+test('retained Devnet terminal source keeps the fixed path and manual wallet sign step', () => {
   assert.match(appSource, /getDevnetQuote\(/);
   assert.match(dataSource, /https:\/\/api\.devnet\.solana\.com/);
   assert.match(appSource, /signAndSubmit\(/);

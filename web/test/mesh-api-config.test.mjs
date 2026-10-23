@@ -2,7 +2,7 @@
 // These run with `node --test` and import no browser or Vite globals.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { resolveApiBase } from '../dashboard/api.mjs';
+import { API_BASE, meshRequest, resolveApiBase } from '../dashboard/api.mjs';
 
 test('dev fallback: returns localhost:8791 when VITE_MESH_API_URL is absent and not production', () => {
   assert.equal(resolveApiBase({}), 'http://127.0.0.1:8791');
@@ -48,4 +48,26 @@ test('configured dev URL: honours VITE_MESH_API_URL even when not in production'
     resolveApiBase({ PROD: false, VITE_MESH_API_URL: 'http://127.0.0.1:9000' }),
     'http://127.0.0.1:9000',
   );
+});
+test('meshRequest preserves HTTP status and error code alongside its existing message', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, `${API_BASE}/v1/activity`);
+    assert.equal(options.method, 'GET');
+    return {
+      ok: false,
+      status: 401,
+      json: async () => ({ error: { code: 'UNAUTHORIZED', message: 'Wallet authentication is invalid or expired.' } }),
+    };
+  };
+  try {
+    await assert.rejects(meshRequest(`wsi1_${'A'.repeat(43)}`, '/v1/activity'), error => {
+      assert.equal(error.status, 401);
+      assert.equal(error.code, 'UNAUTHORIZED');
+      assert.equal(error.message, 'UNAUTHORIZED: Wallet authentication is invalid or expired.');
+      return true;
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

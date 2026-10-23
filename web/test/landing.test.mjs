@@ -47,7 +47,8 @@ test('V104: rendered links preserve route boundaries and resolve local anchors',
   const ids = [...rendered.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
   assert.equal(new Set(ids).size, ids.length, 'Every rendered ID is unique');
   for (const href of hrefs.filter(href => href.startsWith('#'))) assert.ok(ids.includes(href.slice(1)), href);
-  for (const route of ['/product/', '/research/', '/mesh/', '/treasury/', '/dashboard/']) assert.ok(hrefs.includes(route));
+  for (const route of ['/product/', '/research/', '/dashboard/']) assert.ok(hrefs.includes(route));
+  assert.ok(!hrefs.some(href => /^\/(?:app|dash|mesh|treasury|research\/near)(?:\/|$)/.test(href)));
   assert.ok(!hrefs.includes('/copilot/'));
   assert.equal(hrefs.filter(href => /\.html(?:[?#]|$)|\/dash\//i.test(href)).length, 0);
 });

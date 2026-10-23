@@ -1,5 +1,86 @@
 # Status
 
+## Current local verification and publication: 2026-10-23
+
+Owner: coordinator. Status: In Progress (local cutover verified; final draft publication and exact-head CI pending).
+
+[VERIFIED PUBLICATION] Draft [PR114](https://github.com/Sarthib7/FalconOS/pull/114), clock head353964e33f301eda965ea165f23b058e936dd4a7, passed every workflow. Draft [PR115](https://github.com/Sarthib7/FalconOS/pull/115), native head2591fff156f4cb1753b2969654fb4a17c6f4d00a, passed mandatory packaged-worker and missing-component CI. Draft [PR116](https://github.com/Sarthib7/FalconOS/pull/116), owner-activity head543db3e0329b190048eeb3cacee33b66ca7fc1de, also passed every workflow. The single-dashboard branch is locally verified and is the next draft. Nothing was merged.
+
+[VERIFIED APPROVAL] D4 owner sign-in and the dashboard-only human application are approved. Focused draft PRs and existing Cloudflare branch previews are approved. No merge, production rollout, schema change, real-user keypair access or financial action is authorized. Two live Lead/Risk attempts and one later Risk diagnostic were separately approved; those budgets are spent. Further paid calls need new approval.
+
+[VERIFIED LOCAL] The human review surface is `http://127.0.0.1:60942/dashboard/`. The former research URL redirects there. This is a local development bundle, not a production TLS or hosted claim. The production-built HTTPS owner path was checked separately. The current owned service is `falcon-dashboard-d4-preview-r2-20261023`; it runs actual source Mesh and the updated Rust MCP on60936/60937, with model-owner grants `[]`.
+
+| Check | Observed result | Method limit |
+| --- | --- | --- |
+| Full Mesh | VERIFIED: `tests324, pass324, fail0, skipped0` | Disposable PostgreSQL; external chain/provider fixtures, not funded execution. |
+| Final web | VERIFIED: `tests321, pass321, fail0, skipped0` | Builds site/MVP/agents; not hosted routing. |
+| Native SDK worker | VERIFIED: `8 pass, 0 fail, 60 expect() calls` | Real SDK serializer/stream with local broker/provider fixtures; no provider entitlement claim. |
+| Production owner browser | VERIFIED: `passed14, total14` | Real disposable auth/store and ephemeral message signer; localhost TLS, not a user wallet. |
+| Separate system browser | VERIFIED: `passed101, total101` | Actual adapters/store with intercepted fixture RPC; obsolete MVP-only bot navigation check removed, no real chain broadcast. |
+| Rust MCP | VERIFIED: `29 passed`,13suites | Locked tests in the internal publication checkout; outer source workspace unchanged. |
+
+[VERIFIED NEGATIVE PROOFS] The DB-clock regression failed against the frozen original (`tests1, pass0, fail1`) and passed against R4 (`tests1, pass1, fail0`). Removing call binding only in an isolated worker copy made the permanent native rejection test fail (`0 pass, 1 fail`); the protected suite passed8/8. The built-reference omission test failed against the old artifact (`200 !== 404`) and passed in the final web suite. Original design hashes still match `web/public/design-reference/source-sha256.json`.
+
+[VERIFIED GUARD REPAIRS] Dependency copies are private and dereferenced, including an explicit source-symlink test. PID readiness publishes atomically. Test wallets use fresh namespaces. Aged claim fixtures use a valid monotonic origin without sleeping. The graph permits exact shared auth modules, not neighboring workspaces. Human output omits design workspace HTML/sample snapshots. Native omission tests remain in the final boundary suite. See SPEC B128-B140.
+
+[VERIFIED FINAL RELEASE CHECK] After isolating the simulator probe and retaining native omission coverage, the final combined repository checks reported `tests31, pass31, fail0, skipped0`. The earlier29/28/1 result is a superseded checkpoint, not current green evidence. Four copied-public-asset negative cases also passed independently. Current-head CI remains a separate gate.
+
+[VERIFIED MODEL PROOF; LIMITED] Normal discovery initially returned `NO_BROKER_URL`. An owner-approved task-only official SDK broker enabled real-account preflight: SDK18.12.5, bodyAuditPASS, payload1, fetchFence0, providerDispatch0. The first live pair retained both roles null. After adding the required output schema, the second actual source-server run accepted a bound Lead but rejected Risk with INVALID_RESPONSE. A separately approved strict diagnostic copy later accepted Risk NO_DATA with matching run, call, snapshot and proposal bindings. The original retained job remained unchanged as NO_DATA. This is not one retained job with two accepted model responses. The earlier rejected Risk's exact malformed field remains undetermined. The task-only broker was stopped; no credentials were printed or global broker configuration edited.
+
+[VERIFIED ACTUAL SURFACE] Brave completed server-verified sign-in using an ephemeral QA wallet, adopted the real retained public case through the agent API, and rendered that stored assessment in the dashboard. The corrected layout measured desktop1360/document1345 and mobile390/document375. axe4.13.0 reported0violations,2incomplete,29passes; the helper returned no incomplete details and was reported. This is not a fully cleared accessibility claim.
+
+[VERIFIED DEV ENVIRONMENT] Real Vite fixtures reported `tests5, pass5, fail0`: required owner-auth assets load and adjacent workspaces redirect. The initial external publication root was beneath `.git` and returned403 under the unchanged filesystem deny rule. The current internal publication checkout is outside that excluded path. The built review surface remained available; no filesystem guard was relaxed.
+
+[VERIFIED STORAGE/PUBLICATION CORRECTION] External publication hit `No space left on device`; disk usage reported477G/477G,8Mavailable. The remaining publication moved to `$TMPDIR/falcon-r4-runtime.0tVvwL/publication`, cloned from pushed native head2591fff. All seven lifecycle staging files were archived internally before removing only the two task-owned staging worktrees. The canonical source/proposals and original dirty checkout were preserved. Old staging paths are no longer active.
+
+[VERIFIED IMAGE CI; HOSTED UNKNOWN] Local Docker's configured socket remains absent and no engine was reconfigured. Native CI head2591fff passed the mandatory image/actual-worker and missing-Bun/worker/SDK checks. This resolves the earlier image-proof blocker for that native head. Current D4 CI and hosted routing/API HTTPS/origin configuration remain separate; production rollout stays user-managed and unauthorized.
+
+### Earlier checkpoints retained below
+
+[CORRECTION] The same-day checkpoints below describe earlier states. The current evidence above supersedes their pending-approval, missing-broker and no-live-call statements. No source fix is claimed for the earlier unexplained MCP hang.
+
+## Human dashboard direction: 2026-10-23
+
+Owner: coordinator. Status: In Progress (D4 approved; implementation underway).
+
+[VERIFIED USER DIRECTION] Human application should expose only the dashboard. Research, evidence, mesh and system machinery belong to agent/system interfaces. This supersedes the public research-page human-UX target. Backend-R4 authorization remains unchanged; raw-page edits are preserved unshipped, not silently reverted or published.
+
+[VERIFIED APPROVAL] The owner selected “Yes, implement D4 and owner sign-in”. D4 replaces the static Soon dashboard with the existing server-verified wallet session gate. Signup/org workspaces remain unavailable. Sign-in never grants model execution, signing or spending.
+
+[VERIFIED APPROVAL] The owner selected “Yes, small draft PRs for CI” for `Sarthib7/FalconOS`. Publish focused commits sequentially for exact-head CI and actual built-image smoke. No merge, deployment or paid model calls are authorized by this approval.
+
+[PLANNED OWNERSHIP, In Progress] D4Activity owns canonical Mesh activity, the non-starting research read and thin MCP adaptation. D4OwnerUI owns the real-data owner dashboard and existing auth reuse. D4RouteCutover owns production entries, retired human routes and release boundaries. Coordinator owns `docs/interfaces.md`, SPEC, integration, CI, runtime/browser checks and publication. Workers skip all gates.
+
+[VERIFIED CONTRACT RECORD] `docs/interfaces.md#owner-dashboard-d4-contract-2026-10-23` fixes the shared read DTOs and ownership. SPEC V185/V190/V191 and T91 record the approved cutover. No new dashboard runtime or hosted-route proof is claimed at this checkpoint.
+
+[VERIFIED LOCAL RECOVERY] Owner reported a504 on the research preview. Mesh health/readiness and immutable-case lookup returned200, while MCP accepted a fresh TCP connection but returned no HTTP bytes within3seconds. Restarting only the owned MCP child with an identical SHA256 binary restored MCP health and the case API to200. The process hang's cause remains undetermined; this is availability recovery, not a proven Rust source fix. Proxy deadlines were not increased.
+
+[VERIFIED SETUP] Isolated Bun reported1.3.14 after official-digest verification. Locked SDK installation added123packages with scripts/audit/fund disabled. The same manifests/lock installed from the physical temporary working directory; an earlier logical-path --prefix attempt failed. No global CLI update, broker/native preflight or paid business-role call occurred.
+
+[VERIFIED UI LIMIT] The research page build completed and one correctly targeted actual-page axe4.13.0 audit reported0violations/0incomplete/35passes. Later expanded/mobile evidence was invalidated by a managed-browser target mismatch and discarded. No clean full UI verification or publication is claimed; the human target is now superseded.
+
+## R4 completion: 2026-10-23
+
+Owner: coordinator. Status: In Progress.
+
+[VERIFIED USER APPROVAL] Owner selected “Yes, implement and set up” for backend-R4, visual-R2, isolated Bun1.3.14/SDK18.12.5 setup and native zero-provider-dispatch preflight. Paid Lead/Risk calls, production grants, deployment and financial actions remain separate gates.
+
+[VERIFIED OPERATIONS] Branch `feat/research-completion-r4-20261023` starts at `f1f7ce8670575ce0b784f93cfa33369f8ced8efa`. A separate detached copy preserves that source for failure-before checks. Only coordinator-created dependency links were untracked before implementation; they are not publication inputs.
+
+[VERIFIED SOURCE RECORD] `docs/interfaces.md` records the approved private host/worker IPC, preflight schema and monotonic-budget seam. SPEC V187/V188 and T89/T90 record the approved behavior as In Progress, not implemented proof. B124 records the observed injected-clock PostgreSQL failure.
+
+[REPORTED COMPLETED EDITS; PARENT GATES BELOW] R4NodeHost, R4SdkWorker and R4ReviewJobs delivered their source slices. R4ResearchUI edits remain preserved and unshipped after the human target changed. Coordinator owns Docker/CI and integration; current D4 ownership is above.
+
+[VERIFIED STORAGE CHECK] Initial setup reported internal temporary storage27 GB available and external source volume1.7 GB available. Runtime binary/dependency cache will use internal temporary storage. No global CLI/Bun update is planned.
+
+[VERIFIED LOCAL] Focused controller/bridge/store/runner/server checks reported `tests51, pass51, fail0, skipped0`. Pinned native worker checks reported `6 pass, 0 fail, 44 expects`. A fresh disposable PostgreSQL full Mesh run reported `tests320, pass320, fail0, skipped0`. The permanent DB-clock regression failed against the frozen original (`tests1, pass0, fail1`) and passed against R4 (`tests1, pass1, fail0`).
+
+[VERIFIED LOCAL; LIMITED PROOF] Release linkage returned `PASS`, `declaredFiles39`, `isolatedLinkage:true`, `databaseChecked:false`, `dockerImageChecked:false`. Actual source bridge/worker preflight returned `PASS` with SDK18.12.5, bodyAuditPASS, payload1, providerDispatch0 and modelRoleCalls0 using a local broker fixture. Normal-account preflight returned NO_DATA before body audit and dispatched0; actual account/model readiness remains unknown. Obsolete codex-host source/test were removed after replacement proof; legacy src/codex.ts remains unchanged.
+
+[VERIFIED CHECK FAILURE AND REPAIR] A release-test fixture preserved a shared node_modules symlink and its negative mutation removed the shared web3 package. Restored locked1.98.4 and changed fixture copy to realpath+deref with source-survival assertion (V189/B128). The corrected combined command hit its outer180second deadline after10boundary and6verify cases passed. The remaining5web cases separately passed. No complete all-in-one corrected suite or exact-head CI result is claimed.
+
+[BLOCKED IMAGE PROOF] Docker client exists; its configured daemon socket is absent. No local engine was started/reconfigured. Authorized draft PR CI can supply the actual built-image positive and missing-Bun/worker/SDK checks. Two paid Lead/Risk calls and production/hosted readiness remain unverified and separately gated.
+
 ## Source 0.5.0 publication evidence: 2026-10-23
 
 Owner: coordinator. [VERIFIED, parent-observed CI] Status: PR 112 recovery check passed without source changes; the original startup failure remains unexplained. This is not a release or readiness claim.

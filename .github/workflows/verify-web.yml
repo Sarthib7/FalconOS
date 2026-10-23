@@ -47,5 +47,5 @@ jobs:
       - name: Verify production release boundaries
         run: node web/scripts/verify-release.mjs
 
-      - name: Verify public dashboard withholding
+      - name: Verify owner dashboard and retired human routes
         run: node --test web/test/mvp-routes.test.mjs
