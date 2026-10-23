@@ -55,6 +55,7 @@ export default defineConfig({
         main: entry('./index.html'),
         product: entry('./product/index.html'),
         research: entry('./research/index.html'),
+        researchNear: entry('./research/near/index.html'),
         dash: entry('./dash/index.html'),
         app: entry('./app/index.html'),
         treasury: entry('./treasury/index.html'),

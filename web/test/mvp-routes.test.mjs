@@ -86,3 +86,14 @@ test('V185: public dashboard stays Soon and omits local simulator from productio
     assert.equal(response.status, 404, `local artifact must omit dashboard source: ${path}`);
   }
 });
+
+test('public NEAR research route is served from the production website artifact', async t => {
+  const server = staticServer(siteRoot);
+  await listen(server);
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const base = 'http://127.0.0.1:' + server.address().port;
+  const response = await fetch(base + '/research/near/');
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'text/html');
+  assert.ok((await response.arrayBuffer()).byteLength > 0);
+});

@@ -12,7 +12,7 @@ const REQUIRED_INPUTS = [
   'mesh/domain.mjs', ...SHARED_INPUTS,
 ];
 const ROUTES = ['index.html', 'product/index.html', 'research/index.html', 'dash/index.html',
-  'app/index.html', 'treasury/index.html', 'mesh/index.html', 'dashboard/index.html'];
+  'app/index.html', 'treasury/index.html', 'mesh/index.html', 'dashboard/index.html', 'research/near/index.html'];
 
 function contains(directory, path) {
   const child = relative(directory, path);
