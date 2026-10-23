@@ -43,7 +43,7 @@ const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const allowedRemoteHosts = new Set(['api.devnet.solana.com', 'transaction-v1-devnet.raydium.io', 'api-v3-devnet.raydium.io']);
 
 const webRoot = fileURLToPath(new URL('..', import.meta.url));
-const root = resolve(webRoot, 'dist');
+const root = resolve(webRoot, 'dist-mesh');
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 const log = (line) => console.log(`[devnet-e2e] ${line}`);
 
@@ -74,9 +74,9 @@ log(`mode=${mode} wallet=${address}`);
 if (mode === 'full') allowedRemoteHosts.add('esm.sh');
 
 if (!existsSync(resolve(root, 'app/index.html'))) {
-  log('web/dist missing; running build:site');
-  const build = spawnSync('npm', ['run', 'build:site'], { cwd: webRoot, stdio: 'inherit' });
-  assert.equal(build.status, 0, 'build:site failed');
+  log('web/dist-mesh app missing; running build:mesh for the local system harness');
+  const build = spawnSync('npm', ['run', 'build:mesh'], { cwd: webRoot, stdio: 'inherit' });
+  assert.equal(build.status, 0, 'build:mesh failed');
 }
 
 // ---- Devnet RPC (node side, read-only) ----
@@ -110,7 +110,7 @@ const council = createServer((request, response) => {
 await new Promise((done, fail) => { council.once('error', fail); council.listen(0, '127.0.0.1', done); });
 const councilBase = `http://127.0.0.1:${council.address().port}`;
 
-// ---- Static server for web/dist ----
+// ---- Static server for the separate local system artifact ----
 const site = createServer(async (request, response) => {
   try {
     let pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);

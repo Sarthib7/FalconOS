@@ -28,21 +28,24 @@ async function checkout(t, component, sourceRoot = ROOT) {
   await cp(source, join(root, component), {
     recursive: true,
     filter: path => !relative(source, path).split('/').some(part =>
-      ['node_modules', '.local', '.git', 'dist', 'dist-mesh', 'dist-treasury', 'dist-dashboard-preview'].includes(part)
+      ['node_modules', '.local', '.git', 'dist', 'dist-mvp', 'dist-agents', 'dist-bot', 'dist-mesh', 'dist-treasury', 'dist-dashboard-preview'].includes(part)
       || part.startsWith('.env') || part.endsWith('.log')),
   });
   if (component === 'web') {
     await cp(await realpath(join(source, 'node_modules')), join(root, component, 'node_modules'), { recursive: true, dereference: true });
+    await mkdir(join(root, 'mesh'));
   } else {
     await symlink(join(source, 'node_modules'), join(root, component, 'node_modules'), 'dir');
   }
-  if (component === 'web') {
-    await mkdir(join(root, 'mesh'));
-    for (const file of ['fixtures.mjs', 'kamino-wire.mjs', 'domain.mjs', 'limits.mjs']) {
-      await cp(join(ROOT, 'mesh', file), join(root, 'mesh', file));
-    }
-  }
   return root;
+}
+
+async function publicFixture(root) {
+  const config = join(root, 'web/vite.config.js');
+  await writeFile(config, (await readFile(config, 'utf8')).replace('publicDir: false,', "publicDir: 'unsafe-public',"));
+  const directory = join(root, 'web/unsafe-public');
+  await mkdir(directory);
+  return directory;
 }
 
 function check(script, root) {
@@ -64,40 +67,32 @@ function rejected(result, diagnostic) {
   assert.match(result.stderr, diagnostic);
 }
 
-test('REPO-VERIFY-1: website-only checkout builds all production routes with its declared mesh inputs', async t => {
+test('V190: website release builds only the marketing pages and owner dashboard route', async t => {
   const root = await checkout(t, 'web');
   const report = passed(check(WEB_CHECK, root));
-  assert.equal(report.routes, 9);
+  assert.equal(report.routes, 4);
   assert.equal(report.artifactWritten, false);
 });
 
-test('REPO-VERIFY-1: website rejects missing browser shared input', async t => {
-  const root = await checkout(t, 'web');
-  await rm(join(root, 'mesh/fixtures.mjs'));
-  rejected(check(WEB_CHECK, root), /missing.*mesh\/fixtures\.mjs/);
-});
 
 test('REPO-VERIFY-1: Vite graph rejects forbidden repository source even when the module resolves', async t => {
   const root = await checkout(t, 'web');
   await mkdir(join(root, 'src'));
   await writeFile(join(root, 'src/release-probe.mjs'), 'globalThis.releaseBoundaryProbe = true;\n');
-  await appendFile(join(root, 'web/mesh/app.mjs'), '\nimport "../../src/release-probe.mjs";\n');
+  await appendFile(join(root, 'web/landing/main.jsx'), '\nimport "../../src/release-probe.mjs";\n');
   rejected(check(WEB_CHECK, root), /Browser source crosses the release boundary: src\/release-probe\.mjs/);
 });
 
-test('REPO-VERIFY-1: website rejects missing Node-only dashboard test input', async t => {
-  const root = await checkout(t, 'web');
-  await rm(join(root, 'mesh/domain.mjs'));
-  rejected(check(WEB_CHECK, root), /missing.*mesh\/domain\.mjs/);
-});
 
 test('REPO-VERIFY-1: mesh dependencies cannot mask a missing declared website dependency', async t => {
   const root = await checkout(t, 'web');
+  const originalPackage = join(ROOT, 'web/node_modules/@solana/web3.js/package.json');
+  const originalContents = await readFile(originalPackage, 'utf8');
   await rm(join(root, 'web/node_modules/@solana/web3.js'), { recursive: true, force: true });
   await symlink(join(ROOT, 'mesh/node_modules'), join(root, 'mesh/node_modules'), 'dir');
   rejected(check(WEB_CHECK, root), /Website dependency is missing from web\/node_modules: @solana\/web3\.js/);
+  assert.equal(await readFile(originalPackage, 'utf8'), originalContents, 'fixture mutations must not alter shared dependencies');
 });
-
 test('V189: web checkout privately copies dependencies reached through a source symlink', async t => {
   const sourceRoot = await mkdtemp(join(tmpdir(), 'falcon-release-source-'));
   t.after(() => rm(sourceRoot, { recursive: true, force: true }));
@@ -124,44 +119,54 @@ test('V189: web checkout privately copies dependencies reached through a source 
     'deleting a fixture package must preserve the shared dependency');
 });
 
-test('REPO-VERIFY-1: website rejects a missing production route', async t => {
-  const root = await checkout(t, 'web');
-  const config = join(root, 'web/vite.config.js');
-  await writeFile(config, (await readFile(config, 'utf8')).replace("product: entry('./product/index.html'),", ''));
-  rejected(check(WEB_CHECK, root), /Production route was not built: product\/index\.html/);
-});
-
-test('REPO-VERIFY-1: website rejects a local terminal route added to production', async t => {
+test('V190: release rejects raw technical HTML routes added to production', async t => {
   const root = await checkout(t, 'web');
   const config = join(root, 'web/vite.config.js');
   await writeFile(config, (await readFile(config, 'utf8')).replace("main: entry('./index.html'),",
-    "main: entry('./index.html'), local: entry('./local-terminal.html'),"));
-  rejected(check(WEB_CHECK, root), /Local route entered the production build: local-terminal\.html/);
+    "main: entry('./index.html'), dash: entry('./dash/index.html'),"));
+  rejected(check(WEB_CHECK, root), /Retired technical route entered the production build: dash\/index\.html/);
 });
+test('V190: release rejects a retired technical module imported into a marketing bundle', async t => {
+  const root = await checkout(t, 'web');
+  await appendFile(join(root, 'web/landing/main.jsx'),
+    '\nimport { decide } from "../treasury/domain.mjs"; globalThis.technicalProbe = decide;\n');
+  rejected(check(WEB_CHECK, root), /Retired technical source entered the production build: treasury\/domain\.mjs/);
+});
+
+test('V194: owner auth reuse does not permit adjacent bot workspace modules', async t => {
+  const root = await checkout(t, 'web');
+  await writeFile(join(root, 'web/bot/release-probe.mjs'), 'globalThis.retiredWorkspaceProbe = true;');
+  await appendFile(join(root, 'web/bot/auth.mjs'), '\nimport "./release-probe.mjs";\n');
+  rejected(check(WEB_CHECK, root), /bot\/release-probe\.mjs/);
+});
+
 
 test('REPO-VERIFY-1: website rejects local routes copied through the public directory', async t => {
   const root = await checkout(t, 'web');
-  await mkdir(join(root, 'web/public/copilot'));
-  await writeFile(join(root, 'web/public/copilot/index.html'), '<h1>Local copilot</h1>');
-  rejected(check(WEB_CHECK, root), /Local route entered the production public directory: copilot/);
+  const directory = await publicFixture(root);
+  await mkdir(join(directory, 'copilot'));
+  await writeFile(join(directory, 'copilot/index.html'), '<h1>Local copilot</h1>');
+  rejected(check(WEB_CHECK, root), /\bcopilot\b/);
 });
 
-test('V185: release rejects restoring the simulator entry behind the public gate', async t => {
+test('V185: release rejects an unauthenticated simulator entry beside the owner dashboard', async t => {
   const root = await checkout(t, 'web');
+  // Isolate the entry guard from the legacy simulator's forbidden dependencies.
+  await writeFile(join(root, 'web/dashboard/main.jsx'), 'globalThis.unauthenticatedSimulatorProbe = true;');
   await appendFile(join(root, 'web/dashboard/index.html'), '\n<script type="module" src="./main.jsx"></script>\n');
   rejected(check(WEB_CHECK, root), /Simulator source entered the production build: dashboard\/(main\.jsx|App\.jsx|data\.json)/);
 });
 
 test('V185: release rejects simulator fixtures imported into another public chunk', async t => {
   const root = await checkout(t, 'web');
-  await appendFile(join(root, 'web/mesh/app.mjs'), '\nimport privateSamples from "../dashboard/data.json"; globalThis.dashboardProbe = privateSamples;\n');
+  await appendFile(join(root, 'web/landing/main.jsx'), '\nimport privateSamples from "../dashboard/data.json"; globalThis.dashboardProbe = privateSamples;\n');
   rejected(check(WEB_CHECK, root), /Simulator source entered the production build: dashboard\/data\.json/);
 });
 
 test('V185: release rejects executable inline code in the public dashboard', async t => {
   const root = await checkout(t, 'web');
   await appendFile(join(root, 'web/dashboard/index.html'), '\n<script>globalThis.dashboardProbe = true;</script>\n');
-  rejected(check(WEB_CHECK, root), /Public dashboard must remain static Soon HTML/);
+  rejected(check(WEB_CHECK, root), /Dashboard entry must load its owner module without inline code or unsafe markup/);
 });
 
 test('V185: release rejects inline event handlers in the public dashboard', async t => {
@@ -169,7 +174,7 @@ test('V185: release rejects inline event handlers in the public dashboard', asyn
   const page = join(root, 'web/dashboard/index.html');
   const html = await readFile(page, 'utf8');
   await writeFile(page, html.replace('</body>', '<button onclick="globalThis.dashboardProbe = true">Run</button>\n</body>'));
-  rejected(check(WEB_CHECK, root), /Public dashboard must remain static Soon HTML/);
+  rejected(check(WEB_CHECK, root), /Dashboard entry must load its owner module without inline code or unsafe markup/);
 });
 
 test('V185: release rejects javascript URLs in the public dashboard', async t => {
@@ -177,7 +182,7 @@ test('V185: release rejects javascript URLs in the public dashboard', async t =>
   const page = join(root, 'web/dashboard/index.html');
   const html = await readFile(page, 'utf8');
   await writeFile(page, html.replace('</body>', '<a href="javascript:globalThis.dashboardProbe = true">Run</a>\n</body>'));
-  rejected(check(WEB_CHECK, root), /Public dashboard must remain static Soon HTML/);
+  rejected(check(WEB_CHECK, root), /Dashboard entry must load its owner module without inline code or unsafe markup/);
 });
 
 test('V185: release rejects a local dashboard page added as a production input', async t => {
@@ -191,10 +196,31 @@ test('V185: release rejects a local dashboard page added as a production input',
 
 test('V185: release rejects dashboard source copied through the public directory', async t => {
   const root = await checkout(t, 'web');
-  await mkdir(join(root, 'web/public/dashboard'));
-  await cp(join(root, 'web/dashboard/data.json'), join(root, 'web/public/dashboard/data.json'));
-  rejected(check(WEB_CHECK, root), /Local route entered the production public directory: dashboard/);
+  const directory = await publicFixture(root);
+  await mkdir(join(directory, 'dashboard'));
+  await cp(join(root, 'web/dashboard/data.json'), join(directory, 'dashboard/data.json'));
+  rejected(check(WEB_CHECK, root), /\bdashboard\b/);
 });
+test('V190: release rejects technical HTML copied through the public directory', async t => {
+  const root = await checkout(t, 'web');
+  const directory = await publicFixture(root);
+  await mkdir(join(directory, 'mesh'));
+  await writeFile(join(directory, 'mesh/index.html'), '<h1>Technical mesh</h1>');
+  rejected(check(WEB_CHECK, root), /Technical or local route entered the production public directory: mesh/);
+});
+
+test('V196: release rejects copied design workspaces and sample snapshot data', async t => {
+  const root = await checkout(t, 'web');
+  const directory = await publicFixture(root);
+  const reference = join(directory, 'design-reference');
+  await mkdir(reference);
+  await writeFile(join(reference, 'workspace.html'), '<main>Local design specimen</main>');
+  rejected(check(WEB_CHECK, root), /design-reference/);
+  await rm(reference, { recursive: true });
+  await writeFile(join(directory, 'dash-snapshot.json'), '{"fixtureOnly":true}');
+  rejected(check(WEB_CHECK, root), /dash-snapshot\.json/);
+});
+
 
 
 test('REPO-VERIFY-1: complete API checkout links in isolation without database configuration', async t => {
@@ -213,16 +239,6 @@ test('REPO-VERIFY-1: API rejects an omitted transitive runtime file', async t =>
 test('NEAR-RESEARCH-1: API rejects each omitted research runtime dependency', async t => {
   const root = await checkout(t, 'mesh');
   for (const input of NEAR_RESEARCH_RUNTIME_INPUTS) {
-    const target = join(root, 'mesh', input);
-    await rm(target);
-    rejected(check(MESH_CHECK, root), new RegExp('missing.*mesh/' + input));
-    await cp(join(ROOT, 'mesh', input), target);
-  }
-});
-
-test('REPO-VERIFY-1: API rejects each omitted native Council runtime dependency', async t => {
-  const root = await checkout(t, 'mesh');
-  for (const input of NATIVE_COUNCIL_RUNTIME_INPUTS) {
     const target = join(root, 'mesh', input);
     await rm(target);
     rejected(check(MESH_CHECK, root), new RegExp('missing.*mesh/' + input));
@@ -257,4 +273,14 @@ test('REPO-VERIFY-1: isolated API linkage rejects an absolute import outside the
   await writeFile(outside, 'export const probe = true;\n');
   await appendFile(join(root, 'mesh/server.mjs'), `\nimport ${JSON.stringify(pathToFileURL(outside).href)};\n`);
   rejected(check(MESH_CHECK, root), /expected DATABASE_URL guard.*ERR_ACCESS_DENIED/s);
+});
+
+test('REPO-VERIFY-1: API rejects each omitted native Council runtime dependency', async t => {
+  const root = await checkout(t, 'mesh');
+  for (const input of NATIVE_COUNCIL_RUNTIME_INPUTS) {
+    const target = join(root, 'mesh', input);
+    await rm(target);
+    rejected(check(MESH_CHECK, root), new RegExp('missing.*mesh/' + input));
+    await cp(join(ROOT, 'mesh', input), target);
+  }
 });

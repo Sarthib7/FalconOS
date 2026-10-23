@@ -1,6 +1,6 @@
 # Local knowledge mesh
 
-[VERIFIED, source: `server.mjs`, `store.mjs`, `http.mjs`, `wallet-auth.mjs`] This Node service retains sources and analyses in PostgreSQL. The browser at `/mesh/` shows the evidence graph and a Devnet lending terminal. The server derives each workspace from a mesh token or verified Supabase subject. Bot yield requests also accept a verified wallet session.
+[VERIFIED SOURCE, D4] This Node service retains sources and analyses in PostgreSQL. The human application is the owner dashboard. Server-verified wallet sessions or static Mesh tokens select the owner; Supabase JWTs remain yield-only. The separate local system build preserves the mesh and Devnet terminal.
 
 [VERIFIED, source: `package.json`, `schema.sql`, migrations `0002_lending.sql` and `0003_wallet_auth.sql`] Use Node 24.12 or later and PostgreSQL. The current local schema is version 3. Startup checks the schema and does not change it.
 
@@ -35,13 +35,14 @@ FALCON_MESH_ALLOW_SCHEMA_SETUP=1 npm --prefix mesh run init-db
 npm --prefix mesh run dev:local
 ```
 
-[VERIFIED, source: `local.mjs`] The local launcher binds the API to `127.0.0.1:8791`. It saves a generated token in `mesh/.local/operator-token`. The file is excluded from Git. The browser keeps this token in memory. Reloading requires another connection. `FALCON_MESH_ORIGINS` includes the local bot origin `http://127.0.0.1:5194` for Phantom message sign-in.
+[VERIFIED SOURCE, local.mjs] The local launcher starts the actual API server at `127.0.0.1:8791`. It stores a generated operator token in ignored `mesh/.local/operator-token` for the local system viewer. The human dashboard uses server-verified wallet sign-in, not that token form. Allowed local origins include dashboard dev ports `4183` and `5173`.
 
 
-[INFERRED, second terminal] Start the React site, then open `http://127.0.0.1:4183/mesh/`.
+[VERIFIED LOCAL, separate system target] Build and serve the local system artifact, then open `http://127.0.0.1:4183/mesh/`. This is not the human dashboard build.
 
 ```bash
-npm --prefix web run dev:local
+npm --prefix web run build:mesh
+npm --prefix web run preview:mesh -- --host 127.0.0.1 --port 4183 --strictPort
 pbcopy < mesh/.local/operator-token
 ```
 
@@ -60,11 +61,11 @@ pbcopy < mesh/.local/operator-token
 
 [VERIFIED, source and local integration tests] The Mesh API checks the configured Origin, verifies the Ed25519 signature, and deletes the challenge in the same transaction that creates the session. PostgreSQL stores the SHA-256 hash of a random session token. The bot stores the token in `sessionStorage`; it expires after 30 minutes. Logout revokes it. The owner ID comes from the verified wallet address.
 
-[VERIFIED, source: `server.mjs`, `init-db.mjs`, `wallet-auth.mjs`] Wallet login needs schema version 3 and an exact bot origin in `FALCON_MESH_ORIGINS`. `init-db` applies the full local history, including `0003_wallet_auth.sql`. That migration is a local candidate only; it has not been applied remotely. Static mesh tokens and Supabase JWTs remain available to existing clients.
+[VERIFIED SOURCE] Wallet login requires schema version3 and the exact dashboard/MCP caller origin in `FALCON_MESH_ORIGINS`. Initialization and hosted schema changes remain separately approved operations. Existing static Mesh tokens remain supported; Supabase JWTs do not authorize owner activity or research.
 
 ## Live decision graph
 
-[VERIFIED, source: `web/dashboard/Operate.jsx`, `mesh/scenario.mjs`] Open `http://127.0.0.1:4183/dashboard/#operate` to connect the retained Devnet reserve capture to a proposed position and your own limits. Paste the local access token directly into Operate. That in-memory connection is shared with Knowledge; the token never enters a URL or browser storage. Enter all four fields yourself. There are no preset values. The service saves a `REVIEW`, `BLOCKED` or `NO_DATA` advisory with observed, owner-entered, rule and result nodes. The newest saved decision opens when you return to Operate; select older history to inspect its original graph and cutoff. The book amount is not freely withdrawable, the proposed position is not a wallet holding, and the page cannot sign or send a transaction. Refresh the fixed reserve source in `/mesh/` before evaluating when its evidence is stale.
+[VERIFIED SOURCE, separate local simulator] Use the [local dashboard preview](../web/dashboard/README.md#run-and-preview), then open `/local-dashboard/#operate`. Operate connects retained Devnet reserve evidence to explicit owner-entered limits. Its in-memory operator-token connection is not the production owner dashboard. Saved REVIEW, BLOCKED or NO_DATA decisions remain advisory. The simulator cannot sign or send a transaction. Refresh stale reserve evidence through the separate local system viewer.
 [VERIFIED, `mesh/limits.mjs`, `mesh/scenario.mjs`, `mesh/test/scenario.test.mjs`, `mesh/test/scenario-http.test.mjs`] Policy v2 applies the canonical Devnet cap of `1_000_000` USDC base units. A fresh `2_000_000` proposal under maximum `5_000_000` is `BLOCKED`; exact-cap inputs pass the cap check. Caller amounts stay unchanged. Stale or missing evidence remains `NO_DATA`. [VERIFIED source, `web/dashboard/Operate.jsx`] The reader accepts historical v1 and current v2 records; this is not an enforcement layer.
 ## Devnet execution proof
 
@@ -78,7 +79,7 @@ pbcopy < mesh/.local/operator-token
 
 [VERIFIED, source: `mesh/http.mjs`, `mesh/wallet-auth.mjs`, `migrations/0003_wallet_auth.sql`] The bot signs an origin-bound server challenge with `solana:signMessage`. The server derives the owner from the wallet address and stores one-time challenges and hashed 30-minute sessions in PostgreSQL. Sign-in does not authorize transactions or move funds.
 
-[VERIFIED, source: `mesh/http.mjs`] The API exposes `POST /v1/auth/wallet/challenge`, `POST /v1/auth/wallet/verify`, `GET /v1/auth/wallet/session`, and `POST /v1/auth/wallet/logout`. Add the bot origin to `FALCON_MESH_ORIGINS`. Static mesh tokens and Supabase session verification remain available for existing clients.
+[VERIFIED SOURCE] The API exposes `POST /v1/auth/wallet/challenge`, `POST /v1/auth/wallet/verify`, `GET /v1/auth/wallet/session`, and `POST /v1/auth/wallet/logout`. Add the exact caller origin to `FALCON_MESH_ORIGINS`. The dashboard restores a session only after server verification. Authentication never grants inference or financial authority.
 
 ## Preview and verification
 

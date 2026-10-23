@@ -7,6 +7,9 @@ export default defineConfig({
   publicDir: false,
   build: {
     outDir: 'dist-mesh',
-    rolldownOptions: { input: fileURLToPath(new URL('./mesh/index.html', import.meta.url)) },
+    rolldownOptions: { input: {
+      mesh: fileURLToPath(new URL('./mesh/index.html', import.meta.url)),
+      app: fileURLToPath(new URL('./app/index.html', import.meta.url)),
+    } },
   },
 });

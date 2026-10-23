@@ -4,9 +4,17 @@
 
 [VERIFIED, current source boundary: mcp-rust/src/lib.rs, mesh/limits.mjs] The MCP workflow exposes public evidence and owner-scoped Solana Devnet lending preparation. Supply is capped at 1 Devnet USDC. Falcon holds no keys and never signs or broadcasts. Humans approve each signature and broadcast through their own wallet/provider. A complete owner-wallet supply/redemption round trip remains unverified; see SPEC T82. Mainnet, custody and delegated execution are outside this release.
 
+## Human dashboard and agent interfaces
+
+[VERIFIED LOCAL, D4] `/dashboard/` is the only human application workspace. It uses server-verified wallet sign-in and retained backend activity. Login does not authorize model work, signing or spending. Signup and organization workspaces remain unavailable. No sample portfolio or PnL is loaded. See the [owner dashboard contract](docs/interfaces.md#owner-dashboard-d4-contract-2026-10-23).
+
+[VERIFIED SOURCE] Retired app, mesh, treasury and NEAR research workspace URLs redirect to the dashboard. Structured MCP/HTTP research, evidence and execution interfaces remain available under their existing authorization rules. Marketing and agent installation remain separate. Local system/simulator builds are not human deployment artifacts. Hosted routing and environment readiness remain unverified.
+
+[VERIFIED LOCAL] The final web suite reported `tests321, pass321, fail0`. The production-built owner browser reported `passed14, total14`, including forged/revoked/expired sessions, retained data rendering and failed logout. These results do not prove hosted deployment. Current model and container limits are in [status](status.md).
+
 ## Try it
 
-**Agent page:** [https://agents.falconos.markets](https://agents.falconos.markets)
+**Agent install route in current source:** [https://agents.falconos.markets/install/](https://agents.falconos.markets/install/). Hosted cutover is not verified.
 
 **Download the skill (any agent):**
 ```sh
@@ -141,7 +149,7 @@ See [mesh/README.md](mesh/README.md) and [mcp-rust/README.md](mcp-rust/README.md
 | ---- | ------- |
 | `mcp-rust/` | Rust MCP server (Streamable HTTP, stateless, Railway) |
 | `mesh/` | Mesh API and Kamino adapter (Railway, Supabase Postgres schema v3) |
-| `web/` | Bot page (`web/bot`), skill template (`web/skills/SKILLS.md`), site, dashboard |
+| `web/` | Owner dashboard, marketing, agent install/skill files, separate local system and simulator sources |
 | `engine/` | Rust stocks dashboard |
 | `src/` | Advisory plugin CLI |
 | `docs/` | Architecture, interfaces, verification records |

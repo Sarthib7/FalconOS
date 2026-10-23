@@ -14,6 +14,14 @@ export function resolveApiBase(env = (typeof import.meta !== 'undefined' ? impor
 
 export const API_BASE = resolveApiBase();
 export const TOKEN_PATTERN = /^[A-Za-z0-9._~-]{32,256}$/;
+export class MeshRequestError extends Error {
+  constructor(message, { status = null, code = null } = {}) {
+    super(message);
+    this.name = 'MeshRequestError';
+    this.status = status;
+    this.code = code;
+  }
+}
 
 export async function meshRequest(token, path, body) {
   if (!API_BASE) throw new Error(
@@ -30,8 +38,14 @@ export async function meshRequest(token, path, body) {
     });
   } catch { throw new Error('The mesh service did not respond. Check the service and its allowed viewer origin, then try again.'); }
   let payload;
-  try { payload = await response.json(); } catch { throw new Error(`The mesh service returned an unreadable response (HTTP ${response.status}).`); }
-  if (!response.ok) throw new Error(`${payload?.error?.code ?? `HTTP ${response.status}`}: ${payload?.error?.message ?? 'The request failed.'}`);
+  try { payload = await response.json(); } catch { throw new MeshRequestError(`The mesh service returned an unreadable response (HTTP ${response.status}).`, { status: response.status }); }
+  if (!response.ok) {
+    const code = typeof payload?.error?.code === 'string' ? payload.error.code : null;
+    throw new MeshRequestError(
+      `${payload?.error?.code ?? `HTTP ${response.status}`}: ${payload?.error?.message ?? 'The request failed.'}`,
+      { status: response.status, code },
+    );
+  }
   return payload;
 }
 

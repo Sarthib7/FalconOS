@@ -1,10 +1,18 @@
 # Control Centre
 
+## Current owner dashboard
+
+[VERIFIED LOCAL, D4] Production `index.html` loads `owner-main.jsx` and `OwnerDashboard.jsx`. The human workspace uses existing server-verified wallet sign-in and private `GET /v1/activity`. It shows retained public context separately from owner research and decision/intent summaries. It never starts captures, reviews or model work. Login grants identity only. See the [shared contract](../../docs/interfaces.md#owner-dashboard-d4-contract-2026-10-23) and [current verification](../../status.md).
+
+[VERIFIED LOCAL] `node web/test/owner-dashboard-browser.mjs` reported `passed14, total14` against the production build and disposable PostgreSQL. CI builds with a loopback HTTPS API for that check. Production requires an operator-configured HTTPS `VITE_MESH_API_URL` and matching Mesh origins. The local HTTP review artifact is a development build, not hosted-production proof.
+
+## Separate local simulator
+
 [VERIFIED, source: OpenDesign `index.html`, `falconos-workspace.html`; current React source: `App.jsx`] The original Control Centre design from project `886c2e41-d9d4-45e0-a67d-148f20cfca61` has four views: Overview, Decisions, Knowledge and Connections. The React port preserves them and adds Operate for live Devnet reserve scenario decisions. The source project remains standalone HTML; the port uses the existing React and Vite package.
 
 ## Run and preview
 
-[SOURCE-VERIFIED, source: `dashboard/index.html`, `vite.config.js`] PR2 changes the production `/dashboard/` entry to a static Soon page. It does not provide owner login or private access. PR1's React Control Centre remains on the separate local `/local-dashboard/` preview. The local preview output must not be uploaded as the main-site artifact. This describes source behavior only, not hosted route behavior or deployment.
+[CORRECTION, D4] The earlier PR2 static Soon dashboard gate is superseded by the owner dashboard above. The Control Centre simulator still runs only on the separate `/local-dashboard/` preview. Do not upload that preview as the human artifact. The remaining source-fidelity and simulator instructions below describe this separate local build, not current production owner data.
 
 From the FalconOS repository root, start the local simulator:
 
@@ -43,7 +51,7 @@ CHROME_BIN="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" npm --
 
 [VERIFIED, source: `Operate.jsx`, `mesh/scenario.mjs`] Operate reads the current live reserve capture from the mesh service. Enter a proposed position and owner limits to save a read-only decision graph. The source node is observed; mandate and proposal nodes are owner-entered. Results never claim wallet holdings, withdrawable liquidity or execution approval. The original Decisions route remains a synthetic treasury simulation.
 
-[VERIFIED, asset provenance] The dashboard reuses the four font files under `web/landing/assets/`. Their extracted bytes match the source fonts. Existing font licenses remain there. The Alpine mark comes from the source SVG path. Earlier advisory pages remain original HTML under `/design-reference/`; they use their own browser storage key.
+[VERIFIED SOURCE/ASSET PROVENANCE] The dashboard reuses four licensed font files under `web/landing/assets/`. Original advisory HTML and its hash manifest remain in `web/public/design-reference/` for the separate local simulator. Human production builds omit that directory and sample snapshot data. The original source hashes remain unchanged.
 
 [INFERRED, design contract] See [Control Centre](../../docs/control-centre.md) for persistence, history, export and verification requirements.
 

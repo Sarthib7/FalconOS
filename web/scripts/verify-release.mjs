@@ -2,17 +2,26 @@ import { lstat, readFile, realpath } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { applicationGateRules, OWNER_AUTH_MODULE_PATHS } from './application-gate.mjs';
 
 const DEFAULT_ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const SHARED_INPUTS = ['mesh/fixtures.mjs', 'mesh/kamino-wire.mjs', 'mesh/limits.mjs'];
 const REQUIRED_INPUTS = [
-  'web/package.json', 'web/package-lock.json', 'web/vite.config.js',
-  'web/functions/api/waitlist.js', 'web/functions/_waitlist-email.js',
+  'web/package.json', 'web/package-lock.json', 'web/vite.config.js', 'web/waitlist-local.mjs',
+  'web/scripts/application-gate.mjs', 'web/scripts/skills-plugin.mjs', 'web/scripts/skills-release.mjs',
+  'web/skills/SKILLS.md', 'web/functions/api/waitlist.js', 'web/functions/_waitlist-email.js',
   'web/migrations/0001_waitlist.sql', 'web/migrations/0002_waitlist_email_outbox.sql',
-  'mesh/domain.mjs', ...SHARED_INPUTS,
 ];
-const ROUTES = ['index.html', 'product/index.html', 'research/index.html', 'dash/index.html',
-  'app/index.html', 'treasury/index.html', 'mesh/index.html', 'dashboard/index.html', 'research/near/index.html'];
+const ROUTES = ['index.html', 'product/index.html', 'research/index.html', 'dashboard/index.html'];
+const RETIRED_ROUTE_PREFIXES = ['app/', 'dash/', 'mesh/', 'treasury/', 'research/near/', 'bot/'];
+const RETIRED_SOURCE_PREFIXES = ['dash/', 'mesh/', 'treasury/', 'research/near/', 'bot/'];
+const SIMULATOR_MODULES = [
+  'dashboard/main.jsx', 'dashboard/App.jsx', 'dashboard/data.json', 'dashboard/Agent.jsx',
+  'dashboard/Connections.jsx', 'dashboard/Decisions.jsx', 'dashboard/Dialogs.jsx',
+  'dashboard/Knowledge.jsx', 'dashboard/Operate.jsx', 'dashboard/Overview.jsx',
+  'dashboard/agent-intent.mjs', 'dashboard/agent-store.mjs', 'dashboard/selection.mjs',
+  'dashboard/store.mjs', 'dashboard/ui.jsx',
+];
+const EXPECTED_REDIRECTS = applicationGateRules();
 
 function contains(directory, path) {
   const child = relative(directory, path);
@@ -21,13 +30,13 @@ function contains(directory, path) {
 
 export async function verifyWebRelease(root = DEFAULT_ROOT) {
   root = await realpath(resolve(root));
+  const web = await realpath(resolve(root, 'web'));
   for (const input of REQUIRED_INPUTS) {
     const stat = await lstat(resolve(root, input)).catch(() => null);
     if (!stat?.isFile()) throw new Error(`Website release input is missing or not a regular file: ${input}`);
   }
-  const web = await realpath(resolve(root, 'web'));
   const simulatorModules = new Set(await Promise.all(
-    ['dashboard/main.jsx', 'dashboard/App.jsx', 'dashboard/data.json'].map(path => realpath(resolve(web, path))),
+    SIMULATOR_MODULES.map(path => realpath(resolve(web, path))),
   ));
   const manifest = JSON.parse(await readFile(resolve(web, 'package.json'), 'utf8'));
   for (const dependency of Object.keys(manifest.dependencies || {})) {
@@ -36,7 +45,6 @@ export async function verifyWebRelease(root = DEFAULT_ROOT) {
       throw new Error(`Website dependency is missing from web/node_modules: ${dependency}. Run npm --prefix web ci.`);
     }
   }
-  const shared = new Set(await Promise.all(SHARED_INPUTS.map(input => realpath(resolve(root, input)))));
   const dependencies = await realpath(resolve(web, 'node_modules'));
   const require = createRequire(resolve(web, 'package.json'));
   const { build } = await import(pathToFileURL(require.resolve('vite')).href);
@@ -55,45 +63,57 @@ export async function verifyWebRelease(root = DEFAULT_ROOT) {
         publicDirectory = config.build.copyPublicDir && config.publicDir;
       },
       async generateBundle(_options, bundle) {
-        const observed = new Set();
         for (const id of this.getModuleIds()) {
           if (id.startsWith('\0')) continue;
           const path = id.split('?')[0];
           if (!isAbsolute(path)) continue;
           const actual = await realpath(path);
-          if (simulatorModules.has(actual)) {
+          const source = relative(web, actual).split(sep).join('/');
+          if (!source.endsWith('.html') && !OWNER_AUTH_MODULE_PATHS.has('/' + source) && (
+            RETIRED_SOURCE_PREFIXES.some(prefix => source.startsWith(prefix))
+            || source.startsWith('app/')
+          )) {
+            throw new Error(`Retired technical source entered the production build: ${source}`);
+          }
+          if (simulatorModules.has(actual) || source === 'public/dash-snapshot.json' || source.startsWith('public/design-reference/')) {
             throw new Error('Simulator source entered the production build: ' + relative(web, actual));
           }
-          if (shared.has(actual)) observed.add(actual);
-          if (!contains(web, actual) && !shared.has(actual)
-              && !contains(dependencies, actual)) {
+          if (!contains(web, actual) && !contains(dependencies, actual)) {
             throw new Error(`Browser source crosses the release boundary: ${relative(root, actual)}`);
           }
           sourceCount += 1;
         }
-        for (const input of shared) {
-          if (!observed.has(input)) throw new Error(`Browser shared input was not built: ${relative(root, input)}`);
-        }
         for (const route of ROUTES) {
           if (!Object.hasOwn(bundle, route)) throw new Error(`Production route was not built: ${route}`);
         }
+        const redirects = bundle['_redirects'];
+        const redirectLines = String(redirects?.source ?? '').trim().split(/\r?\n/);
+        if (redirects?.type !== 'asset' || redirectLines.length !== EXPECTED_REDIRECTS.length
+            || EXPECTED_REDIRECTS.some((rule, index) => redirectLines[index] !== rule)) {
+          throw new Error('Production redirect manifest does not match the dashboard gate routes.');
+        }
         const dashboard = bundle['dashboard/index.html'];
         const dashboardHtml = String(dashboard.source);
-        const hasExecutableDashboardCode = /<script\b/i.test(dashboardHtml)
+        const hasExternalModule = /<script\b(?=[^>]*\btype=["']?module["']?)(?=[^>]*\bsrc\s*=)[^>]*>/i.test(dashboardHtml);
+        const hasUnsafeCode = /<script\b(?![^>]*\bsrc\s*=)/i.test(dashboardHtml)
           || /<[^>]+(?:\s|\/)on[a-z][\w:-]*\s*=/i.test(dashboardHtml)
           || /<[^>]+\b(?:href|xlink:href|src|action|formaction)\s*=\s*(?:["']\s*|)\s*javascript:/i.test(dashboardHtml);
-        if (dashboard.type !== 'asset' || hasExecutableDashboardCode) {
-          throw new Error('Public dashboard must remain static Soon HTML without executable code.');
+        if (dashboard.type !== 'asset' || !hasExternalModule || hasUnsafeCode) {
+          throw new Error('Dashboard entry must load its owner module without inline code or unsafe markup.');
         }
         for (const output of Object.keys(bundle)) {
+          if (RETIRED_ROUTE_PREFIXES.some(prefix => output.startsWith(prefix))) {
+            throw new Error(`Retired technical route entered the production build: ${output}`);
+          }
           if (output.startsWith('copilot/') || output.startsWith('local-dashboard/') || output === 'local-terminal.html') {
             throw new Error(`Local route entered the production build: ${output}`);
           }
         }
         if (publicDirectory) {
-          for (const output of ['copilot', 'local-terminal.html', 'local-dashboard', 'dashboard']) {
+          for (const output of ['app', 'dash', 'mesh', 'treasury', 'research/near', 'bot',
+            'copilot', 'local-terminal.html', 'local-dashboard', 'dashboard', 'design-reference', 'dash-snapshot.json']) {
             if (await lstat(resolve(publicDirectory, output)).catch(() => null)) {
-              throw new Error(`Local route entered the production public directory: ${output}`);
+              throw new Error(`Technical or local route entered the production public directory: ${output}`);
             }
           }
         }
@@ -102,8 +122,8 @@ export async function verifyWebRelease(root = DEFAULT_ROOT) {
     }],
   });
   if (!checked) throw new Error('Vite did not run the release boundary check.');
-  return { status: 'PASS', check: 'website-release-inputs', routes: ROUTES.length, resolvedFiles: sourceCount,
-    sharedInputs: SHARED_INPUTS, artifactWritten: false };
+  return { status: 'PASS', check: 'website-release-inputs', routes: ROUTES.length,
+    resolvedFiles: sourceCount, artifactWritten: false };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
