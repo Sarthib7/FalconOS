@@ -2,9 +2,9 @@
 
 ## Current local verification and publication: 2026-10-23
 
-Owner: coordinator. Status: In Progress (local cutover verified; final draft publication and exact-head CI pending).
+Owner: coordinator. Status: In Progress (local implementation and focused draft publication complete; owner review and hosted release remain separate).
 
-[VERIFIED PUBLICATION] Draft [PR114](https://github.com/Sarthib7/FalconOS/pull/114), clock head353964e33f301eda965ea165f23b058e936dd4a7, passed every workflow. Draft [PR115](https://github.com/Sarthib7/FalconOS/pull/115), native head2591fff156f4cb1753b2969654fb4a17c6f4d00a, passed mandatory packaged-worker and missing-component CI. Draft [PR116](https://github.com/Sarthib7/FalconOS/pull/116), owner-activity head543db3e0329b190048eeb3cacee33b66ca7fc1de, also passed every workflow. The single-dashboard branch is locally verified and is the next draft. Nothing was merged.
+[VERIFIED PUBLICATION] Draft [PR114](https://github.com/Sarthib7/FalconOS/pull/114) at `353964e33f301eda965ea165f23b058e936dd4a7` passed every workflow. [PR115](https://github.com/Sarthib7/FalconOS/pull/115) at `2591fff156f4cb1753b2969654fb4a17c6f4d00a` passed packaged-worker/missing-component CI. [PR116](https://github.com/Sarthib7/FalconOS/pull/116) at `543db3e0329b190048eeb3cacee33b66ca7fc1de` passed every workflow. [PR117](https://github.com/Sarthib7/FalconOS/pull/117) publishes the dashboard runtime cutover at `e874c98`. Live CI on the latest PR117 head remains the authoritative merge check. Nothing was merged; this checkpoint changes release records only.
 
 [VERIFIED APPROVAL] D4 owner sign-in and the dashboard-only human application are approved. Focused draft PRs and existing Cloudflare branch previews are approved. No merge, production rollout, schema change, real-user keypair access or financial action is authorized. Two live Lead/Risk attempts and one later Risk diagnostic were separately approved; those budgets are spent. Further paid calls need new approval.
 

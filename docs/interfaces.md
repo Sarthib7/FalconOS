@@ -2,7 +2,7 @@
 
 ## Owner dashboard D4 contract, 2026-10-23
 
-[APPROVED D4 SCOPE; VERIFIED LOCAL IMPLEMENTATION] Interface ID: DASHBOARD-D4. Owner: coordinator. Providers: owner-authenticated Mesh reads and existing wallet auth. Consumers: production React dashboard and Rust falcon_activity. Status: In Progress (exact-head CI/hosted cutover pending). Preserve existing authority boundaries. Browser storage is not authorization. Signup and organization workspaces remain unavailable.
+[APPROVED D4 SCOPE; VERIFIED LOCAL IMPLEMENTATION] Interface ID: DASHBOARD-D4. Owner: coordinator. Providers: owner-authenticated Mesh reads and existing wallet auth. Consumers: production React dashboard and Rust falcon_activity. Status: In Progress (current-head CI, owner review and hosted cutover are separate gates). Preserve existing authority boundaries. Browser storage is not authorization. Signup and organization workspaces remain unavailable.
 
 [IMPLEMENTATION DECISION] Keep one canonical activity projection in Mesh. Move the existing Rust decision/intent shaping there without changing its financial meaning. Rust falcon_activity delegates to the fixed private GET /v1/activity instead of maintaining another projection. This lets the browser reuse web/dashboard/api.mjs and existing wallet auth. It adds no general gateway or financial engine. Preserve trail, counts and limit semantics; counts describe returned records, not all historical records.
 
