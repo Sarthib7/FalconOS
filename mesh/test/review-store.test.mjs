@@ -10,6 +10,16 @@ const databaseUrl = process.env.FALCON_MESH_TEST_DATABASE_URL;
 const pool = databaseUrl ? new Pool({ connectionString: databaseUrl, max: 8, connectionTimeoutMillis: 5000, statement_timeout: 10000 }) : null;
 const startAt = Date.parse('2026-10-21T14:00:00.000Z');
 const at = () => new Date(startAt).toISOString();
+async function withDateOffset(offsetMs, action) {
+  const NativeDate = globalThis.Date;
+  globalThis.Date = class extends NativeDate {
+    constructor(...args) { super(...(args.length ? args : [NativeDate.now() + offsetMs])); }
+    static now() { return NativeDate.now() + offsetMs; }
+  };
+  try { return await action(); }
+  finally { globalThis.Date = NativeDate; }
+}
+
 const owner = () => 'review_test_' + randomUUID().replaceAll('-', '');
 const code = expected => error => error instanceof MeshError && error.code === expected;
 
@@ -74,15 +84,27 @@ test('review store integration tests require only FALCON_MESH_TEST_DATABASE_URL'
 
 gated('identical concurrent claims retain one immutable job and phase/terminal rows', async () => {
   const adopted = await seedAdoption(pool);
-  const store = createReviewJobStore(pool, { now: at });
+  const store = createReviewJobStore(pool);
   const requestId = randomUUID();
   const args = { requestId, analysisId: adopted.analysisId, runDeadlineMs: 30_000 };
   const [left, right] = await Promise.all([store.claim(adopted.owner, args), store.claim(adopted.owner, args)]);
   assert.equal(Number(left.claimed) + Number(right.claimed), 1);
   assert.equal(left.job.jobId, right.job.jobId);
   assert.equal(left.job.state, 'PENDING');
-  assert.deepEqual(left.claimed ? left.snapshot : right.snapshot, adopted.snapshot);
-  assert.equal(left.claimed ? right.snapshot : left.snapshot, null);
+  const claimed = left.claimed ? left : right;
+  assert.equal(typeof claimed.deadlineAt, 'string');
+  assert.equal(typeof claimed.sampledAtMonotonicMs, 'number');
+  assert.ok(claimed.remainingMs >= 0 && claimed.remainingMs < args.runDeadlineMs);
+  assert.deepEqual(Object.keys(claimed).sort(), ['claimed', 'deadlineAt', 'job', 'remainingMs', 'sampledAtMonotonicMs', 'snapshot'].sort());
+  assert.deepEqual(Object.keys(claimed.job).sort(), ['analysisId', 'executionReady', 'jobId', 'phase', 'requestId', 'result', 'schemaVersion', 'snapshotHash', 'state'].sort());
+  assert.deepEqual(claimed.snapshot, adopted.snapshot);
+  assert.deepEqual(left.claimed ? right.snapshot : left.snapshot, null);
+  const persisted = await pool.query(
+    "SELECT created_at, analysis->>'deadlineAt' AS deadline_at FROM falcon_mesh.analyses WHERE owner_id = $1 AND request_id = $2",
+    [adopted.owner, requestId],
+  );
+  assert.equal(claimed.deadlineAt, persisted.rows[0].deadline_at);
+  assert.equal(Date.parse(persisted.rows[0].deadline_at), new Date(persisted.rows[0].created_at).getTime() + args.runDeadlineMs);
 
   const phase = await store.phase(adopted.owner, left.job.jobId, 'LEAD');
   assert.equal(phase.phase, 'LEAD');
@@ -105,7 +127,7 @@ gated('identical concurrent claims retain one immutable job and phase/terminal r
 gated('foreign adopted IDs are not found and request reuse conflicts with adoption or legacy rows', async () => {
   const adopted = await seedAdoption(pool);
   const stranger = owner();
-  const store = createReviewJobStore(pool, { now: at });
+  const store = createReviewJobStore(pool);
   await assert.rejects(
     store.lookup(stranger, { requestId: randomUUID(), analysisId: adopted.analysisId }),
     code('NOT_FOUND'),
@@ -150,14 +172,14 @@ gated('a lost COMMIT reply followed by a new store reads pending without reclaim
       };
     },
   };
-  const firstStore = createReviewJobStore(uncertainPool, { now: at });
+  const firstStore = createReviewJobStore(uncertainPool);
   await assert.rejects(
     firstStore.claim(adopted.owner, { requestId, analysisId: adopted.analysisId, runDeadlineMs: 30_000 }),
     code('STORAGE_UNAVAILABLE'),
   );
   assert.equal(commitReplyLost, true);
 
-  const restartedStore = createReviewJobStore(pool, { now: at });
+  const restartedStore = createReviewJobStore(pool);
   const retained = await restartedStore.lookup(adopted.owner, { requestId, analysisId: adopted.analysisId });
   assert.equal(retained.state, 'PENDING');
   const retry = await restartedStore.claim(adopted.owner, { requestId, analysisId: adopted.analysisId, runDeadlineMs: 30_000 });
@@ -165,13 +187,41 @@ gated('a lost COMMIT reply followed by a new store reads pending without reclaim
   assert.equal(retry.job.jobId, retained.jobId);
 });
 
-gated('the owner lock permits at most one unresolved job and expires it to canonical UNKNOWN', async () => {
+// V187: replica wall clocks cannot change expiry; query latency reduces the local budget.
+gated('process wall-clock jumps cannot expire a retained claim early', async () => {
   const adopted = await seedAdoption(pool);
-  let current = startAt;
-  const store = createReviewJobStore(pool, { now: () => new Date(current).toISOString() });
+  const requestId = randomUUID();
+  const delayedPool = {
+    async connect() {
+      const client = await pool.connect();
+      return {
+        async query(text, values) {
+          const result = await client.query(text, values);
+          if (text.includes('clock_timestamp()')) await new Promise(resolve => setTimeout(resolve, 40));
+          return result;
+        },
+        release(error) { client.release(error); },
+      };
+    },
+  };
+  const creator = createReviewJobStore(delayedPool);
+  const reader = createReviewJobStore(pool);
+  const claimed = await creator.claim(adopted.owner, { requestId, analysisId: adopted.analysisId, runDeadlineMs: 60_000 });
+
+  const future = await withDateOffset(120_000, () => reader.lookup(adopted.owner, { requestId, analysisId: adopted.analysisId }));
+  assert.equal(future.state, 'PENDING');
+  const past = await withDateOffset(-120_000, () => reader.lookup(adopted.owner, { requestId, analysisId: adopted.analysisId }));
+  assert.equal(past.state, 'PENDING');
+  assert.ok(claimed.remainingMs <= 59_960, 'the clock-query round-trip is deducted from the initial local budget');
+  assert.equal(claimed.job.state, 'PENDING');
+});
+
+gated('the owner lock permits one unresolved job and preserves request conflicts', async () => {
+  const adopted = await seedAdoption(pool);
+  const store = createReviewJobStore(pool);
   const firstRequest = randomUUID();
   const secondRequest = randomUUID();
-  const args = { analysisId: adopted.analysisId, runDeadlineMs: 1000 };
+  const args = { analysisId: adopted.analysisId, runDeadlineMs: 30_000 };
   const outcomes = await Promise.allSettled([
     store.claim(adopted.owner, { ...args, requestId: firstRequest }),
     store.claim(adopted.owner, { ...args, requestId: secondRequest }),
@@ -180,22 +230,28 @@ gated('the owner lock permits at most one unresolved job and expires it to canon
   const winner = outcomes.find(item => item.status === 'fulfilled').value;
   const loser = outcomes.find(item => item.status === 'rejected').reason;
   assert.equal(loser.code, 'CONFLICT');
-  const requestId = winner.job.requestId;
-  const jobId = winner.job.jobId;
-  assert.equal((await store.lookup(adopted.owner, { requestId, analysisId: adopted.analysisId })).state, 'PENDING');
+  const retained = await store.claim(adopted.owner, { ...args, requestId: winner.job.requestId });
+  assert.equal(retained.claimed, false);
+  assert.equal(retained.job.jobId, winner.job.jobId);
+});
 
-  current += 1000;
+gated('PostgreSQL time expires claims to canonical UNKNOWN and rejects late completion', async () => {
+  const adopted = await seedAdoption(pool);
+  const store = createReviewJobStore(pool);
+  const requestId = randomUUID();
+  const claimed = await store.claim(adopted.owner, { requestId, analysisId: adopted.analysisId, runDeadlineMs: 1 });
+  await new Promise(resolve => setTimeout(resolve, 25));
   const unknown = await store.lookup(adopted.owner, { requestId, analysisId: adopted.analysisId });
   assert.equal(unknown.state, 'UNKNOWN');
   assert.equal(unknown.phase, 'TERMINAL');
   assert.equal(unknown.result.status, 'NO_DATA');
   assert.equal(unknown.result.proposal, null);
-  const late = await store.finish(adopted.owner, jobId, controllerResult(unknown, { status: 'NO_DATA' }));
+  const late = await store.finish(adopted.owner, claimed.job.jobId, controllerResult(unknown, { status: 'NO_DATA' }));
   assert.deepEqual(late, unknown, 'late completion cannot replace an expiry terminal');
 
   const terminalRows = await pool.query(
     "SELECT id FROM falcon_mesh.analyses WHERE owner_id = $1 AND analysis->>'recordKind' = 'near-research/review/terminal/1' AND analysis->>'jobId' = $2",
-    [adopted.owner, jobId],
+    [adopted.owner, claimed.job.jobId],
   );
   assert.equal(terminalRows.rows.length, 1);
   const laterClaim = await store.claim(adopted.owner, { requestId: randomUUID(), analysisId: adopted.analysisId, runDeadlineMs: 1000 });
@@ -203,7 +259,7 @@ gated('the owner lock permits at most one unresolved job and expires it to canon
 });
 
 gated('owner validation rejects the reserved public namespace before SQL', async () => {
-  const store = createReviewJobStore(pool, { now: at });
+  const store = createReviewJobStore(pool);
   await assert.rejects(
     store.lookup('__falcon_public_market_evidence__', { requestId: randomUUID(), analysisId: randomUUID() }),
     code('INVALID_INPUT'),
