@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { performance } from 'node:perf_hooks';
 import { randomUUID } from 'node:crypto';
 import { MeshError } from '../domain.mjs';
 import { canonicalBytes, sha256 } from '../council/evidence.ts';
@@ -68,41 +69,62 @@ function controllerResult(job, overrides = {}) {
   };
 }
 
-function memoryStore({ existing = null } = {}) {
+function memoryStore({ existing = null, remainingForOwner = null, sampledAgeMs = 0 } = {}) {
   const saved = retainedSnapshot();
   const state = {
     current: existing,
+    jobs: new Map(),
     claims: 0,
     finishes: 0,
     phases: [],
     snapshot: saved.snapshot,
     calls: 0,
   };
+  const current = scope => state.jobs.get(scope) ?? (state.jobs.size === 0 ? state.current : null);
+  const retain = (scope, job) => {
+    state.jobs.set(scope, job);
+    if (state.current === null || state.current.jobId === job.jobId) state.current = job;
+  };
   const store = {
     async lookup(scope, input) {
-      if (state.current && state.current.requestId === input.requestId && state.current.analysisId === input.analysisId) return state.current;
+      const job = current(scope);
+      if (job && job.requestId === input.requestId && job.analysisId === input.analysisId) return job;
       return null;
     },
     async claim(scope, input) {
-      if (state.current) return { job: state.current, claimed: false, snapshot: null };
+      const existingJob = current(scope);
+      if (existingJob) return { job: existingJob, claimed: false, snapshot: null };
       state.claims += 1;
       const job = envelope({
         jobId: randomUUID(), requestId: input.requestId, analysisId: input.analysisId, snapshotHash: saved.snapshotHash,
       });
-      state.current = job;
-      return { job, claimed: true, snapshot: saved.snapshot };
+      retain(scope, job);
+      const budget = remainingForOwner ? remainingForOwner(scope, input) : input.runDeadlineMs;
+      const age = typeof sampledAgeMs === 'function' ? sampledAgeMs(scope, input) : sampledAgeMs;
+      return {
+        job,
+        claimed: true,
+        snapshot: saved.snapshot,
+        deadlineAt: new Date(Date.parse(NOW) + input.runDeadlineMs).toISOString(),
+        remainingMs: budget,
+        sampledAtMonotonicMs: performance.now() - age,
+      };
     },
     async phase(scope, jobId, phase) {
       state.phases.push(phase);
-      if (state.current?.jobId === jobId && state.current.state === 'PENDING') {
-        state.current = { ...state.current, phase: state.current.phase === 'PREFLIGHT' || phase !== 'PREFLIGHT' ? phase : state.current.phase };
+      const job = current(scope);
+      if (job?.jobId === jobId && job.state === 'PENDING') {
+        retain(scope, { ...job, phase: job.phase === 'PREFLIGHT' || phase !== 'PREFLIGHT' ? phase : job.phase });
       }
-      return state.current;
+      return current(scope);
     },
     async finish(scope, jobId, result) {
       state.finishes += 1;
-      state.current = { ...state.current, state: 'COMPLETE', phase: 'TERMINAL', result };
-      return state.current;
+      const job = current(scope);
+      if (job?.jobId !== jobId) return job;
+      const finished = { ...job, state: 'COMPLETE', phase: 'TERMINAL', result };
+      retain(scope, finished);
+      return finished;
     },
   };
   return { store, state };
@@ -119,23 +141,21 @@ async function until(predicate, message = 'condition did not settle') {
 function unitPreflight() {
   // Synthetic in-process values make a unit-test transport only; they prove no host isolation.
   return {
-    status: 'VERIFIED',
+    schemaVersion: 2,
     policyVersion: COUNCIL_POLICY_VERSION,
-    requestedModel: COUNCIL_MODEL,
-    requestedReasoningEffort: COUNCIL_REASONING_EFFORT,
-    executableVersion: '0.160.0',
+    status: 'VERIFIED',
     checkedAt: NOW,
-    policyHash: 'c'.repeat(64),
-    verifiedControls: {
-      userConfigIsolated: true,
-      webSearchDisabled: true,
-      commandToolsDisabled: true,
-      patchToolsDisabled: true,
-      inheritedMcpDisabled: true,
-      readOnlySandbox: true,
-      boundedIO: true,
-      controlledProbePassed: true,
-    },
+    sdkVersion: '18.12.5',
+    provider: 'openai-codex',
+    modelId: COUNCIL_MODEL,
+    api: 'openai-codex-responses',
+    effort: COUNCIL_REASONING_EFFORT,
+    endpoint: 'https://chatgpt.com/backend-api/codex/responses',
+    transportMode: 'sse-only',
+    bodyAudit: 'PASS',
+    payloadObservationCount: 1,
+    fetchFenceCallCount: 0,
+    providerDispatchCount: 0,
     reasons: [],
   };
 }
@@ -265,19 +285,25 @@ test('the real Council controller persists a bound NO_DATA result when preflight
   await service.close();
 });
 
-test('synthetic unit-only transport preserves source binding and Risk vetoes the proposal', async () => {
-  const { store, state } = memoryStore();
+test('synthetic unit-only transport preserves source binding and Risk vetoes the proposal', async t => {
+  // V187: simulate an older sample without depending on process uptime.
+  const monotonicNow = performance.now.bind(performance);
+  t.mock.method(performance, 'now', () => monotonicNow() + 1000);
+  const { store, state } = memoryStore({ sampledAgeMs: 250 });
   const scope = owner();
   const calls = [];
+  const preflightOptions = [];
+  const callOptions = [];
   const service = createResearchReviewService({
     jobStore: store,
     allowedOwners: [scope],
     runDeadlineMs: 5000,
     now: () => NOW,
     transport: {
-      async preflight() { return unitPreflight(); },
-      async call(request) {
+      async preflight(options) { preflightOptions.push(options); return unitPreflight(); },
+      async call(request, options) {
         calls.push(request);
+        callOptions.push(options);
         return request.role === 'lead' ? leadFor(request) : riskFor(request);
       },
     },
@@ -286,6 +312,13 @@ test('synthetic unit-only transport preserves source binding and Risk vetoes the
   await until(() => state.current.state === 'COMPLETE');
   assert.equal(calls.length, 2);
   assert.deepEqual(calls.map(call => call.role), ['lead', 'risk']);
+  assert.equal(preflightOptions.length, 1);
+  assert.strictEqual(preflightOptions[0].auditRequest, calls[0]);
+  assert.equal(preflightOptions[0].auditRequest.role, 'lead');
+  assert.equal(preflightOptions[0].signal, callOptions[0].signal);
+  assert.equal(callOptions[0].signal, callOptions[1].signal);
+  assert.ok(callOptions.every(options => Number.isInteger(options.budgetMs) && options.budgetMs > 0 && options.budgetMs < 4750));
+  assert.equal(Object.hasOwn(calls[0], 'signal'), false);
   assert.equal(calls[0].runId, job.jobId);
   assert.equal(calls[1].runId, job.jobId);
   assert.equal(calls[0].snapshotHash, job.snapshotHash);
@@ -301,21 +334,116 @@ test('synthetic unit-only transport preserves source binding and Risk vetoes the
   await service.close();
 });
 
-test('close stops new work, drains boundedly, and late completion cannot write to a closing pool', async () => {
+test('a local deadline aborts only its own job while a peer owner completes', async () => {
+  const firstOwner = owner();
+  const peerOwner = owner();
+  const { store, state } = memoryStore({
+    remainingForOwner: scope => scope === firstOwner ? 250 : 5000,
+    sampledAgeMs: 5,
+  });
+  const preflightSignals = new Map();
+  const calls = [];
+  const ownerForRun = runId => [...state.jobs.entries()].find(([, job]) => job.jobId === runId)?.[0];
+  const service = createResearchReviewService({
+    jobStore: store,
+    allowedOwners: [firstOwner, peerOwner],
+    runDeadlineMs: 5000,
+    now: () => NOW,
+    transport: {
+      async preflight({ auditRequest, signal }) {
+        preflightSignals.set(ownerForRun(auditRequest.runId), signal);
+        return unitPreflight();
+      },
+      async call(request, { signal }) {
+        const jobOwner = ownerForRun(request.runId);
+        calls.push({ owner: jobOwner, role: request.role });
+        if (jobOwner === firstOwner && request.role === 'lead') {
+          return new Promise((resolve, reject) => {
+            if (signal.aborted) reject(new Error('first owner stopped'));
+            else signal.addEventListener('abort', () => reject(new Error('first owner stopped')), { once: true });
+          });
+        }
+        return request.role === 'lead' ? leadFor(request) : riskFor(request);
+      },
+    },
+  });
+  const firstInput = { requestId: requestId(), analysisId };
+  const peerInput = { requestId: requestId(), analysisId };
+  const [first, peer] = await Promise.all([
+    service.review(firstOwner, firstInput),
+    service.review(peerOwner, peerInput),
+  ]);
+  await until(() => preflightSignals.size === 2);
+  const firstSignal = preflightSignals.get(firstOwner);
+  const peerSignal = preflightSignals.get(peerOwner);
+  assert.notStrictEqual(firstSignal, peerSignal);
+  if (!firstSignal.aborted) {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('the first owner was not locally aborted')), 2000);
+      firstSignal.addEventListener('abort', () => { clearTimeout(timer); resolve(); }, { once: true });
+    });
+  }
+  assert.equal(peerSignal.aborted, false);
+  await until(() => state.jobs.get(peerOwner).state === 'COMPLETE');
+  await until(() => state.jobs.get(firstOwner).state === 'COMPLETE');
+  assert.ok(calls.some(call => call.owner === firstOwner && call.role === 'lead'));
+  assert.equal(calls.some(call => call.owner === firstOwner && call.role === 'risk'), false);
+  assert.equal(state.jobs.get(firstOwner).result.status, 'NO_DATA');
+  assert.equal(state.jobs.get(peerOwner).result.status, 'BLOCKED');
+  assert.equal(state.finishes, 2);
+  assert.equal(state.jobs.get(firstOwner).jobId, first.jobId);
+  assert.equal(state.jobs.get(peerOwner).jobId, peer.jobId);
+  await service.close();
+});
+
+test('an aged claim budget reaches preflight without being reset', async t => {
+  // V187: keep the simulated 250 ms history inside a valid monotonic origin.
+  const monotonicNow = performance.now.bind(performance);
+  t.mock.method(performance, 'now', () => monotonicNow() + 1000);
+  const { store, state } = memoryStore({ sampledAgeMs: 250 });
+  const scope = owner();
+  let preflightBudget;
+  const service = createResearchReviewService({
+    jobStore: store,
+    allowedOwners: [scope],
+    runDeadlineMs: 5000,
+    now: () => NOW,
+    transport: {
+      async preflight({ budgetMs }) { preflightBudget = budgetMs; return {}; },
+      async call() { assert.fail('unverified preflight must stop before role calls'); },
+    },
+  });
+  await service.review(scope, { requestId: requestId(), analysisId });
+  await until(() => state.current.state === 'COMPLETE');
+  assert.ok(preflightBudget > 0 && preflightBudget < 4750);
+  await service.close();
+});
+
+test('close stops new work, aborts owned jobs, drains boundedly, and prevents late writes', async () => {
   const { store, state } = memoryStore();
   const scope = owner();
   let releaseReview;
+  let reviewSignal;
+  let hostAborted = 0;
   let hostClosed = 0;
   const service = createResearchReviewService({
     jobStore: store,
     allowedOwners: [scope],
     runDeadlineMs: 5000,
-    review: () => new Promise(resolve => { releaseReview = resolve; }),
-    transport: { async close() { hostClosed += 1; } },
+    review: options => {
+      reviewSignal = options.signal;
+      return new Promise(resolve => { releaseReview = resolve; });
+    },
+    transport: {
+      async abort() { hostAborted += 1; },
+      async close() { hostClosed += 1; },
+    },
   });
   const job = await service.review(scope, { requestId: requestId(), analysisId });
   await until(() => typeof releaseReview === 'function');
   await service.close();
+  assert.equal(reviewSignal.aborted, true);
+  assert.equal(hostAborted, 1);
   assert.equal(hostClosed, 1);
   releaseReview(controllerResult(job));
   await wait(10);

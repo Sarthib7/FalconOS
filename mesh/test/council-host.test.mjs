@@ -43,26 +43,25 @@ function snapshotFor(result = modelResult(), refs = sourceRefs) {
   };
 }
 
-// Synthetic unit-only preflight; it is not evidence of live Codex safety or model proof.
+// Synthetic protocol fixture only; this does not prove native SDK behavior.
+
 function verifiedPreflight(overrides = {}) {
   return {
-    status: "VERIFIED",
+    schemaVersion: 2,
     policyVersion: COUNCIL_POLICY_VERSION,
-    requestedModel: COUNCIL_MODEL,
-    requestedReasoningEffort: COUNCIL_REASONING_EFFORT,
-    executableVersion: "0.160.0",
+    status: "VERIFIED",
     checkedAt: nowText,
-    policyHash: "d".repeat(64),
-    verifiedControls: {
-      userConfigIsolated: true,
-      webSearchDisabled: true,
-      commandToolsDisabled: true,
-      patchToolsDisabled: true,
-      inheritedMcpDisabled: true,
-      readOnlySandbox: true,
-      boundedIO: true,
-      controlledProbePassed: true,
-    },
+    sdkVersion: "18.12.5",
+    provider: "openai-codex",
+    modelId: COUNCIL_MODEL,
+    api: "openai-codex-responses",
+    effort: COUNCIL_REASONING_EFFORT,
+    endpoint: "https://chatgpt.com/backend-api/codex/responses",
+    transportMode: "sse-only",
+    bodyAudit: "PASS",
+    payloadObservationCount: 1,
+    fetchFenceCallCount: 0,
+    providerDispatchCount: 0,
     reasons: [],
     ...overrides,
   };
@@ -111,15 +110,19 @@ function setup({ result = modelResult(), refs = sourceRefs, preflight = verified
   const snapshot = snapshotFor(result, refs);
   const snapshotHash = sha256(canonicalBytes(snapshot));
   const calls = [];
+  const preflightRequests = [];
   const transport = {
-    async preflight() { return preflight; },
+    async preflight(options) {
+      preflightRequests.push(options);
+      return preflight;
+    },
     async call(request) {
       calls.push(request);
       if (onCall) return onCall(request, calls.length);
       return request.role === "lead" ? leadResponse(request) : riskResponse(request);
     },
   };
-  return { snapshot, snapshotHash, result, refs, calls, transport };
+  return { snapshot, snapshotHash, result, refs, calls, preflightRequests, transport };
 }
 
 const optionsFor = setupResult => ({
@@ -140,6 +143,10 @@ test("Lead and Risk bind distinct call IDs to the same frozen retained snapshot"
   assert.equal(result.proposal.summary, "Retain the case for further research only.");
   assert.equal(result.executionReady, false);
   assert.deepEqual(Object.keys(result).sort(), ["executionReady", "lead", "proposal", "reasons", "risk", "runId", "schemaVersion", "snapshotHash", "status"].sort());
+  assert.equal(fixture.preflightRequests.length, 1);
+  assert.equal(fixture.preflightRequests[0].auditRequest.role, "lead");
+  assert.strictEqual(fixture.preflightRequests[0].auditRequest, fixture.calls[0]);
+  assert.equal(Object.isFrozen(fixture.preflightRequests[0].auditRequest), true);
   assert.equal(fixture.calls.length, 2);
   assert.notEqual(fixture.calls[0].callId, fixture.calls[1].callId);
   assert.equal(fixture.calls[0].role, "lead");
@@ -227,12 +234,38 @@ test("Wrong call identity or an unretained citation fails closed", async t => {
 });
 
 test("Unverified or malformed preflight prevents both reviewer calls", async () => {
-  const fixture = setup({ preflight: verifiedPreflight({ status: "NO_DATA", reasons: ["patch tool is not disabled"] }) });
+  const fixture = setup({ preflight: verifiedPreflight({ status: "NO_DATA", reasons: ["provider dispatch was observed"] }) });
   const result = await runCouncilReview(optionsFor(fixture));
   assert.equal(result.status, "NO_DATA");
   assert.equal(result.proposal, null);
   assert.equal(fixture.calls.length, 0);
 });
+
+test("VERIFIED preflight requires the fixed exact body proof and zero dispatch", async t => {
+  const invalidProofs = [
+    ["nonzero fetch-fence count", { fetchFenceCallCount: 1 }],
+    ["nonzero provider dispatch count", { providerDispatchCount: 1 }],
+    ["missing payload observation", { payloadObservationCount: 0 }],
+    ["body audit not passed", { bodyAudit: "NOT_RUN" }],
+    ["wrong exact endpoint", { endpoint: "https://chatgpt.com/" }],
+    ["unsupported model", { modelId: "another-model" }],
+    ["unsupported schema version", { schemaVersion: 1 }],
+    ["counter outside protocol bound", { fetchFenceCallCount: 9 }],
+    ["unexpected proof field", { additionalClaim: true }],
+  ];
+  for (const [name, overrides] of invalidProofs) {
+    await t.test(name, async () => {
+      const fixture = setup({ preflight: verifiedPreflight(overrides) });
+      const result = await runCouncilReview(optionsFor(fixture));
+      assert.equal(result.status, "NO_DATA");
+      assert.equal(result.proposal, null);
+      assert.equal(result.executionReady, false);
+      assert.equal(fixture.calls.length, 0);
+      assert.equal(fixture.preflightRequests[0].auditRequest.role, "lead");
+    });
+  }
+});
+
 
 test("Missing or oversized deterministic assessment data cannot start a review", async () => {
   const fixture = setup({ result: { modelVersion: "near-observed/1", status: "OBSERVED", seriesSummaries: {}, unknowns: [], counterCase: ["Unknown"], executionReady: false } });

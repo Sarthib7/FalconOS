@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { appendFile, cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { appendFile, cp, lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -16,10 +16,15 @@ const NEAR_RESEARCH_RUNTIME_INPUTS = [
   'research/review-store.mjs', 'research/review-jobs.mjs',
 ];
 
-async function checkout(t, component) {
+const NATIVE_COUNCIL_RUNTIME_INPUTS = [
+  'council/omp-host.mjs', 'council/runtime/worker.ts', 'council/runtime/policy.ts',
+  'council/runtime/package.json', 'council/runtime/package-lock.json',
+];
+
+async function checkout(t, component, sourceRoot = ROOT) {
   const root = await mkdtemp(join(tmpdir(), 'falcon-release-test-'));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const source = join(ROOT, component);
+  const source = join(sourceRoot, component);
   await cp(source, join(root, component), {
     recursive: true,
     filter: path => !relative(source, path).split('/').some(part =>
@@ -27,7 +32,7 @@ async function checkout(t, component) {
       || part.startsWith('.env') || part.endsWith('.log')),
   });
   if (component === 'web') {
-    await cp(join(source, 'node_modules'), join(root, component, 'node_modules'), { recursive: true });
+    await cp(await realpath(join(source, 'node_modules')), join(root, component, 'node_modules'), { recursive: true, dereference: true });
   } else {
     await symlink(join(source, 'node_modules'), join(root, component, 'node_modules'), 'dir');
   }
@@ -91,6 +96,32 @@ test('REPO-VERIFY-1: mesh dependencies cannot mask a missing declared website de
   await rm(join(root, 'web/node_modules/@solana/web3.js'), { recursive: true, force: true });
   await symlink(join(ROOT, 'mesh/node_modules'), join(root, 'mesh/node_modules'), 'dir');
   rejected(check(WEB_CHECK, root), /Website dependency is missing from web\/node_modules: @solana\/web3\.js/);
+});
+
+test('V189: web checkout privately copies dependencies reached through a source symlink', async t => {
+  const sourceRoot = await mkdtemp(join(tmpdir(), 'falcon-release-source-'));
+  t.after(() => rm(sourceRoot, { recursive: true, force: true }));
+  const webSource = join(sourceRoot, 'web');
+  const sharedModules = join(sourceRoot, 'shared/node_modules');
+  const packageTarget = join(sourceRoot, 'shared/packages/web3');
+  const sourcePackage = join(packageTarget, 'package.json');
+  const packageContents = JSON.stringify({ name: '@solana/web3.js', version: '1.0.0' });
+  await mkdir(webSource, { recursive: true });
+  await mkdir(join(sharedModules, '@solana'), { recursive: true });
+  await mkdir(packageTarget, { recursive: true });
+  await writeFile(sourcePackage, packageContents);
+  await symlink(packageTarget, join(sharedModules, '@solana/web3.js'), 'dir');
+  const sourceNodeModules = join(webSource, 'node_modules');
+  await symlink(sharedModules, sourceNodeModules, 'dir');
+  assert.equal((await lstat(sourceNodeModules)).isSymbolicLink(), true);
+
+  const root = await checkout(t, 'web', sourceRoot);
+  const fixturePackage = join(root, 'web/node_modules/@solana/web3.js/package.json');
+  assert.notEqual(await realpath(fixturePackage), await realpath(sourcePackage),
+    'checkout dependencies must not resolve back into the shared source tree');
+  await rm(join(root, 'web/node_modules/@solana/web3.js'), { recursive: true, force: true });
+  assert.equal(await readFile(sourcePackage, 'utf8'), packageContents,
+    'deleting a fixture package must preserve the shared dependency');
 });
 
 test('REPO-VERIFY-1: website rejects a missing production route', async t => {
@@ -182,6 +213,16 @@ test('REPO-VERIFY-1: API rejects an omitted transitive runtime file', async t =>
 test('NEAR-RESEARCH-1: API rejects each omitted research runtime dependency', async t => {
   const root = await checkout(t, 'mesh');
   for (const input of NEAR_RESEARCH_RUNTIME_INPUTS) {
+    const target = join(root, 'mesh', input);
+    await rm(target);
+    rejected(check(MESH_CHECK, root), new RegExp('missing.*mesh/' + input));
+    await cp(join(ROOT, 'mesh', input), target);
+  }
+});
+
+test('REPO-VERIFY-1: API rejects each omitted native Council runtime dependency', async t => {
+  const root = await checkout(t, 'mesh');
+  for (const input of NATIVE_COUNCIL_RUNTIME_INPUTS) {
     const target = join(root, 'mesh', input);
     await rm(target);
     rejected(check(MESH_CHECK, root), new RegExp('missing.*mesh/' + input));

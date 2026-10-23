@@ -1,0 +1,488 @@
+{
+  "caseId": "1a0f9be4-d2f9-415f-a1e0-4a35d63711bb",
+  "caseType": "near-thesis",
+  "createdAt": "2026-10-23T11:31:37.949Z",
+  "executionReady": false,
+  "issues": [],
+  "manifestRevisionId": "90256b24-63ca-493d-807e-9aeed4bf8582",
+  "modelResult": {
+    "counterCase": [
+      "Observed publisher rows support activity reporting only; they do not establish economic net revenue, market purchases, or native-token demand.",
+      "Monthly revenue rows publish no query/source identifier, and source-native date labels are not normalized into UTC windows.",
+      "Fee, volume, and revenue rows retain distinct query identifiers, units, and publisher stale flags; no cross-series reconciliation is asserted."
+    ],
+    "executionReady": false,
+    "investmentAssessment": {
+      "proposal": null,
+      "reasons": [
+        "NATIVE_TOKEN_DEMAND_UNVERIFIED",
+        "NET_CAPTURE_METHODOLOGY_UNVERIFIED"
+      ],
+      "status": "NO_DATA"
+    },
+    "modelVersion": "near-observed/1",
+    "seriesSummaries": {
+      "intentVolumeSeries": {
+        "comparisons": [
+          {
+            "adapterVersion": "near-revenue/1",
+            "currentLabel": "2026-10-22",
+            "direction": "lower",
+            "field": "volume_usd",
+            "kind": "exact-direction",
+            "previousLabel": "2026-10-21",
+            "sourceId": "dune:5179085",
+            "status": "COMPARED",
+            "unit": "USD"
+          },
+          {
+            "adapterVersion": "near-revenue/1",
+            "currentLabel": "2026-10-22",
+            "direction": "higher",
+            "field": "cumulative_volume_usd",
+            "kind": "exact-direction",
+            "previousLabel": "2026-10-21",
+            "sourceId": "dune:5179085",
+            "status": "COMPARED",
+            "unit": "USD"
+          }
+        ],
+        "current": {
+          "cumulative_volume_usd": "35883717851.89367",
+          "date_at": "2026-10-22",
+          "is_stale": "0",
+          "publisherStaleClaim": false,
+          "source_used": "dune:5179085",
+          "volume_usd": "132262402.9287494"
+        },
+        "currentSourceId": "dune:5179085",
+        "firstLabel": "2025-01-01",
+        "labelField": "date_at",
+        "labelSemantics": "publisher label; not normalized to a UTC window",
+        "lastLabel": "2026-10-22",
+        "previous": {
+          "cumulative_volume_usd": "35751455448.96492",
+          "date_at": "2026-10-21",
+          "is_stale": "0",
+          "publisherStaleClaim": false,
+          "source_used": "dune:5179085",
+          "volume_usd": "151452048.96614093"
+        },
+        "previousSourceId": "dune:5179085",
+        "sampleCount": 653,
+        "sourceField": "source_used",
+        "unitFields": {
+          "cumulative_volume_usd": "USD",
+          "volume_usd": "USD"
+        }
+      },
+      "revenueSeries": {
+        "comparisons": [],
+        "current": {
+          "cumulative_revenue_near": "4675225.567675695",
+          "cumulative_revenue_usd": "10212918.800679497",
+          "is_stale": "0",
+          "period_month": "2026-10-01",
+          "publisherStaleClaim": false,
+          "revenue_near": "356765.537693944",
+          "revenue_usd": "1775744.1177715985"
+        },
+        "currentSourceId": null,
+        "firstLabel": "2025-08-01",
+        "labelField": "period_month",
+        "labelSemantics": "publisher label; not normalized to a UTC window",
+        "lastLabel": "2026-10-01",
+        "previous": {
+          "cumulative_revenue_near": "4318460.029981751",
+          "cumulative_revenue_usd": "8437174.6829079",
+          "is_stale": "0",
+          "period_month": "2026-09-01",
+          "publisherStaleClaim": false,
+          "revenue_near": "654384.7206365484",
+          "revenue_usd": "2124331.516768312"
+        },
+        "previousSourceId": null,
+        "sampleCount": 15,
+        "sourceField": null,
+        "unitFields": {
+          "cumulative_revenue_near": "NEAR",
+          "cumulative_revenue_usd": "USD",
+          "revenue_near": "NEAR",
+          "revenue_usd": "USD"
+        }
+      },
+      "totalFeesSeries": {
+        "comparisons": [
+          {
+            "adapterVersion": "near-revenue/1",
+            "currentLabel": "2026-10-22",
+            "direction": "lower",
+            "field": "total_fees_near",
+            "kind": "exact-direction",
+            "previousLabel": "2026-10-21",
+            "sourceId": "dune:6732575",
+            "status": "COMPARED",
+            "unit": "NEAR"
+          },
+          {
+            "adapterVersion": "near-revenue/1",
+            "currentLabel": "2026-10-22",
+            "direction": "higher",
+            "field": "cumulative_fees_near",
+            "kind": "exact-direction",
+            "previousLabel": "2026-10-21",
+            "sourceId": "dune:6732575",
+            "status": "COMPARED",
+            "unit": "NEAR"
+          },
+          {
+            "adapterVersion": "near-revenue/1",
+            "currentLabel": "2026-10-22",
+            "direction": "lower",
+            "field": "fees_usd",
+            "kind": "exact-direction",
+            "previousLabel": "2026-10-21",
+            "sourceId": "dune:6162763",
+            "status": "COMPARED",
+            "unit": "USD"
+          },
+          {
+            "adapterVersion": "near-revenue/1",
+            "currentLabel": "2026-10-22",
+            "direction": "higher",
+            "field": "cumulative_fees_usd",
+            "kind": "exact-direction",
+            "previousLabel": "2026-10-21",
+            "sourceId": "dune:6162763",
+            "status": "COMPARED",
+            "unit": "USD"
+          }
+        ],
+        "current": {
+          "burn_revenue_near": "12765.63334759735",
+          "cumulative_fees_near": "4286241.917420427",
+          "cumulative_fees_usd": "56710557.25977549",
+          "cumulative_intents_revenue_near": "3608664.097141825",
+          "cumulative_protocol_fee_near": "677577.8202786038",
+          "date_at": "2026-10-22",
+          "fees_usd": "11924.977075850848",
+          "intents_revenue_near": "12057.380074215174",
+          "is_stale": "0",
+          "near_source_used": "dune:6732575",
+          "protocol_fee_near": "1011.7903905459647",
+          "publisherStaleClaim": false,
+          "total_fees_near": "13069.170464761139",
+          "usd_source_used": "dune:6162763"
+        },
+        "currentSourceId": null,
+        "firstLabel": "2025-08-01",
+        "labelField": "date_at",
+        "labelSemantics": "publisher label; not normalized to a UTC window",
+        "lastLabel": "2026-10-22",
+        "previous": {
+          "burn_revenue_near": "12933.075295550692",
+          "cumulative_fees_near": "4273172.746955666",
+          "cumulative_fees_usd": "56698632.28269964",
+          "cumulative_intents_revenue_near": "3596606.71706761",
+          "cumulative_protocol_fee_near": "676566.0298880578",
+          "date_at": "2026-10-21",
+          "fees_usd": "209713.60317989966",
+          "intents_revenue_near": "12124.288854901126",
+          "is_stale": "0",
+          "near_source_used": "dune:6732575",
+          "protocol_fee_near": "1155.409200927952",
+          "publisherStaleClaim": false,
+          "total_fees_near": "13279.698055829078",
+          "usd_source_used": "dune:6162763"
+        },
+        "previousSourceId": null,
+        "sampleCount": 448,
+        "sourceField": null,
+        "unitFields": {
+          "burn_revenue_near": "NEAR",
+          "cumulative_fees_near": "NEAR",
+          "cumulative_fees_usd": "USD",
+          "cumulative_intents_revenue_near": "NEAR",
+          "cumulative_protocol_fee_near": "NEAR",
+          "fees_usd": "USD",
+          "intents_revenue_near": "NEAR",
+          "protocol_fee_near": "NEAR",
+          "total_fees_near": "NEAR"
+        }
+      }
+    },
+    "status": "OBSERVED",
+    "unknowns": [
+      "native-token-demand: NATIVE_TOKEN_DEMAND_UNVERIFIED; published rows do not prove NEAR bought from the market or incremental native-token demand.",
+      "economic-net-revenue: NET_CAPTURE_METHODOLOGY_UNVERIFIED; no net-revenue attribution or fee/volume/revenue join is made.",
+      "cross-series-periods: date_at and period_month labels do not establish a shared exact reporting window.",
+      "freshness: is_stale is publisher metadata, not independent proof of source freshness.",
+      "fee-volume-ratio: query identifiers and period labels are unreconciled; a zero volume denominator is undefined, so no ratio is computed.",
+      "comparison-provenance-missing: revenueSeries has no published query/source identifier; no trend comparison is claimed.",
+      "unverified-zero: totalFeesSeries.total_fees_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+      "unverified-zero: totalFeesSeries.protocol_fee_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+      "unverified-zero: totalFeesSeries.intents_revenue_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+      "unverified-zero: totalFeesSeries.burn_revenue_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+      "unverified-zero: totalFeesSeries.cumulative_fees_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+      "unverified-zero: totalFeesSeries.cumulative_protocol_fee_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+      "unverified-zero: totalFeesSeries.cumulative_intents_revenue_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31"
+    ]
+  },
+  "requestId": "9671d66c-bd4e-4b93-a8fc-06ec80d9deb4",
+  "schemaVersion": 1,
+  "snapshot": {
+    "adapterVersion": "near-revenue/1",
+    "capturedAt": "2026-10-23T11:31:37.879Z",
+    "domain": "near-thesis",
+    "modelResult": {
+      "counterCase": [
+        "Observed publisher rows support activity reporting only; they do not establish economic net revenue, market purchases, or native-token demand.",
+        "Monthly revenue rows publish no query/source identifier, and source-native date labels are not normalized into UTC windows.",
+        "Fee, volume, and revenue rows retain distinct query identifiers, units, and publisher stale flags; no cross-series reconciliation is asserted."
+      ],
+      "executionReady": false,
+      "investmentAssessment": {
+        "proposal": null,
+        "reasons": [
+          "NATIVE_TOKEN_DEMAND_UNVERIFIED",
+          "NET_CAPTURE_METHODOLOGY_UNVERIFIED"
+        ],
+        "status": "NO_DATA"
+      },
+      "modelVersion": "near-observed/1",
+      "seriesSummaries": {
+        "intentVolumeSeries": {
+          "comparisons": [
+            {
+              "adapterVersion": "near-revenue/1",
+              "currentLabel": "2026-10-22",
+              "direction": "lower",
+              "field": "volume_usd",
+              "kind": "exact-direction",
+              "previousLabel": "2026-10-21",
+              "sourceId": "dune:5179085",
+              "status": "COMPARED",
+              "unit": "USD"
+            },
+            {
+              "adapterVersion": "near-revenue/1",
+              "currentLabel": "2026-10-22",
+              "direction": "higher",
+              "field": "cumulative_volume_usd",
+              "kind": "exact-direction",
+              "previousLabel": "2026-10-21",
+              "sourceId": "dune:5179085",
+              "status": "COMPARED",
+              "unit": "USD"
+            }
+          ],
+          "current": {
+            "cumulative_volume_usd": "35883717851.89367",
+            "date_at": "2026-10-22",
+            "is_stale": "0",
+            "publisherStaleClaim": false,
+            "source_used": "dune:5179085",
+            "volume_usd": "132262402.9287494"
+          },
+          "currentSourceId": "dune:5179085",
+          "firstLabel": "2025-01-01",
+          "labelField": "date_at",
+          "labelSemantics": "publisher label; not normalized to a UTC window",
+          "lastLabel": "2026-10-22",
+          "previous": {
+            "cumulative_volume_usd": "35751455448.96492",
+            "date_at": "2026-10-21",
+            "is_stale": "0",
+            "publisherStaleClaim": false,
+            "source_used": "dune:5179085",
+            "volume_usd": "151452048.96614093"
+          },
+          "previousSourceId": "dune:5179085",
+          "sampleCount": 653,
+          "sourceField": "source_used",
+          "unitFields": {
+            "cumulative_volume_usd": "USD",
+            "volume_usd": "USD"
+          }
+        },
+        "revenueSeries": {
+          "comparisons": [],
+          "current": {
+            "cumulative_revenue_near": "4675225.567675695",
+            "cumulative_revenue_usd": "10212918.800679497",
+            "is_stale": "0",
+            "period_month": "2026-10-01",
+            "publisherStaleClaim": false,
+            "revenue_near": "356765.537693944",
+            "revenue_usd": "1775744.1177715985"
+          },
+          "currentSourceId": null,
+          "firstLabel": "2025-08-01",
+          "labelField": "period_month",
+          "labelSemantics": "publisher label; not normalized to a UTC window",
+          "lastLabel": "2026-10-01",
+          "previous": {
+            "cumulative_revenue_near": "4318460.029981751",
+            "cumulative_revenue_usd": "8437174.6829079",
+            "is_stale": "0",
+            "period_month": "2026-09-01",
+            "publisherStaleClaim": false,
+            "revenue_near": "654384.7206365484",
+            "revenue_usd": "2124331.516768312"
+          },
+          "previousSourceId": null,
+          "sampleCount": 15,
+          "sourceField": null,
+          "unitFields": {
+            "cumulative_revenue_near": "NEAR",
+            "cumulative_revenue_usd": "USD",
+            "revenue_near": "NEAR",
+            "revenue_usd": "USD"
+          }
+        },
+        "totalFeesSeries": {
+          "comparisons": [
+            {
+              "adapterVersion": "near-revenue/1",
+              "currentLabel": "2026-10-22",
+              "direction": "lower",
+              "field": "total_fees_near",
+              "kind": "exact-direction",
+              "previousLabel": "2026-10-21",
+              "sourceId": "dune:6732575",
+              "status": "COMPARED",
+              "unit": "NEAR"
+            },
+            {
+              "adapterVersion": "near-revenue/1",
+              "currentLabel": "2026-10-22",
+              "direction": "higher",
+              "field": "cumulative_fees_near",
+              "kind": "exact-direction",
+              "previousLabel": "2026-10-21",
+              "sourceId": "dune:6732575",
+              "status": "COMPARED",
+              "unit": "NEAR"
+            },
+            {
+              "adapterVersion": "near-revenue/1",
+              "currentLabel": "2026-10-22",
+              "direction": "lower",
+              "field": "fees_usd",
+              "kind": "exact-direction",
+              "previousLabel": "2026-10-21",
+              "sourceId": "dune:6162763",
+              "status": "COMPARED",
+              "unit": "USD"
+            },
+            {
+              "adapterVersion": "near-revenue/1",
+              "currentLabel": "2026-10-22",
+              "direction": "higher",
+              "field": "cumulative_fees_usd",
+              "kind": "exact-direction",
+              "previousLabel": "2026-10-21",
+              "sourceId": "dune:6162763",
+              "status": "COMPARED",
+              "unit": "USD"
+            }
+          ],
+          "current": {
+            "burn_revenue_near": "12765.63334759735",
+            "cumulative_fees_near": "4286241.917420427",
+            "cumulative_fees_usd": "56710557.25977549",
+            "cumulative_intents_revenue_near": "3608664.097141825",
+            "cumulative_protocol_fee_near": "677577.8202786038",
+            "date_at": "2026-10-22",
+            "fees_usd": "11924.977075850848",
+            "intents_revenue_near": "12057.380074215174",
+            "is_stale": "0",
+            "near_source_used": "dune:6732575",
+            "protocol_fee_near": "1011.7903905459647",
+            "publisherStaleClaim": false,
+            "total_fees_near": "13069.170464761139",
+            "usd_source_used": "dune:6162763"
+          },
+          "currentSourceId": null,
+          "firstLabel": "2025-08-01",
+          "labelField": "date_at",
+          "labelSemantics": "publisher label; not normalized to a UTC window",
+          "lastLabel": "2026-10-22",
+          "previous": {
+            "burn_revenue_near": "12933.075295550692",
+            "cumulative_fees_near": "4273172.746955666",
+            "cumulative_fees_usd": "56698632.28269964",
+            "cumulative_intents_revenue_near": "3596606.71706761",
+            "cumulative_protocol_fee_near": "676566.0298880578",
+            "date_at": "2026-10-21",
+            "fees_usd": "209713.60317989966",
+            "intents_revenue_near": "12124.288854901126",
+            "is_stale": "0",
+            "near_source_used": "dune:6732575",
+            "protocol_fee_near": "1155.409200927952",
+            "publisherStaleClaim": false,
+            "total_fees_near": "13279.698055829078",
+            "usd_source_used": "dune:6162763"
+          },
+          "previousSourceId": null,
+          "sampleCount": 448,
+          "sourceField": null,
+          "unitFields": {
+            "burn_revenue_near": "NEAR",
+            "cumulative_fees_near": "NEAR",
+            "cumulative_fees_usd": "USD",
+            "cumulative_intents_revenue_near": "NEAR",
+            "cumulative_protocol_fee_near": "NEAR",
+            "fees_usd": "USD",
+            "intents_revenue_near": "NEAR",
+            "protocol_fee_near": "NEAR",
+            "total_fees_near": "NEAR"
+          }
+        }
+      },
+      "status": "OBSERVED",
+      "unknowns": [
+        "native-token-demand: NATIVE_TOKEN_DEMAND_UNVERIFIED; published rows do not prove NEAR bought from the market or incremental native-token demand.",
+        "economic-net-revenue: NET_CAPTURE_METHODOLOGY_UNVERIFIED; no net-revenue attribution or fee/volume/revenue join is made.",
+        "cross-series-periods: date_at and period_month labels do not establish a shared exact reporting window.",
+        "freshness: is_stale is publisher metadata, not independent proof of source freshness.",
+        "fee-volume-ratio: query identifiers and period labels are unreconciled; a zero volume denominator is undefined, so no ratio is computed.",
+        "comparison-provenance-missing: revenueSeries has no published query/source identifier; no trend comparison is claimed.",
+        "unverified-zero: totalFeesSeries.total_fees_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+        "unverified-zero: totalFeesSeries.protocol_fee_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+        "unverified-zero: totalFeesSeries.intents_revenue_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+        "unverified-zero: totalFeesSeries.burn_revenue_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+        "unverified-zero: totalFeesSeries.cumulative_fees_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+        "unverified-zero: totalFeesSeries.cumulative_protocol_fee_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31",
+        "unverified-zero: totalFeesSeries.cumulative_intents_revenue_near; near_source_used=none; rows=153; labels=2025-08-01…2025-12-31"
+      ]
+    },
+    "modelVersion": "near-observed/1",
+    "rawBodyBytes": 571050,
+    "rawBodySha256": "6873ca962221f291db35d7cc9cf7a44c89cc274fd626bff12ae4c2f0c5534f97",
+    "schemaVersion": 1,
+    "sourceRefs": [
+      {
+        "revisionId": "e4f3204c-4ad7-45d7-bf1a-477b5d21de77",
+        "sha256": "a5f5bdb20ae23e92eb91866b7ab50acfc448fa01721a5efe9d7b86739f49d59b"
+      },
+      {
+        "revisionId": "8c036d0d-b258-49ac-a79c-b9919cfc2965",
+        "sha256": "8483cec82701f7aaa1a037de735be474da4b4eada686a5ac5c6f9145d810480b"
+      }
+    ],
+    "sourceUrl": "https://revenue.near.org/"
+  },
+  "snapshotHash": "437e23428e5a359fc90054b00d1e5a5796dfb2074e098840da26bc2ededa660c",
+  "sourceRefs": [
+    {
+      "revisionId": "e4f3204c-4ad7-45d7-bf1a-477b5d21de77",
+      "sha256": "a5f5bdb20ae23e92eb91866b7ab50acfc448fa01721a5efe9d7b86739f49d59b"
+    },
+    {
+      "revisionId": "8c036d0d-b258-49ac-a79c-b9919cfc2965",
+      "sha256": "8483cec82701f7aaa1a037de735be474da4b4eada686a5ac5c6f9145d810480b"
+    }
+  ],
+  "status": "OBSERVED"
+}

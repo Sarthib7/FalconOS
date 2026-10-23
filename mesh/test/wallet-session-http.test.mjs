@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID, randomBytes } from 'node:crypto';
 import { Pool } from 'pg';
+import { Keypair } from '@solana/web3.js';
 import { createApi, parseTokenHashes } from '../http.mjs';
 import { createStore } from '../store.mjs';
 import { createWalletAuth, deriveWalletOwnerId } from '../wallet-auth.mjs';
@@ -13,8 +14,9 @@ const digest = value => createHash('sha256').update(value).digest('hex');
 const url = process.env.FALCON_MESH_TEST_DATABASE_URL;
 const prefix = randomUUID().replaceAll('-', '');
 const hashes = parseTokenHashes(JSON.stringify({ [digest(token)]: `http_${prefix}` }));
-const wallet1 = '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV';
-const wallet2 = 'J3dxNj7nDRRqRRXuEMynDG57DkZK4jYRuv3Garmb1i99';
+// V193: each run owns fresh wallet namespaces, including when its DB is reused.
+const wallet1 = Keypair.generate().publicKey.toBase58();
+const wallet2 = Keypair.generate().publicKey.toBase58();
 const tx = Buffer.from('fixture-signed-intent').toString('base64');
 
 function sessionToken() {
