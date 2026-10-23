@@ -29,7 +29,7 @@ Or register it with the Codex CLI:
 codex mcp add falconos --url https://mcp.falconos.markets/mcp
 ```
 
-[VERIFIED, source and hosted HTTP] After restarting the client, list tools and call `falcon_self_test({})`. Rust MCP 0.4.0 exposes capability schema v1 and 14 tools. Check supported scopes, unavailable reasons and approval rules before an owner action. Metadata does not prove signer support, funds or transaction readiness. `codex mcp list` confirms registration only. See the [capability contract](mcp-rust/README.md#capability-discovery-040).
+[VERIFIED SOURCE; hosted 0.5.0 not verified] Restart the client, list tools and call `falcon_self_test({})`. Current source 0.5.0 exposes 19 tools and per-domain capability scope. Check supported actions, chain/network, unavailable reasons and approval rules before owner work. Metadata does not verify the owner wallet session, signer or funding state, separate operator review grant, or native model-host controls. `codex mcp list` confirms registration only. See the [current capability contract](mcp-rust/README.md#capability-discovery-050), the dated [hosted 0.4.0 cutover record](status.md#rust-mcp-cutover-2026-10-15), and the [2026-10-23 local evidence and blockers](status.md#source-050-publication-evidence-2026-10-23).
 
 **JSON config** (any MCP client that supports Streamable HTTP):
 ```json

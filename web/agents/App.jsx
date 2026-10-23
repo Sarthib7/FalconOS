@@ -77,7 +77,7 @@ export default function App() {
         <section id="install" className="agents-install" aria-labelledby="install-title">
           <div className="section-heading">
             <h2 id="install-title">Add Falcon to your agent</h2>
-            <p>Choose your client, restart it, and verify all ten Falcon tools in the active session. For Codex, <code>codex mcp list</code> confirms registration only.</p>
+            <p>Choose your client, restart it, and verify the Falcon tool inventory in the active session. For Codex, <code>codex mcp list</code> confirms registration only.</p>
           </div>
           <div className="install-grid">
             <InstallCard title="Claude Code" description="Add Falcon's hosted HTTP MCP server." value={MCP_CLI_COMMAND} label="Copy Claude Code command" />

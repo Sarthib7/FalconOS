@@ -1,5 +1,61 @@
 # Status
 
+## Source 0.5.0 publication evidence: 2026-10-23
+
+Owner: coordinator. [VERIFIED, parent-observed CI] Status: PR 112 recovery check passed without source changes; the original startup failure remains unexplained. This is not a release or readiness claim.
+
+[VERIFIED SOURCE] The [current capability contract](mcp-rust/README.md#capability-discovery-050) documents Rust MCP source 0.5.0 with 19 tools and metadata-only capability discovery. Self-test readiness fields remain `not_checked`; metadata does not establish an owner wallet session, signer or funding state, the separate operator review grant, or native model-host controls. The 0.4.0 T81 inventory and fingerprint are historical; the [0.4.0 capability snapshot](mcp-rust/fixtures/node-self-test-0.4.0.json) preserves that baseline.
+
+[VERIFIED, parent-observed evidence] A fresh PostgreSQL 17 Mesh suite reported `tests 291`, `pass 291`, `fail 0`. The web pretest built `site/MVP/agents` and reported `tests 322`, `pass 322`, `fail 0`. Standalone crate `cargo fmt --check` passed; `cargo test` reported 29 passed across 13 suites. Repository boundary tests reported `tests 28`, `pass 28`, `fail 0`; `mesh-release` reported `PASS`, `declaredFiles 34`. The canonical agents guide record matched rendered SHA256 `1a01905bff94f6554986a1f0c24dd069c152520bdd9b76059c72ef41c2323533`.
+
+[VERIFIED, parent-observed evidence] Native MCP 0.5.0 reported 19 tools, all readiness fields `not_checked`, and preservation of 14 legacy input schemas and authority annotations. The local Brave/protocol smoke returned `REAL_MESH_MCP_PROXY_CASE_PASS` using a real free capture from `https://revenue.near.org/`, real Mesh, actual Rust MCP and proxy functions, with a trusted local mapping for only the fixed MCP upstream. It reconstructed and hash-checked 2 source parts from 1 publisher capture; replay made no recapture. Data was `OBSERVED`; investment was `NO_DATA`, proposal `null`, and `executionReady` `false`.
+
+[VERIFIED, parent-observed evidence] The production-built page had no horizontal overflow at desktop width 1360 or mobile width 390. An invalid `caseId` caused 0 upstream calls. The dashboard rendered Soon with 0 scripts and 0 active controls.
+
+[BLOCKED, parent-observed axe 4.13 audit] Two issues remain unresolved: `dlitem` at `Case.jsx:451` (`DataItem` outside `<dl>`) and `landmark-unique` at `Case.jsx:328` (repeated row-title regions). Backprop and repair remain pending; this is not a clean accessibility audit.
+
+[VERIFIED SOURCE] Review requires owner authentication, a separate operator-principal grant, and verified native model-host controls; capability metadata does not verify these gates. [REPORTED, parent-provided blocker] Backend review construction and native host proof remain unfinished. [INFERRED] This record does not establish completion of the two actual reviewer calls required by the contract.
+
+[REPORTED, parent-provided GitHub state] PR 105 was closed and superseded losslessly by PRs 106, 107, 108, and 109. The final replacement tree `fda091f58a034cae83f6e5df6657e3237032ebed` is reported equal to the `0296ac4` tree. Draft PRs 110 (MCP), 111 (public proxies), and 112 (case page and gates) remain open; none is merged. The owner-requested pause record below remains dated history, not current PR state.
+
+[VERIFIED, parent-observed CI] PRs 102-104 and 106-111 each had 6 checks in the latest snapshot, none pending or failed. PR 112 head `0b6707748a696a4d69192453fe070fdc2d484c8c` initially had 5 successful checks and 1 failed `Verify repository and Mesh container` check, run `39939294783`, job `120366488175`. Chrome startup reported `CDP timeout: Browser.getVersion` after 15 seconds; the transport suite collected 13 and reported `pass 0`, `fail 13` because shared setup failed before CORS assertions.
+
+[VERIFIED, parent-observed CI] Unchanged recovery of run `39939294783` completed with `success`; `Verify repository and Mesh container` job `120370586975` passed from 10:38:34 to 10:43:34. No source changed between attempts.
+
+[REPORTED, parent-provided reviewer finding] The reviewer localized the failure to pre-target Chrome/pipe startup but could not distinguish harness from runner. The root cause remains undetermined; the successful recovery does not prove a source fix or classify the original failure as flaky.
+
+[REPORTED, parent-provided deployment status] No hosted 0.5.0 rollout has been verified. Local source and browser evidence do not establish hosted deployment, model-host readiness, or release readiness.
+
+## Owner-requested pause: 2026-10-21
+
+Owner: coordinator. Status: Blocked (owner requested immediate wrap-up).
+
+[VERIFIED GITHUB] Draft PRs102-107 are open; none was merged during this wrap-up. PR105 preserves an oversized review slice and is only partly split into PR106 (controller) and PR107 (job store). Do not merge PR105 alongside its replacements. Remaining job-runner/host-refusal splitting and the Rust MCP, public page/proxies, release guards and install-guide commits are not finished.
+
+[VERIFIED LOCAL] The retained worktree remains on feat/hackathon-research-slice-20261021 at0296ac4 with uncommitted Rust, web and documentation changes. Smaller review heads ddc5d50 and a56376b are a separate history, not descendants of0296ac4. The unintended prep.rs formatter change was restored. The original dirty checkout remains untouched.
+
+[VERIFIED LOCAL] Focused wrap-up checks reported kernel/adapters39/39, source/model11/11, retained-case PostgreSQL/HTTP6/6 and controller/job checks22/22. Earlier web pretest built site/MVP/agents and reported322/322; proxy tests reported10/10. These do not prove the browser case view or two real model reviewers. The latest full Mesh run failed at wallet-session-http.test.mjs:97 with409 instead of200 on the reused disposable database; no final full-suite green is claimed. Exact-head remote CI was not reviewed before the pause.
+
+[VERIFIED OPERATIONS] The owned disposable PostgreSQL server was stopped without deleting its data. No SDK install, provider grant, production activation, signature, broadcast or financial action occurred. The SDK route remains unapproved; native CLI safety proof and two real reviewer calls remain unavailable. See the OS-temp handoff for pickup locations and next actions.
+
+## D3 collector and shared-kernel verification: 2026-10-21
+
+Owner: coordinator. Status: Partial implementation; integrated research workflow not yet verified.
+
+[VERIFIED USER APPROVAL, supersedes the earlier pending-approval statement below] D3.1 was approved directly. The approved transport/state/source-access contract is recorded in docs/interfaces.md; SPEC now records V186 and B121-B123. Implementation and runtime verification of D3.1 remain in progress; no production activation was authorized.
+
+[VERIFIED LOCAL] The collector/kernel/model command reported `tests 15`, `pass 15`, `fail 0`, `skipped 0`. The publisher page contains a separate revenue/emissions widget and the complete research object. Treating any revenueSeries key as a complete candidate incorrectly returned SOURCE_PAYLOAD_AMBIGUOUS. The retained regression failed before the fix: `tests 1`, `pass 0`, `fail 1`. Selection now requires all three research series, while duplicate complete objects still fail closed.
+
+[VERIFIED LIVE READ] Capture at `2026-10-21T15:16:11.889Z` read `https://revenue.near.org/`: raw bytes568714, gzip bytes102299, parts2, raw SHA256 `85653c8d7258c81038cca989e1a2ba0b5f9d80b2f350e594aa48c639526bf054`. Revenue/intents/fees row counts were15/651/446. These are publisher-reported series, not independently reconciled net capture or native-token demand. Data status was OBSERVED; investmentAssessment was NO_DATA with NATIVE_TOKEN_DEMAND_UNVERIFIED and NET_CAPTURE_METHODOLOGY_UNVERIFIED, proposal null and executionReady false. Independent decode/evaluation runs produced the same canonical model hash: `d66dcaa3fc8318eeed074e768b36e39234c817bdb6d5edd1547b57fe4d6f754a`.
+
+[VERIFIED LOCAL, correction] Initial kernel tests contained a63-character Unicode SHA golden. Literal UTF-8 bytes for é were c3a9; the independent SHA256 result was `4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c`. The expected vector was corrected; runtime hashing was not defective. A separate shell octal probe encoded codepoints differently and was excluded.
+
+[VERIFIED LOCAL, correction] The first stocks/perps consumer run reported `tests 35`, `pass 16`, `fail 19`: stocks manifestEntry retained createHash after its import was removed. It now uses the shared raw-byte sha256 helper. The same consumer suites then reported `tests 35`, `pass 35`, `fail 0`. A direct synthetic snapshot smoke returned STOCKS_KERNEL_PASS and retained bytes00c3a9ff with raw hash `8f0e7a2cd710cdc31d7cbb424a5ff3a126c4d3fcb64129a92ec70a21fb8dd817`. This is synthetic contract proof, not a live stock-market read. Its first probe used the wrong snapshot.status location; the corrected probe checks snapshot.envelope.status.
+
+[VERIFIED SOURCE / LIMIT] Shared kernel and legacy adapter migration are in the retained D3 workspace. PostgreSQL persistence, HTTP/MCP/web integration and two real reviewer calls have not been verified. The Codex host remains fail-closed where tool controls are unproved. D3.1 transport/state/source-access refinement and proposed SPEC bug records await direct approval. No signing, financial action, production grant, migration or manual deployment occurred.
+
+[VERIFIED GITHUB, delivery correction] PR100 merged as `bd74327246ec508d75f4c5835b527c8a2817ac69`; PR101 merged as `8c23641fd749418cf9efe0bd626299df1507dfe4`. Main-head CI39621500458 and Verify web39621500395 reported success at8c23641. The earlier pending-publication statements below are historical. No production smoke for these prerequisite changes is claimed here.
+
 ## Advisory allocation contract: 2026-10-21
 
 Owner: coordinator. Status: Completed (contract clarification only).
