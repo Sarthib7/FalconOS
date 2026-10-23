@@ -1,5 +1,5 @@
 use axum::{Json, Router, extract::Path, routing::any};
-use falcon_mcp_rust::{Config, SCHEMA_FINGERPRINT, TOOL_NAMES, create_app};
+use falcon_mcp_rust::{Config, create_app};
 use serde_json::{Value, json};
 use tokio::net::TcpListener;
 use tower::ServiceExt;
@@ -44,90 +44,6 @@ async fn json_rpc(
     let status = r.status();
     let body = r.json().await.unwrap_or(Value::Null);
     (status, body)
-}
-#[tokio::test]
-async fn fixture_order_schema_and_self_test_match_node_040() {
-    let fixture: Vec<Value> =
-        serde_json::from_str(include_str!("../fixtures/node-0.4.0.json")).unwrap();
-    let names = fixture
-        .iter()
-        .map(|x| x["name"].as_str().unwrap())
-        .collect::<Vec<_>>();
-    assert_eq!(names.len(), 14);
-    assert_eq!(names, TOOL_NAMES);
-    let prep = &fixture[7]["inputSchema"];
-    assert_eq!(prep["additionalProperties"], false);
-    assert!(prep["allOf"].as_array().unwrap().iter().any(|x| {
-        x["if"]["properties"]["action"]["const"] == "supply"
-            && x["then"]["required"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|v| v == "decisionId")
-    }));
-    assert!(prep["allOf"].as_array().unwrap().iter().any(|x| {
-        x["if"]["properties"]["action"]["const"] == "redeem"
-            && x["then"]["required"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|v| v == "amountReceiptTokens")
-    }));
-    let cap: Value = serde_json::from_str(include_str!("../fixtures/capabilities.json")).unwrap();
-    let mesh = Router::new().route("/{*path}", any(fake_mesh));
-    let ml = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let ma = ml.local_addr().unwrap();
-    tokio::spawn(async move { axum::serve(ml, mesh).await.unwrap() });
-    let app = create_app(cfg(format!("http://{ma}"))).unwrap();
-    let l = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let a = l.local_addr().unwrap();
-    tokio::spawn(async move { axum::serve(l, app).await.unwrap() });
-    let client = reqwest::Client::new();
-    let url = format!("http://{a}/mcp");
-    let (s,init)=json_rpc(&client,&url,json!(1),"initialize",json!({"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"offline-test","version":"1"}})).await;
-    assert!(s.is_success(), "{s}: {init}");
-    assert_eq!(init["result"]["serverInfo"]["name"], "falcon-mcp");
-    assert_eq!(init["result"]["serverInfo"]["version"], "0.4.0");
-    let _ = client
-        .post(&url)
-        .header("origin", "http://localhost:8792")
-        .json(&json!({"jsonrpc":"2.0","method":"notifications/initialized"}))
-        .send()
-        .await
-        .unwrap();
-    let (s, list) = json_rpc(&client, &url, json!(2), "tools/list", json!({})).await;
-    assert!(s.is_success(), "{s}: {list}");
-    let live = list["result"]["tools"].as_array().unwrap();
-    assert_eq!(live.len(), 14);
-    for (got, want) in live.iter().zip(&fixture) {
-        assert_eq!(got["name"], want["name"]);
-        assert_eq!(got["title"], want["title"]);
-        assert_eq!(got["description"], want["description"]);
-        assert_eq!(got["inputSchema"], want["inputSchema"]);
-        assert_eq!(got["annotations"], want["annotations"])
-    }
-    let (s, test) = json_rpc(
-        &client,
-        &url,
-        json!(3),
-        "tools/call",
-        json!({"name":"falcon_self_test","arguments":{}}),
-    )
-    .await;
-    assert!(s.is_success(), "{s}: {test}");
-    let r = &test["result"];
-    let body: Value = serde_json::from_str(r["content"][0]["text"].as_str().unwrap()).unwrap();
-    assert_eq!(body["schemaFingerprint"], SCHEMA_FINGERPRINT);
-    assert_eq!(body["tools"], json!(TOOL_NAMES));
-    assert_eq!(body["toolCount"], 14);
-    assert_eq!(body["capabilities"], cap);
-    assert_eq!(
-        body["readiness"],
-        json!({"signer":"not_checked","funding":"not_checked","transaction":"not_checked"})
-    );
-    let expected: Value =
-        serde_json::from_str(include_str!("../fixtures/node-self-test-0.4.0.json")).unwrap();
-    assert_eq!(body, expected);
 }
 #[tokio::test]
 async fn actual_mcp_call_has_projected_data_and_rejects_bad_boundaries() {

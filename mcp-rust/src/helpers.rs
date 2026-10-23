@@ -4,6 +4,11 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
     let o = json_object(a).ok_or_else(|| ToolFailure::input("Arguments must be an object."))?;
     let allowed: &[&str] = match name {
         "falcon_public_graph" | "falcon_self_test" => &[],
+        "falcon_research_case" => &["caseId"],
+        "falcon_replay_research_case" => &["caseId"],
+        "falcon_research_source" => &["revisionId"],
+        "falcon_adopt_research_case" => &["session", "requestId", "publicCaseId"],
+        "falcon_review_research_case" => &["session", "requestId", "analysisId"],
         "falcon_connect" => &["wallet"],
         "falcon_connect_verify" => &["challengeId", "signature"],
         "falcon_disconnect"
@@ -48,6 +53,10 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
     }
     let required: &[&str] = match name {
         "falcon_connect" => &["wallet"],
+        "falcon_replay_research_case" => &["caseId"],
+        "falcon_research_source" => &["revisionId"],
+        "falcon_adopt_research_case" => &["session", "requestId", "publicCaseId"],
+        "falcon_review_research_case" => &["session", "requestId", "analysisId"],
         "falcon_connect_verify" => &["challengeId", "signature"],
         "falcon_disconnect"
         | "falcon_yield_opportunities"
@@ -92,6 +101,9 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
         "intentId",
         "requestId",
         "challengeId",
+        "caseId",
+        "publicCaseId",
+        "revisionId",
     ] {
         if let Some(x) = a.get(k) {
             let s = x
@@ -425,4 +437,69 @@ pub(super) fn activity(d: &Value, i: &Value) -> Value {
             .cmp(a["at"].as_str().unwrap_or(""))
     });
     json!({"trail":trail,"counts":{"decisions":ds.len(),"intents":its.len()},"limit":20})
+}
+
+#[cfg(test)]
+mod research_input_tests {
+    use super::*;
+    use serde_json::json;
+
+    const SESSION: &str = "wsi1_12345678901234567890";
+    const CASE_ID: &str = "12345678-1234-1234-1234-123456789012";
+    const REQUEST_ID: &str = "12345678-1234-1234-1234-123456789013";
+
+    #[test]
+    fn public_research_inputs_are_uuid_strict_and_never_accept_sessions() {
+        assert!(validate("falcon_research_case", &json!({})).is_ok());
+        assert!(validate("falcon_research_case", &json!({"caseId": CASE_ID})).is_ok());
+        assert!(validate("falcon_replay_research_case", &json!({"caseId": CASE_ID})).is_ok());
+        assert!(validate("falcon_research_source", &json!({"revisionId": CASE_ID})).is_ok());
+        for (name, args) in [
+            ("falcon_research_case", json!({"caseId": "not-a-uuid"})),
+            (
+                "falcon_replay_research_case",
+                json!({"caseId": CASE_ID, "session": SESSION}),
+            ),
+            (
+                "falcon_research_source",
+                json!({"revisionId": "not-a-uuid"}),
+            ),
+        ] {
+            assert_eq!(validate(name, &args).unwrap_err().code, "INVALID_INPUT");
+        }
+    }
+
+    #[test]
+    fn owner_research_calls_require_exact_request_and_analysis_ids() {
+        assert!(
+            validate(
+                "falcon_adopt_research_case",
+                &json!({"session": SESSION, "requestId": REQUEST_ID, "publicCaseId": CASE_ID}),
+            )
+            .is_ok()
+        );
+        assert!(
+            validate(
+                "falcon_review_research_case",
+                &json!({"session": SESSION, "requestId": REQUEST_ID, "analysisId": CASE_ID}),
+            )
+            .is_ok()
+        );
+        for (name, args) in [
+            (
+                "falcon_adopt_research_case",
+                json!({"session": SESSION, "publicCaseId": CASE_ID}),
+            ),
+            (
+                "falcon_review_research_case",
+                json!({"session": SESSION, "requestId": REQUEST_ID, "analysisId": "not-a-uuid"}),
+            ),
+            (
+                "falcon_review_research_case",
+                json!({"session": SESSION, "requestId": REQUEST_ID, "analysisId": CASE_ID, "owner": "unexpected"}),
+            ),
+        ] {
+            assert_eq!(validate(name, &args).unwrap_err().code, "INVALID_INPUT");
+        }
+    }
 }

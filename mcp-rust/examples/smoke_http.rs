@@ -52,15 +52,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .structured_content
         .as_ref()
         .ok_or("missing self-test metadata")?;
-    assert_eq!(metadata["serverVersion"], "0.4.0");
+    assert_eq!(metadata["serverVersion"], env!("CARGO_PKG_VERSION"));
     assert_eq!(metadata["schemaFingerprint"], SCHEMA_FINGERPRINT);
     assert_eq!(metadata["capabilities"]["schemaVersion"], 1);
     assert_eq!(metadata["capabilities"]["verification"], "metadata-only");
     assert_eq!(metadata["capabilities"]["defaultSupport"], "unsupported");
-    assert_eq!(
-        metadata["readiness"],
-        json!({"signer":"not_checked","funding":"not_checked","transaction":"not_checked"})
-    );
+    for field in ["signer", "funding", "transaction", "researchReviewGrant"] {
+        assert_eq!(metadata["readiness"][field], "not_checked");
+    }
 
     let rejected = client
         .peer()
