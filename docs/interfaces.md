@@ -1,5 +1,28 @@
 # First research slice interfaces
 
+## Owner-approved NEAR AI CFO R1, 2026-10-26
+
+[VERIFIED USER APPROVAL] The owner approved `falcon-cfo-near-20261026/proposal-r1.html#proposed`. Interface ID: CFO-1. Owner: coordinator. Status: In Progress. This permits implementation, not funding, provider terms acceptance, paid model calls, deployment or publication. SPEC I22/V197-V203 are authoritative.
+
+[APPROVED CONTRACT] A verified wallet session supplies owner and wallet for every `/v1/cfo` call. Generic operator tokens cannot substitute for wallet financial identity. GET overview and records read retained state only. Explicit POST mandate, capture, plans, prepare, signatures, relay, reconcile and monitor map to the canonical CFO service. Every mutation requires a requestId; conflicting reuse fails.
+
+[APPROVED CONTRACT] Mandate fields: schemaVersion1, wallet, reserveAssetId, reserveFloorBaseUnits, maxActionReserveBaseUnits, maxPositionBps, slippageBps, maxFeeBps, maxEvidenceAgeSeconds, targets (assetId/weightBps), monitorIntervalSeconds and maxMonitorCycles. No invented money defaults. Supported-token registry resolves the exact reserve mint and receipt identity. Current entry/exit quotes and token-specific decimals constrain value and execution.
+
+[APPROVED CONTRACT] Portfolio, mandate, quotes, deterministic checks and proposed action form one immutable CFO snapshot. Lead and independent Risk bind its hash. Review grants remain separate from identity. The shared Council host accepts a trusted CFO adapter, not caller-selected model or prompts. New buy exposure requires valid review; deterministic owner exits retain quote/account checks.
+
+[APPROVED CONTRACT] The backend may relay only the exact owner-signed Intents payload. This is a new boundary distinct from legacy Solana human broadcast. Verify quote authenticity, signer, contract, nonce, debit/minimum output and expiry. Persist signed bytes and unknown state before the external call. One open action per owner uses PostgreSQL owner locks and versioned immutable analyses. Unknown sends remain reserved across restart. Provider success is not independent receipt proof.
+
+[APPROVED CONTRACT] Rotation uses confirmed reserve proceeds before the next separately approved leg. Reinvestment uses settled funds, not assumed earnings. Monitoring is bounded, read-only and explicitly started; it stops on restart. Dashboard and Rust MCP call the same service. Existing NEAR thesis and Solana Devnet contracts remain unchanged.
+
+[VERIFIED OFFICIAL DOCUMENTATION] NEAR Intents has no testnet: https://docs.near-intents.org/resources/faqs.md. [OWNER GATES] T82/V180, partner setup/terms, live model budget and exact capped mainnet trial remain required before funded acceptance. No production schema migration is authorized.
+
+[VERIFIED R2 USER APPROVAL, 2026-10-26] The owner approved the receipt sender-discovery amendment. Fixed GET `https://api.nearblocks.io/v3/txns/{hash}` supplies only matching transaction_hash/signer_account_id. `FALCON_CFO_NEARBLOCKS_API_KEY` stays server-side. Independently verify the transaction through NEAR RPC `tx_status` with FINAL execution, exact signed intent and token effects. Indexer success alone never confirms an action; missing key, mismatch, timeout or missing receipt stays UNVERIFIED. This permits implementation, not provider terms, account setup or paid requests.
+
+[VERIFIED LOCAL RECOVERY CONTRACT] Monotonic owner sequences select current financial heads. Every entry rechecks the latest mandate and portfolio under the owner lock. A confirmed exit with no entry closes INCOMPLETE if fresh evidence or review fails. A retained EXIT_CONFIRMED with no entry may close after its 120-second database-time planning lease. This does not release SIGNED, SUBMISSION_UNKNOWN, PENDING or UNVERIFIED movements. Reads may record this safe housekeeping, but never start capture, inference, signing or relay.
+
+[VERIFIED PROVIDER TERMS; DESIGN REQUIRED] [Terms §4.1(e)](https://docs.near-intents.org/security-compliance/terms-of-service.md) restrict API-data storage to24 hours except static end-user transaction history. R1's indefinite unexecuted quote snapshots require a written exception or a newly approved retention design before provider access. Local fixtures are not live API-data acceptance proof.
+
+
 ## Owner dashboard D4 contract, 2026-10-23
 
 [APPROVED D4 SCOPE; VERIFIED LOCAL IMPLEMENTATION] Interface ID: DASHBOARD-D4. Owner: coordinator. Providers: owner-authenticated Mesh reads and existing wallet auth. Consumers: production React dashboard and Rust falcon_activity. Status: In Progress (current-head CI, owner review and hosted cutover are separate gates). Preserve existing authority boundaries. Browser storage is not authorization. Signup and organization workspaces remain unavailable.

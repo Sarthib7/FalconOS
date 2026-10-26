@@ -732,13 +732,13 @@ export function createStore(pool, { capture = captureLiveSource, now = () => new
 
     async getAnalysis(owner, id) {
       ownerId(owner);
-      const result = await pool.query("SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2 AND observation_id <> $3 AND COALESCE(analysis->>'recordKind', '') NOT LIKE 'near-research/%'", [owner, uuid(id), RESERVE_DECISION_MARKER]);
+      const result = await pool.query("SELECT * FROM falcon_mesh.analyses WHERE owner_id = $1 AND id = $2 AND observation_id <> $3 AND COALESCE(graph->>'domain', '') <> 'cfo' AND COALESCE(analysis->>'recordKind', '') NOT LIKE 'near-research/%'", [owner, uuid(id), RESERVE_DECISION_MARKER]);
       return result.rows.length ? record(result.rows[0]) : null;
     },
 
     async listAnalyses(owner) {
       ownerId(owner);
-      const result = await pool.query("SELECT id, created_at, analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND observation_id <> $2 AND COALESCE(analysis->>'recordKind', '') NOT LIKE 'near-research/%' ORDER BY created_at DESC, id DESC LIMIT 20", [owner, RESERVE_DECISION_MARKER]);
+      const result = await pool.query("SELECT id, created_at, analysis FROM falcon_mesh.analyses WHERE owner_id = $1 AND observation_id <> $2 AND COALESCE(graph->>'domain', '') <> 'cfo' AND COALESCE(analysis->>'recordKind', '') NOT LIKE 'near-research/%' ORDER BY created_at DESC, id DESC LIMIT 20", [owner, RESERVE_DECISION_MARKER]);
       return result.rows.map(row => ({ id: row.id, createdAt: new Date(row.created_at).toISOString(), analysis: row.analysis }));
     },
 
