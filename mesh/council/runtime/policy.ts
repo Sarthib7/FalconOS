@@ -1,3 +1,4 @@
+import { canonicalBytes, sha256 } from "../evidence.ts";
 export type WorkerErrorCode =
   | "INVALID_REQUEST"
   | "UNAVAILABLE"
@@ -28,6 +29,21 @@ const RISK_RESULT_KEYS = [
   "schemaVersion", "role", "runId", "callId", "snapshotHash", "proposalHash", "status", "reason",
   "citations", "missingEvidence", "executionReady",
 ] as const;
+const CFO_LEAD_RESULT_KEYS = [
+  "schemaVersion", "role", "runId", "callId", "snapshotHash", "proposalHash", "status", "thesis",
+  "counterCase", "citations", "missingEvidence", "executionReady",
+] as const;
+const CFO_RISK_RESULT_KEYS = [
+  "schemaVersion", "role", "runId", "callId", "snapshotHash", "proposalHash", "status", "reason",
+  "citations", "missingEvidence", "executionReady",
+] as const;
+const CFO_SNAPSHOT_KEYS = [
+  "schemaVersion", "domain", "capturedAt", "portfolio", "mandate", "mandateHash", "request", "quotes",
+  "proposal", "checks", "reasons", "status",
+] as const;
+const CFO_MODEL_RESULT_KEYS = ["domain", "status", "proposal"] as const;
+const CFO_REQUEST_ACTION_KEYS = ["requestId", "action", "sourceAssetId", "targetAssetId", "inputBaseUnits"] as const;
+const CFO_PROPOSAL_KEYS = ["action", "sourceAssetId", "targetAssetId", "inputBaseUnits", "reason", "expiresAt"] as const;
 const FORBIDDEN_ROUTING_KEYS: Record<string, true> = {
   provider: true,
   api: true,
@@ -98,7 +114,10 @@ export function requestError(
   if (!isRecord(request)) return "INVALID_REQUEST";
   const role = request.role;
   if (role !== "lead" && role !== "risk") return "INVALID_REQUEST";
-  const expected = role === "risk" ? RISK_REQUEST_KEYS : COMMON_REQUEST_KEYS;
+  const cfo = isRecord(request.snapshot) && request.snapshot.domain === "cfo";
+  const expected = cfo
+    ? [...COMMON_REQUEST_KEYS, "proposal"]
+    : role === "risk" ? RISK_REQUEST_KEYS : COMMON_REQUEST_KEYS;
   if (!hasExactKeys(request, expected)
       || request.schemaVersion !== 1
       || (operation === "preflight" && role !== "lead")
@@ -110,10 +129,33 @@ export function requestError(
       || !validSourceRefs(request.sourceRefs)) {
     return "INVALID_REQUEST";
   }
-  if (role === "risk") {
+  if (role === "risk" || cfo) {
     const proposal = request.proposal;
-    if (!hasExactKeys(proposal, ["hash", "value"])
-        || !(proposal.hash === null || (typeof proposal.hash === "string" && HASH_PATTERN.test(proposal.hash)))
+    if (!hasExactKeys(proposal, ["hash", "value"])) return "INVALID_REQUEST";
+    if (cfo) {
+      if (typeof proposal.hash !== "string" || !HASH_PATTERN.test(proposal.hash) || !isRecord(proposal.value)) {
+        return "INVALID_REQUEST";
+      }
+      const snapshot = request.snapshot;
+      const snapshotProposal = snapshot.proposal;
+      const modelProposal = request.modelResult.proposal;
+      if (!hasExactKeys(snapshot, CFO_SNAPSHOT_KEYS)
+          || snapshot.schemaVersion !== 1 || snapshot.domain !== "cfo" || snapshot.status !== "REVIEW"
+          || !HASH_PATTERN.test(String(snapshot.mandateHash))
+          || !hasExactKeys(snapshot.request, CFO_REQUEST_ACTION_KEYS)
+          || typeof snapshot.request.requestId !== "string" || !UUID_PATTERN.test(snapshot.request.requestId)
+          || !["invest", "reinvest"].includes(String(snapshot.request.action))
+          || !hasExactKeys(snapshotProposal, CFO_PROPOSAL_KEYS)
+          || snapshotProposal.action !== snapshot.request.action
+          || !hasExactKeys(request.modelResult, CFO_MODEL_RESULT_KEYS)
+          || !isRecord(modelProposal) || !hasExactKeys(proposal.value, CFO_PROPOSAL_KEYS)
+          || request.snapshotHash !== sha256(canonicalBytes(snapshot))
+          || proposal.hash !== sha256(canonicalBytes(snapshotProposal))
+          || proposal.hash !== sha256(canonicalBytes(proposal.value))
+          || proposal.hash !== sha256(canonicalBytes(modelProposal))
+          || request.modelResult.domain !== "cfo"
+          || request.modelResult.status !== snapshot.status) return "INVALID_REQUEST";
+    } else if (!(proposal.hash === null || (typeof proposal.hash === "string" && HASH_PATTERN.test(proposal.hash)))
         || !(proposal.value === null || isRecord(proposal.value))) {
       return "INVALID_REQUEST";
     }
@@ -362,6 +404,13 @@ function validProposal(value: unknown): boolean {
     && validText(value.summary, 4096)
     && validTextArray(value.conditions, 1, 16, 512);
 }
+function validCfoRiskPass(request: ReviewRequest, proposal: { hash: string | null; value: Record<string, unknown> | null }): boolean {
+  const action = request.snapshot.request;
+  return isRecord(action)
+    && ["invest", "reinvest"].includes(String(action.action))
+    && request.snapshot.status === "REVIEW"
+    && proposal.value !== null;
+}
 
 export function parseRoleJson(
   text: string,
@@ -375,7 +424,10 @@ export function parseRoleJson(
   } catch {
     return null;
   }
-  const expected = request.role === "lead" ? LEAD_RESULT_KEYS : RISK_RESULT_KEYS;
+  const isCfo = request.snapshot.domain === "cfo";
+  const expected = isCfo
+    ? request.role === "lead" ? CFO_LEAD_RESULT_KEYS : CFO_RISK_RESULT_KEYS
+    : request.role === "lead" ? LEAD_RESULT_KEYS : RISK_RESULT_KEYS;
   if (!hasExactKeys(value, expected)
       || value.schemaVersion !== 1
       || value.role !== request.role
@@ -393,6 +445,13 @@ export function parseRoleJson(
         || !["PROPOSED", "NO_DATA"].includes(value.status)
         || !validText(value.thesis, 8192)
         || !validText(value.counterCase, 8192)) return null;
+    if (isCfo) {
+      const proposal = request.proposal;
+      return proposal !== undefined
+        && value.proposalHash === proposal.hash
+        && (value.status === "NO_DATA" || citations.length > 0)
+        ? value : null;
+    }
     if (value.status === "NO_DATA") return value.proposal === null ? value : null;
     if (value.proposal === null || !validProposal(value.proposal) || citations.length < 1) return null;
   } else {
@@ -403,13 +462,17 @@ export function parseRoleJson(
         || value.proposalHash !== proposal.hash
         || !validText(value.reason, 4096)) return null;
     if (value.status === "PASS") {
-      const assessment = request.modelResult.investmentAssessment;
-      if (proposal.value === null
-          || missingEvidence.length !== 0
-          || citations.length < 1
-          || request.modelResult.status !== "OBSERVED"
-          || !isRecord(assessment)
-          || assessment.status !== "REVIEW") return null;
+      if (isCfo) {
+        if (!validCfoRiskPass(request, proposal) || missingEvidence.length !== 0 || citations.length < 1) return null;
+      } else {
+        const assessment = request.modelResult.investmentAssessment;
+        if (proposal.value === null
+            || missingEvidence.length !== 0
+            || citations.length < 1
+            || request.modelResult.status !== "OBSERVED"
+            || !isRecord(assessment)
+            || assessment.status !== "REVIEW") return null;
+      }
     }
   }
 
