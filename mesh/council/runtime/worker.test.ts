@@ -57,6 +57,61 @@ function leadResponseFixture(request: ReviewRequest) {
     executionReady: false,
   };
 }
+function cfoRequest(role: "lead" | "risk" = "lead"): ReviewRequest {
+  const proposal = {
+    action: "invest",
+    sourceAssetId: "reserve-usdc",
+    targetAssetId: "receipt-token",
+    inputBaseUnits: "1000000",
+    reason: "Within deterministic reserve and mandate limits.",
+    expiresAt: "2026-10-26T13:00:00.000Z",
+  };
+  const snapshot = {
+    schemaVersion: 1,
+    domain: "cfo",
+    capturedAt: "2026-10-26T12:00:00.000Z",
+    portfolio: { status: "OBSERVED" },
+    mandate: { schemaVersion: 1 },
+    mandateHash: "c".repeat(64),
+    request: { requestId: RUN_ID, action: "invest", sourceAssetId: "reserve-usdc", targetAssetId: "receipt-token", inputBaseUnits: "1000000" },
+    quotes: [],
+    proposal,
+    checks: [{ id: "policy", status: "PASS", detail: "Deterministic checks passed." }],
+    reasons: [],
+    status: "REVIEW",
+  };
+  const sourceRefs = [{ revisionId: SOURCE_ID, sha256: "a".repeat(64) }];
+  return {
+    schemaVersion: 1,
+    role,
+    runId: RUN_ID,
+    callId: CALL_ID,
+    snapshotHash: sha256(canonicalBytes(snapshot)),
+    snapshot,
+    modelResult: { domain: "cfo", status: "REVIEW", proposal },
+    sourceRefs,
+    proposal: { hash: sha256(canonicalBytes(proposal)), value: proposal },
+  };
+}
+
+function cfoResponse(request: ReviewRequest): Record<string, unknown> {
+  const source = request.sourceRefs[0];
+  if (!source || !request.proposal) throw new Error("CFO fixture requires a bound proposal and retained source.");
+  const binding = {
+    schemaVersion: 1,
+    role: request.role,
+    runId: request.runId,
+    callId: request.callId,
+    snapshotHash: request.snapshotHash,
+    proposalHash: request.proposal.hash,
+    citations: [{ revisionId: source.revisionId, sha256: source.sha256, supports: "Retained CFO source record." }],
+    missingEvidence: [],
+    executionReady: false,
+  };
+  return request.role === "lead"
+    ? { ...binding, status: "PROPOSED", thesis: "The deterministic action is supported by retained evidence.", counterCase: "Receipt liquidity remains a material risk." }
+    : { ...binding, status: "PASS", reason: "No cited veto applies to the exact deterministic action." };
+}
 async function controllerLeadRequest(): Promise<ReviewRequest> {
   const capturedAt = new Date().toISOString();
   const sourceRefs = [
@@ -191,6 +246,20 @@ describe("Council worker policy boundaries", () => {
     expect(parseRoleJson(JSON.stringify({ ...response, proposal: { ...response.proposal, headers: "not allowed" } }), request, 49152))
       .toBeNull();
     expect(parseRoleJson(JSON.stringify(response), request, 16)).toBeNull();
+  });
+  it("V205: accepts fixed CFO Lead/Risk schemas with distinct snapshot and proposal hashes", () => {
+    const lead = cfoRequest("lead");
+    const risk: ReviewRequest = { ...lead, role: "risk", callId: "10000000-0000-4000-8000-000000000004" };
+    expect(requestError(lead, "preflight", 65536)).toBeNull();
+    expect(requestError(risk, "call", 65536)).toBeNull();
+    expect(parseRoleJson(JSON.stringify(cfoResponse(lead)), lead, 49152)).toEqual(cfoResponse(lead));
+    expect(parseRoleJson(JSON.stringify(cfoResponse(risk)), risk, 49152)).toEqual(cfoResponse(risk));
+    expect(parseRoleJson(JSON.stringify({ ...cfoResponse(lead), proposal: { action: "reinvest" } }), lead, 49152))
+      .toBeNull();
+    expect(parseRoleJson(JSON.stringify({ ...cfoResponse(risk), snapshotHash: "d".repeat(64) }), risk, 49152))
+      .toBeNull();
+    expect(requestError({ ...lead, proposal: { ...lead.proposal, hash: "d".repeat(64) } }, "call", 65536))
+      .toBe("INVALID_REQUEST");
   });
 
   it("audits the actual full Responses body and rejects tools, Lite, access programs, and routing drift", () => {
