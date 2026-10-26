@@ -599,6 +599,7 @@ V182: ∀ non-loopback MCP request → Host ∈ configured FALCON_MCP_ALLOWED_HO
 V183: ∀ RATE_LIMITED → retryAfterSeconds = max(1, remaining fixed-window duration rounded up to whole seconds); reset clears global and caller quotas together.
 V184: ∀ controlled browser page → app/API use native CORS; only fixed RPC uses fixture bridge; all other HTTP(S) origins denied before wire, even if bridge absent; fixture replies bind the unique calling context; unexpected fixture/settlement failures cannot pass the harness.
 V185: [VERIFIED LOCAL, approved D1 split, 2026-10-21; hosted cutover not yet verified] ∀ production /dashboard/ entry incl. query/hash/index variants → static Soon before simulator mount; no dashboard module, fixture payload, local preview route, Mesh/provider request or storage mutation; public localStorage/sessionStorage cannot unlock; simulator stays local-only in separate build; no new auth or authority; /app/, /dash/, Mesh/MCP unchanged.
+V206: [VERIFIED regression] ∀ reused analyses storage → CFO rows accessible only through wallet-bound CFO projections; generic legacy analysis get/list exclude CFO domain while preserving ordinary legacy records.
 
 ## §T TASKS
 
@@ -819,3 +820,4 @@ B117|2026-10-21|[VERIFIED source and prior anonymous browser observation] public
 B118|2026-10-21|[VERIFIED local axe-core 4.13.0] copied terminal navigation indices had contrast3.97 below4.5 on new Soon page|V50; remove decorative indices on this page, preserve shared terminal CSS
 B119|2026-10-21|[VERIFIED local fixture browser] production-built local simulator omitted HTTPS Mesh base; API correctly refused before fixture requests|V185; fixed reserved HTTPS origin for browser-test build and harness only; fixture-browser6/6, production API guard unchanged
 B120|2026-10-21|[VERIFIED source trace and local regression] discovery normalized catalog by poolId while consumers described its prefix as base-APY/TVL ranked; simulator used a different order|V125; shared comparator; retained regression with only original sort restored: tests1/pass0/fail1; fix restored: relevant tests17/pass17/fail0; live provider-indexed sample63 rows ordered, source market time unknown, executionReady=false
+B144|2026-10-26|[VERIFIED HTTP regression:1test/0pass/1fail] generic analysis get/list exposed CFO rows from reused table; same-owner operator read returned200 instead of404|V206; filter CFO domain in both legacy queries and preserve valid legacy history
