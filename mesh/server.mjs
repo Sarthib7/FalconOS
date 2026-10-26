@@ -15,6 +15,10 @@ import { createOmpTransport } from './council/omp-host.mjs';
 import { createReviewJobStore } from './research/review-store.mjs';
 import { createResearchReviewService } from './research/review-jobs.mjs';
 import { createResearchActivity } from './research/activity.mjs';
+import { createIntentsAdapter } from './cfo/intents.mjs';
+import { createCfoStore } from './cfo/store.mjs';
+import { createCfoService } from './cfo/service.mjs';
+import { parseCfoConfig, createDevnetProofVerifier } from './cfo/config.mjs';
 
 
 function parseReviewOwners(value) {
@@ -29,6 +33,7 @@ function parseReviewOwners(value) {
 }
 
 const researchReviewOwners = parseReviewOwners(process.env.FALCON_MESH_RESEARCH_REVIEW_OWNERS);
+const cfoConfig = parseCfoConfig();
 
 const tokenHashes = parseTokenHashes(process.env.FALCON_MESH_TOKEN_HASHES);
 const allowedOrigins = parseOrigins(process.env.FALCON_MESH_ORIGINS);
@@ -80,14 +85,32 @@ const verifySupabaseToken = createSupabaseSessionVerifier({
   publishableKey: process.env.FALCON_SUPABASE_PUBLISHABLE_KEY,
 });
 let server;
+let cfo;
+let cfoTransport;
 try {
+  const cfoStore = createCfoStore(pool);
+  cfoTransport = createOmpTransport();
+  cfo = createCfoService({
+    store: cfoStore,
+    adapter: createIntentsAdapter({ enabled: cfoConfig.enabled, apiKey: cfoConfig.apiKey, nearblocksApiKey: cfoConfig.nearblocksApiKey }),
+    providerConfiguration: {
+      enabled: cfoConfig.enabled,
+      partnerKeyConfigured: Boolean(cfoConfig.apiKey),
+      senderLookupKeyConfigured: Boolean(cfoConfig.nearblocksApiKey),
+    },
+    reviewTransport: cfoTransport,
+    reviewOwners: cfoConfig.reviewOwners,
+    executionGrants: cfoConfig.executionGrants,
+    executionTrials: cfoConfig.executionTrials,
+    verifyDevnetProof: createDevnetProofVerifier({ lending, cfoStore }),
+  });
   server = createApi({
-    store, lending, yieldService, publicGraph, researchService, researchReviewService, researchActivity, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken,
+    store, lending, yieldService, publicGraph, researchService, researchReviewService, researchActivity, cfo, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken,
     walletStatus: readWalletStatus,
     transactionInspection: inspectTransaction,
   });
 } catch (error) {
-  try { await researchReviewService.close(); }
+  try { await cfo?.close(); await cfoTransport?.close?.(); await researchReviewService.close(); }
   finally { await pool.end(); }
   throw error;
 }
@@ -111,6 +134,8 @@ async function shutdown() {
     catch { process.exitCode = 1; reviewStopped = Promise.resolve(); }
     try { await stopped; } catch { process.exitCode = 1; }
     try { await reviewStopped; } catch { process.exitCode = 1; }
+    try { await cfo?.close(); } catch { process.exitCode = 1; }
+    try { await cfoTransport?.close?.(); } catch { process.exitCode = 1; }
     try { await pool.end(); } catch { process.exitCode = 1; }
   })().finally(() => clearTimeout(watchdog));
   return shutdownPromise;

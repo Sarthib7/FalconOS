@@ -92,7 +92,7 @@ async function body(request, limit = BODY_LIMIT) {
 }
 
 export function createApi({
-  store, lending = null, yieldService = null, publicGraph = null, researchService = null, researchReviewService = null, researchActivity = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
+  store, lending = null, yieldService = null, publicGraph = null, researchService = null, researchReviewService = null, researchActivity = null, cfo = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
   rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600,
   walletLookupMaxPerSource = 240, walletLookupMaxGlobal = rateMaxGlobal, clock = () => Date.now(),
   walletStatus = readWalletStatus, transactionInspection = inspectTransaction,
@@ -300,6 +300,57 @@ export function createApi({
       }
       if (!owner) throw new MeshError('UNAUTHORIZED', 'A valid mesh access token is required.');
       rateLimit(owner);
+      if (url.pathname === '/v1/cfo' || url.pathname.startsWith('/v1/cfo/')) {
+        if (!walletSession?.walletAddress) {
+          throw new MeshError('UNAUTHORIZED', 'CFO access requires a verified wallet session. Operator tokens cannot authorize funds.');
+        }
+        if (!cfo) throw new MeshError('STORAGE_UNAVAILABLE', 'The CFO service is not configured.');
+        const wallet = walletSession.walletAddress;
+        if (request.method === 'GET') {
+          if (Number(request.headers['content-length'] || 0) > 0 || request.headers['transfer-encoding']) {
+            request.resume();
+            throw new MeshError('INVALID_INPUT', 'CFO reads do not accept a body.');
+          }
+          if (url.pathname === '/v1/cfo') {
+            send(200, await cfo.overview(owner, wallet), ACTIVITY_LIMIT_BYTES);
+            return;
+          }
+          const recordPath = /^\/v1\/cfo\/records\/([^/]+)$/.exec(url.pathname);
+          if (recordPath) {
+            const record = await cfo.getRecord(owner, wallet, normalizeResearchUuid(recordPath[1]));
+            if (!record) throw new MeshError('NOT_FOUND', 'CFO record not found.');
+            send(200, { record }, ACTIVITY_LIMIT_BYTES);
+            return;
+          }
+          throw new MeshError('NOT_FOUND', 'CFO endpoint not found.');
+        }
+        const routes = {
+          '/v1/cfo/mandate': ['saveMandate', ['requestId', 'mandate']],
+          '/v1/cfo/capture': ['capturePortfolio', ['requestId']],
+          '/v1/cfo/plans': ['planCycle', ['requestId', 'action', 'sourceAssetId', 'targetAssetId', 'inputBaseUnits']],
+          '/v1/cfo/prepare': ['prepareAction', ['requestId', 'planId']],
+          '/v1/cfo/signatures': ['registerSignedAction', ['requestId', 'actionId', 'signatureBase64']],
+          '/v1/cfo/relay': ['relaySignedAction', ['requestId', 'actionId']],
+          '/v1/cfo/reconcile': ['reconcileAction', ['requestId', 'actionId']],
+          '/v1/cfo/monitor': ['setMonitor', ['requestId', 'enabled']],
+        };
+        const route = routes[url.pathname];
+        if (request.method !== 'POST' || !route) throw new MeshError('NOT_FOUND', 'CFO endpoint not found.');
+        const input = await body(request, 64 * 1024);
+        keys(input, route[1]);
+        normalizeResearchUuid(input.requestId);
+        if (route[0] === 'saveMandate') {
+          if (!input.mandate || typeof input.mandate !== 'object' || Array.isArray(input.mandate)) {
+            throw new MeshError('INVALID_INPUT', 'A CFO mandate is required.');
+          }
+          if (Object.hasOwn(input.mandate, 'wallet') && input.mandate.wallet !== wallet) {
+            throw new MeshError('UNAUTHORIZED', 'The mandate wallet must match the verified session.');
+          }
+          input.mandate = { ...input.mandate, wallet };
+        }
+        send(200, await cfo[route[0]](owner, wallet, input), ACTIVITY_LIMIT_BYTES);
+        return;
+      }
       if (url.pathname === '/v1/research/near/activity' || url.pathname === '/v1/activity') {
         if (request.method !== 'GET') throw new MeshError('NOT_FOUND', 'Activity endpoint not found.');
         if (Number(request.headers['content-length'] || 0) > 0 || request.headers['transfer-encoding']) {
