@@ -43,5 +43,31 @@ async fn self_test_is_metadata_only_and_never_calls_mesh() {
     for field in ["signer", "funding", "transaction", "researchReviewGrant"] {
         assert_eq!(content["readiness"][field], "not_checked");
     }
+    assert_eq!(content["readiness"]["cfoContext"], "not_checked");
+    assert_eq!(content["readiness"]["cfoProvider"], "not_checked");
+    assert_eq!(content["readiness"]["cfoNetwork"], "near_mainnet_only");
+    assert_eq!(
+        content["readiness"]["cfoExecutionGrant"],
+        "default_deny_exact_trial_grant"
+    );
+    assert_eq!(
+        content["readiness"]["cfoOwnerSignature"],
+        "required_per_financial_action"
+    );
+    let cfo = content["capabilities"]["supported"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|scope| scope["id"] == "near-cfo")
+        .unwrap();
+    assert_eq!(cfo["chain"], "near");
+    assert_eq!(cfo["network"], "mainnet");
+    assert_eq!(cfo["currentContext"], "not_checked");
+    assert_eq!(cfo["executionReady"], false);
+    assert_eq!(cfo["authorization"]["defaultRelayGrant"], "deny");
+    assert_eq!(
+        cfo["authorization"]["relayGrant"],
+        "exact-owner-wallet-actionId-quoteHash-reserve-cap-expiry-retained-proof-and-trial"
+    );
     assert_eq!(calls.load(Ordering::SeqCst), 0);
 }

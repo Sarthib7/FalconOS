@@ -28,7 +28,7 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, OnceLock},
+    sync::{Arc, LazyLock, Mutex},
     time::{Duration, Instant},
 };
 use tokio::time::timeout;
@@ -37,7 +37,7 @@ use uuid::Uuid;
 mod helpers;
 use helpers::*;
 mod prep;
-pub const TOOL_NAMES: [&str; 19] = [
+pub const TOOL_NAMES: [&str; 29] = [
     "falcon_public_graph",
     "falcon_connect",
     "falcon_connect_verify",
@@ -57,21 +57,33 @@ pub const TOOL_NAMES: [&str; 19] = [
     "falcon_research_source",
     "falcon_adopt_research_case",
     "falcon_review_research_case",
+    "falcon_cfo_overview",
+    "falcon_cfo_mandate",
+    "falcon_cfo_capture",
+    "falcon_cfo_plan",
+    "falcon_cfo_prepare",
+    "falcon_cfo_register_signed",
+    "falcon_cfo_relay",
+    "falcon_cfo_reconcile",
+    "falcon_cfo_monitor",
+    "falcon_cfo_record",
 ];
 pub const SCHEMA_FINGERPRINT: &str =
-    "sha256:a30618874ed40da8ff60a1812177e203d34eeb6dde39d04673f02ab366c262f3";
+    "sha256:836b31ff8e46a8b10d27b0895d2eb2e3d208acacf19b9ef0ef27822021dc6747";
 const SESSION_RE: &str = r"^wsi1_[A-Za-z0-9_-]{20,}$";
 const UUID_RE: &str =
     r"^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$";
 const WALLET_RE: &str = r"^[1-9A-HJ-NP-Za-km-z]{32,44}$";
 const USDC_RE: &str = r"^(0|[1-9]\d*)(\.\d{1,6})?$";
 const BODY_LIMIT: usize = 256 * 1024;
-const FIXTURE: &str = include_str!("../fixtures/node-0.5.0.json");
+const LEGACY_FIXTURE: &str = include_str!("../fixtures/node-0.5.0.json");
+const CFO_FIXTURE: &str = include_str!("../fixtures/cfo-tools-0.6.0.json");
 const INSTRUCTIONS: &str = concat!(
     "Falcon MCP exposes publisher-reported NEAR/mainnet research separately from legacy Solana/Devnet lending and execution tools. NEAR case/source content and replay results are publisher-reported, not independently verified. Public case/replay/source calls accept no session, owner data, or auth. Adoption and review require a Falcon owner session; review also requires a verified host/operator grant and promptly returns the retained async job envelope instead of waiting for model completion. Review does not authorize execution. Metadata/configuration do not establish runtime readiness or grant verification. ",
+    "The NEAR CFO tools call fixed Mesh /v1/cfo routes using only an authenticated wallet session for owner context; callers cannot supply an owner, wallet, model, key, grant, URL, or route. CFO is mainnet-only. Current account context, signer, funds, quote/provider, and trial readiness are not checked by MCP metadata. Financial actions always require owner approval and signature, distinct from wallet login. CFO relay is default-deny unless an operator grants the exact owner, wallet, actionId, quoteHash, reserve cap, expiry, retained proof, and trial permission. Risk approval is not spending permission. Prepared unsigned payloads may be returned for owner review; signatures and signed bytes are omitted from CFO history and other model-facing output. ",
     "Unlisted capabilities are unsupported. For the legacy Devnet flow, call falcon_public_graph({}) first; it reads only fixed public-market evidence. OBSERVED is technical data, not a personalized REVIEW, recommendation, or execution approval. NO_DATA never falls back to an older graph. Custom graph selection is not supported. Policy identifiers and version are graph metadata, not owner mandates or durable decision IDs. Never invent proposed amount, owner maximum, book floor, or evidence-age limit. ",
     "Reuse an existing unexpired session. Only sign a new wallet-ownership message when one is required for owner-bound adoption, decisions, or execution records; sessions last 30 minutes. For owner-bound Devnet flow: falcon_refresh_evidence adopts the public graph into program and reserve records at one exact graphRevision; falcon_reserve_decision requires that analysisId and explicit human-provided scenario values; falcon_prepare_transaction uses the public-only lending route. Supply needs the returned REVIEW decisionId and stays capped at 1 USDC (1000000 base units) on Devnet. Redeem needs fresh adopted public evidence but no decision. ",
-    "For every signature, show the exact message or transaction and get separate human approval. Falcon never holds keys, signs, or broadcasts. The human alone signs and broadcasts the exact registered transaction. falcon_wallet_status, falcon_decode_transaction, falcon_public_graph, and falcon_self_test are public read-only tools. falcon_self_test reports metadata only; it does not test health, backend readiness, signer, funds, execution readiness, or a verified research grant."
+    "For every signature, show the exact message or transaction and get separate human approval. Falcon never holds keys, signs, or broadcasts legacy Solana transactions. The human alone signs and broadcasts the exact registered transaction. falcon_wallet_status, falcon_decode_transaction, falcon_public_graph, and falcon_self_test are public read-only tools. falcon_self_test reports metadata only; it does not test health, backend readiness, signer, funds, execution readiness, or a verified research grant."
 );
 
 #[derive(Clone, Debug)]
@@ -347,14 +359,20 @@ impl Mesh {
             } else if let Some(error) = payload.get("error") {
                 let code = error.get("code").and_then(Value::as_str).unwrap_or("");
                 let message = error.get("message").and_then(Value::as_str).unwrap_or("");
+                let is_cfo = path == "/v1/cfo" || path.starts_with("/v1/cfo/");
+                let public_message = if is_cfo {
+                    "The NEAR CFO request was rejected."
+                } else {
+                    message
+                };
                 if Regex::new(r"^[A-Z][A-Z0-9_]{1,39}$")
                     .unwrap()
                     .is_match(code)
-                    && message.len() <= 500
+                    && (is_cfo || message.len() <= 500)
                 {
                     Err(ToolFailure {
                         code: code.into(),
-                        message: message.into(),
+                        message: public_message.into(),
                         retry,
                     })
                 } else {
@@ -473,8 +491,7 @@ fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 fn self_test_capabilities() -> &'static Value {
-    static CAPABILITIES: OnceLock<Value> = OnceLock::new();
-    CAPABILITIES.get_or_init(|| {
+    static CAPABILITIES: LazyLock<Value> = LazyLock::new(|| {
         let mut metadata: Value =
             serde_json::from_str(include_str!("../fixtures/capabilities.json"))
                 .expect("checked in capability contract");
@@ -508,13 +525,39 @@ fn self_test_capabilities() -> &'static Value {
 					 "executionSupported": false,
 					 "tools": ["falcon_adopt_research_case", "falcon_review_research_case"]
 				}),
+                json!({
+                    "id": "near-cfo",
+                    "domain": "cfo",
+                    "chain": "near",
+                    "network": "mainnet",
+                    "actions": ["overview", "mandate", "capture", "plan", "prepare", "register-signature", "relay", "reconcile", "monitor", "read-record"],
+                    "authorization": {
+                        "owner": "authenticated-wallet-session",
+                        "ownerSignature": "required-for-every-financial-action",
+                        "relayGrant": "exact-owner-wallet-actionId-quoteHash-reserve-cap-expiry-retained-proof-and-trial",
+                        "defaultRelayGrant": "deny"
+                    },
+                    "currentContext": "not_checked",
+                    "executionSupported": true,
+                    "executionReady": false,
+                    "tools": ["falcon_cfo_overview", "falcon_cfo_mandate", "falcon_cfo_capture", "falcon_cfo_plan", "falcon_cfo_prepare", "falcon_cfo_register_signed", "falcon_cfo_relay", "falcon_cfo_reconcile", "falcon_cfo_monitor", "falcon_cfo_record"]
+                }),
 			]);
         metadata
-    })
+    });
+    &CAPABILITIES
 }
 fn tool_defs() -> &'static [ToolDef] {
-    static TOOLS: OnceLock<Vec<ToolDef>> = OnceLock::new();
-    TOOLS.get_or_init(|| serde_json::from_str(FIXTURE).expect("checked in Node tool fixture"))
+    static TOOLS: LazyLock<Vec<ToolDef>> = LazyLock::new(|| {
+        let mut tools: Vec<ToolDef> =
+            serde_json::from_str(LEGACY_FIXTURE).expect("checked in legacy tool history fixture");
+        tools.extend(
+            serde_json::from_str::<Vec<ToolDef>>(CFO_FIXTURE)
+                .expect("checked in current CFO tool fixture"),
+        );
+        tools
+    });
+    &TOOLS
 }
 fn to_tool(d: &ToolDef) -> Tool {
     let schema = d.input_schema.as_object().cloned().unwrap_or_default();
@@ -762,7 +805,10 @@ impl ServerHandler for FalconHandler {
         let name = request.name.to_string();
         let args = serde_json::to_value(request.arguments.unwrap_or_default()).unwrap_or(json!({}));
         let res = dispatch(&self.state, &name, &args).await.map_err(|e| {
-            if e.code == "UNAUTHORIZED" && args.get("session").is_some() {
+            if e.code == "UNAUTHORIZED"
+                && args.get("session").is_some()
+                && !name.starts_with("falcon_cfo_")
+            {
                 ToolFailure {
                     code: e.code,
                     message: format!(
@@ -1005,9 +1051,124 @@ async fn dispatch(st: &AppState, name: &str, args: &Value) -> Result<Value, Tool
 			)
 			.await
 		},
-		"falcon_self_test" => Ok(
-			json!({"serverVersion":env!("CARGO_PKG_VERSION"),"tools":TOOL_NAMES,"toolCount":TOOL_NAMES.len(),"schemaFingerprint":fingerprint(tool_defs()),"capabilities":self_test_capabilities(),"readiness":{"signer":"not_checked","funding":"not_checked","transaction":"not_checked","researchReviewGrant":"not_checked"}}),
-		),
+        "falcon_cfo_overview" => {
+            let response = g("/v1/cfo", sess, 15000).await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_cfo_mandate" => {
+            let response = p(
+                "/v1/cfo/mandate",
+                json!({"requestId":args["requestId"],"mandate":args["mandate"]}),
+                sess,
+                15000,
+            )
+            .await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_cfo_capture" => {
+            let response = p(
+                "/v1/cfo/capture",
+                json!({"requestId":args["requestId"]}),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_cfo_plan" => {
+            let response = p(
+                "/v1/cfo/plans",
+                json!({
+                    "requestId":args["requestId"],
+                    "action":args["action"],
+                    "sourceAssetId":args["sourceAssetId"],
+                    "targetAssetId":args["targetAssetId"],
+                    "inputBaseUnits":args["inputBaseUnits"]
+                }),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_cfo_prepare" => {
+            let response = p(
+                "/v1/cfo/prepare",
+                json!({"requestId":args["requestId"],"planId":args["planId"]}),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(cfo_public_response(response, true))
+        }
+        "falcon_cfo_register_signed" => {
+            let signature = args["signatureBase64"].as_str().unwrap();
+            let response = p(
+                "/v1/cfo/signatures",
+                json!({
+                    "requestId":args["requestId"],
+                    "actionId":args["actionId"],
+                    "signatureBase64":signature
+                }),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_cfo_relay" => {
+            let response = p(
+                "/v1/cfo/relay",
+                json!({"requestId":args["requestId"],"actionId":args["actionId"]}),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_cfo_reconcile" => {
+            let response = p(
+                "/v1/cfo/reconcile",
+                json!({"requestId":args["requestId"],"actionId":args["actionId"]}),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_cfo_monitor" => {
+            let response = p(
+                "/v1/cfo/monitor",
+                json!({"requestId":args["requestId"],"enabled":args["enabled"]}),
+                sess,
+                15000,
+            )
+            .await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_cfo_record" => {
+            let record_id = args["recordId"].as_str().unwrap();
+            let response = g(&format!("/v1/cfo/records/{record_id}"), sess, 15000).await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_self_test" => Ok(json!({
+            "serverVersion": env!("CARGO_PKG_VERSION"),
+            "tools": TOOL_NAMES,
+            "toolCount": TOOL_NAMES.len(),
+            "schemaFingerprint": fingerprint(tool_defs()),
+            "capabilities": self_test_capabilities(),
+            "readiness": {
+                "signer": "not_checked",
+                "funding": "not_checked",
+                "transaction": "not_checked",
+                "researchReviewGrant": "not_checked",
+                "cfoContext": "not_checked",
+                "cfoProvider": "not_checked",
+                "cfoNetwork": "near_mainnet_only",
+                "cfoExecutionGrant": "default_deny_exact_trial_grant",
+                "cfoOwnerSignature": "required_per_financial_action"
+            }
+        })),
 		_ => {
 			Err(ToolFailure { code: "NOT_FOUND".into(), message: "Unknown tool.".into(), retry: None })
 		},

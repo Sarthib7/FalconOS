@@ -1,0 +1,201 @@
+[
+  {
+    "name": "falcon_cfo_overview",
+    "title": "Read the NEAR CFO overview",
+    "description": "Read the retained, owner-bound NEAR/mainnet CFO state using the wallet session only. This is not a live context, signer, provider, quote, funding, or execution-readiness check.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." }
+      },
+      "required": ["session"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_mandate",
+    "title": "Save a NEAR CFO mandate",
+    "description": "Save strict owner limits for NEAR/mainnet planning. The current wallet is derived from the authenticated session; do not pass an owner or wallet. This does not approve spending or establish readiness.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry." },
+        "mandate": {
+          "type": "object",
+          "properties": {
+            "schemaVersion": { "type": "integer", "const": 1 },
+            "reserveAssetId": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "reserveFloorBaseUnits": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$", "description": "Exact unsigned integer base units, never a JSON number." },
+            "maxActionReserveBaseUnits": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$", "description": "Exact unsigned integer base units, never a JSON number." },
+            "maxPositionBps": { "type": "integer", "minimum": 0 },
+            "slippageBps": { "type": "integer", "minimum": 0 },
+            "maxFeeBps": { "type": "integer", "minimum": 0 },
+            "maxEvidenceAgeSeconds": { "type": "integer", "minimum": 0 },
+            "targets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "assetId": { "type": "string", "minLength": 1, "maxLength": 256 },
+                  "weightBps": { "type": "integer", "minimum": 0 }
+                },
+                "required": ["assetId", "weightBps"],
+                "additionalProperties": false
+              }
+            },
+            "monitorIntervalSeconds": { "type": "integer", "minimum": 1 },
+            "maxMonitorCycles": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["schemaVersion", "reserveAssetId", "reserveFloorBaseUnits", "maxActionReserveBaseUnits", "maxPositionBps", "slippageBps", "maxFeeBps", "maxEvidenceAgeSeconds", "targets", "monitorIntervalSeconds", "maxMonitorCycles"],
+          "additionalProperties": false,
+          "description": "Exact mandate limits; wallet is intentionally omitted because Mesh derives it from the authenticated session."
+        }
+      },
+      "required": ["session", "requestId", "mandate"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_capture",
+    "title": "Capture NEAR CFO holdings",
+    "description": "Capture the supported owner portfolio from finalized NEAR/mainnet evidence. The result may be NO_DATA; it is not complete wealth coverage, a recommendation, or proof of funds readiness.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry." }
+      },
+      "required": ["session", "requestId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_plan",
+    "title": "Plan a NEAR CFO action",
+    "description": "Submit an explicit NEAR/mainnet action request for retained deterministic policy and risk review. Base units are unsigned integer strings; null is allowed only as a typed absence and Mesh enforces action semantics. A plan or risk PASS is not spending approval.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry." },
+        "action": { "type": "string", "enum": ["invest", "redeem", "rotate", "reinvest", "hold"] },
+        "sourceAssetId": { "type": ["string", "null"], "minLength": 1, "maxLength": 256 },
+        "targetAssetId": { "type": ["string", "null"], "minLength": 1, "maxLength": 256 },
+        "inputBaseUnits": { "anyOf": [{ "type": "string", "pattern": "^[1-9][0-9]*$" }, { "type": "null" }], "description": "Positive unsigned integer base units as a string, never a JSON number." }
+      },
+      "required": ["session", "requestId", "action", "sourceAssetId", "targetAssetId", "inputBaseUnits"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_prepare",
+    "title": "Prepare an unsigned NEAR CFO action",
+    "description": "Prepare the exact unsigned NEAR intent payload for owner review from a retained plan. This does not sign, register a signature, relay, authorize spending, or establish readiness.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry." },
+        "planId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$" }
+      },
+      "required": ["session", "requestId", "planId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_register_signed",
+    "title": "Register an owner-signed NEAR CFO action",
+    "description": "Register only the 64-byte base64 owner signature for the exact previously prepared financial action. This financial signature is distinct from falcon_connect login and does not itself relay or confirm the action. Signed bytes and signatures are never returned in history.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry." },
+        "actionId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$" },
+        "signatureBase64": { "type": "string", "minLength": 88, "maxLength": 88, "contentEncoding": "base64", "pattern": "^(?:[A-Za-z0-9+/]{4}){21}[A-Za-z0-9+/]{2}==$", "description": "Canonical standard base64 encoding of the owner signature only (64 bytes). Never pass a replacement payload, key, or login signature." }
+      },
+      "required": ["session", "requestId", "actionId", "signatureBase64"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_relay",
+    "title": "Relay an exact signed NEAR CFO action",
+    "description": "Request relay of the exact owner-signed intent previously registered for this action. Relay is NEAR mainnet only and default-deny: Mesh requires an operator grant bound to the exact owner, wallet, actionId, quoteHash, reserve cap, expiry, retained T82 proof, and trial. Human signature and approval are required for every financial action; this tool does not establish readiness.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry." },
+        "actionId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$" }
+      },
+      "required": ["session", "requestId", "actionId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": true, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_reconcile",
+    "title": "Reconcile a NEAR CFO action",
+    "description": "Reconcile retained status and independently verified NEAR/mainnet receipts for one action. Preserve PENDING, UNKNOWN, REFUNDED, and UNVERIFIED distinctions; an unknown result is not proof of failure, success, or readiness.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry." },
+        "actionId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$" }
+      },
+      "required": ["session", "requestId", "actionId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_monitor",
+    "title": "Set NEAR CFO monitoring",
+    "description": "Enable or disable bounded read-only NEAR/mainnet monitoring using the saved mandate. Monitoring never calls a model, signs, or relays; all cycle limits and current context remain server-validated.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID idempotency key; reuse exactly for a retry." },
+        "enabled": { "type": "boolean" }
+      },
+      "required": ["session", "requestId", "enabled"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_record",
+    "title": "Read a retained NEAR CFO record",
+    "description": "Read one retained CFO record by UUID under the authenticated wallet session. Signed payloads, signatures, private keys, and relay secrets are removed from the model-facing response.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "recordId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$" }
+      },
+      "required": ["session", "recordId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": true }
+  }
+]

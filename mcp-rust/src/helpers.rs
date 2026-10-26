@@ -40,6 +40,22 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
         "falcon_check_receipt" => &["session", "intentId", "requestId"],
         "falcon_wallet_status" => &["wallet", "forAction", "chain", "network"],
         "falcon_decode_transaction" => &["transactionBase64", "chain", "network"],
+        "falcon_cfo_overview" => &["session"],
+        "falcon_cfo_capture" => &["session", "requestId"],
+        "falcon_cfo_mandate" => &["session", "requestId", "mandate"],
+        "falcon_cfo_plan" => &[
+            "session",
+            "requestId",
+            "action",
+            "sourceAssetId",
+            "targetAssetId",
+            "inputBaseUnits",
+        ],
+        "falcon_cfo_prepare" => &["session", "requestId", "planId"],
+        "falcon_cfo_register_signed" => &["session", "requestId", "actionId", "signatureBase64"],
+        "falcon_cfo_relay" | "falcon_cfo_reconcile" => &["session", "requestId", "actionId"],
+        "falcon_cfo_monitor" => &["session", "requestId", "enabled"],
+        "falcon_cfo_record" => &["session", "recordId"],
         _ => {
             return Err(ToolFailure {
                 code: "NOT_FOUND".into(),
@@ -75,6 +91,22 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
         "falcon_check_receipt" => &["session", "intentId"],
         "falcon_wallet_status" => &["wallet"],
         "falcon_decode_transaction" => &["transactionBase64"],
+        "falcon_cfo_overview" => &["session"],
+        "falcon_cfo_capture" => &["session", "requestId"],
+        "falcon_cfo_mandate" => &["session", "requestId", "mandate"],
+        "falcon_cfo_plan" => &[
+            "session",
+            "requestId",
+            "action",
+            "sourceAssetId",
+            "targetAssetId",
+            "inputBaseUnits",
+        ],
+        "falcon_cfo_prepare" => &["session", "requestId", "planId"],
+        "falcon_cfo_register_signed" => &["session", "requestId", "actionId", "signatureBase64"],
+        "falcon_cfo_relay" | "falcon_cfo_reconcile" => &["session", "requestId", "actionId"],
+        "falcon_cfo_monitor" => &["session", "requestId", "enabled"],
+        "falcon_cfo_record" => &["session", "recordId"],
         _ => &[],
     };
     if let Some(k) = required.iter().find(|k| !o.contains_key(**k)) {
@@ -104,6 +136,9 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
         "caseId",
         "publicCaseId",
         "revisionId",
+        "planId",
+        "actionId",
+        "recordId",
     ] {
         if let Some(x) = a.get(k) {
             let s = x
@@ -232,10 +267,223 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
                 ));
             }
         }
+        "falcon_cfo_mandate" => validate_cfo_mandate(&a["mandate"])?,
+        "falcon_cfo_plan" => {
+            if !matches!(
+                string("action")?,
+                "invest" | "redeem" | "rotate" | "reinvest" | "hold"
+            ) {
+                return Err(ToolFailure::input("action is not a supported CFO action."));
+            }
+            for key in ["sourceAssetId", "targetAssetId"] {
+                let value = &a[key];
+                if !value.is_null() && !value.as_str().is_some_and(|asset_id| !asset_id.is_empty())
+                {
+                    return Err(ToolFailure::input(format!(
+                        "{key} must be a non-empty string or null."
+                    )));
+                }
+            }
+            let input = &a["inputBaseUnits"];
+            if !input.is_null() {
+                let amount = input.as_str().ok_or_else(|| {
+                    ToolFailure::input("inputBaseUnits must be a string or null.")
+                })?;
+                if !is_base_units(amount) || amount == "0" {
+                    return Err(ToolFailure::input(
+                        "inputBaseUnits must be a positive unsigned integer string.",
+                    ));
+                }
+            }
+        }
+        "falcon_cfo_register_signed" => validate_cfo_signature(string("signatureBase64")?)?,
+        "falcon_cfo_monitor" => {
+            if !a["enabled"].is_boolean() {
+                return Err(ToolFailure::input("enabled must be a boolean."));
+            }
+        }
         _ => {}
     }
     Ok(())
 }
+fn is_base_units(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    !bytes.is_empty()
+        && bytes.iter().all(u8::is_ascii_digit)
+        && (bytes.len() == 1 || bytes[0] != b'0')
+}
+
+fn exact_keys(value: &Value, expected: &[&str]) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    object.len() == expected.len() && expected.iter().all(|key| object.contains_key(*key))
+}
+
+fn validate_cfo_mandate(mandate: &Value) -> Result<(), ToolFailure> {
+    const MANDATE_KEYS: &[&str] = &[
+        "schemaVersion",
+        "reserveAssetId",
+        "reserveFloorBaseUnits",
+        "maxActionReserveBaseUnits",
+        "maxPositionBps",
+        "slippageBps",
+        "maxFeeBps",
+        "maxEvidenceAgeSeconds",
+        "targets",
+        "monitorIntervalSeconds",
+        "maxMonitorCycles",
+    ];
+    if !exact_keys(mandate, MANDATE_KEYS) {
+        return Err(ToolFailure::input(
+            "mandate must contain only the required wallet-session-bound mandate fields.",
+        ));
+    }
+    if mandate["schemaVersion"].as_u64() != Some(1) {
+        return Err(ToolFailure::input("mandate.schemaVersion must be 1."));
+    }
+    if !mandate["reserveAssetId"]
+        .as_str()
+        .is_some_and(|asset_id| !asset_id.is_empty())
+    {
+        return Err(ToolFailure::input(
+            "mandate.reserveAssetId must be a non-empty string.",
+        ));
+    }
+    for key in ["reserveFloorBaseUnits", "maxActionReserveBaseUnits"] {
+        if !mandate[key].as_str().is_some_and(is_base_units) {
+            return Err(ToolFailure::input(format!(
+                "mandate.{key} must be an unsigned integer string."
+            )));
+        }
+    }
+    for key in [
+        "maxPositionBps",
+        "slippageBps",
+        "maxFeeBps",
+        "maxEvidenceAgeSeconds",
+        "monitorIntervalSeconds",
+        "maxMonitorCycles",
+    ] {
+        if mandate[key].as_u64().is_none() {
+            return Err(ToolFailure::input(format!(
+                "mandate.{key} must be a non-negative integer."
+            )));
+        }
+    }
+    for key in ["monitorIntervalSeconds", "maxMonitorCycles"] {
+        if !mandate[key].as_u64().is_some_and(|value| value > 0) {
+            return Err(ToolFailure::input(format!(
+                "mandate.{key} must be a positive integer."
+            )));
+        }
+    }
+    let targets = mandate["targets"]
+        .as_array()
+        .ok_or_else(|| ToolFailure::input("mandate.targets must be an array."))?;
+    for target in targets {
+        if !exact_keys(target, &["assetId", "weightBps"])
+            || !target["assetId"]
+                .as_str()
+                .is_some_and(|asset_id| !asset_id.is_empty())
+            || target["weightBps"].as_u64().is_none()
+        {
+            return Err(ToolFailure::input(
+                "Each mandate target must contain only a non-empty assetId and integer weightBps.",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_cfo_signature(signature: &str) -> Result<(), ToolFailure> {
+    let bytes = B64.decode(signature).map_err(|_| {
+        ToolFailure::input("signatureBase64 must be canonical base64 for a 64-byte signature.")
+    })?;
+    if bytes.len() != 64 || B64.encode(&bytes) != signature {
+        return Err(ToolFailure::input(
+            "signatureBase64 must be canonical base64 for a 64-byte signature.",
+        ));
+    }
+    Ok(())
+}
+
+const CFO_PRIVATE_FIELDS: &[&str] = &[
+    "signatureBase64",
+    "signature_base64",
+    "signature-base64",
+    "signatureBase58",
+    "signature_base58",
+    "signature-base58",
+    "signedData",
+    "signed_data",
+    "signed-data",
+    "signedPayload",
+    "signed_payload",
+    "signed-payload",
+    "signedBytes",
+    "signed_bytes",
+    "signed-bytes",
+    "signedMessage",
+    "signed_message",
+    "signed-message",
+    "signedIntent",
+    "signed_intent",
+    "signed-intent",
+    "signedIntentBase64",
+    "signed_intent_base64",
+    "signed-intent-base64",
+    "signedTransactionBase64",
+    "signed_transaction_base64",
+    "signed-transaction-base64",
+    "transactionBase64",
+    "transaction_base64",
+    "transaction-base64",
+    "privateKey",
+    "private_key",
+    "private-key",
+    "relaySecret",
+    "relay_secret",
+    "relay-secret",
+    "secret",
+];
+
+pub(super) fn cfo_public_response(mut value: Value, allow_unsigned_payload: bool) -> Value {
+    fn redact(value: &mut Value, allow_unsigned_payload: bool, preserve_provider_signature: bool) {
+        match value {
+            Value::Array(values) => {
+                for child in values {
+                    redact(child, allow_unsigned_payload, false);
+                }
+            }
+            Value::Object(object) => {
+                let quote_envelope = object.get("schemaVersion").and_then(Value::as_u64) == Some(1)
+                    && object.get("raw").is_some()
+                    && object.get("sha256").and_then(Value::as_str).is_some()
+                    && object.get("signatureVerified").and_then(Value::as_bool) == Some(true);
+                object.retain(|key, child| {
+                    let keep = !(key.eq_ignore_ascii_case("payload") && !allow_unsigned_payload)
+                        && !(key.eq_ignore_ascii_case("signature") && !preserve_provider_signature)
+                        && !CFO_PRIVATE_FIELDS
+                            .iter()
+                            .any(|private| key.eq_ignore_ascii_case(private));
+                    if keep {
+                        redact(
+                            child,
+                            allow_unsigned_payload,
+                            quote_envelope && key == "raw",
+                        );
+                    }
+                    keep
+                });
+            }
+            _ => {}
+        }
+    }
+    redact(&mut value, allow_unsigned_payload, false);
+    value
+}
+
 fn units(v: &str) -> Result<String, ToolFailure> {
     if !Regex::new(USDC_RE).unwrap().is_match(v) {
         return Err(ToolFailure::input(
