@@ -1,5 +1,54 @@
 # Status
 
+## Publication recovery: 2026-10-27
+
+Owner: coordinator. Status: Blocked (release and consumer redesign).
+
+[VERIFIED CORRECTION] The implementation record below predates publication. Its no-push/no-merge statement is not the current state. [PR118](https://github.com/Sarthib7/FalconOS/pull/118) merged into main as `563754ba8a717db0237dc5e9db9fb2a2ccb7a986` after all six checks passed. The earlier browser-startup CI failure was retained in the run history; one unchanged failed-job rerun passed.
+
+[VERIFIED RECOVERY] The source worktree returned with the original MCP commit `12c0b0bde3fdd899f427999321bdb77bdf44d32c`. It was pushed without reconstruction or another commit. [PR123](https://github.com/Sarthib7/FalconOS/pull/123) passed exact-head [CI40482329772](https://github.com/Sarthib7/FalconOS/actions/runs/40482329772). The old owner UI was separately committed as `63f6b95a5159363ddcf02f21d83d7e2228bcab00` in draft [PR124](https://github.com/Sarthib7/FalconOS/pull/124), with exact-head [CI40482692512](https://github.com/Sarthib7/FalconOS/actions/runs/40482692512) passing. This preserves rejected work; it does not approve or release that interface.
+
+[VERIFIED SOURCE CHECKPOINTS] Draft PRs [119](https://github.com/Sarthib7/FalconOS/pull/119), [120](https://github.com/Sarthib7/FalconOS/pull/120), [121](https://github.com/Sarthib7/FalconOS/pull/121) and [122](https://github.com/Sarthib7/FalconOS/pull/122) remain open with passing checks at their unchanged heads. The stack still depends on unmerged PR117. Check each PR's exact head before any later merge. Passing fixture and container checks do not establish live provider or funded acceptance.
+
+[VERIFIED ARCHIVE] Fomo findings and the approved, inactive preset values are in `docs/verification/2026-10-26-fomo-ux.md`. The unapproved R5 architecture is preserved at `docs/verification/2026-10-26-cfo-design/proposal-r5-consumer.html`. Neither archiving nor checkpoint publication authorizes implementation, provider activation or money movement.
+
+[LAST OBSERVED HOSTED STATE, 2026-10-26] MCP initialization reported version0.4.0. Health returned `{"status":"alive"}` and readiness returned HTTP503 `{"status":"not_ready"}`. The cause and relationship to the privacy merge were not determined. These endpoints were not rechecked during publication recovery; no resolution or hosted0.6.0 rollout is claimed.
+
+[UNCHANGED RELEASE GATES] Resolve provider retention terms, account/key setup, real review budget/pair, T82 and the exact capped funded trial before activation. R5 consumer architecture still needs approval. No new feature work, private environment changes, real-user signing, funds movement, deployment settings or historical unrelated PR merges occurred during recovery. Dependency links, private environment files and generated outputs stay outside the checkpoint commits.
+
+## Pre-publication implementation evidence: 2026-10-26
+
+Owner: coordinator. Status: R1 local integration verified; consumer UX research completed; new design and live acceptance remain pending.
+
+[VERIFIED USER APPROVAL] The owner approved R1 for owner-approved NEAR Intents fund management, then R2 for fixed NearBlocks sender discovery followed by independent finalized NEAR RPC verification. Approval permits implementation only. Company registration details supplied in chat are not public release inputs and confer no extra financial authority.
+
+[VERIFIED SOURCE SETUP] The implementation branch is `feat/near-cfo-mvp-20261026`, based on integrated draft PR117 head `0d1da41`. The isolated checkout is `.worktrees/FalconOS-cfo-design-20261026`. The original dirty checkout was not edited. SPEC I22/V197-V203 and interface CFO-1 record the approved scope.
+
+[VERIFIED LOCAL INTEGRATION] The coordinator integrated the provider, deterministic policy, durable lifecycle, shared review adapter, authenticated dashboard and ten CFO MCP tools. `npm --prefix mesh test` returned `tests381, pass381, fail0, skipped0`. These checks use disposable PostgreSQL and controlled provider/model responses, not funded settlement.
+
+[VERIFIED LOCAL SETUP] A new disposable database `falcon_cfo_20261026` was empty before setup. The reviewed existing schema and both migrations produced `Falcon mesh schema version 3 created from the complete local history.` No production database or schema was changed. Local PostgreSQL reports version15.15. Dependency installs use task-owned internal temporary storage; the interrupted external install was preserved separately and its emptied manifest was restored.
+
+| Local check | Observed result | Method limit |
+| --- | --- | --- |
+| Web site/MVP/agents builds and unit suite | `tests329, pass329, fail0` | Does not prove funded operations. |
+| Repository tests and TypeScript | `tests114, pass114, fail0`; typecheck exit0 | Separate root code and contracts. |
+| Native runtimes | Rust33 passed across14 suites; Bun9 passed with67 expectations | SDK/transport fixtures, not a live Council pair. |
+| Built HTTPS owner browser | `passed17, total17`; no uncaught exception | Real auth and disposable PostgreSQL; ephemeral identity signatures only. |
+| Release linkage | Mesh `PASS`,47 declared files; web `PASS`,37 resolved files | No Docker image, hosted release or production database checked. |
+
+[VERIFIED NEGATIVE CONTROL] Disabling rotation recovery only in a private source copy returned `tests4, pass1, fail3`. Stale inventory, unavailable review and interrupted confirmed-exit planning remained incorrectly reserved. The protected source was not mutated. The history-cap regression separately failed before its fix with `tests4, pass3, fail1`, then passed.
+
+[VERIFIED LOCAL RUNTIME] A separate empty database `falcon_cfo_runtime_20261026` received the unchanged schema3 history. Actual Mesh and Rust gateway readiness each returned `{\"status\":\"ready\"}`. The local development dashboard is `http://127.0.0.1:60982/dashboard/`; source sign-in and CFO loading were observed with a temporary auth-only QA wallet. The reported HTTPS configuration error came from a production build pointed to HTTP. Local mode was corrected; production HTTPS enforcement was not relaxed.
+
+[VERIFIED MCP OUTAGE SMOKE] The rebuilt official client returned `MCP_HTTP_SMOKE_PASS`, `serverVersion:\"0.6.0\"`, `tools:29`, `meshUnavailable:true` while Mesh was deliberately stopped. Health/discovery are not evidence of wallet, provider or capital readiness.
+
+[VERIFIED PROVIDER TERMS; APPROVAL BLOCKER] Current [1Click Terms §4.1(e)](https://docs.near-intents.org/security-compliance/terms-of-service.md) limit most API-data retention to24 hours, except static transaction records needed for end-user history. R1 retains unused quote snapshots indefinitely. A written exception or an approved retention revision is required before enabling provider requests. Permission for inference use remains a provider-review question; no legal conclusion is inferred from company formation.
+
+[VERIFIED UX DECISIONS] The owner did not approve R3 or R4 and requested Fomo consumer-input research. Findings are in `docs/verification/2026-10-26-fomo-ux.md`. The owner selected the consumer policy-template approach, then approved the listed guardrail values with “go ahead.” Those values are not active. R5 is being scoped around an asset/action-and-amount flow, one-time reviewed template use, and unchanged financial authority. No new application UX architecture, provider activation or financial action is approved.
+
+[OWNER GATES] Provider terms/account keys, paid model-call budget, T82 supply/redemption proof, and an exact capped mainnet trial remain unapproved. No real-user keys, signatures, funds movement, API terms acceptance, deployment, merge, push, or submission occurred. These gates prevent funded acceptance, not the reachable implementation work.
+
+
 ## Current local verification and publication: 2026-10-23
 
 Owner: coordinator. Status: In Progress (local implementation and focused draft publication complete; owner review and hosted release remain separate).
