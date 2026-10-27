@@ -2,7 +2,37 @@
 
 [VERIFIED, approved direction, 2026-10-13] FalconOS is the decision and execution backend for agents. The selected scope is Solana execution and cross-market advice, with owner approval for every action. Falcon Investment Council supplies non-binding market intelligence and risk assessment. The [active plan](plans/roadmap.md#active-mcp-plan-2026-10-13) is specified in SPEC I21 and T81-T85; broader execution and a shared Council backend are not shipped capabilities.
 
-[VERIFIED, current source boundary: mcp-rust/src/lib.rs, mesh/limits.mjs] The MCP workflow exposes public evidence and owner-scoped Solana Devnet lending preparation. Supply is capped at 1 Devnet USDC. Falcon holds no keys and never signs or broadcasts. Humans approve each signature and broadcast through their own wallet/provider. A complete owner-wallet supply/redemption round trip remains unverified; see SPEC T82. Mainnet, custody and delegated execution are outside this release.
+[VERIFIED, legacy Solana boundary: mcp-rust/src/lib.rs, mesh/limits.mjs] The lending workflow exposes public evidence and owner-scoped Solana Devnet preparation. Supply is capped at 1 Devnet USDC. Falcon holds no keys and never signs. Humans approve and broadcast each legacy Solana transaction. The supply/redemption acceptance gate remains SPEC T82. The separate NEAR CFO source candidate below does not widen these limits.
+
+## NEAR hackathon AI CFO
+
+[VERIFIED USER APPROVAL, 2026-10-26] The owner approved an owner-controlled treasury workflow: reserve limits, allocation review, NEAR Intents execution, confirmed-proceeds rotation and reinvestment. The [CFO contract](docs/interfaces.md#owner-approved-near-ai-cfo-r1-2026-10-26) and SPEC I22/V197-V205 define the scope. This is company-owned treasury software, not a pooled investment fund or a grant of signing authority.
+
+[VERIFIED LOCAL SOURCE; LIVE ACCEPTANCE BLOCKED] `mesh/cfo/` owns holdings, policy, immutable records and the action lifecycle. The private dashboard and ten Rust MCP tools call that backend. Owner signatures cover exact raw Ed25519 Intents payloads. A separate operator trial binds the action, quote, assets, amount, expiry and T82 proof. Unknown sends remain reserved; dependent investments wait for finalized matching receipts and a new approval.
+
+[VERIFIED LOCAL MCP SMOKE] The actual Rust server and official client returned `MCP_HTTP_SMOKE_PASS`, `serverVersion:"0.6.0"`, `tools:29`, and `meshUnavailable:true`. This proves discovery and the backend-outage path, not live balances, review or settlement.
+
+[OWNER GATES] Provider terms, partner and sender-discovery keys, model-call budget, T82 evidence and an exact capped mainnet trial remain separate. [VERIFIED OFFICIAL DOCS](https://docs.near-intents.org/resources/faqs.md): NEAR Intents has no testnet. Do not describe dry quotes, local fixtures or provider SUCCESS as funded execution proof. Stablecoin-denominated receipt positions can lose principal.
+
+[VERIFIED PROVIDER TERMS; DESIGN GATE] [1Click Terms §4.1(e)](https://docs.near-intents.org/security-compliance/terms-of-service.md) limit API-data retention to 24 hours, except static transaction records needed for end-user history. Current R1 stores unexecuted quote snapshots without a retention limit. Live provider access requires a written exception or a separately approved retention design. These terms also restrict model training; permission for the planned inference use remains a provider-review question.
+
+### Local review
+
+1. Install the locked root, `mesh/`, `web/` and `mesh/council/runtime/` dependencies. Use Node 24.12 or later and pinned Bun 1.3.14 for the Council worker. Use an initialized disposable database with the reviewed schema 3 history; never point schema setup at production without approval.
+2. Set `DATABASE_URL` to that reviewed local database. Run `npm --prefix mesh run dev:local`. It generates a local operator credential, but CFO routes still require a server-verified wallet session.
+3. In another terminal, run `npm --prefix web run dev` and open `/dashboard/` on the displayed local URL. [EXPECTED] Wallet sign-in opens private retained state. It does not capture balances, start a model or sign a financial action.
+4. [EXPECTED] With the provider disabled, an explicit portfolio capture records `NO_DATA`. Missing balances are not zero. All money limits remain owner-entered. Configure provider access only after terms and account approval.
+5. After each separately authorized setup and trial gate passes, use the same dashboard to plan, review, sign, relay and reconcile. Rotate through confirmed reserve proceeds; reinvest only settled funds above the reserve floor. A pending or unverified result stops the next movement.
+
+[VERIFIED LOCAL CONFIGURATION] Use development mode for a loopback HTTP API. A production build rejects HTTP, including loopback. Hosted builds need `VITE_MESH_API_URL=https://<approved-mesh-host>` at build time and the exact site origin in server `FALCON_MESH_ORIGINS`. Setting an environment variable after building does not rewrite the bundle.
+
+### Provider and trial configuration
+
+[SOURCE CONTRACT] `FALCON_CFO_PROVIDER_ENABLED=1` enables provider requests. `FALCON_CFO_PARTNER_API_KEY` and `FALCON_CFO_NEARBLOCKS_API_KEY` are server-only credentials. `FALCON_CFO_REVIEW_OWNERS`, `FALCON_CFO_EXECUTION_GRANTS` and `FALCON_CFO_EXECUTION_TRIALS` are bounded JSON arrays and default empty. Configuration is not operational readiness or owner consent. Keep credentials outside source and browser bundles.
+
+[SOURCE CONTRACT] Sender discovery uses only the fixed NearBlocks transaction lookup. NEAR RPC must independently verify the exact signed intent and finalized token effects. T82's Explorer evidence remains an operator-retained observation bound to actual confirmed lending records; a proof UUID alone does not pass. No public endpoint can create a T82 proof or trial grant.
+
+[VERIFIED EVENT BRIEF](https://nearhackathon.com/HACKATHON.md): NEAR HACKATHON runs November 1 through November 14, 2026, ending at 23:59 UTC. A public repository and public X demo are required. Prior-code judging treatment remains unresolved. No public post, repository publication or submission is authorized by the implementation approval.
 
 ## Human dashboard and agent interfaces
 
@@ -37,7 +67,7 @@ Or register it with the Codex CLI:
 codex mcp add falconos --url https://mcp.falconos.markets/mcp
 ```
 
-[VERIFIED SOURCE; hosted 0.5.0 not verified] Restart the client, list tools and call `falcon_self_test({})`. Current source 0.5.0 exposes 19 tools and per-domain capability scope. Check supported actions, chain/network, unavailable reasons and approval rules before owner work. Metadata does not verify the owner wallet session, signer or funding state, separate operator review grant, or native model-host controls. `codex mcp list` confirms registration only. See the [current capability contract](mcp-rust/README.md#capability-discovery-050), the dated [hosted 0.4.0 cutover record](status.md#rust-mcp-cutover-2026-10-15), and the [2026-10-23 local evidence and blockers](status.md#source-050-publication-evidence-2026-10-23).
+[VERIFIED LOCAL SOURCE 0.6.0; hosted cutover unverified] Restart the client, list tools and call `falcon_self_test({})`. Current source exposes 29 tools with per-domain scope. Metadata does not verify the wallet session, signer, funds, operator review grant, exact trial permission or native model host. `codex mcp list` confirms registration only. The [Rust guide](mcp-rust/README.md) separates CFO and legacy lending. The dated [hosted 0.4.0 record](status.md#rust-mcp-cutover-2026-10-15) remains historical.
 
 **JSON config** (any MCP client that supports Streamable HTTP):
 ```json
