@@ -10,6 +10,7 @@ const REQUIRED_INPUTS = [
   'web/scripts/application-gate.mjs', 'web/scripts/skills-plugin.mjs', 'web/scripts/skills-release.mjs',
   'web/skills/SKILLS.md', 'web/functions/api/waitlist.js', 'web/functions/_waitlist-email.js',
   'web/migrations/0001_waitlist.sql', 'web/migrations/0002_waitlist_email_outbox.sql',
+  'web/dashboard/Cfo.jsx', 'web/dashboard/cfo.css',
 ];
 const ROUTES = ['index.html', 'product/index.html', 'research/index.html', 'dashboard/index.html'];
 const RETIRED_ROUTE_PREFIXES = ['app/', 'dash/', 'mesh/', 'treasury/', 'research/near/', 'bot/'];

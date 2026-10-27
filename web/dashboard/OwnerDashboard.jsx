@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { meshRequest } from './api.mjs';
 import { createSignInWalletSession } from '../app/wallet-signin.mjs';
+import Cfo from './Cfo.jsx';
 import {
   clearWalletSession,
   createWalletSession,
@@ -216,7 +217,7 @@ function ActivityTrail({ activity }) {
     <div className="owner-card-heading">
       <p className="owner-eyebrow">Personal decision and intent history</p>
       <h2 id="owner-activity-title">Your recorded actions</h2>
-      <p className="owner-muted">Summaries come from retained records. No transaction action is available on this page.</p>
+      <p className="owner-muted">These retained records are read-only. AI CFO below has separate owner-approved NEAR action controls.</p>
     </div>
     <p className="owner-returned-counts">Service-returned records: {activity.counts.decisions} decisions · {activity.counts.intents} intents</p>
     {visible.length ? <ol className="owner-record-list owner-trail-list">
@@ -248,7 +249,7 @@ function LoadError({ error, onRetry }) {
   </section>;
 }
 
-function OwnerWorkspace({ session, activity, onRefresh, onLogout, onRetry }) {
+function OwnerWorkspace({ session, walletSession, activity, onRefresh, onLogout, onRetry }) {
   const data = activity.data;
   const loading = !data && (activity.status === 'idle' || activity.status === 'loading');
   return <section className="owner-workspace" aria-label="Verified owner dashboard">
@@ -274,6 +275,7 @@ function OwnerWorkspace({ session, activity, onRefresh, onLogout, onRetry }) {
         <ActivityTrail activity={data} />
       </div>
     </div>}
+    <Cfo session={session} walletSession={walletSession} />
   </section>;
 }
 
@@ -299,7 +301,7 @@ function OwnerGate({ auth, wallets, walletError, notice, pendingWallet, onSignIn
     {walletError && <p className="owner-auth-error" role="alert">{walletError}</p>}
     {canChooseWallet && <div className="owner-wallet-picker" role="group" aria-label="Wallet sign-in options">
       <h3>Choose a wallet to sign in</h3>
-      <p className="owner-muted">Wallet sign-in needs a Solana Devnet account with message-signing support.</p>
+      <p className="owner-muted">Wallet sign-in needs a Solana account with message-signing support.</p>
       {wallets.length ? <ul className="owner-wallet-list">
         {wallets.map((wallet, index) => <li className="owner-wallet-option" key={wallet.id}>
           <button
@@ -311,7 +313,7 @@ function OwnerGate({ auth, wallets, walletError, notice, pendingWallet, onSignIn
           >Sign in with {wallet.name}</button>
           {!wallet.available && <p className="owner-wallet-reason" id={`owner-wallet-reason-${index}`}>{wallet.reason || 'This wallet does not support the required sign-in capability.'}</p>}
         </li>)}
-      </ul> : <p className="owner-empty owner-wallet-empty">No Wallet Standard wallet is currently available. This dashboard requires a Solana Devnet account that can sign a message.</p>}
+      </ul> : <p className="owner-empty owner-wallet-empty">No Wallet Standard wallet is currently available. This dashboard requires a Solana account that can sign a message.</p>}
     </div>}
     <p className="owner-coming-soon">Sign-up and organization workspaces are unavailable.</p>
   </section>;
@@ -342,7 +344,7 @@ export default function OwnerDashboard() {
   useEffect(() => {
     let unsubscribe;
     try {
-      const walletSession = createSignInWalletSession();
+      const walletSession = createSignInWalletSession({ requiredChain: null });
       walletSessionRef.current = walletSession;
       unsubscribe = walletSession.subscribe(state => setWallets(state.wallets));
     } catch (error) {
@@ -516,7 +518,7 @@ export default function OwnerDashboard() {
         <p className="owner-intro-copy">Research and risk advice.<br />Every financial action remains yours.</p>
       </div>
       {auth.status === 'authenticated'
-        ? <OwnerWorkspace session={auth.session} activity={activity} onRefresh={retryActivity} onRetry={retryActivity} onLogout={logout} />
+        ? <OwnerWorkspace session={auth.session} walletSession={walletSessionRef.current} activity={activity} onRefresh={retryActivity} onRetry={retryActivity} onLogout={logout} />
         : <OwnerGate auth={auth} wallets={wallets} walletError={walletError} notice={notice} pendingWallet={pendingWallet} onSignIn={signIn} onRetryRestore={restoreSavedSession} />}
     </main>
     <footer className="owner-footer">FALCON INVESTMENT COUNCIL / RESEARCH AND RISK ADVICE</footer>
