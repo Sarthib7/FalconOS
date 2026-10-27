@@ -11,9 +11,25 @@ function settlementAmounts(value) {
   return debit && credit ? { debit, credit } : null;
 }
 
-function nodeFor(record) {
+function projectChecks(record, issues) {
+  const projected = [];
+  for (const [index, check] of record.data.snapshot.checks.entries()) {
+    if (!check || typeof check !== 'object' || Array.isArray(check) || Object.keys(check).length !== 3
+        || typeof check.id !== 'string' || !/\S/.test(check.id) || Buffer.byteLength(check.id) > 64
+        || !['PASS', 'BLOCKED', 'NO_DATA'].includes(check.status)
+        || typeof check.detail !== 'string' || Buffer.byteLength(check.detail) > 512) {
+      issues.add('PLAN_CHECK_INVALID:' + record.id + ':' + index);
+      continue;
+    }
+    projected.push({ id: check.id, status: check.status, detail: check.detail });
+  }
+  return projected;
+}
+
+function nodeFor(record, issues, validateRequest) {
   const data = record.data;
   let facts = {};
+  let status = data.status ?? data.state ?? 'RECORDED';
   switch (record.kind) {
     case 'portfolio':
       facts = { capturedAt: data.capturedAt, sourceTime: null, chain: data.chain, network: data.network,
@@ -30,16 +46,31 @@ function nodeFor(record) {
         expiresAt: typeof quote.raw.quote.deadline === 'string' ? quote.raw.quote.deadline : null,
         signatureVerificationRecorded: quote.signatureVerified })) };
       break;
-    case 'plan':
+    case 'plan': {
+      let request = null;
+      try {
+        validateRequest(data.request);
+        if (stableStringify(data.request) === stableStringify(data.snapshot.request)) request = data.request;
+        else issues.add('PLAN_REQUEST_INVALID:' + record.id);
+      } catch (error) {
+        if (!(error instanceof MeshError) || error.code !== 'INVALID_INPUT') throw error;
+        issues.add('PLAN_REQUEST_INVALID:' + record.id);
+      }
       facts = { snapshotHash: data.snapshotHash,
         proposalHash: data.snapshot.proposal === null ? null : sha256(canonicalBytes(data.snapshot.proposal)),
-        action: data.request.action, sourceAssetId: data.request.sourceAssetId, targetAssetId: data.request.targetAssetId,
-        inputBaseUnits: data.request.inputBaseUnits, reviewJobId: data.reviewJobId, checks: data.snapshot.checks };
+        action: request?.action ?? null, sourceAssetId: request?.sourceAssetId ?? null,
+        targetAssetId: request?.targetAssetId ?? null, inputBaseUnits: request?.inputBaseUnits ?? null,
+        reviewJobId: data.reviewJobId, checks: projectChecks(record, issues) };
       break;
-    case 'review':
+    }
+    case 'review': {
+      const resultStatus = ['REVIEW', 'BLOCKED', 'NO_DATA'].includes(data.result?.status) ? data.result.status : null;
+      if (data.result !== null && resultStatus === null) issues.add('REVIEW_RESULT_INVALID:' + record.id);
+      status = resultStatus ?? (data.result === null ? data.state : 'NO_DATA');
       facts = { jobId: data.jobId, planId: data.planId, snapshotHash: data.snapshotHash,
-        phase: data.phase, jobState: data.state, resultStatus: data.result?.status ?? null };
+        phase: data.phase, jobState: data.state, resultStatus };
       break;
+    }
     case 'action':
       facts = { actionId: data.actionId, action: data.action, leg: data.leg, rotationState: data.rotationState,
         sourceAssetId: data.sourceAssetId, targetAssetId: data.targetAssetId, inputBaseUnits: data.inputBaseUnits,
@@ -57,11 +88,11 @@ function nodeFor(record) {
   return {
     id: 'cfo:' + record.id, recordId: record.id, kind: record.kind,
     contentHash: record.contentHash, sequence: record.sequence, createdAt: record.createdAt,
-    status: data.status ?? data.result?.status ?? data.state ?? 'RECORDED', facts,
+    status, facts,
   };
 }
 
-export async function readCfoDecisionTrace({ store, owner, root, at, validateReview, validateQuote }) {
+export async function readCfoDecisionTrace({ store, owner, root, at, validateReview, validateQuote, validateRequest }) {
   const records = new Map([[root.id, root]]);
   const pending = [root];
   const nodes = new Map();
@@ -98,7 +129,7 @@ export async function readCfoDecisionTrace({ store, owner, root, at, validateRev
     if (record.kind === 'quotes' && data.quotes.some(quote => !validateQuote(quote))) {
       throw new MeshError('STORAGE_UNAVAILABLE', 'Retained CFO trace quote integrity is invalid.');
     }
-    nodes.set(record.id, nodeFor(record));
+    nodes.set(record.id, nodeFor(record, issues, validateRequest));
     if (record.kind === 'plan' || record.kind === 'review') {
       for (const ref of data.sourceRefs) await retain(record, ref.revisionId, 'uses-evidence', ref.sha256);
     }

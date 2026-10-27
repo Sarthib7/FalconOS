@@ -10,6 +10,7 @@ import { createWalletAuth, deriveWalletOwnerId } from '../wallet-auth.mjs';
 import { createCfoStore } from '../cfo/store.mjs';
 import { createCfoService } from '../cfo/service.mjs';
 import { createIntentsAdapter } from '../cfo/intents.mjs';
+import { canonicalBytes, sha256 } from '../council/evidence.ts';
 
 const databaseUrl = process.env.FALCON_MESH_TEST_DATABASE_URL;
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -81,6 +82,64 @@ test('V197/V213: CFO records and traces require wallet identity and isolate reta
   assert.equal(JSON.stringify(foreignTrace.payload).includes(retained.contentHash), false);
   assert.equal((await request(tracePath, operator)).status, 401);
   assert.equal((await request(tracePath + '?owner=' + owner, credentials[0])).status, 400);
+  const mandateData = {
+    schemaVersion: 1, wallet: address, reserveAssetId: 'fixture:reserve',
+    reserveFloorBaseUnits: '0', maxActionReserveBaseUnits: '1000000', maxPositionBps: 10000,
+    slippageBps: 50, maxFeeBps: 100, maxEvidenceAgeSeconds: 300, targets: [],
+    monitorIntervalSeconds: 300, maxMonitorCycles: 1,
+  };
+  const mandate = (await cfoStore.append(owner, { requestId: randomUUID(), kind: 'mandate', data: mandateData })).record;
+  const portfolio = (await cfoStore.append(owner, { requestId: randomUUID(), kind: 'portfolio',
+    data: { ...retained.data, blockHash: 'test-only-retained-block', blockHeight: 1, status: 'OBSERVED', reasons: [] } })).record;
+  const quotes = (await cfoStore.append(owner, { requestId: randomUUID(), kind: 'quotes',
+    data: { schemaVersion: 1, wallet: address, quotes: [] } })).record;
+  const planRequest = { requestId: randomUUID(), action: 'hold',
+    sourceAssetId: null, targetAssetId: null, inputBaseUnits: null };
+  const checkMarker = 'private-retained-check-marker';
+  const reviewMarker = 'private-retained-review-marker';
+  const snapshot = {
+    schemaVersion: 1, domain: 'cfo', capturedAt: new Date().toISOString(),
+    portfolio: portfolio.data, mandate: mandate.data, mandateHash: sha256(canonicalBytes(mandate.data)),
+    request: planRequest, quotes: [], proposal: null,
+    checks: [{ id: 'bad-retained-check', status: 'PASS', detail: { signedData: checkMarker } }],
+    reasons: [], status: 'REVIEW',
+  };
+  const sourceRefs = [mandate, portfolio, quotes].map(record => ({ revisionId: record.id, sha256: record.contentHash }));
+  const reviewJobId = randomUUID();
+  const badPlan = (await cfoStore.append(owner, { requestId: planRequest.requestId, kind: 'plan', data: {
+    schemaVersion: 1, wallet: address, request: planRequest, snapshot, snapshotHash: sha256(canonicalBytes(snapshot)),
+    sourceRefs, quoteBindings: [], status: 'REVIEW', reviewJobId, workflow: 'SINGLE',
+  } })).record;
+  const badReview = (await cfoStore.append(owner, { requestId: randomUUID(), kind: 'review', data: {
+    schemaVersion: 1, wallet: address, jobId: reviewJobId, planId: badPlan.id, snapshotHash: badPlan.data.snapshotHash,
+    state: 'COMPLETE', phase: 'TERMINAL', result: {
+      schemaVersion: 1, runId: reviewJobId, snapshotHash: badPlan.data.snapshotHash,
+      lead: null, risk: null, status: { signedData: reviewMarker }, proposal: null, reasons: [], executionReady: false,
+    }, deadlineAt: new Date(Date.now() + 60_000).toISOString(), leaseUntil: null, workerId: null, sourceRefs,
+  } })).record;
+  const requestMarker = 'private-retained-request-marker';
+  const badRequestData = structuredClone(badPlan.data);
+  badRequestData.request = { ...planRequest, requestId: randomUUID(), sourceAssetId: { signedData: requestMarker } };
+  badRequestData.snapshot.request = structuredClone(badRequestData.request);
+  badRequestData.snapshot.checks = [];
+  badRequestData.snapshotHash = sha256(canonicalBytes(badRequestData.snapshot));
+  const badRequest = (await cfoStore.append(owner, {
+    requestId: badRequestData.request.requestId, kind: 'plan', data: badRequestData,
+  })).record;
+  function assertUnavailableProjection(payload, marker) {
+    assert.equal(payload.trace.status, 'NO_DATA', 'invalid retained values cannot become an observed assessment');
+    assert.equal(JSON.stringify(payload).includes(marker), false, 'private nested data cannot enter trace facts');
+    assert.equal(payload.trace.nodes.every(node => typeof node.status === 'string'), true);
+    const planNode = payload.trace.nodes.find(node => node.kind === 'plan');
+    assert.equal(planNode.facts.checks.every(check => typeof check.id === 'string'
+      && typeof check.status === 'string' && typeof check.detail === 'string'), true);
+  }
+  const malformedCases = [];
+  for (const [record, marker] of [[badPlan, checkMarker], [badReview, reviewMarker], [badRequest, requestMarker]]) {
+    const response = await request('/v1/cfo/records/' + record.id + '/trace', credentials[0]);
+    assert.equal(response.status, 200);
+    malformedCases.push({ recordId: record.id, marker, payload: response.payload });
+  }
   if (process.env.FALCON_MCP_TEST_BINARY) {
     const child = spawn(process.env.FALCON_MCP_TEST_BINARY, [], {
       env: { ...process.env, PORT: '0', FALCON_MCP_HOST: '127.0.0.1',
@@ -123,8 +182,16 @@ test('V197/V213: CFO records and traces require wallet identity and isolate reta
     assert.equal(foreignMcp.structuredContent.code, 'NOT_FOUND');
     assert.equal(JSON.stringify(foreignMcp).includes(retained.contentHash), false);
     assert.equal((await rpc(credentials[0], { owner })).structuredContent.code, 'INVALID_INPUT');
+    for (const entry of malformedCases) {
+      const result = await rpc(credentials[0], { recordId: entry.recordId });
+      assert.notEqual(result.isError, true);
+      assertUnavailableProjection(result.structuredContent, entry.marker);
+      assert.deepEqual(result.structuredContent.trace, entry.payload.trace,
+        'HTTP and native MCP must return the same typed, hash-bound unavailable projection');
+    }
     t.diagnostic('Actual native MCP -> authenticated Mesh -> PostgreSQL trace verified.');
   }
+  for (const entry of malformedCases) assertUnavailableProjection(entry.payload, entry.marker);
   await pool.query(`UPDATE falcon_mesh.analyses
     SET analysis = jsonb_set(analysis, '{data,capturedAt}', to_jsonb('2026-01-01T00:00:00.000Z'::text))
     WHERE owner_id = $1 AND id = $2`, [owner, retained.id]);

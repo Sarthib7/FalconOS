@@ -836,7 +836,7 @@ export function createCfoService({
       if (!root || root.data.wallet !== canonicalWallet) fail('NOT_FOUND', 'CFO record was not found.');
       return readCfoDecisionTrace({
         store, owner, root, at: await databaseNow(owner),
-        validateReview: validReviewResult, validateQuote: verifyQuoteEnvelope,
+        validateReview: validReviewResult, validateQuote: verifyQuoteEnvelope, validateRequest: validatePlanInput,
       });
     },
 

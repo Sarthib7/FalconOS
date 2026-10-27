@@ -747,6 +747,7 @@ T94|~|[APPROVED R1] exact signed Intents quote/action lifecycle, default-deny tr
 T95|~|[APPROVED R1] confirmed-proceeds rotation/reinvestment, bounded read-only monitoring, dashboard controls and thin Rust MCP; no delegated signing|I22,V202,V203
 T96|.|[OWNER GATES] complete T82, provider terms/account setup, separately approved model pair and exact funded NEAR trial; prove enter/exit/rotate/reinvest/failure and prepare honest hackathon demo; publication/deploy/submission separate|I22,V180,V197-V203
 T97|x|[VERIFIED LOCAL R6.1; remote CI/hosted gates separate] owner-scoped immutable CFO decision trace through HTTP/MCP; shared projection, domain provenance/freshness, review identity, adverse behavior checks and native/PostgreSQL smoke; stocks/perps and funded acceptance remain open|I22,V197,V199,V201,V205,V206,V211,V213
+T98|x|[VERIFIED LOCAL R7; remote CI/rollout separate] typed trace request/check/review facts before hashing; malformed values yield explicit NO_DATA without private nested JSON; valid sample hashes unchanged; authenticated HTTP/native MCP regressions and guard-bypass negative proof pass|I22,V197,V205,V206,V213
 
 
 ## §B BUGS
@@ -906,3 +907,4 @@ B150|2026-10-26|[VERIFIED local preview and user report] a production web build 
 B151|2026-10-27|[VERIFIED test-fixture failure] a historical-freshness test called current planning with stale inventory; existing policy correctly returned CONFLICT|V198,V213; seed historical evidence with policy evaluated at its retained cutoff; keep current planning freshness enforcement
 B152|2026-10-27|[VERIFIED HTTP regression:tests1/pass0/fail1] trace copied untyped NO_DATA block metadata and returned a nested signedData marker|V213; project block hash/height only as typed scalar metadata; preserve null for unknown fields
 B153|2026-10-27|[VERIFIED boundary regression:tests1/pass0/fail1] graph size was checked before adding its hash, so an oversized wire object was accepted|V213; enforce graph byte limit after hash attachment and accept the exact-limit case
+B154|2026-10-27|[VERIFIED authenticated local HTTP probes] validly hashed retained JSON bypassed typed output: review status/check detail objects returned private canaries; malformed check reported OBSERVED with no issue|V213; project typed requests/checks/status before hashing; reject invalid values as explicit NO_DATA without raw nested structures

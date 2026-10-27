@@ -1,5 +1,21 @@
 # Status
 
+## R7 typed projection repair and recovered backend: 2026-10-27
+
+Owner: coordinator. Status: Completed (local repair); Blocked (release approval and financial acceptance).
+
+[VERIFIED USER APPROVAL] The owner approved R7 to guard trace output, add adverse HTTP/MCP cases, correct the records and update draft PR126 with CI. Merge, production deployment, provider/model activation and financial actions remain unapproved.
+
+[VERIFIED REVIEW CORRECTION] Valid record hashes did not prevent malformed nested review/check JSON from entering trace facts. Authenticated disposable-store probes returned private canaries; the bad check was OBSERVED with no issue. The new permanent regression failed before the guard. B154 records this missed R6.1 boundary. The repair validates requests through the existing domain validator and projects typed checks/status before hashing; stored history and financial policy are unchanged.
+
+[VERIFIED LOCAL] Full Mesh returned `tests382, pass382, fail0, skipped0`, and isolated runtime linkage49files passed. The targeted trace/lifecycle group passed14. Actual native-MCP/authenticated-HTTP/PostgreSQL passed1, including malformed request/check/review cases. Bypassing the check guard failed1 collected case at the native boundary; restoring it passed. Two pre-fix plan/review trace samples remained byte-identical with unchanged hashes; this is sample compatibility, not a corpus-wide result.
+
+[VERIFIED RECOVERY] The owner separately approved Railway reauthentication and resuming the confirmed inactive Supabase project. One resume request returned200 and the project became ACTIVE_HEALTHY. API/MCP readiness became200/ready; live MCP0.4.0/14tools returned a fresh OBSERVED Devnet graph with8nodes/7edges/3sources and no issue. No app deployment, schema, role or production credential changed. Earlier unrecovered statements below are historical.
+
+[VERIFIED RELEASE CHECKS] Read-only queries from the running Mesh service confirmed effective role falcon_mesh_app, schema3,7expected tables and45columns. Immutable tables lack update/delete; source-head revision update is narrowly granted. All new provider/review/execution/trial gates are unset/default-closed and keys absent. The old deployed legacy reader lacks the CFO exclusion, with no current CFO rows; do not automatically downgrade Mesh to it after new CFO writes.
+
+[UNCHANGED HOLD] Source0.7.0 remains unreleased. PR124 preserves unapproved forms; a backend release must exclude frontend assets and avoid treating the draft stack as consumer approval. The served guide is0.3.2 and Cloudflare remains owner-managed. T83/T84, provider terms/keys, live model-pair budget, T82, the exact funded trial and an authorized positive production trace record/session remain separate.
+
 ## R6.1 decision trace: 2026-10-27
 
 Owner: coordinator. Status: Completed (local trace slice); Blocked (production recovery and broader release).
