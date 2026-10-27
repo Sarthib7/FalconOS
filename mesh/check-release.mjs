@@ -13,11 +13,13 @@ const RELEASE_INPUTS = [
   'yield-data.mjs', 'yield-domain.mjs', 'auth.mjs',
   'limits.mjs', 'wallet-status.mjs', 'transaction-inspection.mjs',
   'council/evidence.ts', 'council/host.mjs',
+  'council/decision-trace.mjs',
   'council/omp-host.mjs', 'council/runtime/worker.ts', 'council/runtime/policy.ts',
   'council/runtime/package.json', 'council/runtime/package-lock.json',
   'research/near-source.mjs', 'research/near-model.mjs', 'research/service.mjs', 'research/activity.mjs',
   'research/review-store.mjs', 'research/review-jobs.mjs',
   'cfo/config.mjs', 'cfo/intents.mjs', 'cfo/policy.mjs', 'cfo/review.mjs', 'cfo/store.mjs', 'cfo/service.mjs',
+  'cfo/trace.mjs',
   'schema.sql', 'migrations/0002_lending.sql', 'migrations/0003_wallet_auth.sql', 'deploy/supabase-permissions.sql',
 ];
 

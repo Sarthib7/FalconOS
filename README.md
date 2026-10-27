@@ -6,11 +6,13 @@
 
 ## NEAR hackathon AI CFO
 
-[VERIFIED USER APPROVAL, 2026-10-26] The owner approved an owner-controlled treasury workflow: reserve limits, allocation review, NEAR Intents execution, confirmed-proceeds rotation and reinvestment. The [CFO contract](docs/interfaces.md#owner-approved-near-ai-cfo-r1-2026-10-26) and SPEC I22/V197-V205 define the scope. This is company-owned treasury software, not a pooled investment fund or a grant of signing authority.
+[VERIFIED USER APPROVAL, 2026-10-26] The owner approved an owner-controlled treasury workflow: reserve limits, allocation review, NEAR Intents execution, confirmed-proceeds rotation and reinvestment. [SPEC I22](SPEC.md#i22-owner-approved-near-ai-cfo) defines the scope. This is company-owned treasury software, not a pooled investment fund or a grant of signing authority.
 
-[VERIFIED LOCAL SOURCE; LIVE ACCEPTANCE BLOCKED] `mesh/cfo/` owns holdings, policy, immutable records and the action lifecycle. The private dashboard and ten Rust MCP tools call that backend. Owner signatures cover exact raw Ed25519 Intents payloads. A separate operator trial binds the action, quote, assets, amount, expiry and T82 proof. Unknown sends remain reserved; dependent investments wait for finalized matching receipts and a new approval.
+[VERIFIED LOCAL SOURCE; LIVE ACCEPTANCE BLOCKED] `mesh/cfo/` owns holdings, policy, immutable records and the action lifecycle. The private dashboard and eleven Rust MCP tools call that backend. The decision trace is read-only. Owner signatures cover exact raw Ed25519 Intents payloads. A separate operator trial binds the action, quote, assets, amount, expiry and T82 proof. Unknown sends remain reserved; dependent investments wait for finalized matching receipts and a new approval.
 
-[VERIFIED LOCAL MCP SMOKE] The actual Rust server and official client returned `MCP_HTTP_SMOKE_PASS`, `serverVersion:"0.6.0"`, `tools:29`, and `meshUnavailable:true`. This proves discovery and the backend-outage path, not live balances, review or settlement.
+[HISTORICAL LOCAL MCP SMOKE, 2026-10-26] The Rust server and official client returned `MCP_HTTP_SMOKE_PASS`, `serverVersion:"0.6.0"`, `tools:29`, and `meshUnavailable:true`. That checkpoint proved discovery and the outage path, not balances, review or settlement.
+
+[VERIFIED LOCAL R6.1, 2026-10-27] Current source MCP0.7.0 returned `MCP_HTTP_SMOKE_PASS`, `tools:30`, `meshUnavailable:false`, and `graphStatus:"OBSERVED"` against actual source Mesh and local PostgreSQL. The new owner-scoped decision trace has separate current freshness and immutable review record IDs. See [the verification record](docs/verification/2026-10-27-cfo-trace.md). These checks do not establish hosted recovery, a live Council pair or better investment outcomes.
 
 [OWNER GATES] Provider terms, partner and sender-discovery keys, model-call budget, T82 evidence and an exact capped mainnet trial remain separate. [VERIFIED OFFICIAL DOCS](https://docs.near-intents.org/resources/faqs.md): NEAR Intents has no testnet. Do not describe dry quotes, local fixtures or provider SUCCESS as funded execution proof. Stablecoin-denominated receipt positions can lose principal.
 
@@ -67,7 +69,7 @@ Or register it with the Codex CLI:
 codex mcp add falconos --url https://mcp.falconos.markets/mcp
 ```
 
-[VERIFIED LOCAL SOURCE 0.6.0; hosted cutover unverified] Restart the client, list tools and call `falcon_self_test({})`. Current source exposes 29 tools with per-domain scope. Metadata does not verify the wallet session, signer, funds, operator review grant, exact trial permission or native model host. `codex mcp list` confirms registration only. The [Rust guide](mcp-rust/README.md) separates CFO and legacy lending. The dated [hosted 0.4.0 record](status.md#rust-mcp-cutover-2026-10-15) remains historical.
+[VERIFIED LOCAL SOURCE 0.7.0; hosted cutover unverified] Restart the client, list tools and call `falcon_self_test({})`. Current source exposes30 tools with per-domain scope. Metadata does not verify the wallet session, signer, funds, operator review grant, exact trial permission or native model host. `codex mcp list` confirms registration only. The [Rust guide](mcp-rust/README.md) separates CFO and legacy lending. The dated [hosted0.4.0 cutover](status.md#rust-mcp-cutover-2026-10-15) is not a hosted0.7.0 claim.
 
 **JSON config** (any MCP client that supports Streamable HTTP):
 ```json

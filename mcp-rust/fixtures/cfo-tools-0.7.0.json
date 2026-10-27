@@ -197,5 +197,21 @@
       "additionalProperties": false
     },
     "annotations": { "readOnlyHint": true, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_cfo_decision_trace",
+    "title": "Inspect a retained CFO decision trace",
+    "description": "Read an owner-scoped, hash-bound decision trace at the selected record's immutable append cutoff. Current capture freshness is separate from historical evidence. This read never captures, launches model work, signs, relays, or authorizes funds. OBSERVED attests retained records, not a recommendation or independently verified market truth.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Falcon wallet session returned by falcon_connect_verify." },
+        "recordId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$" }
+      },
+      "required": ["session", "recordId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": false }
   }
 ]

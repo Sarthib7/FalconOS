@@ -37,7 +37,7 @@ use uuid::Uuid;
 mod helpers;
 use helpers::*;
 mod prep;
-pub const TOOL_NAMES: [&str; 29] = [
+pub const TOOL_NAMES: [&str; 30] = [
     "falcon_public_graph",
     "falcon_connect",
     "falcon_connect_verify",
@@ -67,9 +67,10 @@ pub const TOOL_NAMES: [&str; 29] = [
     "falcon_cfo_reconcile",
     "falcon_cfo_monitor",
     "falcon_cfo_record",
+    "falcon_cfo_decision_trace",
 ];
 pub const SCHEMA_FINGERPRINT: &str =
-    "sha256:836b31ff8e46a8b10d27b0895d2eb2e3d208acacf19b9ef0ef27822021dc6747";
+    "sha256:c3c44279336fcafd2570cd946be199e4d0ced55d615ec8d90eca3259421ebbbf";
 const SESSION_RE: &str = r"^wsi1_[A-Za-z0-9_-]{20,}$";
 const UUID_RE: &str =
     r"^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$";
@@ -77,7 +78,7 @@ const WALLET_RE: &str = r"^[1-9A-HJ-NP-Za-km-z]{32,44}$";
 const USDC_RE: &str = r"^(0|[1-9]\d*)(\.\d{1,6})?$";
 const BODY_LIMIT: usize = 256 * 1024;
 const LEGACY_FIXTURE: &str = include_str!("../fixtures/node-0.5.0.json");
-const CFO_FIXTURE: &str = include_str!("../fixtures/cfo-tools-0.6.0.json");
+const CFO_FIXTURE: &str = include_str!("../fixtures/cfo-tools-0.7.0.json");
 const INSTRUCTIONS: &str = concat!(
     "Falcon MCP exposes publisher-reported NEAR/mainnet research separately from legacy Solana/Devnet lending and execution tools. NEAR case/source content and replay results are publisher-reported, not independently verified. Public case/replay/source calls accept no session, owner data, or auth. Adoption and review require a Falcon owner session; review also requires a verified host/operator grant and promptly returns the retained async job envelope instead of waiting for model completion. Review does not authorize execution. Metadata/configuration do not establish runtime readiness or grant verification. ",
     "The NEAR CFO tools call fixed Mesh /v1/cfo routes using only an authenticated wallet session for owner context; callers cannot supply an owner, wallet, model, key, grant, URL, or route. CFO is mainnet-only. Current account context, signer, funds, quote/provider, and trial readiness are not checked by MCP metadata. Financial actions always require owner approval and signature, distinct from wallet login. CFO relay is default-deny unless an operator grants the exact owner, wallet, actionId, quoteHash, reserve cap, expiry, retained proof, and trial permission. Risk approval is not spending permission. Prepared unsigned payloads may be returned for owner review; signatures and signed bytes are omitted from CFO history and other model-facing output. ",
@@ -530,7 +531,7 @@ fn self_test_capabilities() -> &'static Value {
                     "domain": "cfo",
                     "chain": "near",
                     "network": "mainnet",
-                    "actions": ["overview", "mandate", "capture", "plan", "prepare", "register-signature", "relay", "reconcile", "monitor", "read-record"],
+                    "actions": ["overview", "mandate", "capture", "plan", "prepare", "register-signature", "relay", "reconcile", "monitor", "read-record", "read-decision-trace"],
                     "authorization": {
                         "owner": "authenticated-wallet-session",
                         "ownerSignature": "required-for-every-financial-action",
@@ -540,7 +541,7 @@ fn self_test_capabilities() -> &'static Value {
                     "currentContext": "not_checked",
                     "executionSupported": true,
                     "executionReady": false,
-                    "tools": ["falcon_cfo_overview", "falcon_cfo_mandate", "falcon_cfo_capture", "falcon_cfo_plan", "falcon_cfo_prepare", "falcon_cfo_register_signed", "falcon_cfo_relay", "falcon_cfo_reconcile", "falcon_cfo_monitor", "falcon_cfo_record"]
+                    "tools": ["falcon_cfo_overview", "falcon_cfo_mandate", "falcon_cfo_capture", "falcon_cfo_plan", "falcon_cfo_prepare", "falcon_cfo_register_signed", "falcon_cfo_relay", "falcon_cfo_reconcile", "falcon_cfo_monitor", "falcon_cfo_record", "falcon_cfo_decision_trace"]
                 }),
 			]);
         metadata
@@ -1149,6 +1150,12 @@ async fn dispatch(st: &AppState, name: &str, args: &Value) -> Result<Value, Tool
         "falcon_cfo_record" => {
             let record_id = args["recordId"].as_str().unwrap();
             let response = g(&format!("/v1/cfo/records/{record_id}"), sess, 15000).await?;
+            Ok(cfo_public_response(response, false))
+        }
+        "falcon_cfo_decision_trace" => {
+            let record_id = args["recordId"].as_str().unwrap();
+            let path = format!("/v1/cfo/records/{record_id}/trace");
+            let response = mesh.get(&path, sess, 15000).await?;
             Ok(cfo_public_response(response, false))
         }
         "falcon_self_test" => Ok(json!({

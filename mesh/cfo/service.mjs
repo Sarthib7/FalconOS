@@ -5,6 +5,7 @@ import { canonicalWalletAddress, deriveWalletOwnerId } from '../wallet-auth.mjs'
 import { canonicalBytes, sha256, stableStringify } from '../council/evidence.ts';
 import { validateMandate, evaluatePlan } from './policy.mjs';
 import { runCfoReview } from './review.mjs';
+import { readCfoDecisionTrace } from './trace.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HASH = /^[0-9a-f]{64}$/;
@@ -21,7 +22,6 @@ const QUOTE_KEYS = ['schemaVersion', 'capturedAt', 'raw', 'sha256', 'signatureVe
 const SNAPSHOT_KEYS = ['schemaVersion', 'domain', 'capturedAt', 'portfolio', 'mandate', 'mandateHash', 'request', 'quotes', 'proposal', 'checks', 'reasons', 'status'];
 const REQUEST_KEYS = ['requestId', 'action', 'sourceAssetId', 'targetAssetId', 'inputBaseUnits'];
 const REVIEW_RESULT_KEYS = ['schemaVersion', 'runId', 'snapshotHash', 'lead', 'risk', 'status', 'proposal', 'reasons', 'executionReady'];
-const REVIEW_JOB_KEYS = ['jobId', 'requestId', 'snapshotHash', 'state', 'phase', 'result', 'executionReady'];
 const GRANT_KEYS = ['ownerId', 'wallet', 'maxReserveBaseUnits', 'expiresAt', 'devnetProofId'];
 const TRIAL_KEYS = ['ownerId', 'wallet', 'actionId', 'quoteHash', 'sourceAssetId', 'targetAssetId', 'inputBaseUnits', 'expiresAt', 'devnetProofId'];
 const PROVIDER_CONFIGURATION_KEYS = ['enabled', 'partnerKeyConfigured', 'senderLookupKeyConfigured'];
@@ -227,6 +227,7 @@ function reviewJobDto(reviewRecord, plan) {
   if (!reviewRecord) return null;
   return cloneJson({
     jobId: reviewRecord.data.jobId,
+    recordId: reviewRecord.id,
     requestId: plan.data.request.requestId,
     snapshotHash: reviewRecord.data.snapshotHash,
     state: reviewRecord.data.state,
@@ -827,6 +828,16 @@ export function createCfoService({
       const record = await store.get(owner, uuid(recordId, 'Record ID'));
       if (!record || record.data.wallet !== canonicalWallet) fail('NOT_FOUND', 'CFO record was not found.');
       return publicRecord(record);
+    },
+
+    async getDecisionTrace(owner, wallet, recordId) {
+      const canonicalWallet = identity(owner, wallet);
+      const root = await store.get(owner, uuid(recordId, 'Record ID'));
+      if (!root || root.data.wallet !== canonicalWallet) fail('NOT_FOUND', 'CFO record was not found.');
+      return readCfoDecisionTrace({
+        store, owner, root, at: await databaseNow(owner),
+        validateReview: validReviewResult, validateQuote: verifyQuoteEnvelope, validateRequest: validatePlanInput,
+      });
     },
 
     async saveMandate(owner, wallet, input) {

@@ -9,6 +9,7 @@ import { canonicalBytes, sha256 } from '../council/evidence.ts';
 import { createCfoStore } from '../cfo/store.mjs';
 import { createCfoService } from '../cfo/service.mjs';
 import { COUNCIL_POLICY_VERSION } from '../council/host.mjs';
+import { evaluatePlan } from '../cfo/policy.mjs';
 
 const databaseUrl = process.env.FALCON_MESH_TEST_DATABASE_URL;
 const RESERVE_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -213,7 +214,7 @@ async function reviewedPlan(service, owner, wallet, fields) {
   return result;
 }
 
-test('V211: CFO service composes a retained policy plan with both bound review roles', { skip: !databaseUrl }, async t => {
+test('V211/V213: CFO trace preserves same-evidence review, freshness and immutable history', { skip: !databaseUrl }, async t => {
   const pool = new Pool({ connectionString: databaseUrl, max: 5 });
   const f = fixture(pool);
   const roles = [];
@@ -226,6 +227,75 @@ test('V211: CFO service composes a retained policy plan with both bound review r
   assert.equal(plan.review.result.lead.snapshotHash, plan.plan.data.snapshotHash);
   assert.equal(plan.review.result.risk.proposalHash, plan.review.result.lead.proposalHash);
   assert.deepEqual(roles, ['lead', 'risk']);
+  const reviewRecord = await service.getRecord(f.owner, f.wallet, plan.review.recordId);
+  const beforeTrace = { ...f.calls };
+  const traced = await service.getDecisionTrace(f.owner, f.wallet, reviewRecord.id);
+  assert.deepEqual(traced.trace.nodes.map(node => node.kind).sort(),
+    ['lead', 'mandate', 'plan', 'portfolio', 'quotes', 'review', 'risk']);
+  assert.equal(traced.trace.nodes.find(node => node.kind === 'plan').facts.snapshotHash, plan.plan.data.snapshotHash);
+  assert.equal(traced.trace.nodes.find(node => node.kind === 'risk').facts.proposalHash, plan.review.result.lead.proposalHash);
+  assert.equal(traced.freshness.status, 'FRESH');
+  assert.equal(traced.freshness.evidence.find(source => source.kind === 'portfolio').sourceTime, null,
+    'capture time cannot stand in for an unavailable chain-event timestamp');
+  assert.deepEqual((await service.getDecisionTrace(f.owner, f.wallet, reviewRecord.id)).trace, traced.trace);
+  assert.deepEqual(f.calls, beforeTrace, 'trace reads cannot restart provider or model work');
+  const serializedTrace = JSON.stringify(traced);
+  assert.equal(serializedTrace.includes('public-provider-quote-signature'), false);
+  assert.equal(serializedTrace.includes('fixture-near-deposit-address'), false);
+  const historical = await service.getDecisionTrace(f.owner, f.wallet, plan.plan.id);
+  assert.equal(historical.trace.nodes.some(node => node.kind === 'review'), false,
+    'a plan revision cannot adopt a review appended after its cutoff');
+  const prepared = await service.prepareAction(f.owner, f.wallet, { requestId: randomUUID(), planId: plan.plan.id });
+  const preparedRecord = (await service.overview(f.owner, f.wallet)).actions.find(record => record.data.actionId === prepared.actionId);
+  const preparedTrace = await service.getDecisionTrace(f.owner, f.wallet, preparedRecord.id);
+  assert.equal(preparedTrace.trace.nodes.find(node => node.kind === 'risk').status, 'PASS');
+  const retainedReview = await f.store.get(f.owner, reviewRecord.id);
+  await f.store.append(f.owner, { requestId: randomUUID(), kind: 'review',
+    data: { ...retainedReview.data, state: 'UNKNOWN', phase: 'TERMINAL', result: null, workerId: null, leaseUntil: null } });
+  assert.deepEqual((await service.getDecisionTrace(f.owner, f.wallet, preparedRecord.id)).trace, preparedTrace.trace,
+    'a later review revision cannot change the review bound to an earlier prepared action');
+  // Seed a historical decision with the actual policy evaluator, not a fake database clock.
+  const oldAt = '2026-01-01T00:00:00.000Z';
+  const oldDeadline = '2026-01-01T00:01:00.000Z';
+  const oldSnapshot = structuredClone(plan.plan.data.snapshot);
+  oldSnapshot.capturedAt = oldAt;
+  oldSnapshot.portfolio.capturedAt = oldAt;
+  oldSnapshot.request.requestId = randomUUID();
+  const quoteHashes = new Map();
+  for (const quote of oldSnapshot.quotes) {
+    const priorHash = quote.sha256;
+    quote.capturedAt = oldAt;
+    quote.raw.timestamp = oldAt;
+    quote.raw.quote.deadline = oldDeadline;
+    quote.raw.quoteRequest.deadline = oldDeadline;
+    quote.sha256 = sha256(canonicalBytes(quote.raw));
+    quoteHashes.set(priorHash, quote.sha256);
+  }
+  const evaluated = evaluatePlan({ portfolio: oldSnapshot.portfolio, mandate: oldSnapshot.mandate,
+    request: oldSnapshot.request, quotes: oldSnapshot.quotes, at: oldAt });
+  assert.equal(evaluated.status, 'REVIEW');
+  Object.assign(oldSnapshot, evaluated);
+  const oldRefs = [];
+  for (const ref of plan.plan.data.sourceRefs) {
+    const source = await f.store.get(f.owner, ref.revisionId);
+    if (source.kind === 'mandate') { oldRefs.push(ref); continue; }
+    const data = source.kind === 'portfolio' ? oldSnapshot.portfolio
+      : { ...source.data, quotes: oldSnapshot.quotes };
+    const saved = await f.store.append(f.owner, { requestId: randomUUID(), kind: source.kind, data });
+    oldRefs.push({ revisionId: saved.record.id, sha256: saved.record.contentHash });
+  }
+  const { record: oldPlan } = await f.store.append(f.owner, {
+    requestId: oldSnapshot.request.requestId, kind: 'plan',
+    data: { ...plan.plan.data, request: oldSnapshot.request, snapshot: oldSnapshot,
+      snapshotHash: sha256(canonicalBytes(oldSnapshot)), sourceRefs: oldRefs, reviewJobId: null,
+      quoteBindings: plan.plan.data.quoteBindings.map(binding => ({ ...binding, quoteHash: quoteHashes.get(binding.quoteHash) })) },
+  });
+  const staleTrace = await service.getDecisionTrace(f.owner, f.wallet, oldPlan.id);
+  assert.equal(staleTrace.trace.nodes.find(node => node.kind === 'plan').status, 'REVIEW',
+    'historical policy is separate from current evidence freshness');
+  assert.equal(staleTrace.freshness.status, 'STALE');
+  assert.deepEqual((await service.getDecisionTrace(f.owner, f.wallet, reviewRecord.id)).trace, traced.trace,
+    'new unavailable observations cannot replace the historical decision evidence');
   await service.overview(f.owner, f.wallet);
   await service.getRecord(f.owner, f.wallet, plan.plan.id);
   assert.deepEqual(roles, ['lead', 'risk'], 'retained reads must not incur another review');
@@ -315,6 +385,15 @@ test('CFO lifecycle retains an owner-bound deterministic exit and never retries 
   assert.equal(f.calls.submit, 1);
   assert.equal((await executionService.relaySignedAction(f.owner, f.wallet, { requestId: relayRequestId, actionId: prepared.actionId })).status, 'SUBMISSION_UNKNOWN');
   assert.equal(f.calls.submit, 1, 'a duplicate request never redispatches the signed bytes');
+  const uncertainRecord = await f.store.latestAction(f.owner, prepared.actionId);
+  const beforeTrace = { ...f.calls };
+  const uncertainTrace = await executionService.getDecisionTrace(f.owner, f.wallet, uncertainRecord.id);
+  const actionNode = uncertainTrace.trace.nodes.find(node => node.kind === 'action');
+  assert.equal(actionNode.status, 'SUBMISSION_UNKNOWN');
+  assert.equal(actionNode.facts.signatureRecorded, true);
+  assert.equal(actionNode.facts.settlementAmounts, null);
+  assert.deepEqual(f.calls, beforeTrace, 'reading uncertain funds cannot reconcile or redispatch');
+  assert.equal(JSON.stringify(uncertainTrace).includes(Buffer.alloc(64, 3).toString('base64')), false);
 
   const reconciliation = await executionService.reconcileAction(f.owner, f.wallet, { requestId: randomUUID(), actionId: prepared.actionId });
   assert.equal(reconciliation.status, 'UNVERIFIED', 'provider status without the exact relay hash cannot confirm settlement');

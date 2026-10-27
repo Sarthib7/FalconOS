@@ -22,6 +22,10 @@ npm ci --prefix mesh/council/runtime --ignore-scripts --no-audit --no-fund
 
 [VERIFIED LOCAL] Mesh reported `tests324, pass324, fail0`; Rust reported29passed. Actual source Mesh auth through native MCP returned HTTP200, research schema1, the bound retained public case and one adopted owner record; the QA session was revoked. Broadening the research owner predicate only in an isolated copy made the permanent privacy test fail (`tests1, pass0, fail1`, capped returned rows20 versus expected1).
 
+[VERIFIED SOURCE, R6.1] `GET /v1/cfo/records/:id/trace` reads an owner-scoped immutable graph through the same CFO service used by MCP. Review envelopes expose `recordId` for the retained review revision. The graph preserves source hashes, policy checks, role bindings and available action/receipt state at the root append cutoff. Current freshness is a separate envelope; a portfolio capture timestamp is not a chain-event timestamp. The read never captures, launches models, signs, relays or reconciles.
+
+[VERIFIED LOCAL; LIMITED] The authenticated HTTP/actual PostgreSQL check passed with the new native MCP read: `Actual native MCP -> authenticated Mesh -> PostgreSQL trace verified.` Direct source Mesh also returned readiness200 and a real Devnet graph with `OBSERVED`,8nodes,7edges,3sources. The trace tests use test-owned records and controlled model/provider results. They do not prove a live Council pair, funded operations or hosted recovery.
+
 ## Run
 
 [INFERRED, fresh local setup] Run these commands from the repository root. Use a new local database. Review `schema.sql`, both migrations, and the permission candidate before explicit initialization.

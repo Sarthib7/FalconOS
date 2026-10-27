@@ -123,6 +123,12 @@ jobs:
       - name: Run repository verification
         run: npm run verify
 
+      - name: Verify CFO trace through native MCP and PostgreSQL
+        run: |
+          cargo build --locked --manifest-path mcp-rust/Cargo.toml
+          FALCON_MCP_TEST_BINARY="$PWD/mcp-rust/target/debug/falcon-mcp-rust" \
+            node --test mesh/test/cfo-http.test.mjs
+
       - name: Verify native Council worker controls
         run: npm --prefix mesh/council/runtime test
 
@@ -250,7 +256,7 @@ jobs:
           npm --prefix web run build:mesh
 
       - name: Verify pinned skill rebuild
-        run: npm run verify:skill-rebuild -- --ref "$(git rev-parse HEAD)" --expected-record web/skills/releases/0.6.0.json
+        run: npm run verify:skill-rebuild -- --ref "$(git rev-parse HEAD)" --expected-record web/skills/releases/0.7.0.json
 
       - name: Check MVP and main-site routes
         run: node --test web/test/mvp-routes.test.mjs

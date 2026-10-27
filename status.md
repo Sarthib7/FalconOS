@@ -1,5 +1,35 @@
 # Status
 
+## R7 typed projection repair and recovered backend: 2026-10-27
+
+Owner: coordinator. Status: Completed (local repair); Blocked (release approval and financial acceptance).
+
+[VERIFIED USER APPROVAL] The owner approved R7 to guard trace output, add adverse HTTP/MCP cases, correct the records and update draft PR126 with CI. Merge, production deployment, provider/model activation and financial actions remain unapproved.
+
+[VERIFIED REVIEW CORRECTION] Valid record hashes did not prevent malformed nested review/check JSON from entering trace facts. Authenticated disposable-store probes returned private canaries; the bad check was OBSERVED with no issue. The new permanent regression failed before the guard. B154 records this missed R6.1 boundary. The repair validates requests through the existing domain validator and projects typed checks/status before hashing; stored history and financial policy are unchanged.
+
+[VERIFIED LOCAL] Full Mesh returned `tests382, pass382, fail0, skipped0`, and isolated runtime linkage49files passed. The targeted trace/lifecycle group passed14. Actual native-MCP/authenticated-HTTP/PostgreSQL passed1, including malformed request/check/review cases. Bypassing the check guard failed1 collected case at the native boundary; restoring it passed. Two pre-fix plan/review trace samples remained byte-identical with unchanged hashes; this is sample compatibility, not a corpus-wide result.
+
+[VERIFIED RECOVERY] The owner separately approved Railway reauthentication and resuming the confirmed inactive Supabase project. One resume request returned200 and the project became ACTIVE_HEALTHY. API/MCP readiness became200/ready; live MCP0.4.0/14tools returned a fresh OBSERVED Devnet graph with8nodes/7edges/3sources and no issue. No app deployment, schema, role or production credential changed. Earlier unrecovered statements below are historical.
+
+[VERIFIED RELEASE CHECKS] Read-only queries from the running Mesh service confirmed effective role falcon_mesh_app, schema3,7expected tables and45columns. Immutable tables lack update/delete; source-head revision update is narrowly granted. All new provider/review/execution/trial gates are unset/default-closed and keys absent. The old deployed legacy reader lacks the CFO exclusion, with no current CFO rows; do not automatically downgrade Mesh to it after new CFO writes.
+
+[UNCHANGED HOLD] Source0.7.0 remains unreleased. PR124 preserves unapproved forms; a backend release must exclude frontend assets and avoid treating the draft stack as consumer approval. The served guide is0.3.2 and Cloudflare remains owner-managed. T83/T84, provider terms/keys, live model-pair budget, T82, the exact funded trial and an authorized positive production trace record/session remain separate.
+
+## R6.1 decision trace: 2026-10-27
+
+Owner: coordinator. Status: Completed (local trace slice); Blocked (production recovery and broader release).
+
+[VERIFIED USER APPROVAL] R6.1 and inline execution were explicitly approved. Worker dispatch rejected explicit Luna/max selection; no worker or substitute model started. The new isolated branch is `feat/cfo-decision-trace-20261027`, based on checkpoint`2d400cc`. The original dirty checkout and prior checkpoint remain unchanged.
+
+[VERIFIED LOCAL] Source MCP0.7.0 adds the wallet-bound CFO decision trace through the actual backend. Mesh verification returned `tests382, pass382, fail0, skipped0`, with49 declared release files linked in isolation. Native Rust returned33passed across14suites. The combined native-MCP and complete-wire-size checks returned2passing tests. Agents build and related web checks returned16passed. Repository checks returned31passed after correcting an insufficient command deadline.
+
+[VERIFIED RUNTIME] The official MCP client returned `MCP_HTTP_SMOKE_PASS`, `serverVersion:"0.7.0"`, `tools:30`, `meshUnavailable:false`, `graphStatus:"OBSERVED"` against source Mesh and existing local schema3. This was real fixed Devnet evidence, not funded execution. Trace-specific model/provider inputs use controlled fixtures. The negative control returned `tests1, pass0, fail1` when freshness was forced toFRESH. Raw NO_DATA block-object and complete-wire-size regressions failed before their fixes.
+
+[VERIFIED PRODUCTION DIAGNOSIS; NOT RECOVERED] Public MCP still reported0.4.0/14tools during this check; graph returned `STORAGE_UNAVAILABLE` and readiness503. The historical Falcon Supabase project reported`INACTIVE` and its API hostname returned`ENOTFOUND`. Railway CLI remained`Unauthorized`. [INFERRED] Database inactivity can explain the outage, but current deployed target/configuration and exact cause need authenticated Railway logs. No database restore, migration, role change or deployment occurred.
+
+[UNCHANGED FINANCIAL GATES; PUBLICATION APPROVED] This completes T97 locally, not universal market coverage or funded MVP acceptance. T83/T84, provider terms/key setup, real model-pair budget, T82, exact funded trial and R5 consumer redesign remain separate. The owner approved one sequential commit, branch push and draft PR against the checkpoint branch. Merge and production rollout remain unapproved. No real-user keys, signatures, financial relay or paid model calls were used. See [the complete evidence and limits](docs/verification/2026-10-27-cfo-trace.md).
+
 ## Publication recovery: 2026-10-27
 
 Owner: coordinator. Status: Blocked (release and consumer redesign).
