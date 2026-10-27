@@ -15,6 +15,9 @@ import { createWalletAuth } from '../../mesh/wallet-auth.mjs';
 import { createReviewJobStore } from '../../mesh/research/review-store.mjs';
 import { createResearchActivity } from '../../mesh/research/activity.mjs';
 import { LENDING_CONFIG } from '../../mesh/kamino-wire.mjs';
+import { createCfoStore } from '../../mesh/cfo/store.mjs';
+import { createCfoService } from '../../mesh/cfo/service.mjs';
+import { createIntentsAdapter } from '../../mesh/cfo/intents.mjs';
 import { createFixtureTransport } from './support/fixture-transport.mjs';
 
 // V185/V190/V191: actual built UI, wallet signatures, Mesh auth and PostgreSQL.
@@ -33,6 +36,8 @@ const artifacts = await mkdtemp(join(tmpdir(), 'falcon-owner-browser-'));
 const pool = new Pool({ connectionString: databaseUrl, max: 3, connectionTimeoutMillis: 3000 });
 const store = createStore(pool);
 const lending = createLendingStore(pool, { meshStore: store });
+const cfoStore = createCfoStore(pool);
+const cfo = createCfoService({ store: cfoStore, adapter: createIntentsAdapter({ enabled: false }) });
 const key = generateKeyPairSync('ed25519');
 const publicBytes = key.publicKey.export({ format: 'der', type: 'spki' }).subarray(-32);
 const privateBase64 = key.privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64');
@@ -97,7 +102,7 @@ try {
   walletAuth = createWalletAuth(pool, { allowedOrigins, clock: () => Date.now() + clockOffset });
   await walletAuth.ready();
   const credential = randomBytes(32).toString('hex');
-  api = createApi({ store, lending, walletAuth, researchActivity: createResearchActivity({ store, reviewJobStore: createReviewJobStore(pool) }), tokenHashes: new Map([[createHash('sha256').update(credential).digest('hex'), 'owner_browser_fixture']]), allowedOrigins });
+  api = createApi({ store, lending, cfo, walletAuth, researchActivity: createResearchActivity({ store, reviewJobStore: createReviewJobStore(pool) }), tokenHashes: new Map([[createHash('sha256').update(credential).digest('hex'), 'owner_browser_fixture']]), allowedOrigins });
   await listen(api);
   // TLS forwarding preserves native browser CORS and the real auth handler.
   gateway = createTlsServer(tls, (request, response) => {
@@ -181,6 +186,13 @@ try {
   check('V191: refresh reads retained activity without another signature', activityReads() === beforeRefresh + 1 && await evaluate('window.__ownerTestWallet.signCalls === 1'));
   await wait(`document.body.innerText.includes(${JSON.stringify(savedDecision.analysis.summary)})`);
   check('V191: the built view renders an actual retained domain decision', await evaluate(`document.body.innerText.includes(${JSON.stringify(savedDecision.analysis.summary)}) && !document.querySelector('.owner-load-error')`));
+  await wait(`Boolean(document.getElementById('cfo-title')) && document.body.innerText.includes('T82_PROOF_UNVERIFIED')`);
+  check('V197: CFO loads retained state without a capture or financial signature', requests.filter(row => row.path.startsWith('/v1/cfo') && row.method === 'POST').length === 0 && await evaluate('window.__ownerTestWallet.signCalls === 1'));
+  check('V200: actual CFO surface labels the mainnet signing boundary', await evaluate(`Boolean(document.getElementById('cfo-mainnet-warning')) && !document.querySelector('.cfo-payload')`));
+  await click('Capture finalized portfolio');
+  await wait(`Boolean(${button('Capture finalized portfolio')} && !${button('Capture finalized portfolio')}.disabled) && document.body.innerText.includes('Portfolio data is unavailable')`);
+  const unavailablePortfolio = await cfoStore.latest(identity.ownerId, 'portfolio');
+  check('V198: disabled provider is retained as NO_DATA rather than fabricated funds', unavailablePortfolio?.data.status === 'NO_DATA' && unavailablePortfolio.data.balances.length === 0 && await evaluate('window.__ownerTestWallet.signCalls === 1'));
   await writeFile(join(artifacts, 'owner-desktop.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   check('V190: owner dashboard fits a mobile viewport', await evaluate('document.documentElement.scrollWidth <= innerWidth'));
@@ -204,7 +216,7 @@ try {
   await click('Sign in with Ephemeral fixture wallet');
   await wait(`Boolean(${button('Sign in with Ephemeral fixture wallet')} && !${button('Sign in with Ephemeral fixture wallet')}.disabled)`);
   check('V185: rejected wallet signature cannot verify or open owner content', verifyPosts() === beforeRejected && !await evaluate(ownerVisible));
-  check('V191: human load and refresh make no capture, review, transaction or model-start POST', requests.every(row => !row.hasQuery && (row.method !== 'POST' || ['/v1/auth/wallet/challenge', '/v1/auth/wallet/verify', '/v1/auth/wallet/logout'].includes(row.path))));
+  check('V191/V197: only explicit capture adds a CFO POST; load and refresh never start financial work', requests.every(row => !row.hasQuery && (row.method !== 'POST' || ['/v1/auth/wallet/challenge', '/v1/auth/wallet/verify', '/v1/auth/wallet/logout', '/v1/cfo/capture'].includes(row.path))) && requests.filter(row => row.method === 'POST' && row.path === '/v1/cfo/capture').length === 1);
   await transport.drain();
   check('V185: browser has no uncaught runtime exception', exceptions.length === 0);
 } catch (error) {
@@ -214,6 +226,7 @@ try {
   try { await transport?.drain(); } catch (error) { checks.push({ name: safe(String(error)), pass: false }); process.exitCode = 1; }
   if (chrome) { try { await call('Browser.close'); } catch {} chrome.kill(); }
   for (const token of tokens) { try { await walletAuth?.revokeSession(token); } catch { process.exitCode = 1; } }
+  await cfo.close();
   await close(gateway); await close(api); await close(site); await pool.end();
   await rm(join(artifacts, 'localhost.key'), { force: true }); await rm(join(artifacts, 'localhost.crt'), { force: true });
   const report = safe({ passed: checks.filter(row => row.pass).length, total: checks.length, checks, exceptions, requests, artifacts, limitation: 'Production-built UI and real disposable PostgreSQL auth/read path. Ephemeral message signatures and localhost TLS only. No external provider, real user wallet, model inference, deployment or financial action.' });

@@ -34,7 +34,7 @@ export async function meshRequest(token, path, body) {
     response = await fetch(`${API_BASE}${path}`, {
       method: body === undefined ? 'GET' : 'POST', credentials: 'omit', redirect: 'error',
       headers: { accept: 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(path === '/v1/captures' || path.startsWith('/v1/lending/') ? 45000 : 15000),
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(path === '/v1/captures' || path.startsWith('/v1/lending/') || path.startsWith('/v1/cfo/') ? 45000 : 15000),
     });
   } catch { throw new Error('The mesh service did not respond. Check the service and its allowed viewer origin, then try again.'); }
   let payload;

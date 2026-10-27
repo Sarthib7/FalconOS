@@ -1,0 +1,696 @@
+.cfo {
+  --cfo-line: var(--line, var(--border, #465348));
+  --cfo-text: var(--fg, #edf0e7);
+  --cfo-muted: var(--muted, #adb6aa);
+  --cfo-surface: var(--surface, #18201b);
+  --cfo-deep: var(--deep, #121a15);
+  --cfo-green: var(--green, #9cdaa1);
+  --cfo-warning: var(--amber, #f0c98e);
+  --cfo-danger: var(--red, #f3b3a7);
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  color: var(--cfo-text);
+}
+
+.cfo h2,
+.cfo h3,
+.cfo h4,
+.cfo p,
+.cfo dl,
+.cfo ul {
+  margin: 0;
+}
+
+.cfo h2 {
+  font: 500 clamp(28px, 3.5vw, 40px)/1.08 var(--body, system-ui, sans-serif);
+  letter-spacing: -.045em;
+}
+
+.cfo h3 {
+  font: 450 clamp(20px, 2.2vw, 26px)/1.2 var(--body, system-ui, sans-serif);
+  letter-spacing: -.03em;
+}
+
+.cfo h4 {
+  font-size: 16px;
+  font-weight: 550;
+}
+
+.cfo-header,
+.cfo-panel-heading,
+.cfo-record-heading,
+.cfo-actions,
+.cfo-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cfo-header {
+  align-items: end;
+  padding: 4px 0 8px;
+}
+
+.cfo-header > div:first-child {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cfo-header-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.cfo-eyebrow,
+.cfo-label {
+  color: var(--cfo-green);
+  font: 11px/1.45 var(--mono, ui-monospace, monospace);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.cfo-intro,
+.cfo-description,
+.cfo-footnote,
+.cfo-snapshot-meta,
+.cfo-readiness-card > p,
+.cfo-review-result > p,
+.cfo-record-summary {
+  color: var(--cfo-muted);
+}
+
+.cfo-intro {
+  max-width: 68ch;
+  font-size: 15px;
+}
+
+.cfo-wallet {
+  max-width: 24ch;
+  overflow: hidden;
+  color: var(--cfo-muted);
+  font: 12px/1.5 var(--mono, ui-monospace, monospace);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfo-warning,
+.cfo-error,
+.cfo-status,
+.cfo-panel,
+.cfo-readiness-card {
+  min-width: 0;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-surface);
+}
+
+.cfo-warning {
+  display: grid;
+  gap: 8px;
+  padding: clamp(16px, 2.5vw, 22px);
+  border-left: 4px solid var(--cfo-warning);
+}
+
+.cfo-warning h3 {
+  color: var(--cfo-warning);
+  font-size: 18px;
+}
+
+.cfo-warning p,
+.cfo-gate-note {
+  max-width: 90ch;
+  color: var(--cfo-muted);
+}
+
+.cfo-wallet-reconnect {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: clamp(16px, 2.5vw, 22px);
+  border: 1px solid var(--cfo-line);
+  border-left: 4px solid var(--cfo-warning);
+  background: var(--cfo-surface);
+}
+
+.cfo-wallet-reconnect > div:first-child {
+  display: grid;
+  gap: 7px;
+}
+
+.cfo-wallet-reconnect > p {
+  max-width: 82ch;
+  color: var(--cfo-muted);
+}
+
+.cfo-wallet-options {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.cfo-wallet-options li {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.cfo-wallet-reason {
+  color: var(--cfo-danger);
+  font-size: 12px;
+}
+
+.cfo-readiness {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cfo-readiness-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 16px;
+}
+
+.cfo-readiness-card ul,
+.cfo-reasons {
+  padding-left: 20px;
+  color: var(--cfo-muted);
+}
+
+.cfo-readiness-card li,
+.cfo-reasons li {
+  margin: 5px 0;
+  overflow-wrap: anywhere;
+}
+
+.cfo-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 9px;
+  border: 1px solid var(--cfo-line);
+  color: var(--cfo-muted);
+  font: 11px/1.35 var(--mono, ui-monospace, monospace);
+  letter-spacing: .04em;
+  overflow-wrap: anywhere;
+}
+
+.cfo-state--ready {
+  border-color: color-mix(in srgb, var(--cfo-green) 55%, var(--cfo-line));
+  color: var(--cfo-green);
+}
+
+.cfo-state--blocked,
+.cfo-state--no_data {
+  border-color: color-mix(in srgb, var(--cfo-danger) 55%, var(--cfo-line));
+  color: var(--cfo-danger);
+}
+
+.cfo-panel {
+  display: grid;
+  gap: 16px;
+  padding: clamp(16px, 2.5vw, 24px);
+}
+
+.cfo-panel-heading {
+  align-items: flex-start;
+}
+
+.cfo-panel-heading > div:first-child {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.cfo-snapshot-meta,
+.cfo-payload-meta,
+.cfo-monitor-data {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cfo-snapshot-meta > span,
+.cfo-payload-meta > div,
+.cfo-monitor-data > div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-deep);
+  overflow-wrap: anywhere;
+}
+
+.cfo-snapshot-meta strong,
+.cfo-payload-meta dt,
+.cfo-monitor-data dt {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--cfo-muted);
+  font: 10px/1.4 var(--mono, ui-monospace, monospace);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.cfo-balance-list {
+  display: grid;
+  gap: 8px;
+}
+
+.cfo-balance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-deep);
+}
+
+.cfo-balance > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.cfo-balance code,
+.cfo-snapshot-meta code,
+.cfo-record code,
+.cfo-payload-meta code,
+.cfo-relay-confirm code {
+  overflow-wrap: anywhere;
+  color: var(--cfo-muted);
+  font: 11px/1.5 var(--mono, ui-monospace, monospace);
+}
+
+.cfo-amount {
+  font: 600 clamp(15px, 2vw, 20px)/1.25 var(--mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.cfo-empty {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px dashed var(--cfo-line);
+  color: var(--cfo-muted);
+}
+
+.cfo-footnote {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.cfo-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.cfo-form--plan {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cfo-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cfo-field > span,
+.cfo-targets legend {
+  color: var(--cfo-text);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.cfo-field em,
+.cfo-targets em {
+  color: var(--cfo-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.cfo-field input,
+.cfo-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid var(--cfo-line);
+  border-radius: 2px;
+  background: var(--cfo-deep);
+  color: var(--cfo-text);
+  font: 13px/1.4 var(--mono, ui-monospace, monospace);
+}
+
+.cfo-field small {
+  color: var(--cfo-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.cfo-field .cfo-field-error,
+.cfo-field-error {
+  color: var(--cfo-danger);
+}
+
+.cfo-field input[aria-invalid="true"],
+.cfo-field select[aria-invalid="true"] {
+  border-color: var(--cfo-danger);
+}
+
+.cfo-targets {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--cfo-line);
+}
+
+.cfo-targets legend {
+  padding-inline: 6px;
+}
+
+.cfo-target-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(150px, .6fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.cfo-form > .cfo-button {
+  justify-self: start;
+}
+
+.cfo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--cfo-line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--cfo-text);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.3;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.cfo-button--primary {
+  border-color: var(--cfo-green);
+  background: color-mix(in srgb, var(--cfo-green) 12%, var(--cfo-surface));
+  color: var(--cfo-text);
+}
+
+.cfo-button--danger {
+  border-color: var(--cfo-danger);
+  color: var(--cfo-danger);
+}
+
+.cfo-button--quiet {
+  color: var(--cfo-muted);
+}
+
+.cfo-button:hover:not(:disabled) {
+  border-color: var(--cfo-green);
+  background: color-mix(in srgb, var(--cfo-green) 9%, var(--cfo-surface));
+}
+
+.cfo-button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.cfo :where(button, input, select, summary):focus-visible {
+  outline: 3px solid var(--cfo-warning);
+  outline-offset: 3px;
+}
+
+.cfo-error,
+.cfo-status {
+  padding: 12px 14px;
+  overflow-wrap: anywhere;
+}
+
+.cfo-error {
+  border-left: 4px solid var(--cfo-danger);
+  color: var(--cfo-danger);
+}
+
+.cfo-status {
+  border-left: 4px solid var(--cfo-green);
+  color: var(--cfo-text);
+}
+
+.cfo-review-result,
+.cfo-relay-step,
+.cfo-relay-confirm {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cfo-review-result {
+  padding: 14px;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-deep);
+  overflow-wrap: anywhere;
+}
+
+.cfo-review-result ul {
+  padding-left: 20px;
+  color: var(--cfo-muted);
+}
+
+.cfo-review-result li {
+  margin: 5px 0;
+}
+
+.cfo-payload-meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cfo-payload-meta dd,
+.cfo-monitor-data dd {
+  min-width: 0;
+  font: 12px/1.5 var(--mono, ui-monospace, monospace);
+  overflow-wrap: anywhere;
+}
+
+.cfo-payload {
+  max-height: 360px;
+  min-height: 96px;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-deep);
+  color: var(--cfo-text);
+  font: 12px/1.6 var(--mono, ui-monospace, monospace);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.cfo-relay-step {
+  padding-top: 4px;
+}
+
+.cfo-relay-confirm {
+  padding: 14px;
+  border: 1px solid var(--cfo-warning);
+  background: var(--cfo-deep);
+}
+
+.cfo-monitor-data {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.cfo-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cfo-history {
+  align-content: start;
+}
+
+.cfo-history-group {
+  display: grid;
+  gap: 10px;
+}
+
+.cfo-history-group > h4 {
+  color: var(--cfo-green);
+  font: 11px/1.4 var(--mono, ui-monospace, monospace);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cfo-record {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-deep);
+}
+
+.cfo-record-heading {
+  align-items: flex-start;
+}
+
+.cfo-record-heading > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cfo-record-heading time {
+  color: var(--cfo-muted);
+  font: 11px/1.45 var(--mono, ui-monospace, monospace);
+}
+
+.cfo-record-summary {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.cfo-record-details {
+  border-top: 1px solid var(--cfo-line);
+  padding-top: 10px;
+}
+
+.cfo-record-details summary {
+  min-height: 40px;
+  color: var(--cfo-green);
+  font-size: 12px;
+}
+
+.cfo-record-details pre {
+  max-height: 320px;
+  overflow: auto;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--cfo-line);
+  color: var(--cfo-muted);
+  font: 11px/1.5 var(--mono, ui-monospace, monospace);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cfo-loading {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+  color: var(--cfo-muted);
+}
+
+.cfo-loading p {
+  grid-column: 1 / -1;
+}
+
+.cfo-skeleton {
+  min-height: 54px;
+  border: 1px solid var(--cfo-line);
+  background: linear-gradient(100deg, var(--cfo-surface) 25%, color-mix(in srgb, var(--cfo-text) 8%, var(--cfo-surface)) 42%, var(--cfo-surface) 60%);
+  background-size: 220% 100%;
+  animation: cfo-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes cfo-shimmer {
+  to { background-position-x: -220%; }
+}
+
+@media (max-width: 900px) {
+  .cfo-readiness,
+  .cfo-monitor-data {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+.cfo-wallet-options .cfo-button {
+  min-width: min(100%, 240px);
+}
+@media (max-width: 680px) {
+  .cfo {
+    gap: 14px;
+  }
+
+  .cfo-header,
+  .cfo-panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cfo-header-actions {
+    justify-content: flex-start;
+  }
+
+  .cfo-readiness,
+  .cfo-snapshot-meta,
+  .cfo-monitor-data,
+  .cfo-form,
+  .cfo-form--plan,
+  .cfo-target-row,
+  .cfo-payload-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cfo-targets {
+    grid-column: auto;
+    padding: 12px;
+  }
+
+  .cfo-balance {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cfo-amount {
+    text-align: left;
+  }
+
+  .cfo-record-heading {
+    flex-direction: column;
+  }
+
+  .cfo-panel-heading > .cfo-button {
+    width: 100%;
+  }
+
+  .cfo-button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cfo-button {
+    transition: none;
+  }
+
+  .cfo-skeleton {
+    animation: none;
+  }
+}
