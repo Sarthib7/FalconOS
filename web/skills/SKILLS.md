@@ -1,8 +1,8 @@
 ---
 name: falconos
 description: Use FalconOS for retained NEAR research, legacy Solana Devnet lending, or owner-approved NEAR Intents treasury actions. CFO actions require a verified wallet session, current evidence, an exact owner signature and a separate operator trial grant. No custody or delegated signing.
-version: 0.6.0
-requiredMcpVersion: 0.6.0
+version: 0.7.0
+requiredMcpVersion: 0.7.0
 ---
 
 # FalconOS MCP skill
@@ -15,7 +15,7 @@ FalconOS exposes retained research, fixed Solana Devnet lending and a separately
 
 ## Start here
 
-Fetch <{{FALCON_SKILL_URL}}> and `SKILLS.manifest.json` from the same origin. Compare the manifest SHA-256 with the digest of the exact SKILLS.md bytes; preserve bytes and newlines. Same-origin headers and manifests are not independent trust anchors. The versioned record discovery URL is <https://github.com/Sarthib7/FalconOS/blob/main/web/skills/releases/0.6.0.json>. Moving `main` is not a final pin. Authenticate the known repository separately, obtain a full immutable commit ID through that trusted channel, and check the record at that commit. Compare the rendered guide against an independently learned digest. The candidate checkout's own record is not an authenticated expected value.
+Fetch <{{FALCON_SKILL_URL}}> and `SKILLS.manifest.json` from the same origin. Compare the manifest SHA-256 with the digest of the exact SKILLS.md bytes; preserve bytes and newlines. Same-origin headers and manifests are not independent trust anchors. The versioned record discovery URL is <https://github.com/Sarthib7/FalconOS/blob/main/web/skills/releases/0.7.0.json>. Moving `main` is not a final pin. Authenticate the known repository separately, obtain a full immutable commit ID through that trusted channel, and check the record at that commit. Compare the rendered guide against an independently learned digest. The candidate checkout's own record is not an authenticated expected value.
 ### Reproducibly verify a published build
 
 From an authenticated checkout of the known repository, use a full commit ID and expected digest learned through a separately authenticated channel. Pass a record obtained independently of the candidate checkout, not its own unverified release file. The verifier rebuilds that commit in a clean temporary Git worktree using locked web dependencies and canonical `build:agents` rendering. It is not a sandbox or proof of author identity. CI uses the candidate checkout's record only to check reproducibility and internal consistency, not publisher authentication or release approval. Do not fetch an absent historical commit from an arbitrary source.
@@ -34,7 +34,7 @@ Alternatively, supply the independently learned SHA-256 directly: `node web/scri
 {"mcpServers":{"falconos":{"type":"http","url":"{{FALCON_MCP_URL}}"}}}
 ```
 
-Initialize MCP, list tools, and call `falcon_self_test({})`. Require source version 0.6.0 or later and all 29 tools below. This is metadata, not health, authorization, signer support, funds or execution readiness. Use the CFO workflow for NEAR Intents management and the research workflow for publisher evidence. For legacy Solana lending, call `falcon_public_graph({})` first. `OBSERVED` is technical evidence, not personal approval. `NO_DATA` must not fall back to an older graph. The public graph can reuse its 60-second capture; no force-refresh selector is supported.
+Initialize MCP, list tools, and call `falcon_self_test({})`. Require source version 0.7.0 or later and all 30 tools below. This is metadata, not health, authorization, signer support, funds or execution readiness. Use the CFO workflow for NEAR Intents management and the research workflow for publisher evidence. For legacy Solana lending, call `falcon_public_graph({})` first. `OBSERVED` is technical evidence, not personal approval. `NO_DATA` must not fall back to an older graph. The public graph can reuse its 60-second capture; no force-refresh selector is supported.
 
 Before choosing an owner action, require `capabilities.schemaVersion: 1`, `verification: "metadata-only"`, and `defaultSupport: "unsupported"`. Match the requested domain, action, chain and network to a `supported` entry. A missing match is unsupported; show the matching `unavailable` entry's `code` and `reason`, or explain which requested scope is absent. Null chain/network values in unavailable entries are not wildcards. Missing or unknown schema versions stop this workflow rather than granting fallback support.
 
@@ -74,13 +74,15 @@ Use this branch only when capability discovery lists the CFO tools. An older hos
 4. **Prepare and approve exact bytes.** Use `falcon_cfo_prepare` only for the retained plan. Show its full unchanged unsigned payload, account, assets, exact debit, minimum credit and expiry. Obtain separate owner approval before signing that UTF-8 payload with raw Ed25519. Register only the returned signature through `falcon_cfo_register_signed`; never substitute a payload or reuse the sign-in signature. Relay needs another explicit approval plus an operator grant and trial bound to this actionId, quoteHash, assets, amount, expiry and verified T82 evidence. This skill cannot create or widen those permissions.
 5. **Reconcile before reuse.** `falcon_cfo_relay` submits the retained signed bytes once. A lost reply is SUBMISSION_UNKNOWN, not failure. Use `falcon_cfo_reconcile` on that same action and preserve pending/unverified/refund states. Provider SUCCESS alone is insufficient; finalized matching NEAR receipts and token effects are required. Rotation exits into reserve before a fresh approved entry. Reinvestment uses settled funds, not projected profit. The explicitly started `falcon_cfo_monitor` is bounded and read-only; it never signs, relays or launches paid models on every poll.
 
-## Tools (29)
+To inspect one retained decision, call `falcon_cfo_decision_trace` with `session` and `recordId`. For a completed model review, use the immutable `review.recordId` from the current plan or overview. The trace binds the root record, its append cutoff, source hashes, policy checks, retained Lead/Risk responses and available action or receipt references. Its hash identifies the historical projection. `freshness` is separate and uses the current database clock, each retained mandate's evidence-age limit, quote provider time and quote expiry. A portfolio capture time is not a chain-event timestamp. Missing source time remains null. Reading a trace cannot capture, start/retry a model, sign, relay or reconcile. `OBSERVED` means retained records were inspected, not independent market verification, a risk approval or permission to spend. A later review cannot rewrite an earlier record's trace.
+
+## Tools (30)
 
 - Public: `falcon_public_graph` (empty arguments), `falcon_wallet_status`, `falcon_decode_transaction`, `falcon_self_test`, `falcon_research_case`, `falcon_replay_research_case`, `falcon_research_source`.
 - Owner records: `falcon_yield_opportunities`, `falcon_refresh_evidence`, `falcon_reserve_decision`, `falcon_activity`, `falcon_adopt_research_case`, `falcon_review_research_case`.
 - Session: `falcon_connect`, `falcon_connect_verify`, `falcon_disconnect`.
 - Transactions/receipts: `falcon_prepare_transaction`, `falcon_submit_signed`, `falcon_check_receipt`.
-- CFO: `falcon_cfo_overview`, `falcon_cfo_mandate`, `falcon_cfo_capture`, `falcon_cfo_plan`, `falcon_cfo_prepare`, `falcon_cfo_register_signed`, `falcon_cfo_relay`, `falcon_cfo_reconcile`, `falcon_cfo_monitor`, `falcon_cfo_record`.
+- CFO: `falcon_cfo_overview`, `falcon_cfo_mandate`, `falcon_cfo_capture`, `falcon_cfo_plan`, `falcon_cfo_prepare`, `falcon_cfo_register_signed`, `falcon_cfo_relay`, `falcon_cfo_reconcile`, `falcon_cfo_monitor`, `falcon_cfo_record`, `falcon_cfo_decision_trace`.
 
 Self-test reports server version, tool inventory/schema fingerprint, versioned capability scope, unavailable reasons, authority rules and contextual-check tool names. It remains available during a Mesh outage because it makes no Mesh call. Readiness stays `not_checked`; successful metadata discovery is not a health or execution check.
 

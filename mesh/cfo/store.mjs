@@ -434,6 +434,22 @@ export function createCfoStore(pool) {
       } catch (error) { throw safeError(error); }
     },
 
+    async reviewAt(owner, jobId, cutoffSequence) {
+      ownerId(owner);
+      const normalizedJobId = id(jobId, 'Review job ID');
+      if (typeof cutoffSequence !== 'string' || !/^[1-9]\d*$/.test(cutoffSequence)) invalid('CFO trace cutoff is invalid.');
+      try {
+        const result = await pool.query(
+          `SELECT id, request_id, created_at, graph, analysis FROM falcon_mesh.analyses
+           WHERE owner_id = $1 AND analysis->>'recordKind' = $2 AND analysis->'data'->>'jobId' = $3
+             AND (analysis->>'sequence')::bigint <= $4::bigint
+           ORDER BY (analysis->>'sequence')::bigint DESC LIMIT 1`,
+          [owner, recordKind('review'), normalizedJobId, cutoffSequence],
+        );
+        return result.rows[0] ? rowRecord(result.rows[0], owner) : null;
+      } catch (error) { throw safeError(error); }
+    },
+
     async byRequest(owner, requestId) {
       ownerId(owner);
       const normalizedRequest = id(requestId, 'Request ID');

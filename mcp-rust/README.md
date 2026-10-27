@@ -1,10 +1,10 @@
 # Falcon MCP server
 
-Falcon's Rust server is a stateless Streamable HTTP adapter to Mesh. This source change adds the owner-bound NEAR/mainnet CFO tools for the 0.6.0 release alongside retained publisher-reported NEAR research and the existing public Solana Devnet evidence and owner-bound lending tools. Mesh owns models, decisions, transaction policy and financial logic. Falcon holds no keys, signs nothing, and has no custody or spending authority. Legacy Solana signing and broadcast remain human-only; CFO relay requests only the exact owner-signed intent behind a separate default-deny trial grant [SOURCE SCOPE; hosted0.6.0 not verified].
+Falcon's Rust server is a stateless Streamable HTTP adapter to Mesh. Source0.7.0 adds an owner-scoped CFO decision trace to the NEAR/mainnet CFO, retained research and Solana Devnet tools. Mesh owns financial logic and storage. Falcon holds no keys and grants no signing or spending authority. Existing owner signatures and default-deny trial grants remain required [SOURCE SCOPE; hosted0.7.0 not verified].
 
 The hosted endpoint is `https://mcp.falconos.markets/mcp`. Railway deployment `6697d4d3-6cab-47da-b2bd-841c0344975c` replaced the Node runtime with Rust. See the [cutover record](../status.md#rust-mcp-cutover-2026-10-15) for evidence and limits [VERIFIED, Railway readback].
 
-The dated deployment record above does not prove a hosted0.6.0 rollout. Check the actual server version before using the CFO or new research tools. This source change does not authorize production activation [SOURCE SCOPE].
+The dated deployment record above does not prove a hosted0.7.0 rollout. Check the actual server version before using new tools. The last observed hosted server reported0.4.0; local0.7.0 behavior does not establish production recovery [VERIFIED OBSERVATION, 2026-10-27].
 
 ## Install
 
@@ -23,7 +23,7 @@ Generic client configuration:
 
 Restart the client after changing its configuration. List tools and call `falcon_self_test({})`. Use `falcon_research_case({})` for the public NEAR case, or `falcon_public_graph({})` for fixed Devnet evidence. Both public reads need no wallet or session. Registration and metadata do not prove backend, signer, funding, transaction or model-host readiness [VERIFIED SOURCE].
 
-## Tools (0.6.0 source:29)
+## Tools (0.7.0 source:30)
 
 | Tool | Contract |
 | --- | --- |
@@ -56,6 +56,7 @@ Restart the client after changing its configuration. List tools and call `falcon
 | `falcon_cfo_reconcile` | Reads retained action state and receipt verification; unknown stays unknown. |
 | `falcon_cfo_monitor` | Configures bounded read-only monitoring; it never signs or relays. |
 | `falcon_cfo_record` | Reads one authenticated retained CFO record with signed bytes redacted. |
+| `falcon_cfo_decision_trace` | Reads a hash-bound, owner-scoped decision graph at an immutable record cutoff, with current freshness reported separately. |
 
 ### Public graph contract
 
@@ -63,13 +64,21 @@ The anonymous graph calls Mesh `GET /v1/public/graph/live` without a session, Be
 
 `OBSERVED` is technical evidence, not a personalized REVIEW, recommendation, owner mandate, or approval. Current `NO_DATA` never substitutes an older successful graph. Public output excludes source content, raw exchanges, wallets, sessions, and owner records. Mesh may reuse a complete graph head for 60 seconds; repeated calls do not force a new capture [VERIFIED, Mesh source and tests].
 
-### Capability discovery (0.6.0 source)
+### Capability discovery (0.7.0 source)
 
-Self-test accepts `{}` and returns 29 tool names, capability schema version 1, `verification: "metadata-only"` and `defaultSupport: "unsupported"`. It makes no Mesh request. Signer, funding, transaction, `researchReviewGrant`, current CFO context, and CFO provider/quote readiness remain `not_checked`; CFO network is NEAR mainnet only, CFO relay grant defaults to deny unless an exact trial grant is configured, and owner signature remains required for every financial action. Neither self-test nor HTTP readiness verifies these prerequisites or funds [SOURCE CONTRACT].
+Self-test accepts `{}` and returns 30 tool names, capability schema version1, `verification: "metadata-only"` and `defaultSupport: "unsupported"`. It makes no Mesh request. Signer, funding, transaction, research grants and CFO context/provider readiness remain `not_checked`. Signatures and exact trial grants remain separate from login or model review [SOURCE CONTRACT].
 
 Match each capability's domain, chain and network. Existing public-market-evidence, lending-execution and yield-discovery identifiers retain their scope. NEAR research is publisher-reported mainnet context, with executionSupported false. CFO is a separate NEAR/mainnet surface. Unsupported stocks/perps advice, swaps, EVM and brokerage actions keep specific unavailable reasons. No top-level chain/network default applies to every tool [SOURCE CONTRACT].
 
-The frozen `fixtures/node-0.5.0.json` remains legacy compatibility history. Current discovery combines those unchanged 19 legacy schemas with the 10 strict schemas in `fixtures/cfo-tools-0.6.0.json`; self-test fingerprints the combined inventory. Cargo package version 0.6.0 supplies the server version [VERIFIED LOCAL source and MCP smoke].
+The frozen `fixtures/node-0.5.0.json` retains the19 legacy schemas. Current discovery adds11 CFO schemas from `fixtures/cfo-tools-0.7.0.json`. Self-test fingerprints the combined inventory; Cargo supplies server version0.7.0 [VERIFIED SOURCE].
+
+### Retained CFO decision trace
+
+Use `falcon_cfo_decision_trace({session,recordId})`. For a completed model review, the plan or overview exposes its immutable `review.recordId`. Job identity and record identity are different [VERIFIED SOURCE].
+
+Mesh loads owner-bound records at the selected root's append sequence. The historical graph and its hash remain unchanged when a newer capture or review arrives. The separate `freshness` envelope uses database UTC, the retained mandate's age limit, provider timestamps and quote expiry. Null source time means unknown, not the capture time. Trace reads make no capture, model, signing, relay or reconciliation request [SOURCE CONTRACT].
+
+The graph includes retained policy checks, bound role responses and available action/receipt references. Raw provider bodies and signed bytes are excluded. `OBSERVED` attests retained records only; `executionReady` stays false. Hashes do not prove that a provider's claim is true. Stocks/perps integration, live model-pair acceptance and funded execution remain separate gates [SOURCE CONTRACT].
 
 ### Retained NEAR research contract
 

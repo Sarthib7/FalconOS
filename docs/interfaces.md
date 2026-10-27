@@ -428,3 +428,27 @@ Verification: [VERIFIED, local runs] From mesh/, full schema initialization prin
 
 1. [INFERRED] Clients can use Falcon-verified review data as the standard trust source without a separate RPC connection. It does not add independent cryptographic assurance.
 2. [INFERRED] Time expiry and observed height are enough review data for the existing interface. A blockhash may still expire before human approval; clients must never reuse changed bytes under an old approval.
+
+## Owner CFO decision trace, 2026-10-27
+
+Interface ID: CFO-TRACE-1
+Owner: coordinator
+Provider: Mesh CFO service and shared decision-trace projection
+Consumers: authenticated HTTP and Rust MCP0.7.0
+Status: Completed
+
+[APPROVED R6.1] Request: authenticated `GET /v1/cfo/records/:id/trace`, or `falcon_cfo_decision_trace({session,recordId})`. Wallet and owner derive from the verified session. Review envelopes expose immutable `recordId`, distinct from `jobId`.
+
+[VERIFIED SOURCE] Response: `{trace,freshness}`. Trace schema1 includes root record/hash, append cutoff, original record time, typed nodes, edges, issues and a canonical projection hash. It is limited to32 retained records,64 nodes,128 edges and128KiB graph bytes. `executionReady` remains false.
+
+[VERIFIED SOURCE] The root append sequence bounds linked records and review lookup. A later observation or review cannot rewrite that historical projection. Current freshness uses database UTC, the source's retained mandate age limit, quote provider time and quote expiry. Missing provider/chain time stays null. Capture freshness is not independent market-event freshness.
+
+[VERIFIED SOURCE] Errors: wrong-owner or absent root returns NOT_FOUND; static operator credentials cannot replace a wallet session. Corrupt hashes return STORAGE_UNAVAILABLE. Missing references produce explicit NO_DATA issues. Oversize graphs return TOO_LARGE. The read cannot capture, claim/start/retry a model, sign, relay or reconcile. Signed bytes and raw provider bodies are omitted.
+
+[VERIFIED LOCAL] The native-MCP integration emitted `Actual native MCP -> authenticated Mesh -> PostgreSQL trace verified.` These checks use disposable PostgreSQL, test-owned wallet sessions and retained fixtures. Production configuration and funds remain unverified.
+
+### Least confident decisions
+
+1. [INFERRED] This trace projection can support future stock/perps adapters without changing their financial schemas. Those adapter contracts still need source verification.
+2. [INFERRED] Record-level hashes provide enough audit context for the first slice. They attest retained bytes, not independent source truth.
+

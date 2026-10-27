@@ -355,6 +355,7 @@ Focused perps tests use deterministic checked-in synthetic captures and injected
 - [APPROVED R1 contract] One open action per owner across replicas. Immutable analyses/source records reuse schema3; no migration authorized. Unknown send remains reserved; duplicate request cannot create another dispatch. Reconcile retained intent/quote and finalized chain result before dependent leg or new spend. Rotation exits into reserve then obtains fresh entry approval; reinvestment uses settled funds, never assumed profit.
 - [VERIFIED official docs read, 2026-10-26] NEAR Intents has no testnet. https://docs.near-intents.org/resources/faqs.md. Real funded acceptance remains separate. T82/V180 prerequisite retained. Read-only monitor never signs, relays or automatically launches paid model calls; restart stops monitoring.
 - [VERIFIED R2 user approval, 2026-10-26] Fixed NearBlocks v3 transaction-hash lookup discovers relayer signer for independent NEAR RPC tx_status FINAL verification. Optional server-only FALCON_CFO_NEARBLOCKS_API_KEY; no arbitrary source URLs. Missing key/source/matching receipt → UNVERIFIED, not CONFIRMED. No extra money or provider-terms authority.
+- [APPROVED R6.1] GET `/v1/cfo/records/:id/trace` and MCP `falcon_cfo_decision_trace({session,recordId})` return owner-scoped immutable decision trace plus separate current freshness. Review envelopes expose immutable `recordId`, distinct from jobId. Trace root append sequence bounds linked evidence/review reads; retained hashes bind sources, policy, roles and available action/receipt state. No capture/model/sign/relay/reconcile from trace read. Reuse schema3; no migration.
 
 ## §V INVARIANTS
 
@@ -640,6 +641,7 @@ V209: [VERIFIED local regressions] ∀ independently confirmed rotation exit wit
 V210: [VERIFIED adapter fixtures and official documentation] ∀ settlement proof → exact signed intent and finalized owner token effects; one failed relay attempt cannot terminate a replayable intent; lost submission identity can recover only from the exact verified receipt; quote deposit identifier remains distinct from verifying_contract.
 V211: [VERIFIED local regressions] ∀ quote use → signed provider time and local capture time both fresh; review clocks return canonical database UTC after awaited work; monitor intervals cannot overflow the native timer; a retained remote lease alone does not prove a running or stopped process.
 V212: [VERIFIED built-browser smoke] ∀ verified owner CFO mount → render retained state and explicit mainnet boundary without automatic capture, model work or financial signature; unavailable providers remain NO_DATA; local development binding must not weaken production HTTPS enforcement.
+V213: [APPROVED R6.1] ∀ CFO trace → verified wallet owner + immutable root/sequence/hash; bounded 32 retained records,64 nodes,128 edges,128KiB graph; later observations/reviews cannot alter historical trace; source mismatch/corruption never falls back; provider time/capture time/quote expiry/current freshness remain distinct; absent source time stays null; signed bytes/raw provider bodies excluded; uncertain send preserved; executionReady=false; trace never starts external or financial work.
 
 
 ## §T TASKS
@@ -744,6 +746,7 @@ T93|~|[APPROVED R1] shared CFO review domain adapter, same-evidence Lead/Risk an
 T94|~|[APPROVED R1] exact signed Intents quote/action lifecycle, default-deny trial grant, owner reservation and finalized receipt reconciliation; restart/unknown/duplicate protection|I22,V197,V200,V201
 T95|~|[APPROVED R1] confirmed-proceeds rotation/reinvestment, bounded read-only monitoring, dashboard controls and thin Rust MCP; no delegated signing|I22,V202,V203
 T96|.|[OWNER GATES] complete T82, provider terms/account setup, separately approved model pair and exact funded NEAR trial; prove enter/exit/rotate/reinvest/failure and prepare honest hackathon demo; publication/deploy/submission separate|I22,V180,V197-V203
+T97|x|[VERIFIED LOCAL R6.1; remote CI/hosted gates separate] owner-scoped immutable CFO decision trace through HTTP/MCP; shared projection, domain provenance/freshness, review identity, adverse behavior checks and native/PostgreSQL smoke; stocks/perps and funded acceptance remain open|I22,V197,V199,V201,V205,V206,V211,V213
 
 
 ## §B BUGS
@@ -900,3 +903,6 @@ B147|2026-10-26|[VERIFIED private negative control: tests4/pass1/fail3] bypassin
 B148|2026-10-26|[VERIFIED provider regressions] deposit identifier was conflated with verifier contract; a failed finalized relay attempt was treated as terminal intent failure; lost reply could not discover its exact receipt identity|V210; validate each separate identity and retain UNVERIFIED absent complete finalized proof
 B149|2026-10-26|[VERIFIED composed review failure] controller clock read an absent record data.createdAt; the native preflight envelope uses schema2, not CFO request schema1|V211; sample trusted database UTC around awaited operations and preserve the real preflight contract
 B150|2026-10-26|[VERIFIED local preview and user report] a production web build pointed to loopback HTTP triggered the required HTTPS configuration error|V212; use explicit development mode locally with the allowed site origin; keep production HTTPS enforcement unchanged
+B151|2026-10-27|[VERIFIED test-fixture failure] a historical-freshness test called current planning with stale inventory; existing policy correctly returned CONFLICT|V198,V213; seed historical evidence with policy evaluated at its retained cutoff; keep current planning freshness enforcement
+B152|2026-10-27|[VERIFIED HTTP regression:tests1/pass0/fail1] trace copied untyped NO_DATA block metadata and returned a nested signedData marker|V213; project block hash/height only as typed scalar metadata; preserve null for unknown fields
+B153|2026-10-27|[VERIFIED boundary regression:tests1/pass0/fail1] graph size was checked before adding its hash, so an oversized wire object was accepted|V213; enforce graph byte limit after hash attachment and accept the exact-limit case

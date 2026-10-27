@@ -55,7 +55,7 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
         "falcon_cfo_register_signed" => &["session", "requestId", "actionId", "signatureBase64"],
         "falcon_cfo_relay" | "falcon_cfo_reconcile" => &["session", "requestId", "actionId"],
         "falcon_cfo_monitor" => &["session", "requestId", "enabled"],
-        "falcon_cfo_record" => &["session", "recordId"],
+        "falcon_cfo_record" | "falcon_cfo_decision_trace" => &["session", "recordId"],
         _ => {
             return Err(ToolFailure {
                 code: "NOT_FOUND".into(),
@@ -106,7 +106,7 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
         "falcon_cfo_register_signed" => &["session", "requestId", "actionId", "signatureBase64"],
         "falcon_cfo_relay" | "falcon_cfo_reconcile" => &["session", "requestId", "actionId"],
         "falcon_cfo_monitor" => &["session", "requestId", "enabled"],
-        "falcon_cfo_record" => &["session", "recordId"],
+        "falcon_cfo_record" | "falcon_cfo_decision_trace" => &["session", "recordId"],
         _ => &[],
     };
     if let Some(k) = required.iter().find(|k| !o.contains_key(**k)) {

@@ -1,5 +1,19 @@
 # Status
 
+## R6.1 decision trace: 2026-10-27
+
+Owner: coordinator. Status: Completed (local trace slice); Blocked (production recovery and broader release).
+
+[VERIFIED USER APPROVAL] R6.1 and inline execution were explicitly approved. Worker dispatch rejected explicit Luna/max selection; no worker or substitute model started. The new isolated branch is `feat/cfo-decision-trace-20261027`, based on checkpoint`2d400cc`. The original dirty checkout and prior checkpoint remain unchanged.
+
+[VERIFIED LOCAL] Source MCP0.7.0 adds the wallet-bound CFO decision trace through the actual backend. Mesh verification returned `tests382, pass382, fail0, skipped0`, with49 declared release files linked in isolation. Native Rust returned33passed across14suites. The combined native-MCP and complete-wire-size checks returned2passing tests. Agents build and related web checks returned16passed. Repository checks returned31passed after correcting an insufficient command deadline.
+
+[VERIFIED RUNTIME] The official MCP client returned `MCP_HTTP_SMOKE_PASS`, `serverVersion:"0.7.0"`, `tools:30`, `meshUnavailable:false`, `graphStatus:"OBSERVED"` against source Mesh and existing local schema3. This was real fixed Devnet evidence, not funded execution. Trace-specific model/provider inputs use controlled fixtures. The negative control returned `tests1, pass0, fail1` when freshness was forced toFRESH. Raw NO_DATA block-object and complete-wire-size regressions failed before their fixes.
+
+[VERIFIED PRODUCTION DIAGNOSIS; NOT RECOVERED] Public MCP still reported0.4.0/14tools during this check; graph returned `STORAGE_UNAVAILABLE` and readiness503. The historical Falcon Supabase project reported`INACTIVE` and its API hostname returned`ENOTFOUND`. Railway CLI remained`Unauthorized`. [INFERRED] Database inactivity can explain the outage, but current deployed target/configuration and exact cause need authenticated Railway logs. No database restore, migration, role change or deployment occurred.
+
+[UNCHANGED FINANCIAL GATES; PUBLICATION APPROVED] This completes T97 locally, not universal market coverage or funded MVP acceptance. T83/T84, provider terms/key setup, real model-pair budget, T82, exact funded trial and R5 consumer redesign remain separate. The owner approved one sequential commit, branch push and draft PR against the checkpoint branch. Merge and production rollout remain unapproved. No real-user keys, signatures, financial relay or paid model calls were used. See [the complete evidence and limits](docs/verification/2026-10-27-cfo-trace.md).
+
 ## Publication recovery: 2026-10-27
 
 Owner: coordinator. Status: Blocked (release and consumer redesign).

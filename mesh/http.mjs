@@ -315,6 +315,11 @@ export function createApi({
             send(200, await cfo.overview(owner, wallet), ACTIVITY_LIMIT_BYTES);
             return;
           }
+          const tracePath = /^\/v1\/cfo\/records\/([^/]+)\/trace$/.exec(url.pathname);
+          if (tracePath) {
+            send(200, await cfo.getDecisionTrace(owner, wallet, normalizeResearchUuid(tracePath[1])), ACTIVITY_LIMIT_BYTES);
+            return;
+          }
           const recordPath = /^\/v1\/cfo\/records\/([^/]+)$/.exec(url.pathname);
           if (recordPath) {
             const record = await cfo.getRecord(owner, wallet, normalizeResearchUuid(recordPath[1]));
