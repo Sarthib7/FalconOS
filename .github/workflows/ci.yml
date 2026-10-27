@@ -250,7 +250,7 @@ jobs:
           npm --prefix web run build:mesh
 
       - name: Verify pinned skill rebuild
-        run: npm run verify:skill-rebuild -- --ref "$(git rev-parse HEAD)" --expected-record web/skills/releases/0.5.0.json
+        run: npm run verify:skill-rebuild -- --ref "$(git rev-parse HEAD)" --expected-record web/skills/releases/0.6.0.json
 
       - name: Check MVP and main-site routes
         run: node --test web/test/mvp-routes.test.mjs

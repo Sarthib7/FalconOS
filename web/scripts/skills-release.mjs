@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { renderSkill } from '../bot/install-commands.mjs';
 
-export const SKILL_VERSION = '0.5.0';
-export const REQUIRED_MCP_VERSION = '0.5.0';
+export const SKILL_VERSION = '0.6.0';
+export const REQUIRED_MCP_VERSION = '0.6.0';
 export const CANONICAL_SKILL_URL = 'https://agents.falconos.markets/SKILLS.md';
 
 function artifact(body, contentType, hashHeader) {
