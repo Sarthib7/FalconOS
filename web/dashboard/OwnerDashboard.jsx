@@ -264,6 +264,7 @@ function OwnerWorkspace({ session, walletSession, activity, onRefresh, onLogout,
         <button className="owner-button owner-button--quiet" type="button" onClick={onLogout}>Sign out</button>
       </div>
     </div>
+    <Cfo session={session} walletSession={walletSession} />
     {activity.error && data && <div className="owner-refresh-error" role="alert">
       <p>Couldn’t refresh your retained activity. {activity.error}</p>
       <button className="owner-button owner-button--quiet" type="button" onClick={onRetry}>Try again</button>
@@ -275,7 +276,6 @@ function OwnerWorkspace({ session, walletSession, activity, onRefresh, onLogout,
         <ActivityTrail activity={data} />
       </div>
     </div>}
-    <Cfo session={session} walletSession={walletSession} />
   </section>;
 }
 
