@@ -15,6 +15,18 @@ const RECEIPTS = Object.freeze({
     symbol: 'TLO', blockchain: 'eth', contractAddress: '0x0f38f1ce62776d4a0038bc6cac66877a5687383b', decimals: 8,
   }),
 });
+
+export const CFO_CONSUMER_TEMPLATE = Object.freeze({
+  id: 'falcon-cfo-consumer',
+  version: 1,
+  maxPositionBps: 2500,
+  slippageBps: 50,
+  maxFeeBps: 100,
+  maxEvidenceAgeSeconds: 300,
+  monitorIntervalSeconds: 300,
+  maxMonitorCycles: 12,
+});
+
 const MANDATE_KEYS = [
   'schemaVersion', 'wallet', 'reserveAssetId', 'reserveFloorBaseUnits', 'maxActionReserveBaseUnits',
   'maxPositionBps', 'slippageBps', 'maxFeeBps', 'maxEvidenceAgeSeconds', 'targets',
