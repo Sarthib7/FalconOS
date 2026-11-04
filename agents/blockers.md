@@ -1,0 +1,92 @@
+# FalconOS launch blockers
+
+Internal owner-action register · as of 2026-11-04
+
+These records track the owner decisions and work that remain open for a consumer launch or funded financial acceptance. A prior production smoke supports only a narrow public fixed-graph read. The current server is reported to advertise 30 tools [REPORTED], and its OMP entry is not a read-only allowlist. No account, provider terms, deployment, publication, paid call, signature, or transfer was changed for this register.
+
+Evidence-history note: `status.md#unfunded-production-trace-accepted-2026-10-28` records the accepted unfunded trace and supersedes the earlier "no CFO records" wording in `status.md#backend-only-production-rollout-2026-10-28`. Treat the latter section as historical for guide-version and dependency notes, not as a current runtime check.
+
+
+## BL-01: R5 consumer integration and acceptance
+
+Status: Closed for local R5/source acceptance. Consumer deployment and funded launch remain Blocked.
+
+Owners: `ProductDesign` (dashboard view and CSS), `SeniorEngineer` (CFO consumer), `JuniorChecks` (owner-browser smoke), `RedTeamChecks` (behavior/security cases), `Orchestrator` (backend metadata, integration, all gates).
+
+Evidence: [VERIFIED, parent] Helpers14/14 and production-built owner browser32/32 passed. A private enabled-sign mutation failed its intended V216 check24/25. Native keyboard copy, mobile width and scoped axe checks passed in the observed states. All workflows passed exact consumer head3c01355. Full commands, links and limitations: [`status.md#r5-consumer-acceptance-2026-11-04`; `SPEC.md T99, V214-V216`].
+
+Next owner action: Review drafts127 and128. Separately approve the backend-template/origin rollout and user-managed UI release if desired. Keep provider/model/financial gates closed until their own exit evidence is accepted.
+
+Exit evidence: [VERIFIED, parent] Local/source acceptance is recorded in `status.md#r5-consumer-acceptance-2026-11-04`. Controlled financial fixtures prove consumer transitions, not funded/provider/model acceptance. This closes BL-01 only.
+
+## BL-02: Provider retention, terms, account, and keys
+
+Status: Blocked
+
+Owner: `Coordinator / project owner` (provider relationship and account holder).
+
+Evidence: The approved R1 contract records the 1Click Terms §4.1(e) 24-hour API-data retention limit, except static end-user transaction history, while R1 retains unused quote snapshots indefinitely. A written exception or approved retention revision is required before provider access. The last recorded production configuration (2026-10-28) had provider requests disabled and partner/sender keys absent; this is historical, not a current configuration readback. [`docs/interfaces.md#owner-approved-near-ai-cfo-r1-2026-10-26`; `status.md#backend-only-production-rollout-2026-10-28`]
+
+Next owner action: Review the applicable provider terms and data-use/retention requirements; obtain a written exception or approve a compatible retention design; resolve provider inference permission; then, only with owner authorization, create/configure the required provider account and keys.
+
+Exit evidence: Owner-approved terms/retention decision plus verified provider account/configuration state. Do not store credentials or private account details in this register.
+
+## BL-03: Actual bound Lead/Risk pair and call budget
+
+Status: Blocked
+
+Owners: `Coordinator / project owner` (provider and finite budget approval); `Orchestrator` (bound-run evidence).
+
+Evidence: The last recorded production configuration had providers disabled and zero review owners [VERIFIED at the 2026-10-28 boundary; historical only]. The approved contract distinguishes native SDK/preflight proof from an actual bound Lead/Risk pair, keeps provider activation and the model budget separate, and leaves production financial, model, and provider grants default-closed. [`status.md#backend-only-production-rollout-2026-10-28`; `docs/interfaces.md#owner-approved-near-ai-cfo-r1-2026-10-26`; `SPEC.md I22, V199, T96`]
+
+Next owner action: Obtain fresh explicit owner approval for a finite model-call budget and any provider activation. After provider terms/keys are resolved, the Orchestrator must retain one completed job with accepted Lead and independent Risk results bound to the same request/run and snapshot hash. Do not treat separate diagnostic outputs, native preflight, or a Risk `NO_DATA` diagnostic as the required pair.
+
+Exit evidence: Owner approval and the exact retained result proving both roles accepted against the same snapshot, with the job and relevant hashes recorded. No model call is authorized by this blocker record.
+
+## BL-04: T82 and capped funded NEAR acceptance
+
+Status: Blocked
+
+Owners: `Coordinator / project owner` (financial approval and any funded account); `Orchestrator` (acceptance evidence).
+
+Evidence: T82 remains Planned pending separately owner-approved Devnet supply and receipt-token redemption, exact signatures, confirmed receipts, and independent Explorer proof. NEAR Intents has no testnet, and funded acceptance remains a separate owner gate. The R1 CFO launch gate separately requires T82 and an exact capped NEAR trial. [`SPEC.md T82, V180, T96, I22`]
+
+Next owner action: Keep the proofs distinct. First request and obtain explicit approval for T82's capped Devnet supply/redemption round trip and record exact signatures, token changes, confirmed receipts, and Explorer evidence. Separately, only after all prerequisites, request an explicit exact-cap NEAR mainnet trial approval and perform its defined acceptance. No funds, keys, signatures, broadcasts, or trial grants are authorized here.
+
+Exit evidence: T82 evidence and the separately approved capped NEAR trial record, each independently reconciled and accepted by the Orchestrator. Do not label T82 itself as NEAR acceptance.
+
+## BL-05: Public guide and human UI publication
+
+Status: Blocked
+
+Owners: `Coordinator / project owner` (publication decision and Cloudflare); `ProductDesign` (local UI artifact).
+
+Evidence: The coordinator reports that the current production dashboard still returns Soon [REPORTED, current read-only production observation]. R5 code approval does not authorize frontend deployment. [`SPEC.md T86`; `docs/interfaces.md#cfo-consumer-r5-contract`] A separate current read-only SSH report says `FALCON_MESH_ORIGINS` includes `https://agents.falconos.markets`, `https://falcon-agents.pages.dev`, `https://mcp.falconos.markets`, and the Railway MCP hostname, but excludes `https://falconos.markets`. [REPORTED, coordinator, current read-only production SSH]
+
+Next owner action: Keep the dashboard gated. Separately approve and verify the backend candidate that supplies R5 template metadata. For a main-host UI build, use the verified HTTPS API base `VITE_MESH_API_URL=https://api.falconos.markets` and approve adding `https://falconos.markets` to `FALCON_MESH_ORIGINS` while preserving every current origin. Verify the production readback. Separately approve frontend/guide publication; Cloudflare remains owner-managed. R5 code approval alone does not authorize configuration changes or deployment.
+
+Exit evidence: Explicit owner decision, identified published artifact/version, and owner-observed live route/guide result. A local build or draft is not publication proof.
+
+## BL-06: Mesh dependency reachability and major-upgrade risk
+
+Status: Blocked
+
+Owners: `SeniorEngineer` (dependency and compatibility assessment); `Orchestrator` (release decision).
+
+Evidence: The parent reports a current locked Mesh npm audit with 4 moderate, 0 high, and 0 critical findings. Reported ancestry is `@solana/web3.js` 1.98.4 through `jayson` to `stream-json` and `uuid`. Reported advisory identities are GHSA-528h-pc64-c93x (`stream-json` nested-filter quadratic behavior through 3.4.0), GHSA-hqr4-qq8f-hg3x (JSONC chunk/comment rescans through 3.5.0), GHSA-mjw6-4jj6-33hc (Assembler prototype pollution before 3.6.0), and GHSA-w5hq-g745-h8pq (`uuid` optional output-buffer bounds in v3, v5, and v6 before 11.1.1). `@solana/web3.js` 3.1.1 is a reported major-upgrade candidate; no upgrade is authorized. [REPORTED, parent current locked Mesh audit. Static package/source paths can be verified separately; exploitability remains INFERRED unless established.]
+
+Next owner action: Trace the reported advisories through the locked Mesh dependency graph and shipped runtime paths; document reachability and impact. Separately assess the compatibility cost of the major `@solana/web3.js` candidate. Recommend no change or a narrowly scoped, reviewed fix; do not upgrade or change the lockfile as part of this documentation task.
+
+Exit evidence: A reviewed, source-linked reachability/impact assessment and an explicit release decision. Any proposed dependency change needs its own approved implementation and verification.
+
+## BL-07: Native MCP client connection
+
+Status: Blocked
+
+Owner: `Coordinator / client owner`.
+
+Evidence: The selected client is OMP 18.12.5, and the current native command has not been run. OMP source `#handleWizardComplete` writes the active-profile user MCP entry, then performs a global MCP reload and activates discovered tools; reload can briefly reconnect Cloudflare, Vercel, and REA. Export active REA evidence first. The endpoint is reported to advertise all 30 tools [REPORTED]; its OMP entry is not a read-only allowlist. A helper SDK call does not prove that native OMP tools are mounted. Codex and other clients are optional examples, not blockers for this session. [OMP 18.12.5 source `#handleWizardComplete`; OMP MCP configuration docs, "Profiles"; OMP runtime lifecycle docs, "Interactive reload and live-change paths"; `mcp-rust/README.md#install`]
+
+Next owner action: Export any active REA evidence before making the change. In this OMP session, run `/mcp add falconos --scope user --url https://mcp.falconos.markets/mcp --transport http`. This writes the server entry at the active profile's user scope and triggers a global MCP reload; it can briefly reconnect Cloudflare, Vercel, and REA. No client restart is required. Then use `/mcp list` and invoke `falcon_self_test({})` and `falcon_public_graph({})` through OMP's mounted native tools. Use the graph call for the public read. These initial public-research calls grant no wallet, model, or funds authority. The advertised 30-tool server is not restricted by this configuration to read-only tools.
+
+Exit evidence: Owner-observed `/mcp list` output showing the active-profile server and its tools, plus a `falcon_public_graph({})` response produced through a mounted native OMP tool. Record the version and returned status; do not infer that every advertised tool is usable or read-only. `falcon_self_test` is metadata-only and does not probe Mesh or wallets. No restart, provider/model readiness, wallet readiness, or funds authority is claimed. [`mcp-rust/README.md#public-graph-contract`; `mcp-rust/README.md`, "Capability discovery (0.7.0 source)"]
