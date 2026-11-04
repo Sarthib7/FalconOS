@@ -3,7 +3,7 @@ import { PublicKey } from '@solana/web3.js';
 import { MeshError } from '../domain.mjs';
 import { canonicalWalletAddress, deriveWalletOwnerId } from '../wallet-auth.mjs';
 import { canonicalBytes, sha256, stableStringify } from '../council/evidence.ts';
-import { validateMandate, evaluatePlan } from './policy.mjs';
+import { CFO_CONSUMER_TEMPLATE, validateMandate, evaluatePlan } from './policy.mjs';
 import { runCfoReview } from './review.mjs';
 import { readCfoDecisionTrace } from './trace.mjs';
 
@@ -814,6 +814,7 @@ export function createCfoService({
       }
       return cloneJson({
         schemaVersion: 1,
+        policyTemplate: CFO_CONSUMER_TEMPLATE,
         mandate: publicRecord(mandate),
         portfolio: publicRecord(portfolio),
         plans: hydratedPlans,

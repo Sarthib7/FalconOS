@@ -452,3 +452,36 @@ Status: Completed
 1. [INFERRED] This trace projection can support future stock/perps adapters without changing their financial schemas. Those adapter contracts still need source verification.
 2. [INFERRED] Record-level hashes provide enough audit context for the first slice. They attest retained bytes, not independent source truth.
 
+## CFO consumer R5 contract
+
+Interface ID: CFO-CONSUMER-R5
+Owner: orchestrator
+Status: In Progress
+Provider: existing Mesh CFO service, one Node process
+Consumers: authenticated owner dashboard and existing thin MCP
+
+[APPROVED] R5/R8 implementation and small draft PR publication are approved. No deployment, merge, provider/model grant, real-user signing or financial relay is included. I22 and V197-V203/V212/V213 remain authoritative.
+
+[APPROVED RESPONSE] Add flat read-only `policyTemplate` metadata to the authenticated overview: `{id:"falcon-cfo-consumer",version:1,maxPositionBps:2500,slippageBps:50,maxFeeBps:100,maxEvidenceAgeSeconds:300,monitorIntervalSeconds:300,maxMonitorCycles:12}`. Export the immutable descriptor as `CFO_CONSUMER_TEMPLATE` from `mesh/cfo/policy.mjs`. It is a local copy aid, not saved-policy authority. It contains no wallet, capital amount, reserve asset, target or weight.
+
+[APPROVED COPY] An explicit template click copies only the six non-money fields into the local draft. Missing/malformed metadata cannot supply guessed defaults. Preserve capital, asset and target choices. Saved numeric limits never upgrade on refresh; call them "Saved limits", not a historical template adoption. Dirty choices survive refresh. Wallet/session changes discard drafts and ignore late replies.
+
+[APPROVED REQUESTS] Mandate, plan, prepare, signature, relay and reconcile routes keep their complete existing schemas and authority. No template ID replaces numeric mandate fields. Convert plain decimal text through verified token precision using integer/string operations only. Reject signs, exponent notation, grouping commas, excess precision and unknown decimals. Zero is valid for a reserve floor, not an action amount. No amount or capital defaults.
+
+[PLANNED SHARED UI HELPERS] Preserve existing `formatBaseUnits`, `buildMandateFromForm` and `buildPlanFields` signatures. Add named exports in `web/dashboard/Cfo.jsx`: `parseTokenAmount(text,decimals)` returns canonical integer text or null, allowing zero for callers to constrain; `baseUnitsInputText(value,decimals)` returns ungrouped exact decimal text or null; `copyConsumerTemplate(form,template)` returns a new draft or null without mutating arguments; `actionHeadRecords(records)` derives one current entry per logical `data.actionId` using the backend's authoritative newest-first order, then puts unresolved heads before terminal heads. It must not resurrect an older SIGNED state after a newer CONFIRMED state. New helpers have behavior tests, not export/wiring assertions.
+
+[APPROVED ACTION CONTEXT] The observed owner portfolio and saved permissions supply asset identity/decimals. The reserve is the buy source and redeem destination. An explicit saved-allocation mode may send null sizing for invest/reinvest; redeem/rotate require a positive held-token amount. Never infer free cash by subtracting local reservations or calculate unsupported NAV/APY/PnL.
+
+[APPROVED PREPARE] One prepare response is followed by a GET-only retained-state refresh. Correlate the exact logical action ID, current state, mandate/portfolio, quote hash, debit/assets, minimum output, costs, destination and expiry before enabling signature. Missing/stale/mismatched quote data blocks signing. Failed read retries only the GET; never prepare or start a model again to display a quote. Keep pending/unknown signatures and financial reservations unchanged.
+
+[PLANNED CSS HOOKS] Keep existing classes and use applicable new hooks consistently: `cfo-primary-flow`, `cfo-investment-grid`, `cfo-position-card`, `cfo-amount-editor`, `cfo-limit-summary`, `cfo-policy-sheet`, `cfo-action-status`, `cfo-quote-review`, `cfo-evidence-details`. Styling must not be the authority that hides or disables financial actions.
+
+[PLANNED OWNERSHIP] ProductDesign owns `web/dashboard/cfo.css` and `OwnerDashboard.jsx`. SeniorEngineer owns `web/dashboard/Cfo.jsx`. JuniorChecks owns `web/test/owner-dashboard-browser.mjs`. RedTeamChecks owns `web/test/cfo.test.mjs` and `docs/verification/r5-security-review.md`. GTMLaunch owns `docs/pitches/falcon-launch-readiness.md` and `agents/blockers.md`. The orchestrator owns backend metadata, this contract, integration, status, all gates and publication. Workers edit only their assigned files and never run tests, builds, audits, linters, formatters, browsers, commits or deployments.
+
+[PLANNED VERIFICATION] Exact conversion boundaries and malformed template metadata; preserved capital/target choices; latest logical action heads; actual authenticated browser with disposable PostgreSQL; unavailable providers remain NO_DATA; no automatic capture/model/sign/relay; GET-only quote-read recovery; context-switch rejection; desktop/mobile keyboard access; exact-head CI. Controlled fixtures do not establish funded or live model acceptance.
+
+### Least confident decisions
+
+1. [INFERRED] The backend action order is the correct basis for deduplication. Inspect its producer before implementing; do not substitute timestamp or UUID ordering.
+2. [UNKNOWN] Browser fixtures can prove consumer transitions but cannot prove live provider, market or capital readiness. The operator gates remain explicit.
+
