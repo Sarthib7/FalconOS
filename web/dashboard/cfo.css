@@ -364,6 +364,7 @@
 .cfo-field .cfo-field-error,
 .cfo-field-error {
   color: var(--cfo-danger);
+  overflow-wrap: anywhere;
 }
 
 .cfo-field input[aria-invalid="true"],
@@ -440,7 +441,7 @@
   cursor: not-allowed;
 }
 
-.cfo :where(button, input, select, summary):focus-visible {
+.cfo :where(button, input, select, summary, [tabindex]):focus-visible {
   outline: 3px solid var(--cfo-warning);
   outline-offset: 3px;
 }
@@ -693,4 +694,317 @@
   .cfo-skeleton {
     animation: none;
   }
+}
+
+/* R5 action-first consumer workflow hooks */
+.cfo-primary-flow,
+.cfo-investment-grid,
+.cfo-position-option,
+.cfo-position-card,
+.cfo-amount-editor,
+.cfo-limit-summary,
+.cfo-policy-sheet,
+.cfo-action-status,
+.cfo-quote-review,
+.cfo-evidence-details {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.cfo-primary-flow {
+  display: grid;
+  gap: 16px;
+}
+
+.cfo-primary-flow .cfo-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cfo-investment-grid {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--cfo-line);
+}
+
+.cfo-investment-grid legend {
+  grid-column: 1 / -1;
+  padding-inline: 6px;
+  color: var(--cfo-text);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.cfo-investment-grid > .cfo-empty {
+  grid-column: 1 / -1;
+}
+
+.cfo-position-option {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.cfo-position-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-deep);
+  color: var(--cfo-text);
+  font: inherit;
+  text-align: left;
+}
+
+.cfo-position-card[aria-pressed="true"],
+.cfo-position-card[aria-current="true"],
+.cfo-position-card--selected {
+  border-color: var(--cfo-green);
+  background: color-mix(in srgb, var(--cfo-green) 8%, var(--cfo-deep));
+}
+
+.cfo-position-card :where(code, time, small, p) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cfo-position-card:disabled {
+  cursor: not-allowed;
+  opacity: .68;
+}
+
+@media (hover: hover) {
+  .cfo-position-card:hover:not(:disabled) {
+    border-color: var(--cfo-green);
+  }
+}
+
+.cfo-primary-flow .cfo-form > .cfo-field:has(> input[type="checkbox"]) {
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 10px;
+}
+
+.cfo-primary-flow .cfo-form > .cfo-field:has(> input[type="checkbox"]) > input[type="checkbox"] {
+  grid-column: 1;
+  grid-row: 1;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--cfo-green);
+  appearance: auto;
+}
+
+.cfo-primary-flow .cfo-form > .cfo-field:has(> input[type="checkbox"]) > span {
+  grid-column: 2;
+}
+
+.cfo-primary-flow .cfo-form > .cfo-field:has(> input[type="checkbox"]) > small {
+  grid-column: 1 / -1;
+}
+
+.cfo-amount-editor {
+  display: grid;
+  gap: 12px;
+  padding: clamp(16px, 2.5vw, 24px);
+  border: 1px solid var(--cfo-line);
+  border-left: 4px solid var(--cfo-green);
+  background: var(--cfo-surface);
+}
+
+.cfo-amount-editor input {
+  min-height: 60px;
+  padding: 12px 14px;
+  border-color: var(--cfo-green);
+  background: var(--cfo-deep);
+  color: var(--cfo-text);
+  font: 600 clamp(20px, 3vw, 30px)/1.25 var(--mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.cfo-amount-editor input:disabled {
+  border-color: var(--cfo-line);
+  opacity: .68;
+  cursor: not-allowed;
+}
+
+.cfo-limit-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 10px;
+}
+
+.cfo-limit-summary > *,
+.cfo-limit-summary > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-deep);
+  overflow-wrap: anywhere;
+}
+
+.cfo-limit-summary :where(dt, .cfo-label) {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--cfo-muted);
+  font: 11px/1.45 var(--mono, ui-monospace, monospace);
+  letter-spacing: .04em;
+}
+
+.cfo-limit-summary :where(dd, strong) {
+  min-width: 0;
+  color: var(--cfo-text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.cfo-policy-sheet {
+  display: grid;
+  gap: 12px;
+  padding: clamp(16px, 2.5vw, 24px);
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-deep);
+}
+
+.cfo-policy-sheet > summary {
+  min-height: 44px;
+  color: var(--cfo-green);
+  font-weight: 600;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.cfo-policy-sheet[open] > summary {
+  margin-bottom: 4px;
+}
+
+.cfo-policy-sheet :where(p, dd, code) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cfo-action-status {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--cfo-line);
+  border-left: 4px solid var(--cfo-warning);
+  background: var(--cfo-deep);
+}
+
+.cfo-action-status :where(p, code, time) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cfo-quote-review {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--cfo-line);
+  border-left: 3px solid var(--cfo-warning);
+  background: var(--cfo-deep);
+}
+
+.cfo-quote-review :where(dl, p, code, time, dd) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cfo-quote-review dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 10px;
+}
+
+.cfo-quote-review dl > div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-surface);
+}
+
+.cfo-quote-review dt {
+  margin-bottom: 5px;
+  color: var(--cfo-muted);
+  font: 11px/1.45 var(--mono, ui-monospace, monospace);
+}
+
+.cfo-evidence-details {
+  border-top: 1px solid var(--cfo-line);
+  padding-top: 10px;
+}
+
+.cfo-evidence-details > summary {
+  min-height: 44px;
+  color: var(--cfo-green);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cfo-evidence-details pre {
+  max-width: 100%;
+  max-height: 320px;
+  overflow: auto;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--cfo-line);
+  background: var(--cfo-deep);
+  color: var(--cfo-muted);
+  font: 11px/1.5 var(--mono, ui-monospace, monospace);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cfo-record-details pre {
+  max-width: 100%;
+}
+
+@media (max-width: 680px) {
+  .cfo-position-card {
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .cfo-investment-grid {
+    padding: 12px;
+  }
+
+  .cfo-amount-editor {
+    padding: 16px;
+  }
+
+  .cfo-amount-editor input {
+    min-height: 56px;
+    font-size: clamp(20px, 6vw, 26px);
+  }
+
+  .cfo-quote-review dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cfo :where(input, select, textarea):disabled {
+  border-color: var(--cfo-line);
+  background: var(--cfo-surface);
+  color: var(--cfo-muted);
+  opacity: .72;
+  cursor: not-allowed;
+}
+
+.cfo :where(input, select, textarea):disabled[aria-invalid="true"] {
+  border-color: var(--cfo-danger);
 }
