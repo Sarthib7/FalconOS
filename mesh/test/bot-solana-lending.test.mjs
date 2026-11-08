@@ -335,6 +335,7 @@ test('R1.1 refuses to confirm a finalized receipt whose message differs from the
   const result = await adapter.reconcile({ prepared, signature: signed.signature });
   assert.equal(result.status, 'UNVERIFIED');
   assert.equal(result.amounts, null);
+  assert.equal(result.reason, 'INVALID_SIGNED_TRANSACTION');
 });
 
 test('R1.1 treats absent settlement as pending before expiry and unverified after expiry', async () => {
@@ -367,4 +368,19 @@ test('R1.1 isExpired uses finalized chain height and does not guess on RPC failu
     fetchImpl: async () => new Response('unavailable', { status: 503 }),
   });
   await assert.rejects(unavailable.isExpired({ prepared }), error => error instanceof SolanaLendingError && error.code === 'SOLANA_RPC_UNAVAILABLE');
+});
+
+test('V221: finalized token effects cannot hide inconsistent native fee balances', async () => {
+  const prepared = preparedSupply('1000');
+  const signed = signPrepared(prepared);
+  const receipt = successfulSupplyReceipt(signed, prepared);
+  receipt.meta.postBalances = [...receipt.meta.preBalances];
+  const adapter = createSolanaLendingAdapter({
+    rpcUrl: 'https://rpc.invalid',
+    fetchImpl: jsonRpcFetch({ getTransaction: () => receipt }),
+  });
+  const result = await adapter.reconcile({ prepared, signature: signed.signature });
+  assert.equal(result.status, 'UNVERIFIED');
+  assert.equal(result.reason, 'SOLANA_RECEIPT_MISMATCH');
+  assert.equal(result.amounts, null);
 });
