@@ -1,4 +1,6 @@
 use super::*;
+const LENDING_BOT_UUID_RE: &str =
+    r"^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[1-8][A-Fa-f0-9]{3}-[89aAbB][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12}$";
 
 pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
     let o = json_object(a).ok_or_else(|| ToolFailure::input("Arguments must be an object."))?;
@@ -56,6 +58,15 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
         "falcon_cfo_relay" | "falcon_cfo_reconcile" => &["session", "requestId", "actionId"],
         "falcon_cfo_monitor" => &["session", "requestId", "enabled"],
         "falcon_cfo_record" | "falcon_cfo_decision_trace" => &["session", "recordId"],
+        "falcon_lending_bot_overview" => &["session"],
+        "falcon_lending_bot_capture"
+        | "falcon_lending_bot_start"
+        | "falcon_lending_bot_pause"
+        | "falcon_lending_bot_fee_claim" => &["session", "requestId"],
+        "falcon_lending_bot_withdraw" => {
+            &["session", "requestId", "reserveAddress", "receiptBaseUnits"]
+        }
+        "falcon_lending_bot_reconcile" => &["session", "requestId", "actionId"],
         _ => {
             return Err(ToolFailure {
                 code: "NOT_FOUND".into(),
@@ -107,6 +118,15 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
         "falcon_cfo_relay" | "falcon_cfo_reconcile" => &["session", "requestId", "actionId"],
         "falcon_cfo_monitor" => &["session", "requestId", "enabled"],
         "falcon_cfo_record" | "falcon_cfo_decision_trace" => &["session", "recordId"],
+        "falcon_lending_bot_overview" => &["session"],
+        "falcon_lending_bot_capture"
+        | "falcon_lending_bot_start"
+        | "falcon_lending_bot_pause"
+        | "falcon_lending_bot_fee_claim" => &["session", "requestId"],
+        "falcon_lending_bot_withdraw" => {
+            &["session", "requestId", "reserveAddress", "receiptBaseUnits"]
+        }
+        "falcon_lending_bot_reconcile" => &["session", "requestId", "actionId"],
         _ => &[],
     };
     if let Some(k) = required.iter().find(|k| !o.contains_key(**k)) {
@@ -146,6 +166,18 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
                 .ok_or_else(|| ToolFailure::input(format!("{k} must be a string.")))?;
             if !Regex::new(UUID_RE).unwrap().is_match(s) {
                 return Err(ToolFailure::input(format!("{k} must be a UUID.")));
+            }
+        }
+    }
+    if name.starts_with("falcon_lending_bot_") {
+        for key in ["requestId", "actionId"] {
+            if let Some(value) = a.get(key) {
+                if !Regex::new(LENDING_BOT_UUID_RE)
+                    .unwrap()
+                    .is_match(value.as_str().unwrap())
+                {
+                    return Err(ToolFailure::input(format!("{key} must be a UUID.")));
+                }
             }
         }
     }
@@ -302,6 +334,26 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
                 return Err(ToolFailure::input("enabled must be a boolean."));
             }
         }
+        "falcon_lending_bot_withdraw" => {
+            let reserve = string("reserveAddress")?;
+            if !Regex::new(WALLET_RE).unwrap().is_match(reserve) {
+                return Err(ToolFailure::input(
+                    "reserveAddress must be a Solana address.",
+                ));
+            }
+            let amount = string("receiptBaseUnits")?;
+            if amount.len() > 78 || !is_base_units(amount) || amount == "0" {
+                return Err(ToolFailure::input(
+                    "receiptBaseUnits must be a positive canonical integer string.",
+                ));
+            }
+        }
+        "falcon_lending_bot_reconcile"
+        | "falcon_lending_bot_capture"
+        | "falcon_lending_bot_start"
+        | "falcon_lending_bot_pause"
+        | "falcon_lending_bot_fee_claim"
+        | "falcon_lending_bot_overview" => {}
         _ => {}
     }
     Ok(())
@@ -481,6 +533,137 @@ pub(super) fn cfo_public_response(mut value: Value, allow_unsigned_payload: bool
         }
     }
     redact(&mut value, allow_unsigned_payload, false);
+    value
+}
+
+pub(super) fn lending_bot_public_response(
+    mut value: Value,
+    allow_unsigned_prepared: bool,
+) -> Value {
+    fn normalized_bytes(name: &str) -> impl Iterator<Item = u8> + Clone + '_ {
+        name.bytes()
+            .filter(|byte| byte.is_ascii_alphanumeric())
+            .map(|byte| byte.to_ascii_lowercase())
+    }
+
+    fn normalized_eq(name: &str, expected: &str) -> bool {
+        let mut actual = normalized_bytes(name);
+        expected.bytes().all(|byte| actual.next() == Some(byte)) && actual.next().is_none()
+    }
+
+    fn normalized_starts_with(name: &str, prefix: &str) -> bool {
+        let mut actual = normalized_bytes(name);
+        prefix.bytes().all(|byte| actual.next() == Some(byte))
+    }
+
+    fn normalized_contains(name: &str, needle: &str) -> bool {
+        let mut start = normalized_bytes(name);
+        loop {
+            let mut candidate = start.clone();
+            if needle.bytes().all(|byte| candidate.next() == Some(byte)) {
+                return true;
+            }
+            if start.next().is_none() {
+                return false;
+            }
+        }
+    }
+
+    fn private_field(name: &str, allow_unsigned_transaction: bool) -> bool {
+        if normalized_eq(name, "transactionbase64") {
+            return !allow_unsigned_transaction;
+        }
+        (normalized_starts_with(name, "owner") && !normalized_eq(name, "owneraction"))
+            || (normalized_starts_with(name, "wallet")
+                && !normalized_eq(name, "walletproviderconfigured"))
+            || normalized_starts_with(name, "customer")
+            || normalized_starts_with(name, "user")
+            || normalized_starts_with(name, "session")
+            || normalized_eq(name, "account")
+            || [
+                "accountid",
+                "accountaddress",
+                "accountname",
+                "accountnumber",
+            ]
+            .iter()
+            .any(|field| normalized_eq(name, field))
+            || normalized_starts_with(name, "provider")
+            || normalized_eq(name, "identity")
+            || ["email", "emailaddress", "phonenumber"]
+                .iter()
+                .any(|field| normalized_eq(name, field))
+            || normalized_contains(name, "token")
+            || normalized_contains(name, "secret")
+            || normalized_contains(name, "privatekey")
+            || normalized_starts_with(name, "signed")
+            || normalized_starts_with(name, "signature")
+            || normalized_eq(name, "payload")
+            || normalized_starts_with(name, "raw")
+            || normalized_contains(name, "exchange")
+            || normalized_eq(name, "request")
+            || normalized_eq(name, "response")
+            || normalized_eq(name, "headers")
+            || normalized_eq(name, "authorization")
+            || normalized_contains(name, "body")
+            || normalized_eq(name, "rules")
+            || normalized_eq(name, "rule")
+            || (normalized_contains(name, "policy")
+                && ![
+                    "policyid",
+                    "policyids",
+                    "policyhash",
+                    "policyversion",
+                    "policystatus",
+                    "policyexpiresat",
+                ]
+                .iter()
+                .any(|field| normalized_eq(name, field)))
+    }
+
+    fn unsigned_prepared(value: &Value) -> bool {
+        value.as_object().is_some_and(|object| {
+            object.get("signature").is_some_and(Value::is_null)
+                && object
+                    .get("transactionBase64")
+                    .and_then(Value::as_str)
+                    .is_some_and(|bytes| !bytes.is_empty())
+        })
+    }
+
+    fn redact(value: &mut Value, allow_unsigned_prepared: bool, context: u8) {
+        match value {
+            Value::Array(values) => {
+                for child in values {
+                    redact(child, allow_unsigned_prepared, 0);
+                }
+            }
+            Value::Object(object) => {
+                object.retain(|key, child| {
+                    if private_field(key, context == 2) {
+                        return false;
+                    }
+                    if normalized_eq(key, "prepared") {
+                        if context == 1 && allow_unsigned_prepared && unsigned_prepared(child) {
+                            redact(child, allow_unsigned_prepared, 2);
+                            return true;
+                        }
+                        return false;
+                    }
+                    let next_context = if normalized_eq(key, "owneraction") {
+                        1
+                    } else {
+                        0
+                    };
+                    redact(child, allow_unsigned_prepared, next_context);
+                    true
+                });
+            }
+            _ => {}
+        }
+    }
+
+    redact(&mut value, allow_unsigned_prepared, 0);
     value
 }
 

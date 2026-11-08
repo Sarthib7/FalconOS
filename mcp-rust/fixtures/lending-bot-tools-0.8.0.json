@@ -1,0 +1,116 @@
+[
+  {
+    "name": "falcon_lending_bot_overview",
+    "title": "Read the Solana lending bot overview",
+    "description": "Read retained customer-owned Solana mainnet-beta lending bot state. This does not capture provider data, start work, sign, send, or establish funded readiness. NEAR CFO and legacy Solana Devnet remain separate workflows.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Existing Falcon wallet session. Treat it as a short-lived password; never repeat it in prose." }
+      },
+      "required": ["session"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": true, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_lending_bot_capture",
+    "title": "Capture current Solana lending observations",
+    "description": "Request an explicit real read of the authenticated customer's supported Solana mainnet-beta lending portfolio. Missing evidence stays unavailable; capture does not start the bot or prove executable liquidity or readiness.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Existing Falcon wallet session; never repeat it in prose." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[1-8][A-Fa-f0-9]{3}-[89aAbB][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID request identity; reuse exactly for a retry." }
+      },
+      "required": ["session", "requestId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_lending_bot_start",
+    "title": "Start the customer-approved Solana lending bot",
+    "description": "Request bot start for the authenticated customer. Mesh must recheck an existing human-approved mandate and actual installed customer-owned policy-limited delegation; this tool only activates that existing authority. MCP has no wallet/delegation installation, signing, or direct-send tool and cannot widen the installed policy.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Existing Falcon wallet session; never repeat it in prose." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[1-8][A-Fa-f0-9]{3}-[89aAbB][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID request identity; reuse exactly for a retry." }
+      },
+      "required": ["session", "requestId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_lending_bot_pause",
+    "title": "Pause the customer-owned Solana lending bot",
+    "description": "Commit a stop for new bot signing or sending. Already-submitted actions remain reconcilable; this does not revoke a wallet signer or undo a transaction.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Existing Falcon wallet session; never repeat it in prose." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[1-8][A-Fa-f0-9]{3}-[89aAbB][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID request identity; reuse exactly for a retry." }
+      },
+      "required": ["session", "requestId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_lending_bot_withdraw",
+    "title": "Prepare an unsigned owner-approved withdrawal",
+    "description": "Prepare one exact unsigned Solana mainnet-beta withdrawal from a supported reserve for owner review. The returned prepared transaction is unsigned; MCP does not sign or broadcast it. The authenticated session supplies the owner and wallet. Mesh enforces supported reserve, current portfolio and policy limits; unpaid fees cannot block exit.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Existing Falcon wallet session; never repeat it in prose." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[1-8][A-Fa-f0-9]{3}-[89aAbB][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID request identity; reuse exactly for a retry." },
+        "reserveAddress": { "type": "string", "minLength": 32, "maxLength": 44, "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$", "description": "Solana reserve account address; Mesh accepts only its fixed reviewed reserve set." },
+        "receiptBaseUnits": { "type": "string", "minLength": 1, "maxLength": 78, "pattern": "^[1-9][0-9]*$", "description": "Positive canonical integer receipt-token base units, never a floating-point value." }
+      },
+      "required": ["session", "requestId", "reserveAddress", "receiptBaseUnits"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_lending_bot_reconcile",
+    "title": "Reconcile a Solana lending bot action",
+    "description": "Read current finalized receipt evidence for one owner-bound action. Missing or incomplete proof stays unknown; reconciliation never creates a replacement signature or submits another spend.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Existing Falcon wallet session; never repeat it in prose." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[1-8][A-Fa-f0-9]{3}-[89aAbB][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID request identity; reuse exactly for a retry." },
+        "actionId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[1-8][A-Fa-f0-9]{3}-[89aAbB][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12}$", "description": "Owner-bound action identifier returned by Mesh." }
+      },
+      "required": ["session", "requestId", "actionId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  },
+  {
+    "name": "falcon_lending_bot_fee_claim",
+    "title": "Prepare an unsigned owner-approved fee claim",
+    "description": "Prepare the exact unsigned fee transfer only from a reconciled positive amount owed, the trusted configured recipient, and observed available cash. The caller cannot supply an amount or recipient. MCP does not sign or broadcast; the owner reviews and separately signs the exact transfer.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "session": { "type": "string", "maxLength": 256, "pattern": "^wsi1_[A-Za-z0-9_-]{20,}$", "description": "Existing Falcon wallet session; never repeat it in prose." },
+        "requestId": { "type": "string", "pattern": "^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[1-8][A-Fa-f0-9]{3}-[89aAbB][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12}$", "description": "Caller-supplied UUID request identity; reuse exactly for a retry." }
+      },
+      "required": ["session", "requestId"],
+      "additionalProperties": false
+    },
+    "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true }
+  }
+]

@@ -1,10 +1,10 @@
 # Falcon MCP server
 
-Falcon's Rust server is a stateless Streamable HTTP adapter to Mesh. Source0.7.0 adds an owner-scoped CFO decision trace to the NEAR/mainnet CFO, retained research and Solana Devnet tools. Mesh owns financial logic and storage. Falcon holds no keys and grants no signing or spending authority. Existing owner signatures and default-deny trial grants remain required [SOURCE SCOPE; hosted0.7.0 not verified].
+Falcon's Rust server is a stateless Streamable HTTP adapter to Mesh. Source0.8.0 adds seven draft treasury controls to the existing NEAR/mainnet and legacy Solana Devnet tools. Mesh owns financial logic and storage. MCP accepts no owner keys and does not install wallet delegations. Treasury execution requires customer-installed scope and explicit backend configuration [SOURCE SCOPE; hosted0.8.0 not verified].
 
 The hosted endpoint is `https://mcp.falconos.markets/mcp`. Railway deployment `6697d4d3-6cab-47da-b2bd-841c0344975c` replaced the Node runtime with Rust. See the [cutover record](../status.md#rust-mcp-cutover-2026-10-15) for evidence and limits [VERIFIED, Railway readback].
 
-The dated deployment record above does not prove a hosted0.7.0 rollout. Check the actual server version before using new tools. The last observed hosted server reported0.4.0; local0.7.0 behavior does not establish production recovery [VERIFIED OBSERVATION, 2026-10-27].
+The dated deployment record above does not prove a hosted0.8.0 rollout. Check the actual server version before using new tools. The last observed hosted server reported0.4.0 on 2026-10-27; this historical observation and local source do not establish current production recovery [VERIFIED OBSERVATION, 2026-10-27].
 
 ## Install
 
@@ -23,7 +23,7 @@ Generic client configuration:
 
 Restart the client after changing its configuration. List tools and call `falcon_self_test({})`. Use `falcon_research_case({})` for the public NEAR case, or `falcon_public_graph({})` for fixed Devnet evidence. Both public reads need no wallet or session. Registration and metadata do not prove backend, signer, funding, transaction or model-host readiness [VERIFIED SOURCE].
 
-## Tools (0.7.0 source:30)
+## Tools (0.8.0 draft source:37)
 
 | Tool | Contract |
 | --- | --- |
@@ -57,6 +57,13 @@ Restart the client after changing its configuration. List tools and call `falcon
 | `falcon_cfo_monitor` | Configures bounded read-only monitoring; it never signs or relays. |
 | `falcon_cfo_record` | Reads one authenticated retained CFO record with signed bytes redacted. |
 | `falcon_cfo_decision_trace` | Reads a hash-bound, owner-scoped decision graph at an immutable record cutoff, with current freshness reported separately. |
+| `falcon_lending_bot_overview` | Retained owner-scoped Solana/mainnet-beta treasury state; no capture, signing or readiness probe. |
+| `falcon_lending_bot_capture` | Explicit current portfolio capture through the same Mesh backend. |
+| `falcon_lending_bot_start` | Requests the configured runner under the accepted mandate, installed scope and finite review grant. |
+| `falcon_lending_bot_pause` | Requests a committed stop; an already in-flight action may settle before acknowledgement. |
+| `falcon_lending_bot_withdraw` | Prepares an unsigned exact receipt redemption for separate owner review and signing. |
+| `falcon_lending_bot_reconcile` | Checks the exact retained action; unknown effects remain reserved. |
+| `falcon_lending_bot_fee_claim` | Prepares an unsigned reconciled fee payment for separate owner approval; no automatic fee skim. |
 
 ### Public graph contract
 
@@ -64,13 +71,13 @@ The anonymous graph calls Mesh `GET /v1/public/graph/live` without a session, Be
 
 `OBSERVED` is technical evidence, not a personalized REVIEW, recommendation, owner mandate, or approval. Current `NO_DATA` never substitutes an older successful graph. Public output excludes source content, raw exchanges, wallets, sessions, and owner records. Mesh may reuse a complete graph head for 60 seconds; repeated calls do not force a new capture [VERIFIED, Mesh source and tests].
 
-### Capability discovery (0.7.0 source)
+### Capability discovery (0.8.0 draft source)
 
-Self-test accepts `{}` and returns 30 tool names, capability schema version1, `verification: "metadata-only"` and `defaultSupport: "unsupported"`. It makes no Mesh request. Signer, funding, transaction, research grants and CFO context/provider readiness remain `not_checked`. Signatures and exact trial grants remain separate from login or model review [SOURCE CONTRACT].
+Self-test accepts `{}` and returns 37 tool names, capability schema version1, `verification: "metadata-only"` and `defaultSupport: "unsupported"`. It makes no Mesh request. Signer, funding, transaction, research grants and financial provider readiness remain `not_checked`. Metadata cannot grant spending authority [SOURCE CONTRACT].
 
 Match each capability's domain, chain and network. Existing public-market-evidence, lending-execution and yield-discovery identifiers retain their scope. NEAR research is publisher-reported mainnet context, with executionSupported false. CFO is a separate NEAR/mainnet surface. Unsupported stocks/perps advice, swaps, EVM and brokerage actions keep specific unavailable reasons. No top-level chain/network default applies to every tool [SOURCE CONTRACT].
 
-The frozen `fixtures/node-0.5.0.json` retains the19 legacy schemas. Current discovery adds11 CFO schemas from `fixtures/cfo-tools-0.7.0.json`. Self-test fingerprints the combined inventory; Cargo supplies server version0.7.0 [VERIFIED SOURCE].
+The frozen `fixtures/node-0.5.0.json` retains the19 legacy schemas, and `fixtures/cfo-tools-0.7.0.json` retains11 CFO schemas. The draft adds seven schemas from `fixtures/lending-bot-tools-0.8.0.json`. Self-test fingerprints the combined inventory; Cargo supplies server version0.8.0 [VERIFIED SOURCE].
 
 ### Retained CFO decision trace
 
@@ -112,6 +119,20 @@ Responses preserve Mesh's service DTOs rather than reconstructing decisions or f
 The registered CFO signature is a financial owner approval for one exact prepared action, not a wallet-login signature; the MCP accepts only the 64-byte standard-base64 signature, never replacement signed bytes or a key. `falcon_cfo_prepare` may return the exact unsigned payload for owner review. Owner signing material (`signatureBase64`, `signedData`), signed payloads, and relay secrets are removed recursively from overview, record, registration, relay, reconciliation, and other non-prepare CFO output. Verified provider quote envelopes preserve `raw.signature` as hash-bound public verification evidence. Registration does not relay. `falcon_cfo_relay` asks Mesh to relay only the already registered exact signed intent. Relay remains default-deny until an operator grant is bound to the exact owner, wallet, actionId, quoteHash, reserve cap, expiry, retained T82 proof, and trial permission. Owner signature remains required even with an operator grant; neither a model review nor a grant is spending approval.
 
 The surface is NEAR mainnet only. `falcon_self_test` reports current CFO context, signer, funding, and transaction readiness as unchecked; it does not claim provider readiness, available funds, execution readiness, or successful receipt reconciliation. Mesh owns all portfolio, policy, quote, signing-validation, grant, and financial logic. Existing Solana Devnet broadcast flow remains human-only and unchanged.
+
+### Draft funded treasury contract
+
+[SOURCE SCOPE] All seven treasury tools use fixed `/v1/lending-bot` routes with the existing verified Falcon wallet session. Mesh derives the owner and wallet; callers cannot choose a route, owner, wallet, model, key, policy or fee recipient. Overview is retained-only. Capture and reconciliation are explicit operations. History excludes signed bytes, provider bodies and customer identity. Only withdrawal and fee preparation return unsigned transaction bytes for owner review.
+
+[SOURCE SCOPE] The proposed Solana worker differs from legacy Devnet and NEAR CFO. It can sign and submit only within a customer-installed lending scope when the backend admits the mandate and current evidence. Login, model review and MCP metadata do not install that scope. Fee payment and owner recovery keep separate owner signatures. Disconnecting a Falcon session does not itself revoke a wallet delegation or pause a previously authorized offline runner.
+
+[VERIFIED CURRENT HOLD] Product flows and screen layouts are not approved. The R1.1 owner-JWT handoff and missing first-run token-account setup remain blockers. The local SDK/adapter import timed out; no live Privy policy admission, funded execution or hosted0.8.0 behavior was verified. Keep this publication draft-only and default-deny. No merge, deployment or financial activation is authorized.
+
+[VERIFIED correction] The import observation above is historical, not a current SDK diagnosis. The later module load and nine controlled-RPC adapter cases passed after three source defects were fixed. See the [executed-check correction](../docs/funded-lending-contract.md#executed-checks-and-limits). The product, owner-JWT, first-run account and live acceptance gates remain open.
+
+[VERIFIED local checkpoint] An isolated export of the corrected crate passed `cargo test --offline --locked`: `37 passed`, `0 failed`. The actual loopback server and official RMCP client returned `{"graphError":"MESH_UNAVAILABLE","graphStatus":null,"meshUnavailable":true,"result":"MCP_HTTP_SMOKE_PASS","serverVersion":"0.8.0","tools":37}`. Mesh was deliberately unavailable. This proves local discovery, metadata serialization and the exercised outage response, not a hosted release or funded backend.
+
+[VERIFIED negative control] Disabling only the model-output private-field predicate in the isolated copy made the unchanged selected privacy case fail: `0 passed`, `1 failed`, on `rawPolicyBody`. Canonical source was unchanged; the isolated helper was restored before the process smoke. Production sign-in guidance was preserved rather than changed to satisfy an incidental wording assertion.
 
 ## Decision and execution boundaries
 

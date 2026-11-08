@@ -37,7 +37,7 @@ use uuid::Uuid;
 mod helpers;
 use helpers::*;
 mod prep;
-pub const TOOL_NAMES: [&str; 30] = [
+pub const TOOL_NAMES: [&str; 37] = [
     "falcon_public_graph",
     "falcon_connect",
     "falcon_connect_verify",
@@ -68,9 +68,16 @@ pub const TOOL_NAMES: [&str; 30] = [
     "falcon_cfo_monitor",
     "falcon_cfo_record",
     "falcon_cfo_decision_trace",
+    "falcon_lending_bot_overview",
+    "falcon_lending_bot_capture",
+    "falcon_lending_bot_start",
+    "falcon_lending_bot_pause",
+    "falcon_lending_bot_withdraw",
+    "falcon_lending_bot_reconcile",
+    "falcon_lending_bot_fee_claim",
 ];
 pub const SCHEMA_FINGERPRINT: &str =
-    "sha256:c3c44279336fcafd2570cd946be199e4d0ced55d615ec8d90eca3259421ebbbf";
+    "sha256:15b0a5c47f6b97e15f98871e240e8940c793d78d8b332e67c165816a078acb88";
 const SESSION_RE: &str = r"^wsi1_[A-Za-z0-9_-]{20,}$";
 const UUID_RE: &str =
     r"^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$";
@@ -79,9 +86,11 @@ const USDC_RE: &str = r"^(0|[1-9]\d*)(\.\d{1,6})?$";
 const BODY_LIMIT: usize = 256 * 1024;
 const LEGACY_FIXTURE: &str = include_str!("../fixtures/node-0.5.0.json");
 const CFO_FIXTURE: &str = include_str!("../fixtures/cfo-tools-0.7.0.json");
+const LENDING_BOT_FIXTURE: &str = include_str!("../fixtures/lending-bot-tools-0.8.0.json");
 const INSTRUCTIONS: &str = concat!(
     "Falcon MCP exposes publisher-reported NEAR/mainnet research separately from legacy Solana/Devnet lending and execution tools. NEAR case/source content and replay results are publisher-reported, not independently verified. Public case/replay/source calls accept no session, owner data, or auth. Adoption and review require a Falcon owner session; review also requires a verified host/operator grant and promptly returns the retained async job envelope instead of waiting for model completion. Review does not authorize execution. Metadata/configuration do not establish runtime readiness or grant verification. ",
     "The NEAR CFO tools call fixed Mesh /v1/cfo routes using only an authenticated wallet session for owner context; callers cannot supply an owner, wallet, model, key, grant, URL, or route. CFO is mainnet-only. Current account context, signer, funds, quote/provider, and trial readiness are not checked by MCP metadata. Financial actions always require owner approval and signature, distinct from wallet login. CFO relay is default-deny unless an operator grants the exact owner, wallet, actionId, quoteHash, reserve cap, expiry, retained proof, and trial permission. Risk approval is not spending permission. Prepared unsigned payloads may be returned for owner review; signatures and signed bytes are omitted from CFO history and other model-facing output. ",
+    "The funded Solana lending bot calls only fixed Mesh /v1/lending-bot endpoints with an authenticated wallet session; owner and wallet are derived by Mesh, and MCP accepts no owner, wallet, route, model, fee recipient, provider JWT, or delegation control. It is distinct from both legacy Solana Devnet execution and NEAR CFO. Start requires Mesh to recheck a human-approved mandate and the actual customer-owned installed policy-limited delegation; it only activates that existing authority. MCP has no wallet/delegation installation, signing, or direct-send tool and cannot widen the installed policy. Withdrawals and fee claims return unsigned owner-review transactions only; the human separately approves and signs them. Raw provider policy bodies, customer identity, signatures and signed bytes are removed from bot output. ",
     "Unlisted capabilities are unsupported. For the legacy Devnet flow, call falcon_public_graph({}) first; it reads only fixed public-market evidence. OBSERVED is technical data, not a personalized REVIEW, recommendation, or execution approval. NO_DATA never falls back to an older graph. Custom graph selection is not supported. Policy identifiers and version are graph metadata, not owner mandates or durable decision IDs. Never invent proposed amount, owner maximum, book floor, or evidence-age limit. ",
     "Reuse an existing unexpired session. Only sign a new wallet-ownership message when one is required for owner-bound adoption, decisions, or execution records; sessions last 30 minutes. For owner-bound Devnet flow: falcon_refresh_evidence adopts the public graph into program and reserve records at one exact graphRevision; falcon_reserve_decision requires that analysisId and explicit human-provided scenario values; falcon_prepare_transaction uses the public-only lending route. Supply needs the returned REVIEW decisionId and stays capped at 1 USDC (1000000 base units) on Devnet. Redeem needs fresh adopted public evidence but no decision. ",
     "For every signature, show the exact message or transaction and get separate human approval. Falcon never holds keys, signs, or broadcasts legacy Solana transactions. The human alone signs and broadcasts the exact registered transaction. falcon_wallet_status, falcon_decode_transaction, falcon_public_graph, and falcon_self_test are public read-only tools. falcon_self_test reports metadata only; it does not test health, backend readiness, signer, funds, execution readiness, or a verified research grant."
@@ -361,15 +370,19 @@ impl Mesh {
                 let code = error.get("code").and_then(Value::as_str).unwrap_or("");
                 let message = error.get("message").and_then(Value::as_str).unwrap_or("");
                 let is_cfo = path == "/v1/cfo" || path.starts_with("/v1/cfo/");
+                let is_lending_bot =
+                    path == "/v1/lending-bot" || path.starts_with("/v1/lending-bot/");
                 let public_message = if is_cfo {
                     "The NEAR CFO request was rejected."
+                } else if is_lending_bot {
+                    "The Solana lending bot request was rejected."
                 } else {
                     message
                 };
                 if Regex::new(r"^[A-Z][A-Z0-9_]{1,39}$")
                     .unwrap()
                     .is_match(code)
-                    && (is_cfo || message.len() <= 500)
+                    && (is_cfo || is_lending_bot || message.len() <= 500)
                 {
                     Err(ToolFailure {
                         code: code.into(),
@@ -497,6 +510,21 @@ fn self_test_capabilities() -> &'static Value {
             serde_json::from_str(include_str!("../fixtures/capabilities.json"))
                 .expect("checked in capability contract");
         metadata["configurationProvesReadiness"] = json!(false);
+        metadata["authority"]["humanApproval"] = json!(
+            "NEAR CFO owner signature per financial action; funded bot start requires human-approved mandate and delegation; owner signature for bot withdrawal and fee claim; legacy Solana human signature"
+        );
+        metadata["authority"]["signing"] = json!(
+            "human-controlled wallet for legacy and NEAR CFO; customer-owned policy-limited bot signer for funded lending only"
+        );
+        metadata["authority"]["broadcast"] = json!(
+            "human-only legacy Solana; NEAR CFO exact granted signed intents; funded lending policy-limited runner only"
+        );
+        metadata["authority"]["broadcastScope"] = json!(
+            "legacy-solana-devnet-human-only;near-mainnet-exact-cfo-relay;solana-mainnet-beta-policy-limited-funded-lending-bot"
+        );
+        metadata["authority"]["delegatedExecution"] = json!(true);
+        metadata["authority"]["delegatedExecutionScope"] =
+            json!("solana-funded-lending-bot-only;customer-installed-policy-limited-signer");
         metadata["supported"]
 			.as_array_mut()
 			.expect("capability scopes are an array")
@@ -543,6 +571,23 @@ fn self_test_capabilities() -> &'static Value {
                     "executionReady": false,
                     "tools": ["falcon_cfo_overview", "falcon_cfo_mandate", "falcon_cfo_capture", "falcon_cfo_plan", "falcon_cfo_prepare", "falcon_cfo_register_signed", "falcon_cfo_relay", "falcon_cfo_reconcile", "falcon_cfo_monitor", "falcon_cfo_record", "falcon_cfo_decision_trace"]
                 }),
+                json!({
+                    "id": "solana-funded-lending-bot",
+                    "domain": "lending",
+                    "chain": "solana",
+                    "network": "mainnet-beta",
+                    "actions": ["overview", "capture", "start", "pause", "prepare-withdrawal", "reconcile", "prepare-fee-claim"],
+                    "authorization": {
+                        "owner": "authenticated-wallet-session",
+                        "start": "human-approved-mandate-and-actual-customer-owned-installed-policy-limited-delegation",
+                        "withdrawal": "unsigned-owner-review-and-signature-required",
+                        "feeClaim": "reconciled-owed-fee-and-configured-recipient-then-owner-signature"
+                    },
+                    "currentContext": "not_checked",
+                    "executionSupported": true,
+                    "executionReady": false,
+                    "tools": ["falcon_lending_bot_overview", "falcon_lending_bot_capture", "falcon_lending_bot_start", "falcon_lending_bot_pause", "falcon_lending_bot_withdraw", "falcon_lending_bot_reconcile", "falcon_lending_bot_fee_claim"]
+                }),
 			]);
         metadata
     });
@@ -555,6 +600,10 @@ fn tool_defs() -> &'static [ToolDef] {
         tools.extend(
             serde_json::from_str::<Vec<ToolDef>>(CFO_FIXTURE)
                 .expect("checked in current CFO tool fixture"),
+        );
+        tools.extend(
+            serde_json::from_str::<Vec<ToolDef>>(LENDING_BOT_FIXTURE)
+                .expect("checked in funded lending bot tool fixture"),
         );
         tools
     });
@@ -1158,9 +1207,77 @@ async fn dispatch(st: &AppState, name: &str, args: &Value) -> Result<Value, Tool
             let response = mesh.get(&path, sess, 15000).await?;
             Ok(cfo_public_response(response, false))
         }
+        "falcon_lending_bot_overview" => {
+            let response = g("/v1/lending-bot", sess, 15000).await?;
+            Ok(lending_bot_public_response(response, false))
+        }
+        "falcon_lending_bot_capture" => {
+            let response = p(
+                "/v1/lending-bot/capture",
+                json!({"requestId":args["requestId"]}),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(lending_bot_public_response(response, false))
+        }
+        "falcon_lending_bot_start" => {
+            let response = p(
+                "/v1/lending-bot/start",
+                json!({"requestId":args["requestId"]}),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(lending_bot_public_response(response, false))
+        }
+        "falcon_lending_bot_pause" => {
+            let response = p(
+                "/v1/lending-bot/pause",
+                json!({"requestId":args["requestId"]}),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(lending_bot_public_response(response, false))
+        }
+        "falcon_lending_bot_withdraw" => {
+            let response = p(
+                "/v1/lending-bot/withdraw",
+                json!({
+                    "requestId":args["requestId"],
+                    "reserveAddress":args["reserveAddress"],
+                    "receiptBaseUnits":args["receiptBaseUnits"]
+                }),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(lending_bot_public_response(response, true))
+        }
+        "falcon_lending_bot_reconcile" => {
+            let response = p(
+                "/v1/lending-bot/reconcile",
+                json!({"requestId":args["requestId"],"actionId":args["actionId"]}),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(lending_bot_public_response(response, false))
+        }
+        "falcon_lending_bot_fee_claim" => {
+            let response = p(
+                "/v1/lending-bot/fee-claim",
+                json!({"requestId":args["requestId"]}),
+                sess,
+                60000,
+            )
+            .await?;
+            Ok(lending_bot_public_response(response, true))
+        }
         "falcon_self_test" => Ok(json!({
             "serverVersion": env!("CARGO_PKG_VERSION"),
-            "tools": TOOL_NAMES,
+            "tools": TOOL_NAMES.as_slice(),
             "toolCount": TOOL_NAMES.len(),
             "schemaFingerprint": fingerprint(tool_defs()),
             "capabilities": self_test_capabilities(),
@@ -1173,7 +1290,12 @@ async fn dispatch(st: &AppState, name: &str, args: &Value) -> Result<Value, Tool
                 "cfoProvider": "not_checked",
                 "cfoNetwork": "near_mainnet_only",
                 "cfoExecutionGrant": "default_deny_exact_trial_grant",
-                "cfoOwnerSignature": "required_per_financial_action"
+                "cfoOwnerSignature": "required_per_financial_action",
+                "lendingBotContext": "not_checked",
+                "lendingBotProvider": "not_checked",
+                "lendingBotNetwork": "solana_mainnet_beta_only",
+                "lendingBotExecution": "default_deny_until_provider_mandate_delegation_and_financial_gates",
+                "lendingBotOwnerSignature": "required_for_withdrawal_and_fee_claim",
             }
         })),
 		_ => {
