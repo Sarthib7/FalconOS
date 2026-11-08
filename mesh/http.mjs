@@ -10,6 +10,94 @@ import { projectActivity } from './activity.mjs';
 
 const BODY_LIMIT = 1024 * 1024;
 const ACTIVITY_LIMIT_BYTES = 1024 * 1024;
+const LENDING_BOT_BODY_LIMIT = 16 * 1024;
+const LENDING_BOT_TRANSACTION_BYTES_LIMIT = 1232;
+const LENDING_BOT_TRANSACTION_BASE64_LIMIT = 4 * Math.ceil(LENDING_BOT_TRANSACTION_BYTES_LIMIT / 3);
+const LENDING_BOT_ROUTES = {
+  '/v1/lending-bot/wallet-link': ['linkWallet', ['requestId', 'accessToken']],
+  '/v1/lending-bot/mandate': ['saveMandate', ['requestId', 'mandate']],
+  '/v1/lending-bot/delegation/prepare': ['prepareDelegation', ['requestId', 'accessToken']],
+  '/v1/lending-bot/delegation': ['verifyDelegation', ['requestId']],
+  '/v1/lending-bot/capture': ['capture', ['requestId']],
+  '/v1/lending-bot/start': ['start', ['requestId']],
+  '/v1/lending-bot/pause': ['pause', ['requestId']],
+  '/v1/lending-bot/revoke/prepare': ['prepareRevocation', ['requestId', 'accessToken']],
+  '/v1/lending-bot/revoke': ['revoke', ['requestId', 'accessToken']],
+  '/v1/lending-bot/withdraw': ['prepareWithdrawal', ['requestId', 'reserveAddress', 'receiptBaseUnits']],
+  '/v1/lending-bot/fee-claim': ['prepareFeeClaim', ['requestId']],
+  '/v1/lending-bot/owner-signatures': ['submitOwnerSignature', ['requestId', 'actionId', 'signedTransactionBase64']],
+  '/v1/lending-bot/reconcile': ['reconcile', ['requestId', 'actionId']],
+};
+const LENDING_BOT_MANDATE_KEYS = [
+  'schemaVersion', 'capitalCapBaseUnits', 'reserveFloorBaseUnits', 'maxActionBaseUnits',
+  'maxPositionBps', 'maxFeeLamports', 'maxEvidenceAgeSeconds', 'minHoldingSeconds',
+  'minNetBenefitBaseUnits', 'cooldownSeconds', 'feeBps', 'feeRecipient', 'reserves',
+  'expiresAt', 'monitorIntervalSeconds', 'maxReviewCalls',
+];
+const CANONICAL_UNITS = /^(0|[1-9][0-9]*)$/;
+const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+function validateLendingBotInput(input, route) {
+  keys(input, route[1]);
+  normalizeResearchUuid(input.requestId);
+  if (Object.hasOwn(input, 'actionId')) normalizeResearchUuid(input.actionId);
+  if (Object.hasOwn(input, 'accessToken')
+      && (typeof input.accessToken !== 'string' || !input.accessToken)) {
+    throw new MeshError('INVALID_INPUT', 'accessToken must be a non-empty string.');
+  }
+  if (Object.hasOwn(input, 'mandate')) {
+    const mandate = input.mandate;
+    keys(mandate, LENDING_BOT_MANDATE_KEYS);
+    if (mandate.schemaVersion !== 1
+        || !['capitalCapBaseUnits', 'reserveFloorBaseUnits', 'maxActionBaseUnits', 'maxFeeLamports', 'minNetBenefitBaseUnits']
+          .every(key => typeof mandate[key] === 'string' && mandate[key].length <= 78 && CANONICAL_UNITS.test(mandate[key]))
+        || !['maxPositionBps', 'feeBps'].every(key => Number.isSafeInteger(mandate[key]))
+        || !['maxEvidenceAgeSeconds', 'minHoldingSeconds', 'cooldownSeconds', 'monitorIntervalSeconds', 'maxReviewCalls']
+          .every(key => Number.isSafeInteger(mandate[key]) && mandate[key] >= 0)
+        || !SOLANA_ADDRESS.test(mandate.feeRecipient)
+        || !Array.isArray(mandate.reserves) || mandate.reserves.length !== 2
+        || mandate.reserves.some(address => typeof address !== 'string' || !SOLANA_ADDRESS.test(address))
+        || mandate.reserves[0] === mandate.reserves[1]
+        || typeof mandate.expiresAt !== 'string' || !mandate.expiresAt) {
+      throw new MeshError('INVALID_INPUT', 'The lending bot mandate does not match its exact schema.');
+    }
+  }
+  if (Object.hasOwn(input, 'reserveAddress')
+      && (typeof input.reserveAddress !== 'string' || !SOLANA_ADDRESS.test(input.reserveAddress))) {
+    throw new MeshError('INVALID_INPUT', 'reserveAddress must be a Solana address.');
+  }
+  if (Object.hasOwn(input, 'receiptBaseUnits')
+      && (typeof input.receiptBaseUnits !== 'string' || input.receiptBaseUnits.length > 78
+        || !CANONICAL_UNITS.test(input.receiptBaseUnits))) {
+    throw new MeshError('INVALID_INPUT', 'receiptBaseUnits must be a canonical integer string.');
+  }
+  if (Object.hasOwn(input, 'signedTransactionBase64')) {
+    const encoded = input.signedTransactionBase64;
+    if (typeof encoded !== 'string' || encoded.length < 4 || encoded.length > LENDING_BOT_TRANSACTION_BASE64_LIMIT) {
+      throw new MeshError('INVALID_INPUT', 'signedTransactionBase64 exceeds the Solana transaction limit.');
+    }
+    const decoded = Buffer.from(encoded, 'base64');
+    if (decoded.length > LENDING_BOT_TRANSACTION_BYTES_LIMIT || decoded.toString('base64') !== encoded) {
+      throw new MeshError('INVALID_INPUT', 'signedTransactionBase64 must be canonical base64 within the Solana transaction limit.');
+    }
+  }
+}
+
+async function callLendingBot(service, method, owner, wallet, input) {
+  if (typeof service?.[method] !== 'function') {
+    throw new MeshError('STORAGE_UNAVAILABLE', 'The lending bot service is not configured.');
+  }
+  try {
+    return await service[method](owner, wallet, input);
+  } catch (error) {
+    if (error instanceof MeshError && Object.hasOwn(STATUSES, error.code)) {
+      const safe = new MeshError(error.code, 'The lending bot request could not be completed.');
+      if (Number.isInteger(error.retryAfter)) safe.retryAfter = error.retryAfter;
+      throw safe;
+    }
+    throw new MeshError('STORAGE_UNAVAILABLE', 'The lending bot service could not complete the request.');
+  }
+}
 
 const EVIDENCE_EXCHANGES = 2;
 const STATUSES = { INVALID_INPUT: 400, UNAUTHORIZED: 401, FORBIDDEN: 403, ORIGIN_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, TOO_LARGE: 413, RATE_LIMITED: 429, STORAGE_UNAVAILABLE: 503, AUTH_UNAVAILABLE: 503, INTERNAL_ERROR: 500 };
@@ -92,7 +180,7 @@ async function body(request, limit = BODY_LIMIT) {
 }
 
 export function createApi({
-  store, lending = null, yieldService = null, publicGraph = null, researchService = null, researchReviewService = null, researchActivity = null, cfo = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
+  store, lending = null, lendingBot = null, yieldService = null, publicGraph = null, researchService = null, researchReviewService = null, researchActivity = null, cfo = null, walletAuth = null, tokenHashes, allowedOrigins = new Set(), now = () => new Date().toISOString(), verifySupabaseToken = null,
   rateWindowMs = 60000, rateMaxPerOwner = 120, rateMaxGlobal = 600,
   walletLookupMaxPerSource = 240, walletLookupMaxGlobal = rateMaxGlobal, clock = () => Date.now(),
   walletStatus = readWalletStatus, transactionInspection = inspectTransaction,
@@ -300,6 +388,28 @@ export function createApi({
       }
       if (!owner) throw new MeshError('UNAUTHORIZED', 'A valid mesh access token is required.');
       rateLimit(owner);
+      if (url.pathname === '/v1/lending-bot' || url.pathname.startsWith('/v1/lending-bot/')) {
+        if (!walletSession?.walletAddress) {
+          throw new MeshError('UNAUTHORIZED', 'Lending bot access requires a verified wallet session. Operator tokens cannot authorize funds.');
+        }
+        if (!lendingBot) throw new MeshError('STORAGE_UNAVAILABLE', 'The lending bot service is not configured.');
+        const wallet = walletSession.walletAddress;
+        if (request.method === 'GET') {
+          if (url.pathname !== '/v1/lending-bot') throw new MeshError('NOT_FOUND', 'Lending bot endpoint not found.');
+          if (Number(request.headers['content-length'] || 0) > 0 || request.headers['transfer-encoding']) {
+            request.resume();
+            throw new MeshError('INVALID_INPUT', 'Lending bot reads do not accept a body.');
+          }
+          send(200, await callLendingBot(lendingBot, 'overview', owner, wallet), ACTIVITY_LIMIT_BYTES);
+          return;
+        }
+        const route = LENDING_BOT_ROUTES[url.pathname];
+        if (request.method !== 'POST' || !route) throw new MeshError('NOT_FOUND', 'Lending bot endpoint not found.');
+        const input = await body(request, LENDING_BOT_BODY_LIMIT);
+        validateLendingBotInput(input, route);
+        send(200, await callLendingBot(lendingBot, route[0], owner, wallet, input), ACTIVITY_LIMIT_BYTES);
+        return;
+      }
       if (url.pathname === '/v1/cfo' || url.pathname.startsWith('/v1/cfo/')) {
         if (!walletSession?.walletAddress) {
           throw new MeshError('UNAUTHORIZED', 'CFO access requires a verified wallet session. Operator tokens cannot authorize funds.');
