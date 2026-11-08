@@ -56,7 +56,9 @@ async fn mesh(
     if fake.deny_pause && route == "/v1/lending-bot/pause" {
         return (
             StatusCode::FORBIDDEN,
-            Json(json!({"error":{"code":"UNAUTHORIZED","message":format!("Rejected provider session {PRIVATE_SECRET}")}})),
+            Json(
+                json!({"error":{"code":"UNAUTHORIZED","message":format!("Rejected provider session {PRIVATE_SECRET}")}}),
+            ),
         );
     }
     let response = match route.as_str() {
@@ -164,7 +166,9 @@ async fn mesh(
 }
 
 async fn stack(fake: FakeMesh) -> (String, FakeMesh) {
-    let upstream = Router::new().route("/{*path}", any(mesh)).with_state(fake.clone());
+    let upstream = Router::new()
+        .route("/{*path}", any(mesh))
+        .with_state(fake.clone());
     let upstream_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let upstream_address = upstream_listener.local_addr().unwrap();
     tokio::spawn(async move { axum::serve(upstream_listener, upstream).await.unwrap() });
@@ -247,8 +251,18 @@ async fn funded_lending_tools_are_fixed_and_reject_identity_or_authority_injecti
         let schema = &tool["inputSchema"];
         assert_eq!(schema["additionalProperties"], false);
         let properties = schema["properties"].as_object().unwrap();
-        for forbidden in ["owner", "wallet", "feeRecipient", "route", "model", "accessToken"] {
-            assert!(!properties.contains_key(forbidden), "{name} exposed {forbidden}");
+        for forbidden in [
+            "owner",
+            "wallet",
+            "feeRecipient",
+            "route",
+            "model",
+            "accessToken",
+        ] {
+            assert!(
+                !properties.contains_key(forbidden),
+                "{name} exposed {forbidden}"
+            );
         }
     }
     assert_eq!(fake.calls.lock().await.len(), 0);
@@ -263,7 +277,14 @@ async fn funded_lending_tools_are_fixed_and_reject_identity_or_authority_injecti
     bad_withdrawal["reserveAddress"] = json!(RESERVE);
     bad_withdrawal["receiptBaseUnits"] = json!(100);
     bad_withdrawal["feeRecipient"] = json!("caller-chosen-recipient");
-    let rejected = call(&client, &url, 3, "falcon_lending_bot_withdraw", bad_withdrawal).await;
+    let rejected = call(
+        &client,
+        &url,
+        3,
+        "falcon_lending_bot_withdraw",
+        bad_withdrawal,
+    )
+    .await;
     assert_eq!(rejected["isError"], true);
     assert_eq!(rejected["structuredContent"]["code"], "INVALID_INPUT");
     assert_eq!(fake.calls.lock().await.len(), 0);
@@ -296,20 +317,42 @@ async fn funded_lending_calls_forward_only_fixed_authenticated_mesh_requests_and
     }
 
     assert_eq!(outputs[0]["domain"], "solana-lending-bot");
-    assert_eq!(outputs[0]["configuration"]["walletProviderConfigured"], true);
+    assert_eq!(
+        outputs[0]["configuration"]["walletProviderConfigured"],
+        true
+    );
     assert_eq!(outputs[0]["accounting"]["depositsBaseUnits"], "2000000");
     assert_eq!(outputs[0]["delegation"]["policyHash"], "policy-hash-public");
     assert!(outputs[0]["delegation"].get("rawPolicyBody").is_none());
-    assert_eq!(outputs[4]["ownerAction"]["prepared"]["transactionBase64"], UNSIGNED_WITHDRAW);
-    assert_eq!(outputs[6]["ownerAction"]["prepared"]["transactionBase64"], UNSIGNED_FEE);
+    assert_eq!(
+        outputs[4]["ownerAction"]["prepared"]["transactionBase64"],
+        UNSIGNED_WITHDRAW
+    );
+    assert_eq!(
+        outputs[6]["ownerAction"]["prepared"]["transactionBase64"],
+        UNSIGNED_FEE
+    );
     for index in [1_usize, 2, 3, 5] {
         assert!(!outputs[index].to_string().contains("transactionBase64"));
-        assert!(!outputs[index].to_string().contains("signedTransactionBase64"));
+        assert!(
+            !outputs[index]
+                .to_string()
+                .contains("signedTransactionBase64")
+        );
     }
     for output in &outputs {
         let text = output.to_string();
-        for private in [PRIVATE_CUSTOMER, PRIVATE_PROVIDER, PRIVATE_POLICY, PRIVATE_SECRET, PRIVATE_SIGNED] {
-            assert!(!text.contains(private), "private marker reached model output: {private}");
+        for private in [
+            PRIVATE_CUSTOMER,
+            PRIVATE_PROVIDER,
+            PRIVATE_POLICY,
+            PRIVATE_SECRET,
+            PRIVATE_SIGNED,
+        ] {
+            assert!(
+                !text.contains(private),
+                "private marker reached model output: {private}"
+            );
         }
         assert!(!text.contains("walletAddress"));
         assert!(!text.contains("providerWalletId"));
@@ -320,9 +363,21 @@ async fn funded_lending_calls_forward_only_fixed_authenticated_mesh_requests_and
     assert_eq!(forwarded.len(), calls.len());
     let expected = [
         ("GET", "/v1/lending-bot", Value::Null),
-        ("POST", "/v1/lending-bot/capture", json!({"requestId":REQUEST_ID})),
-        ("POST", "/v1/lending-bot/start", json!({"requestId":REQUEST_ID})),
-        ("POST", "/v1/lending-bot/pause", json!({"requestId":REQUEST_ID})),
+        (
+            "POST",
+            "/v1/lending-bot/capture",
+            json!({"requestId":REQUEST_ID}),
+        ),
+        (
+            "POST",
+            "/v1/lending-bot/start",
+            json!({"requestId":REQUEST_ID}),
+        ),
+        (
+            "POST",
+            "/v1/lending-bot/pause",
+            json!({"requestId":REQUEST_ID}),
+        ),
         (
             "POST",
             "/v1/lending-bot/withdraw",
@@ -333,7 +388,11 @@ async fn funded_lending_calls_forward_only_fixed_authenticated_mesh_requests_and
             "/v1/lending-bot/reconcile",
             json!({"requestId":REQUEST_ID,"actionId":ACTION_ID}),
         ),
-        ("POST", "/v1/lending-bot/fee-claim", json!({"requestId":REQUEST_ID})),
+        (
+            "POST",
+            "/v1/lending-bot/fee-claim",
+            json!({"requestId":REQUEST_ID}),
+        ),
     ];
     for (observed, (method, path, body)) in forwarded.iter().zip(expected) {
         assert_eq!(observed["method"], method);
@@ -348,7 +407,11 @@ async fn funded_lending_calls_forward_only_fixed_authenticated_mesh_requests_and
 
 #[tokio::test]
 async fn funded_lending_upstream_errors_are_redacted() {
-    let (url, _) = stack(FakeMesh { deny_pause: true, ..FakeMesh::default() }).await;
+    let (url, _) = stack(FakeMesh {
+        deny_pause: true,
+        ..FakeMesh::default()
+    })
+    .await;
     let result = call(
         &reqwest::Client::new(),
         &url,
@@ -369,11 +432,21 @@ async fn funded_lending_upstream_errors_are_redacted() {
 #[tokio::test]
 async fn self_test_keeps_legacy_scopes_separate_and_reports_bot_gates_closed() {
     let (url, fake) = stack(FakeMesh::default()).await;
-    let result = call(&reqwest::Client::new(), &url, 1, "falcon_self_test", json!({})).await;
+    let result = call(
+        &reqwest::Client::new(),
+        &url,
+        1,
+        "falcon_self_test",
+        json!({}),
+    )
+    .await;
     assert!(result.get("isError").is_none());
     let metadata = &result["structuredContent"];
     assert_eq!(metadata["toolCount"], 37);
-    assert_eq!(metadata["tools"].as_array().unwrap().len(), TOOL_NAMES.len());
+    assert_eq!(
+        metadata["tools"].as_array().unwrap().len(),
+        TOOL_NAMES.len()
+    );
     assert_eq!(metadata["schemaFingerprint"], SCHEMA_FINGERPRINT);
     assert_eq!(metadata["readiness"]["lendingBotContext"], "not_checked");
     assert_eq!(metadata["readiness"]["lendingBotProvider"], "not_checked");
@@ -394,16 +467,25 @@ async fn self_test_keeps_legacy_scopes_separate_and_reports_bot_gates_closed() {
     );
 
     let supported = metadata["capabilities"]["supported"].as_array().unwrap();
-    let bot = supported.iter().find(|scope| scope["id"] == "solana-funded-lending-bot").unwrap();
+    let bot = supported
+        .iter()
+        .find(|scope| scope["id"] == "solana-funded-lending-bot")
+        .unwrap();
     assert_eq!(bot["chain"], "solana");
     assert_eq!(bot["network"], "mainnet-beta");
     assert_eq!(bot["executionReady"], false);
-    assert_eq!(bot["authorization"]["owner"], "authenticated-wallet-session");
+    assert_eq!(
+        bot["authorization"]["owner"],
+        "authenticated-wallet-session"
+    );
     assert_eq!(
         bot["authorization"]["start"],
         "human-approved-mandate-and-actual-customer-owned-installed-policy-limited-delegation"
     );
-    let near = supported.iter().find(|scope| scope["id"] == "near-cfo").unwrap();
+    let near = supported
+        .iter()
+        .find(|scope| scope["id"] == "near-cfo")
+        .unwrap();
     assert_eq!(near["chain"], "near");
     assert_eq!(near["network"], "mainnet");
     assert_eq!(
@@ -411,7 +493,10 @@ async fn self_test_keeps_legacy_scopes_separate_and_reports_bot_gates_closed() {
         "required-for-every-financial-action"
     );
     assert_eq!(near["authorization"]["defaultRelayGrant"], "deny");
-    let legacy = supported.iter().find(|scope| scope["id"] == "lending-execution").unwrap();
+    let legacy = supported
+        .iter()
+        .find(|scope| scope["id"] == "lending-execution")
+        .unwrap();
     assert_eq!(legacy["network"], "devnet");
     assert_eq!(legacy["maxSupplyUsdc"], "1");
     assert_eq!(fake.calls.lock().await.len(), 0);
