@@ -1,5 +1,59 @@
 # Status
 
+## R5 consumer acceptance: 2026-11-04
+
+Owner: orchestrator. Status: Verified locally and at exact consumer head3c01355 in CI. Consumer and funded launches remain Blocked.
+
+[APPROVED SCOPE] The owner approved preserved R5/R8 implementation and sequential draft PR publication. This does not authorize merge, deployment, provider/model activation, real-wallet signing, relay or funds. Product design, senior implementation, browser checks, red-team review and GTM records had separate file owners; the parent ran the gates.
+
+[VERIFIED LOCAL GATES] `npm run verify` returned `repository: PASS`, `advisory: PASS`, `web: PASS`, `mesh: PASS`, `mcp: PASS`, `engine: PASS`. Counts were repository31, advisory114, web335, Mesh382, MCP33 and engine38, all passing. This run used Homebrew Node26.8.1. After the final markup changes, Node24.19.0 web verification returned `tests335, pass335, fail0, skipped0`. Its non-failing development-HMR warning named occupied port24678; the unrelated listener was not changed. Pinned Bun1.3.14 Council fixture checks returned `9 pass, 0 fail, 67 expect() calls`.
+
+[VERIFIED ACTUAL OWNER PATH] The final production-built browser run returned `passed:32, total:32, exceptions:[]` through actual HTTP/auth and disposable PostgreSQL17. It covered provider-disabled NO_DATA, exact18-decimal entry, explicit template copy/save, unchanged capital/targets, dirty refresh, GET-only503→200 recovery, changed quote bytes with an unchanged claimed hash, mismatched mandate context, GET recovery after response corruption and wallet-account invalidation. Only controlled financial fixtures and authentication-only test keys were used. No external provider/model, financial signature, relay, settlement or funds were exercised.
+
+[VERIFIED FAILURE DIRECTION] Frozen c353955 source with the new helper cases collected14 tests:8 passed and6 failed because the helpers were absent. Current helpers passed14/14. A separate copy of3c01355 with only the rendered sign control forced enabled returned `passed:24, total:25`; the failing check was `V216: failed authenticated quote read leaves one exact action retained but signing unavailable`. It made no signature/relay POST and had no runtime exception. The canonical implementation passed32/32. Both owned control worktrees were removed.
+
+[VERIFIED ACTUAL SURFACE] Brave keyboard Enter opened the policy disclosures and copied only the six reviewed values, `25,0.5,1,300,300,12`; both capital inputs stayed blank and Save stayed disabled. The final provider-disabled `.cfo` surface had axe4.12.1 `violations:0,incomplete:0,passes:27` collapsed and `passes:28` expanded. Mobile document width and viewport were both390. These observations cover those states, not every accessibility or live financial path. The observed-portfolio amount screenshot used clearly controlled fixtures.
+
+[VERIFIED HARNESS CORRECTIONS] The earlier25/26 composite predicate was not valid financial-failure proof: it searched the wrong container for the action ID and pinned shortened zero formatting. The final check uses public fields, semantic amounts and technical-audit identity. Three separate cold-profile runs stalled before API access; retained netlog rows showed `COOKIE_PERSISTENT_STORE_KEY_LOAD_STARTED` without completion before the20-second deadline. Private-profile `--password-store=basic` and `--use-mock-keychain` avoid host credential storage; no global Brave setting or timeout changed. A later fixture edit omitted two capture-state declarations and returned503 after6 passing checks. Restoring them led to32/32; unchecked-JavaScript LSP diagnostics had not caught that defect.
+
+[VERIFIED METADATA PUBLICATION] Commit `750daea2fa219d7a859a04b552c1c579ef69710e` is [draft127](https://github.com/Sarthib7/FalconOS/pull/127), stacked on126. Its [PR CI](https://github.com/Sarthib7/FalconOS/actions/runs/41823704792), [push CI](https://github.com/Sarthib7/FalconOS/actions/runs/41823589885) and [web workflow](https://github.com/Sarthib7/FalconOS/actions/runs/41823704789) passed.
+
+[VERIFIED CONSUMER PUBLICATION] Commit `3c01355756e494ff0ac784592e3ec6fd24695ef6` is [draft128](https://github.com/Sarthib7/FalconOS/pull/128), stacked on127. Its [PR CI](https://github.com/Sarthib7/FalconOS/actions/runs/41828244823), [push CI](https://github.com/Sarthib7/FalconOS/actions/runs/41828130884) and [web workflow](https://github.com/Sarthib7/FalconOS/actions/runs/41828244784) passed. This supersedes the earlier pending-CI state. T99 is complete for its local/source scope, not financial launch.
+
+[VERIFIED NON-DEPLOYING PUBLICATION] Every new commit uses the documented [Pages-only skip prefix](https://developers.cloudflare.com/pages/configuration/git-integration/github-integration/#skipping-a-build-via-a-commit-message); GitHub verification still runs. No application deployment or merge was performed.
+
+[VERIFIED CURRENT BOUNDARIES] This session's official SDK smoke returned `MCP_HTTP_SMOKE_PASS`, `serverVersion:0.7.0`, `tools:30`, `graphStatus:OBSERVED`, `meshUnavailable:false`; graph execution readiness was false. Read-only configuration showed providers disabled, zero review owners/execution grants/trials, and absent partner/sender keys. The public dashboard remained Soon; the served guide was0.3.2. The main-host origin was absent from the allowed list. Current mounted-tool inventory had no Falcon device. These are bounded observations, not universal real-time coverage, model quality or funded acceptance.
+
+[BLOCKED OWNER GATES] Provider retention/terms/keys, a finite real Lead/Risk budget and accepted same-snapshot pair, T82 and the separately capped NEAR trial remain open. Backend-template/origin rollout and user-managed UI/guide publication need separate approval. Four moderate dependency findings remain under bounded review; no major SDK upgrade was made. Native OMP registration needs the provided owner command after active REA evidence is exported. T83/T84 cross-market work is not completed by R5. Named owners and exit evidence are in `agents/blockers.md`.
+
+## Unfunded production trace accepted: 2026-10-28
+
+Owner: coordinator. Status: Completed (bounded QA); Blocked (live intelligence and financial acceptance).
+
+[VERIFIED OWNER APPROVAL] The owner separately approved disposable QA and the endpoint's existing expired-auth cleanup.
+
+[VERIFIED TRACE] One provider-disabled portfolio record, `8ba6dd14-d884-4656-b9cb-c9d2bd0c71e7`, was retained through the normal production API. Authenticated HTTP and native MCP returned identical traces. Canonical hashing and replay passed. The trace reports NO_DATA, freshness UNKNOWN and `executionReady:false`; it is not a balance observation.
+
+[VERIFIED REVOCATION] Logout returned `200 {"revoked":true}`. The same session then failed with HTTP401 and native MCP UNAUTHORIZED. The local private key and bearer token were discarded. Read-only owner-scoped counts found exactly one CFO portfolio, one revoked session and no challenge. Provider/model/execution gates remained closed.
+
+[VERIFIED CORRECTION] The positive-trace hold in the earlier rollout section is now cleared for this approved unfunded case. A CFO record now exists. The old Mesh image without the legacy-reader exclusion is not a safe rollback candidate. No CFO history was deleted.
+
+[UNCHANGED GATES] This does not prove a live portfolio, a complete Lead/Risk pair, universal coverage or funded execution. Provider terms/keys, model budget, T82 and the exact funded trial remain open. The public guide and four reported moderate dependency findings remain as recorded below. See [the acceptance evidence](docs/verification/2026-10-27-cfo-trace.md).
+
+## Backend-only production rollout: 2026-10-28
+
+Owner: coordinator. Status: Completed (backend rollout); Blocked (positive owner trace and financial acceptance).
+
+[VERIFIED OWNER APPROVAL] The owner approved this backend-only rollout with "go ahead resume". Revision: `c353955aabae37ef136a9cf4372ee8e25919c241`. Financial and paid-model grants stay closed.
+
+[VERIFIED LIVE] Mesh deployment `19fc352d-d1cd-4daf-b271-2513d5c8d929` and MCP deployment `c6df1a89-24fa-4944-9835-16685e2c204a` report SUCCESS. Both readiness endpoints returned `200 {"status":"ready"}`. The official Rust SDK smoke returned `MCP_HTTP_SMOKE_PASS`, version `0.7.0`, `tools:30`, `meshUnavailable:false`, and `graphStatus:"OBSERVED"`. These checks cover the fixed public Devnet graph, not every tool's positive owner path.
+
+[VERIFIED BOUNDARIES] Trace HTTP requests without a valid wallet session returned401. Native MCP rejected missing sessions and injected owner IDs with INVALID_INPUT; a nonexistent session returned UNAUTHORIZED. Actual production configuration parsed as provider disabled, zero review owners, zero execution grants and zero trials. Partner/sender keys remain absent. Production variables were unchanged.
+
+[VERIFIED RELEASE CORRECTION] The October 27 unreleased statements below describe the earlier checkpoint. Only clean `mesh/` and `mcp-rust/` packages were deployed. Twelve selected Mesh file hashes match the candidate. No frontend release, PR merge, schema/role change, real-user signing, financial relay or paid-model request was performed. See [the deployment evidence and limits](docs/verification/2026-10-27-cfo-trace.md).
+
+[UNCHANGED HOLDS] No CFO records were present at the checked boundary, so positive authenticated production trace acceptance remains open. The public guide still serves0.3.2; Cloudflare publication remains owner-managed. T83/T84, provider terms/keys, a complete live Council pair, T82 and the exact funded trial remain separate. The Mesh build reported "4 moderate severity vulnerabilities"; impact was not assessed in this rollout.
+
 ## R7 typed projection repair and recovered backend: 2026-10-27
 
 Owner: coordinator. Status: Completed (local repair); Blocked (release approval and financial acceptance).

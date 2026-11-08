@@ -456,7 +456,7 @@ Status: Completed
 
 Interface ID: CFO-CONSUMER-R5
 Owner: orchestrator
-Status: In Progress
+Status: Implemented; local and exact-head consumer CI verified. Hosted and funded acceptance remain separate.
 Provider: existing Mesh CFO service, one Node process
 Consumers: authenticated owner dashboard and existing thin MCP
 
@@ -468,20 +468,20 @@ Consumers: authenticated owner dashboard and existing thin MCP
 
 [APPROVED REQUESTS] Mandate, plan, prepare, signature, relay and reconcile routes keep their complete existing schemas and authority. No template ID replaces numeric mandate fields. Convert plain decimal text through verified token precision using integer/string operations only. Reject signs, exponent notation, grouping commas, excess precision and unknown decimals. Zero is valid for a reserve floor, not an action amount. No amount or capital defaults.
 
-[PLANNED SHARED UI HELPERS] Preserve existing `formatBaseUnits`, `buildMandateFromForm` and `buildPlanFields` signatures. Add named exports in `web/dashboard/Cfo.jsx`: `parseTokenAmount(text,decimals)` returns canonical integer text or null, allowing zero for callers to constrain; `baseUnitsInputText(value,decimals)` returns ungrouped exact decimal text or null; `copyConsumerTemplate(form,template)` returns a new draft or null without mutating arguments; `actionHeadRecords(records)` derives one current entry per logical `data.actionId` using the backend's authoritative newest-first order, then puts unresolved heads before terminal heads. It must not resurrect an older SIGNED state after a newer CONFIRMED state. New helpers have behavior tests, not export/wiring assertions.
+[VERIFIED SOURCE] Existing `formatBaseUnits`, `buildMandateFromForm` and `buildPlanFields` signatures remain. Named exports in `web/dashboard/Cfo.jsx`: `parseTokenAmount(text,decimals)` returns canonical integer text or null, allowing zero for callers to constrain; `baseUnitsInputText(value,decimals)` returns ungrouped exact decimal text or null; `copyConsumerTemplate(form,template)` returns a new draft or null without mutating arguments; `actionHeadRecords(records)` derives one current entry per logical `data.actionId` using the backend's authoritative newest-first order, then puts unresolved heads before terminal heads. It does not resurrect an older SIGNED state after a newer CONFIRMED state. Behavior tests cover these helpers.
 
 [APPROVED ACTION CONTEXT] The observed owner portfolio and saved permissions supply asset identity/decimals. The reserve is the buy source and redeem destination. An explicit saved-allocation mode may send null sizing for invest/reinvest; redeem/rotate require a positive held-token amount. Never infer free cash by subtracting local reservations or calculate unsupported NAV/APY/PnL.
 
 [APPROVED PREPARE] One prepare response is followed by a GET-only retained-state refresh. Correlate the exact logical action ID, current state, mandate/portfolio, quote hash, debit/assets, minimum output, costs, destination and expiry before enabling signature. Missing/stale/mismatched quote data blocks signing. Failed read retries only the GET; never prepare or start a model again to display a quote. Keep pending/unknown signatures and financial reservations unchanged.
 
-[PLANNED CSS HOOKS] Keep existing classes and use applicable new hooks consistently: `cfo-primary-flow`, `cfo-investment-grid`, `cfo-position-card`, `cfo-amount-editor`, `cfo-limit-summary`, `cfo-policy-sheet`, `cfo-action-status`, `cfo-quote-review`, `cfo-evidence-details`. Styling must not be the authority that hides or disables financial actions.
+[VERIFIED SOURCE] Consumer styling uses `cfo-primary-flow`, `cfo-investment-grid`, `cfo-position-card`, `cfo-amount-editor`, `cfo-limit-summary`, `cfo-policy-sheet`, `cfo-action-status`, `cfo-quote-review` and `cfo-evidence-details`. Financial controls use actual state guards; CSS is not their authority.
 
-[PLANNED OWNERSHIP] ProductDesign owns `web/dashboard/cfo.css` and `OwnerDashboard.jsx`. SeniorEngineer owns `web/dashboard/Cfo.jsx`. JuniorChecks owns `web/test/owner-dashboard-browser.mjs`. RedTeamChecks owns `web/test/cfo.test.mjs` and `docs/verification/r5-security-review.md`. GTMLaunch owns `docs/pitches/falcon-launch-readiness.md` and `agents/blockers.md`. The orchestrator owns backend metadata, this contract, integration, status, all gates and publication. Workers edit only their assigned files and never run tests, builds, audits, linters, formatters, browsers, commits or deployments.
+[VERIFIED OWNERSHIP] ProductDesign owned `web/dashboard/cfo.css` and `OwnerDashboard.jsx`. SeniorEngineer owned `web/dashboard/Cfo.jsx`. JuniorChecks owned `web/test/owner-dashboard-browser.mjs`. RedTeamChecks owned `web/test/cfo.test.mjs` and `docs/verification/r5-security-review.md`. GTMLaunch owned `docs/pitches/falcon-launch-readiness.md` and `agents/blockers.md`. The orchestrator owned backend metadata, this contract, integration, status, all gates and publication. Workers did not run gates, browsers, commits or deployments; the parent verified their union.
 
-[PLANNED VERIFICATION] Exact conversion boundaries and malformed template metadata; preserved capital/target choices; latest logical action heads; actual authenticated browser with disposable PostgreSQL; unavailable providers remain NO_DATA; no automatic capture/model/sign/relay; GET-only quote-read recovery; context-switch rejection; desktop/mobile keyboard access; exact-head CI. Controlled fixtures do not establish funded or live model acceptance.
+[VERIFIED RUNTIME] Helpers14/14 and actual authenticated browser32/32 cover exact conversion, malformed template metadata, preserved capital/targets, logical heads, NO_DATA, explicit policy save, GET-only recovery, quote-byte and mandate-context corruption, wallet invalidation and zero financial dispatch. Native keyboard disclosure/copy, mobile width and bounded axe checks were observed. The isolated enabled-sign mutation failed its intended V216 check24/25. All three workflows passed exact consumer head3c01355. Full evidence and limitations: `status.md#r5-consumer-acceptance-2026-11-04`. Controlled fixtures do not establish funded or live model acceptance.
 
 ### Least confident decisions
 
-1. [INFERRED] The backend action order is the correct basis for deduplication. Inspect its producer before implementing; do not substitute timestamp or UUID ordering.
+1. [INFERRED maintenance risk] Action-head selection depends on the overview retaining its inspected newest-first owner sequence. A producer-order change needs a contract and consumer-test update; timestamp or UUID ordering is not a substitute.
 2. [UNKNOWN] Browser fixtures can prove consumer transitions but cannot prove live provider, market or capital readiness. The operator gates remain explicit.
 
