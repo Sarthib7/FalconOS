@@ -19,7 +19,7 @@ const RELEASE_INPUTS = [
   'research/near-source.mjs', 'research/near-model.mjs', 'research/service.mjs', 'research/activity.mjs',
   'research/review-store.mjs', 'research/review-jobs.mjs',
   'cfo/config.mjs', 'cfo/intents.mjs', 'cfo/policy.mjs', 'cfo/review.mjs', 'cfo/store.mjs', 'cfo/service.mjs',
-  'cfo/trace.mjs',
+  'cfo/trace.mjs', 'cfo/lifecycle.mjs',
   'schema.sql', 'migrations/0002_lending.sql', 'migrations/0003_wallet_auth.sql', 'deploy/supabase-permissions.sql',
 ];
 
