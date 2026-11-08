@@ -1277,7 +1277,7 @@ async fn dispatch(st: &AppState, name: &str, args: &Value) -> Result<Value, Tool
         }
         "falcon_self_test" => Ok(json!({
             "serverVersion": env!("CARGO_PKG_VERSION"),
-            "tools": TOOL_NAMES,
+            "tools": TOOL_NAMES.as_slice(),
             "toolCount": TOOL_NAMES.len(),
             "schemaFingerprint": fingerprint(tool_defs()),
             "capabilities": self_test_capabilities(),

@@ -130,6 +130,10 @@ The surface is NEAR mainnet only. `falcon_self_test` reports current CFO context
 
 [VERIFIED correction] The import observation above is historical, not a current SDK diagnosis. The later module load and nine controlled-RPC adapter cases passed after three source defects were fixed. See the [executed-check correction](../docs/funded-lending-contract.md#executed-checks-and-limits). The product, owner-JWT, first-run account and live acceptance gates remain open.
 
+[VERIFIED local checkpoint] An isolated export of the corrected crate passed `cargo test --offline --locked`: `37 passed`, `0 failed`. The actual loopback server and official RMCP client returned `{"graphError":"MESH_UNAVAILABLE","graphStatus":null,"meshUnavailable":true,"result":"MCP_HTTP_SMOKE_PASS","serverVersion":"0.8.0","tools":37}`. Mesh was deliberately unavailable. This proves local discovery, metadata serialization and the exercised outage response, not a hosted release or funded backend.
+
+[VERIFIED negative control] Disabling only the model-output private-field predicate in the isolated copy made the unchanged selected privacy case fail: `0 passed`, `1 failed`, on `rawPolicyBody`. Canonical source was unchanged; the isolated helper was restored before the process smoke. Production sign-in guidance was preserved rather than changed to satisfy an incidental wording assertion.
+
 ## Decision and execution boundaries
 
 Owner-bound operations need a valid wallet session. Authentication proves ownership only. Supply needs explicit `proposedUsdc`, `maxUsdc`, `minBookLiquidityUsdc`, and `maxEvidenceAgeSeconds`; never infer these limits. A fresh REVIEW decision and current adopted public evidence are prerequisites for supply preparation. Mesh caps supply at 1 Devnet USDC. Redeem uses receipt-token units and forbids a supply decision ID [VERIFIED, Mesh and MCP contracts].
