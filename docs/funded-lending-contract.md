@@ -92,6 +92,8 @@ Frontend starts with current verified session's wallet. Explicit embedded-wallet
 
 [VERIFIED] Five explicit Kit 2-compatible program pins and `buffer-layout` materialized with `npm ci --strict-peer-deps --ignore-scripts --no-audit --no-fund`; `npm ls --all --parseable` completed. SDK/adapter import timed out at 60 seconds. The exposed receipt path remains runtime-unproved.
 
+[VERIFIED correction] The earlier timeout did not establish SDK incompatibility. Later startup diagnosis found a duplicate adapter helper and two receipt-boundary defects. After their repair, an actual module import reported `adapter:function` and `reserves:2`; `node --test test/bot-solana-lending.test.mjs` collected `9`, passed `9`, failed `0`. The cases use actual SDK/cryptographic code with controlled RPC responses. They do not prove live prices, liquidity, provider policy admission or funded settlement.
+
 ## Primary source pointers
 
 - Privy policies/owners docs read in this session: controls/policies/overview, controls/policies/example-policies/solana-idls, controls/authorization-keys/using-owners/overview, recipes/wallets/conditional-signer-policies.
