@@ -1,7 +1,8 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { MeshError } from '../domain.mjs';
 import { canonicalWalletAddress, deriveWalletOwnerId } from '../wallet-auth.mjs';
 import { canonicalBytes, sha256, stableStringify } from '../council/evidence.ts';
+import { createOwnerTransaction, databaseTime, openFinancialActions } from './lifecycle.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const HASH = /^[a-f0-9]{64}$/;
@@ -321,36 +322,7 @@ function rowRecord(row, owner) {
 export function createCfoStore(pool) {
   if (!pool || typeof pool.connect !== 'function' || typeof pool.query !== 'function') throw new TypeError('CFO store requires a PostgreSQL pool.');
 
-  async function transaction(owner, work) {
-    ownerId(owner);
-    const lock = createHash('sha256').update('falcon_mesh:' + owner, 'utf8').digest().readBigInt64BE().toString();
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      let client;
-      try { client = await pool.connect(); }
-      catch { throw failStorage(); }
-      let releaseError;
-      try {
-        await client.query('BEGIN');
-        await client.query('SELECT pg_advisory_xact_lock($1::bigint)', [lock]);
-        const value = await work(client);
-        await client.query('COMMIT');
-        return value;
-      } catch (error) {
-        try { await client.query('ROLLBACK'); } catch (rollbackError) { releaseError = rollbackError; }
-        if (!releaseError && ['40001', '40P01'].includes(error?.code) && attempt < 2) continue;
-        throw safeError(error);
-      } finally { client.release(releaseError); }
-    }
-    throw failStorage();
-  }
-
-  async function databaseTime(client) {
-    const result = await client.query(`SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS now`);
-    const at = result.rows?.[0]?.now;
-    try { canonicalTime(at, 'PostgreSQL CFO clock'); }
-    catch { throw failStorage(); }
-    return at;
-  }
+  const transaction = createOwnerTransaction(pool);
 
   async function latestRow(client, owner, kind) {
     const result = await client.query(
@@ -405,15 +377,7 @@ export function createCfoStore(pool) {
   }
 
   async function openActionIds(client, owner) {
-    const result = await client.query(
-      `SELECT DISTINCT ON (analysis->'data'->>'actionId')
-         analysis->'data'->>'actionId' AS action_id, analysis->'data'->>'status' AS status
-       FROM falcon_mesh.analyses
-       WHERE owner_id = $1 AND analysis->>'recordKind' = $2
-       ORDER BY analysis->'data'->>'actionId', COALESCE((analysis->>'sequence')::bigint, 0) DESC`,
-      [owner, recordKind('action')],
-    );
-    return result.rows.filter(row => ACTION_OPEN_STATES.has(row.status)).map(row => row.action_id);
+    return openFinancialActions(client, owner);
   }
 
   return {
@@ -427,8 +391,9 @@ export function createCfoStore(pool) {
       try {
         const result = await pool.query(
           `SELECT id, request_id, created_at, graph, analysis FROM falcon_mesh.analyses
-           WHERE owner_id = $1 AND id = $2 AND graph->>'domain' = 'cfo'`,
-          [owner, normalizedId],
+           WHERE owner_id = $1 AND id = $2 AND graph->>'domain' = 'cfo'
+             AND analysis->>'recordKind' = ANY($3::text[])`,
+          [owner, normalizedId, [...KINDS].map(recordKind)],
         );
         return result.rows[0] ? rowRecord(result.rows[0], owner) : null;
       } catch (error) { throw safeError(error); }
@@ -456,8 +421,9 @@ export function createCfoStore(pool) {
       try {
         const result = await pool.query(
           `SELECT id, request_id, created_at, graph, analysis FROM falcon_mesh.analyses
-           WHERE owner_id = $1 AND request_id = $2 AND graph->>'domain' = 'cfo' LIMIT 1`,
-          [owner, normalizedRequest],
+           WHERE owner_id = $1 AND request_id = $2 AND graph->>'domain' = 'cfo'
+             AND analysis->>'recordKind' = ANY($3::text[]) LIMIT 1`,
+          [owner, normalizedRequest, [...KINDS].map(recordKind)],
         );
         return result.rows[0] ? rowRecord(result.rows[0], owner) : null;
       } catch (error) { throw safeError(error); }
@@ -533,8 +499,9 @@ export function createCfoStore(pool) {
           `SELECT id, request_id, created_at, graph, analysis FROM falcon_mesh.analyses
            WHERE owner_id = $1 AND graph->>'domain' = 'cfo'
              AND ($3::text IS NULL OR analysis->>'recordKind' = $3)
+             AND analysis->>'recordKind' = ANY($4::text[])
            ORDER BY COALESCE((analysis->>'sequence')::bigint, 0) DESC, id DESC LIMIT $2`,
-          [owner, limit, kind === null ? null : recordKind(kind)],
+          [owner, limit, kind === null ? null : recordKind(kind), [...KINDS].map(recordKind)],
         );
         return result.rows.map(row => rowRecord(row, owner));
       } catch (error) { throw safeError(error); }
