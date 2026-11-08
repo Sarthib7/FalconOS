@@ -19,6 +19,11 @@ import { createIntentsAdapter } from './cfo/intents.mjs';
 import { createCfoStore } from './cfo/store.mjs';
 import { createCfoService } from './cfo/service.mjs';
 import { parseCfoConfig, createDevnetProofVerifier } from './cfo/config.mjs';
+import { createLendingJournal } from './cfo/lifecycle.mjs';
+import { createLendingBotService } from './cfo/lending-bot.mjs';
+import { parseLendingBotConfig } from './cfo/lending-config.mjs';
+import { createWalletProvider } from './cfo/wallet-provider.mjs';
+import { createSolanaLendingAdapter, DEFAULT_LENDING_RESERVES, USDC_MINT } from './cfo/solana-lending.mjs';
 
 
 function parseReviewOwners(value) {
@@ -34,6 +39,7 @@ function parseReviewOwners(value) {
 
 const researchReviewOwners = parseReviewOwners(process.env.FALCON_MESH_RESEARCH_REVIEW_OWNERS);
 const cfoConfig = parseCfoConfig();
+const botConfig = parseLendingBotConfig();
 
 const tokenHashes = parseTokenHashes(process.env.FALCON_MESH_TOKEN_HASHES);
 const allowedOrigins = parseOrigins(process.env.FALCON_MESH_ORIGINS);
@@ -87,6 +93,8 @@ const verifySupabaseToken = createSupabaseSessionVerifier({
 let server;
 let cfo;
 let cfoTransport;
+let lendingBot;
+let botTransport;
 try {
   const cfoStore = createCfoStore(pool);
   cfoTransport = createOmpTransport();
@@ -104,13 +112,23 @@ try {
     executionTrials: cfoConfig.executionTrials,
     verifyDevnetProof: createDevnetProofVerifier({ lending, cfoStore }),
   });
+  if (botConfig.executionEnabled && botConfig.reviewGrants.length) botTransport = createOmpTransport();
+  lendingBot = createLendingBotService({
+    journal: createLendingJournal(pool),
+    adapter: createSolanaLendingAdapter({ rpcUrl: botConfig.rpcUrl }),
+    walletProvider: createWalletProvider({ appId: botConfig.appId, appSecret: botConfig.appSecret,
+      authorizationKeyId: botConfig.authorizationKeyId, authorizationPrivateKey: botConfig.authorizationPrivateKey }),
+    reviewTransport: botTransport,
+    config: botConfig,
+    reserves: DEFAULT_LENDING_RESERVES.map(value => ({ ...value, mint: USDC_MINT })),
+  });
   server = createApi({
-    store, lending, yieldService, publicGraph, researchService, researchReviewService, researchActivity, cfo, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken,
+    store, lending, yieldService, publicGraph, researchService, researchReviewService, researchActivity, cfo, lendingBot, walletAuth, tokenHashes, allowedOrigins, rateWindowMs, rateMaxPerOwner, rateMaxGlobal, verifySupabaseToken,
     walletStatus: readWalletStatus,
     transactionInspection: inspectTransaction,
   });
 } catch (error) {
-  try { await cfo?.close(); await cfoTransport?.close?.(); await researchReviewService.close(); }
+  try { await lendingBot?.close(); await botTransport?.close?.(); await cfo?.close(); await cfoTransport?.close?.(); await researchReviewService.close(); }
   finally { await pool.end(); }
   throw error;
 }
@@ -134,6 +152,8 @@ async function shutdown() {
     catch { process.exitCode = 1; reviewStopped = Promise.resolve(); }
     try { await stopped; } catch { process.exitCode = 1; }
     try { await reviewStopped; } catch { process.exitCode = 1; }
+    try { await lendingBot?.close(); } catch { process.exitCode = 1; }
+    try { await botTransport?.close?.(); } catch { process.exitCode = 1; }
     try { await cfo?.close(); } catch { process.exitCode = 1; }
     try { await cfoTransport?.close?.(); } catch { process.exitCode = 1; }
     try { await pool.end(); } catch { process.exitCode = 1; }
@@ -148,7 +168,10 @@ server.on('error', () => {
 process.once('SIGINT', () => void shutdown());
 process.once('SIGTERM', () => void shutdown());
 try {
-  server.listen(port, process.env.FALCON_MESH_HOST || '127.0.0.1', () => process.stdout.write(`Falcon mesh listening on port ${port}.\n`));
+  server.listen(port, process.env.FALCON_MESH_HOST || '127.0.0.1', () => {
+    process.stdout.write(`Falcon mesh listening on port ${port}.\n`);
+    lendingBot.startScheduler();
+  });
 } catch {
   process.stderr.write('Mesh HTTP service failed to start.\n');
   process.exitCode = 1;
