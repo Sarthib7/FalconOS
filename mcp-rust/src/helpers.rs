@@ -337,7 +337,9 @@ pub(super) fn validate(name: &str, a: &Value) -> Result<(), ToolFailure> {
         "falcon_lending_bot_withdraw" => {
             let reserve = string("reserveAddress")?;
             if !Regex::new(WALLET_RE).unwrap().is_match(reserve) {
-                return Err(ToolFailure::input("reserveAddress must be a Solana address."));
+                return Err(ToolFailure::input(
+                    "reserveAddress must be a Solana address.",
+                ));
             }
             let amount = string("receiptBaseUnits")?;
             if amount.len() > 78 || !is_base_units(amount) || amount == "0" {
@@ -534,7 +536,10 @@ pub(super) fn cfo_public_response(mut value: Value, allow_unsigned_payload: bool
     value
 }
 
-pub(super) fn lending_bot_public_response(mut value: Value, allow_unsigned_prepared: bool) -> Value {
+pub(super) fn lending_bot_public_response(
+    mut value: Value,
+    allow_unsigned_prepared: bool,
+) -> Value {
     fn normalized_bytes(name: &str) -> impl Iterator<Item = u8> + Clone + '_ {
         name.bytes()
             .filter(|byte| byte.is_ascii_alphanumeric())
@@ -619,7 +624,10 @@ pub(super) fn lending_bot_public_response(mut value: Value, allow_unsigned_prepa
     fn unsigned_prepared(value: &Value) -> bool {
         value.as_object().is_some_and(|object| {
             object.get("signature").is_some_and(Value::is_null)
-                && object.get("transactionBase64").and_then(Value::as_str).is_some_and(|bytes| !bytes.is_empty())
+                && object
+                    .get("transactionBase64")
+                    .and_then(Value::as_str)
+                    .is_some_and(|bytes| !bytes.is_empty())
         })
     }
 
@@ -642,7 +650,11 @@ pub(super) fn lending_bot_public_response(mut value: Value, allow_unsigned_prepa
                         }
                         return false;
                     }
-                    let next_context = if normalized_eq(key, "owneraction") { 1 } else { 0 };
+                    let next_context = if normalized_eq(key, "owneraction") {
+                        1
+                    } else {
+                        0
+                    };
                     redact(child, allow_unsigned_prepared, next_context);
                     true
                 });

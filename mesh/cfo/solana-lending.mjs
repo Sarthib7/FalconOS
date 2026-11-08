@@ -467,10 +467,6 @@ function decodeSignedTransaction(prepared, signedTransactionBase64) {
 }
 
 
-function normalizeError(error, fallbackCode = 'SOLANA_DATA_UNAVAILABLE') {
-  if (error instanceof SolanaLendingError) return error;
-  return new SolanaLendingError(fallbackCode, 'Solana lending evidence is unavailable or invalid.');
-}
 
 function expectedReserves(reserves) {
   if (!Array.isArray(reserves) || reserves.length !== DEFAULT_LENDING_RESERVES.length) fail('INVALID_INPUT', 'Only the two reviewed Kamino USDC reserves are supported.');
@@ -1335,7 +1331,7 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
         } else result.reason = 'No finalized receipt is available after blockhash expiry; absence does not prove non-execution.';
         return result;
       }
-      if (!Number.isSafeInteger(Number(receipt.slot)) || Number(receipt.slot) <= 0 || receipt.version !== 0
+      if (!Number.isSafeInteger(Number(receipt.slot)) || Number(receipt.slot) <= 0 || asBigInt(receipt.version, 'Finalized transaction version') !== 0n
           || !Array.isArray(receipt.transaction) || receipt.transaction.length !== 2 || receipt.transaction[1] !== 'base64'
           || !receipt.meta || !Object.hasOwn(receipt.meta, 'err')) fail('SOLANA_RECEIPT_UNVERIFIED', 'Finalized transaction receipt is incomplete.');
       const signed = decodeSignedTransaction(prepared, receipt.transaction[0]);
@@ -1367,9 +1363,9 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
         if (recipientCredit !== BigInt(prepared.amountBaseUnits)) fail('SOLANA_RECEIPT_MISMATCH', 'Finalized fee recipient credit differs from the exact transfer amount.');
       }
       validateFinalEffects(prepared, effects);
-      const walletLamportDebit = ownerLamportDebit(prepared.wallet, signed.transaction, meta);
-      if (walletLamportDebit < fee) fail('SOLANA_RECEIPT_MISMATCH', 'Finalized wallet balance delta is smaller than the network fee.');
-      const rent = walletLamportDebit - fee;
+      const nativeDebit = walletLamportDebit(prepared.wallet, signed.transaction, meta);
+      if (nativeDebit < fee) fail('SOLANA_RECEIPT_MISMATCH', 'Finalized wallet balance delta is smaller than the network fee.');
+      const rent = nativeDebit - fee;
       if (rent !== BigInt(prepared.rentLamports) || fee > BigInt(prepared.costEvidence.maxFeeLamports)) {
         fail('SOLANA_RECEIPT_MISMATCH', 'Finalized fee or rent exceeds prepared cost evidence.');
       }

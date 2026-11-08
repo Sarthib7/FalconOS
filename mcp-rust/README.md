@@ -128,6 +128,8 @@ The surface is NEAR mainnet only. `falcon_self_test` reports current CFO context
 
 [VERIFIED CURRENT HOLD] Product flows and screen layouts are not approved. The R1.1 owner-JWT handoff and missing first-run token-account setup remain blockers. The local SDK/adapter import timed out; no live Privy policy admission, funded execution or hosted0.8.0 behavior was verified. Keep this publication draft-only and default-deny. No merge, deployment or financial activation is authorized.
 
+[VERIFIED correction] The import observation above is historical, not a current SDK diagnosis. The later module load and nine controlled-RPC adapter cases passed after three source defects were fixed. See the [executed-check correction](../docs/funded-lending-contract.md#executed-checks-and-limits). The product, owner-JWT, first-run account and live acceptance gates remain open.
+
 ## Decision and execution boundaries
 
 Owner-bound operations need a valid wallet session. Authentication proves ownership only. Supply needs explicit `proposedUsdc`, `maxUsdc`, `minBookLiquidityUsdc`, and `maxEvidenceAgeSeconds`; never infer these limits. A fresh REVIEW decision and current adopted public evidence are prerequisites for supply preparation. Mesh caps supply at 1 Devnet USDC. Redeem uses receipt-token units and forbids a supply decision ID [VERIFIED, Mesh and MCP contracts].

@@ -370,7 +370,8 @@ impl Mesh {
                 let code = error.get("code").and_then(Value::as_str).unwrap_or("");
                 let message = error.get("message").and_then(Value::as_str).unwrap_or("");
                 let is_cfo = path == "/v1/cfo" || path.starts_with("/v1/cfo/");
-                let is_lending_bot = path == "/v1/lending-bot" || path.starts_with("/v1/lending-bot/");
+                let is_lending_bot =
+                    path == "/v1/lending-bot" || path.starts_with("/v1/lending-bot/");
                 let public_message = if is_cfo {
                     "The NEAR CFO request was rejected."
                 } else if is_lending_bot {
