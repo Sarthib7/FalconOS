@@ -293,3 +293,54 @@ test('V223: paying a current gain below an unpaid peak cannot charge that same g
   assert.equal(state.feePaidBaseUnits, '10');
   assert.equal(feeOwed(state), '0', 'already-paid fees must also reduce the current-gain entitlement, not only the historical peak');
 });
+
+test('V229: setup costs paid before enrollment must recover before a performance fee is earned', () => {
+  let state = createAccounting({
+    portfolio: portfolio({ cashBaseUnits: '9900', aReceipt: '100', aValue: '100' }),
+    feeBps: 1000, feeRecipient: RECIPIENT,
+    setupCosts: { knownCostUsdcBaseUnits: '20', hasUnpricedCost: false },
+  });
+  assert.equal(accountingOverview(state).netGainBaseUnits, '-20');
+  state = observeAccounting(state, portfolio({ cashBaseUnits: '9900', aReceipt: '100', aValue: '115' }));
+  assert.equal(accountingOverview(state).netGainBaseUnits, '-5');
+  assert.equal(feeOwed(state), '0');
+  state = observeAccounting(state, portfolio({ cashBaseUnits: '9900', aReceipt: '100', aValue: '140' }));
+  assert.equal(accountingOverview(state).netGainBaseUnits, '20');
+  assert.equal(feeOwed(state), '2');
+});
+
+test('V229: an unpriced setup cost remains unavailable instead of becoming a zero-cost fee basis', () => {
+  const state = createAccounting({
+    portfolio: portfolio(), feeBps: 1000, feeRecipient: RECIPIENT,
+    setupCosts: { knownCostUsdcBaseUnits: '5', hasUnpricedCost: true },
+  });
+  const overview = accountingOverview(state);
+  assert.equal(state.transactionCostsBaseUnits, '5');
+  assert.equal(overview.feeUnavailableReason, 'unpriced_setup_cost');
+  assert.equal(overview.netGainBaseUnits, null);
+  assert.equal(overview.feeOwedBaseUnits, null);
+  assert.equal(feeOwed(state), null);
+});
+
+test('V228/V229: owner setup records only native costs once and rejects worker or principal effects', () => {
+  const initial = enrollment();
+  const setup = {
+    ...action('owner-setup-1', 1, 'setup', '0', null),
+    wallet: WALLET, mode: 'OWNER',
+  };
+  const proof = receipt({ cost: '5' });
+  const observed = portfolio();
+  const settled = reconcileAccounting(initial, { action: setup, receipt: proof, portfolio: observed });
+  assert.equal(accountingOverview(settled).netGainBaseUnits, '-5');
+  assert.equal(settled.transactionCostsBaseUnits, '5');
+  assert.equal(settled.externalDepositsBaseUnits, '0');
+  assert.equal(settled.externalWithdrawalsBaseUnits, '0');
+  assert.deepEqual(reconcileAccounting(settled, { action: setup, receipt: proof, portfolio: observed }), settled);
+  assert.throws(() => reconcileAccounting(initial, {
+    action: { ...setup, mode: 'WORKER' }, receipt: proof, portfolio: observed,
+  }), error => error.code === 'CONFLICT');
+  assert.throws(() => reconcileAccounting(initial, {
+    action: setup, receipt: receipt({ debit: '1', cost: '5' }), portfolio: observed,
+  }), error => error.code === 'CONFLICT');
+  assert.equal(initial.transactionCostsBaseUnits, '0');
+});

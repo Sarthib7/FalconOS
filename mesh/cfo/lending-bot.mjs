@@ -3,6 +3,7 @@ import { lifecycleError, ownerWallet, requestId, recordHash, cloneRecord } from 
 import { validateBotMandate, units, fresh, selectLendingAction } from './lending-strategy.mjs';
 import { runCfoReview } from './review.mjs';
 import { createAccounting, observeAccounting, reconcileAccounting, accountingOverview, feeOwed } from './lending-accounting.mjs';
+import { canonicalWalletAddress } from '../wallet-auth.mjs';
 
 const TERMINAL = new Set(['CONFIRMED', 'FAILED', 'REFUNDED']);
 const REVIEW_MS = 120000;
@@ -18,6 +19,13 @@ function requestIdOnly(input) {
     fail('INVALID_INPUT', 'Request fields do not match the owner control.');
   }
   requestId(input.requestId);
+}
+function setupPrepareInput(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 2
+      || !Object.hasOwn(input, 'requestId') || !Object.hasOwn(input, 'quoteId')) {
+    fail('INVALID_INPUT', 'Request fields do not match account setup preparation.');
+  }
+  return { requestId: requestId(input.requestId), quoteId: requestId(input.quoteId) };
 }
 function runnerData(wallet, value = {}) {
   return { wallet, state: 'STOPPED', nextRunAt: null, reason: null, lease: null, lastActionAt: null,
@@ -39,6 +47,8 @@ function delegationDto(record) {
 async function state(tx, wallet) {
   const result = { wallet };
   for (const kind of ['wallet', 'mandate', 'delegation', 'portfolio', 'runner', 'accounting']) result[kind] = await tx.latest(kind);
+  result.setupQuote = await tx.latest('setup-quote');
+  result.setupCost = await tx.latest('setup-cost');
   result.run = runnerData(wallet, result.runner?.data);
   return result;
 }
@@ -77,6 +87,105 @@ function checkedPortfolio(value, wallet) {
       || !['OBSERVED', 'NO_DATA'].includes(value.status)) fail('PROVIDER_UNAVAILABLE', 'Solana adapter returned an invalid portfolio identity.');
   return cloneRecord(value);
 }
+function setupQuoteDto(record) {
+  return record ? { ...record.data.quote, quoteId: record.id } : null;
+}
+function validSetupAccounts(accounts, wallet, allowUnknown = false) {
+  if (!Array.isArray(accounts) || accounts.length !== 3 || new Set(accounts.map(account => account?.address)).size !== 3) return false;
+  try {
+    return accounts.every(account => account && account.owner === wallet
+      && canonicalWalletAddress(account.address) === account.address
+      && canonicalWalletAddress(account.mint) === account.mint
+      && canonicalWalletAddress(account.tokenProgram) === account.tokenProgram
+      && (typeof account.exists === 'boolean' || (allowUnknown && account.exists === null))
+      && ((allowUnknown && account.balanceBaseUnits === null)
+        || (units(account.balanceBaseUnits) >= 0n && (account.exists !== false || account.balanceBaseUnits === '0'))));
+  } catch { return false; }
+}
+function checkedSetupQuote(value, wallet) {
+  try {
+    if (!value || value.schemaVersion !== 1 || value.wallet !== wallet || value.chain !== 'solana'
+        || value.network !== 'mainnet-beta' || !['QUOTED', 'READY', 'NO_DATA'].includes(value.status)
+        || !Array.isArray(value.reasons) || value.reasons.some(item => typeof item !== 'string' || item.length > 512)) {
+      fail('PROVIDER_UNAVAILABLE', 'Invalid account setup quote identity.');
+    }
+    if (value.status === 'NO_DATA') {
+      if (!Array.isArray(value.accounts) || (value.accounts.length && !validSetupAccounts(value.accounts, wallet, true))) {
+        fail('PROVIDER_UNAVAILABLE', 'Invalid unavailable account setup evidence.');
+      }
+    } else {
+      if (!validSetupAccounts(value.accounts, wallet) || !Number.isSafeInteger(value.slot) || value.slot < 0
+          || typeof value.observedAt !== 'string' || !Number.isFinite(Date.parse(value.observedAt))) {
+        fail('PROVIDER_UNAVAILABLE', 'Invalid account setup observation.');
+      }
+      for (const field of ['feeLamports', 'rentLamports', 'maxFeeLamports']) units(value[field]);
+      if (value.nativeBalanceLamports !== null) units(value.nativeBalanceLamports);
+      if (value.maxTotalCostUsdcBaseUnits !== null) units(value.maxTotalCostUsdcBaseUnits);
+      if (value.status === 'QUOTED' && (typeof value.expiresAt !== 'string' || !Number.isFinite(Date.parse(value.expiresAt))
+          || value.nativeBalanceLamports === null || value.accounts.every(account => account.exists)
+          || units(value.feeLamports) > units(value.maxFeeLamports))) {
+        fail('PROVIDER_UNAVAILABLE', 'Invalid account setup cost or lifetime.');
+      }
+      if (value.status === 'READY' && value.accounts.some(account => !account.exists)) {
+        fail('PROVIDER_UNAVAILABLE', 'Ready setup observation has missing accounts.');
+      }
+    }
+    return cloneRecord(value);
+  } catch { fail('PROVIDER_UNAVAILABLE', 'Account setup evidence is unavailable or malformed.'); }
+}
+function setupIdentityMatches(accounts, expected) {
+  if (!Array.isArray(accounts) || accounts.length !== expected.length) return false;
+  const byAddress = new Map(expected.map(account => [account.address, account]));
+  const seen = new Set();
+  return accounts.every(account => {
+    const prior = byAddress.get(account?.address);
+    if (!prior || seen.has(account.address)) return false;
+    seen.add(account.address);
+    return ['mint', 'owner', 'tokenProgram'].every(field => account[field] === prior[field]);
+  });
+}
+function checkedPreparedSetup(prepared, quoteRecord, wallet, at) {
+  const quote = quoteRecord?.data.quote;
+  if (!quote || quote.status !== 'QUOTED' || prepared?.accountSetup?.quoteId !== quoteRecord.id
+      || Date.parse(quote.expiresAt) <= Date.parse(at) || prepared.schemaVersion !== 1
+      || prepared.wallet !== wallet || prepared.recipient !== wallet || prepared.chain !== 'solana'
+      || prepared.network !== 'mainnet-beta' || prepared.action !== 'setup' || prepared.reserveAddress !== null
+      || prepared.amountBaseUnits !== '0' || prepared.amountUnit !== 'usdc-base-units' || prepared.signature !== null
+      || !Number.isFinite(Date.parse(prepared.observedAt)) || !Number.isFinite(Date.parse(prepared.expiresAt))
+      || !Number.isSafeInteger(prepared.source?.slot) || prepared.source.slot < quote.slot
+      || Date.parse(prepared.observedAt) < Date.parse(quote.observedAt) || Date.parse(prepared.expiresAt) <= Date.parse(at)
+      || Date.parse(prepared.expiresAt) > Date.parse(quote.expiresAt)
+      || !setupIdentityMatches(prepared.accountSetup.accounts, quote.accounts)
+      || prepared.accountSetup.accounts.some(account => account.wasMissing !== !quote.accounts.find(item => item.address === account.address).exists)
+      || !prepared.expectedEffects || ['usdcDebitBaseUnits', 'usdcCreditBaseUnits', 'receiptDebitBaseUnits', 'receiptCreditBaseUnits']
+        .some(field => prepared.expectedEffects[field] !== '0')
+      || units(prepared.feeLamports) > units(quote.maxFeeLamports) || units(prepared.rentLamports) > units(quote.rentLamports)
+      || (prepared.maxTotalCostUsdcBaseUnits !== null && quote.maxTotalCostUsdcBaseUnits !== null
+        && units(prepared.maxTotalCostUsdcBaseUnits) > units(quote.maxTotalCostUsdcBaseUnits))) {
+    fail('CONFLICT', 'Account setup no longer matches its accepted quote, accounts or cost bounds.');
+  }
+}
+function setupObservation(s) {
+  const quote = s.setupQuote;
+  const portfolio = s.portfolio;
+  if (portfolio && Object.hasOwn(portfolio.data.portfolio, 'accountSetupReady')
+      && (!quote || BigInt(portfolio.sequence) > BigInt(quote.sequence))) {
+    const value = portfolio.data.portfolio;
+    return { setupStatus: value.accountSetupReady === true ? 'READY' : value.accountSetupReady === false ? 'REQUIRED' : 'UNAVAILABLE',
+      setupObservedAt: value.accountSetupObservedAt ?? null,
+      setupIssues: value.accountSetupReady === true ? [] : [value.accountSetupReady === false ? 'CANONICAL_ACCOUNTS_MISSING' : 'ACCOUNT_SETUP_UNAVAILABLE'] };
+  }
+  const value = quote?.data.quote;
+  return { setupStatus: value?.status === 'READY' ? 'READY' : value?.status === 'QUOTED' ? 'REQUIRED' : value ? 'UNAVAILABLE' : 'NOT_OBSERVED',
+    setupObservedAt: value?.observedAt ?? null,
+    setupIssues: value?.reasons ?? ['ACCOUNT_SETUP_OBSERVATION_REQUIRED'] };
+}
+function accumulatedAmount(value) {
+  if (typeof value !== 'string' || value.length > 128 || !/^(0|[1-9][0-9]*)$/.test(value)) {
+    fail('STORAGE_UNAVAILABLE', 'Retained setup cost total is invalid.');
+  }
+  return BigInt(value);
+}
 function availableActions(records) {
   const seen = new Set();
   return records.filter(record => {
@@ -88,7 +197,7 @@ function availableActions(records) {
 
 export function createLendingBotService({ journal, adapter, walletProvider, reviewTransport, config, reserves, review = runCfoReview } = {}) {
   if (!journal || !['withOwner', 'exclusive', 'dueOwners'].every(key => typeof journal[key] === 'function')) throw new TypeError('Lending requires the shared durable financial journal.');
-  if (!adapter || !['capture', 'prepare', 'prepareFeeTransfer', 'verifySigned', 'submit', 'reconcile', 'policyRules', 'isExpired'].every(key => typeof adapter[key] === 'function')) throw new TypeError('Lending requires the complete Solana adapter.');
+  if (!adapter || !['capture', 'prepare', 'prepareFeeTransfer', 'quoteAccountSetup', 'prepareAccountSetup', 'verifySigned', 'submit', 'reconcile', 'policyRules', 'isExpired'].every(key => typeof adapter[key] === 'function')) throw new TypeError('Lending requires the complete Solana adapter.');
   if (!walletProvider || !['configuration', 'verifyWalletLink', 'prepareDelegation', 'verifyDelegation', 'prepareRevocation', 'revokeDelegation', 'signTransaction'].every(key => typeof walletProvider[key] === 'function')) throw new TypeError('Lending requires the complete customer-owned wallet provider.');
   if (!config || !Array.isArray(config.reviewGrants) || !Array.isArray(reserves) || reserves.length !== 2) throw new TypeError('Lending requires explicit pilot configuration and two supported reserves.');
   const active = new Map();
@@ -123,10 +232,11 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
           && portfolio.slot < s.portfolio.data.portfolio.slot) fail('CONFLICT', 'A newer portfolio observation is already retained.');
       if (input) await control(tx, 'portfolio', 'capture', input, { wallet, portfolio });
       else await tx.append({ kind: 'portfolio', data: { wallet, portfolio } });
-      if (portfolio.status === 'OBSERVED' && s.mandate && !(await tx.openActions()).length) {
+      if (portfolio.status === 'OBSERVED' && s.mandate && (s.accounting || portfolio.accountSetupReady === true)
+          && !(await tx.openActions()).length) {
         const terms = s.mandate.data.mandate;
         const accounting = s.accounting ? observeAccounting(s.accounting.data.state, portfolio)
-          : createAccounting({ portfolio, feeBps: terms.feeBps, feeRecipient: terms.feeRecipient });
+          : createAccounting({ portfolio, feeBps: terms.feeBps, feeRecipient: terms.feeRecipient, setupCosts: s.setupCost?.data ?? null });
         await tx.append({ kind: 'accounting', data: { wallet, state: accounting } });
       }
       return portfolio;
@@ -195,19 +305,63 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
       if (old) return { ownerAction: { actionId: old.data.actionId, prepared: old.data.prepared } };
       await noOpen(tx);
       const s = await state(tx, wallet);
-      const mandate = requireMandate(s, tx.now, true);
-      if (expectedMandateId !== null && expectedMandateId !== s.mandate.id) fail('CONFLICT', 'Owner mandate changed during recovery preparation.');
-      if (prepared.wallet !== wallet || prepared.network !== 'mainnet-beta' || prepared.chain !== 'solana'
-          || !fresh(prepared.observedAt, tx.now, mandate.maxEvidenceAgeSeconds) || Date.parse(prepared.expiresAt) <= Date.parse(tx.now)) {
-        fail('CONFLICT', 'Prepared owner action has stale or mismatched evidence.');
+      const setup = prepared.action === 'setup';
+      if (setup) {
+        requireLink(s);
+        if (s.run.state === 'RUNNING') fail('CONFLICT', 'Pause the worker before owner account setup.');
+        if (s.setupQuote?.id !== input.quoteId) fail('CONFLICT', 'Review the current account setup quote first.');
+        checkedPreparedSetup(prepared, s.setupQuote, wallet, tx.now);
+      } else {
+        const mandate = requireMandate(s, tx.now, true);
+        if (expectedMandateId !== null && expectedMandateId !== s.mandate.id) fail('CONFLICT', 'Owner mandate changed during recovery preparation.');
+        if (prepared.wallet !== wallet || prepared.network !== 'mainnet-beta' || prepared.chain !== 'solana'
+            || !fresh(prepared.observedAt, tx.now, mandate.maxEvidenceAgeSeconds) || Date.parse(prepared.expiresAt) <= Date.parse(tx.now)) {
+          fail('CONFLICT', 'Prepared owner action has stale or mismatched evidence.');
+        }
+        if (units(prepared.feeLamports) > units(mandate.maxFeeLamports)) fail('CONFLICT', 'Prepared transaction exceeds the owner native fee cap.');
       }
-      if (units(prepared.feeLamports) > units(mandate.maxFeeLamports)) fail('CONFLICT', 'Prepared transaction exceeds the owner native fee cap.');
       const record = await control(tx, 'action', operation, input, { wallet, actionId: randomUUID(), createdAt: tx.now,
         action: prepared.action, reserveAddress: prepared.reserveAddress, amountBaseUnits: prepared.amountBaseUnits,
         amountUnit: prepared.amountUnit, prepared, status: 'PREPARED', signature: null, signedTransactionBase64: null,
-        mandateId: s.mandate.id, portfolioId: s.portfolio?.id ?? null, mode: 'OWNER', reason: null, ...extra }, { exclusiveAction: true });
+        mandateId: s.mandate?.id ?? null, portfolioId: s.portfolio?.id ?? null, mode: 'OWNER', reason: null, ...extra }, { exclusiveAction: true });
       return { ownerAction: { actionId: record.data.actionId, prepared } };
     });
+  }
+  async function retainSetupCost(tx, s, wallet, action, proof) {
+    const amounts = proof.amounts;
+    if (!amounts || ['usdcDebitBaseUnits', 'usdcCreditBaseUnits', 'receiptDebitBaseUnits', 'receiptCreditBaseUnits']
+      .some(field => amounts[field] !== '0')) fail('PROVIDER_UNAVAILABLE', 'Setup receipt has unverified token-principal effects.');
+    const fee = units(amounts.feeLamports);
+    const rent = units(amounts.rentLamports);
+    if (fee > units(action.prepared.costEvidence.maxFeeLamports) || rent > units(action.prepared.rentLamports)) {
+      fail('PROVIDER_UNAVAILABLE', 'Setup receipt exceeds the accepted native cost bounds.');
+    }
+    const cost = amounts.costUsdcBaseUnits == null ? null : units(amounts.costUsdcBaseUnits);
+    const previous = s.setupCost?.data;
+    if (previous && (typeof previous.hasUnpricedCost !== 'boolean' || previous.lastActionId === action.actionId)) {
+      fail('CONFLICT', 'Setup cost state is invalid or already applied.');
+    }
+    const data = { wallet,
+      knownCostUsdcBaseUnits: ((previous ? accumulatedAmount(previous.knownCostUsdcBaseUnits) : 0n) + (cost ?? 0n)).toString(),
+      hasUnpricedCost: (previous?.hasUnpricedCost ?? false) || cost === null,
+      feeLamports: ((previous ? accumulatedAmount(previous.feeLamports) : 0n) + fee).toString(),
+      rentLamports: ((previous ? accumulatedAmount(previous.rentLamports) : 0n) + rent).toString(),
+      lastActionId: action.actionId };
+    await tx.append({ kind: 'setup-cost', data });
+    return data;
+  }
+  function verifiedReadySetupQuote(wallet, action, proof) {
+    const fact = proof.accountSetup;
+    if (!fact || fact.quoteId !== action.prepared.accountSetup.quoteId
+        || !Number.isSafeInteger(proof.slot) || !Number.isSafeInteger(fact.slot) || fact.slot < proof.slot
+        || !validSetupAccounts(fact.accounts, wallet) || fact.accounts.some(account => !account.exists)
+        || !setupIdentityMatches(fact.accounts, action.prepared.accountSetup.accounts)
+        || typeof fact.observedAt !== 'string' || !Number.isFinite(Date.parse(fact.observedAt))) {
+      fail('PROVIDER_UNAVAILABLE', 'Canonical setup accounts are not verified at the finalized receipt context.');
+    }
+    return checkedSetupQuote({ schemaVersion: 1, chain: 'solana', network: 'mainnet-beta', wallet, status: 'READY',
+      observedAt: fact.observedAt, slot: fact.slot, expiresAt: null, nativeBalanceLamports: null, accounts: fact.accounts,
+      feeLamports: '0', rentLamports: '0', maxFeeLamports: '0', maxTotalCostUsdcBaseUnits: '0', costEvidence: null, reasons: [] }, wallet);
   }
   async function reconcileOne(owner, wallet, actionId) {
     return journal.exclusive(owner, wallet, async locked => {
@@ -219,7 +373,16 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
         fail('PROVIDER_UNAVAILABLE', 'Transaction reconciliation returned an invalid identity.');
       }
       let portfolio = null;
-      if (['CONFIRMED', 'FAILED'].includes(proof.status)) portfolio = checkedPortfolio(await adapter.capture({ wallet }), wallet);
+      if (['CONFIRMED', 'FAILED'].includes(proof.status)) {
+        portfolio = checkedPortfolio(await adapter.capture({ wallet }), wallet);
+        if (portfolio.status === 'OBSERVED' && Number.isSafeInteger(proof.slot)
+            && (!Number.isSafeInteger(portfolio.slot) || portfolio.slot < proof.slot)) {
+          portfolio = { schemaVersion: 1, chain: 'solana', network: 'mainnet-beta', wallet, status: 'NO_DATA',
+            capturedAt: portfolio.capturedAt, observedAt: null, slot: null, nativeLamports: null, cashBaseUnits: null,
+            positions: [], accountSetupReady: null, accountSetupObservedAt: null, accountSetupSlot: null,
+            issues: ['POST_RECEIPT_PORTFOLIO_STALE'] };
+        }
+      }
       return locked.withOwner(owner, wallet, async tx => {
         const current = await actionById(tx, actionId);
         if (current.id !== original.id) fail('CONFLICT', 'Action changed during reconciliation.');
@@ -228,11 +391,26 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
         const next = await transition(tx, current, { status: terminal ? proof.status : 'SUBMISSION_UNKNOWN',
           reconciliation: proof, reason: terminal ? proof.reason ?? null : 'Transaction effects remain unverified; funds stay reserved.' });
         if (terminal) {
-          if (portfolio.status === 'OBSERVED') await tx.append({ kind: 'portfolio', data: { wallet, portfolio } });
+          await tx.append({ kind: 'portfolio', data: { wallet, portfolio } });
+          let setupCosts = s.setupCost?.data ?? null;
+          if (next.data.action === 'setup') {
+            setupCosts = await retainSetupCost(tx, s, wallet, next.data, proof);
+            if (proof.status === 'CONFIRMED') {
+              const quote = verifiedReadySetupQuote(wallet, next.data, proof);
+              if (!(portfolio.accountSetupReady === false && Number.isSafeInteger(portfolio.accountSetupSlot)
+                  && portfolio.accountSetupSlot >= quote.slot)) {
+                await tx.append({ kind: 'setup-quote', data: { wallet, quote, sourceActionId: next.data.actionId } });
+              }
+            }
+          }
           if (s.accounting) {
             const accounting = reconcileAccounting(s.accounting.data.state, {
               action: { ...next.data, sequence: Number(next.sequence) }, receipt: proof, portfolio,
             });
+            await tx.append({ kind: 'accounting', data: { wallet, state: accounting } });
+          } else if (s.mandate && portfolio.status === 'OBSERVED' && portfolio.accountSetupReady === true) {
+            const terms = s.mandate.data.mandate;
+            const accounting = createAccounting({ portfolio, feeBps: terms.feeBps, feeRecipient: terms.feeRecipient, setupCosts });
             await tx.append({ kind: 'accounting', data: { wallet, state: accounting } });
           }
           const rotation = proof.status === 'CONFIRMED' && next.data.mode === 'WORKER'
@@ -423,6 +601,7 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
       });
       const verifiedScope = await verifyCurrentDelegation(setup.s, setup.at);
       const currentPortfolio = checkedPortfolio(await adapter.capture({ wallet }), wallet);
+      if (currentPortfolio.accountSetupReady !== true) fail('CONFLICT', 'Canonical wallet accounts are not ready for the reviewed lending action.');
       const currentAt = await locked.withOwner(owner, wallet, tx => tx.now);
       const guard = selectLendingAction({ portfolio: currentPortfolio, mandate: verifiedScope.mandate, at: currentAt,
         lastActionAt: setup.s.run.lastActionAt, rotation: setup.s.run.rotation });
@@ -515,6 +694,10 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
       await verifyCurrentDelegation(before, beforeAt);
       const observed = checkedPortfolio(await adapter.capture({ wallet }), wallet);
       await saveObservation(owner, wallet, observed);
+      if (observed.accountSetupReady !== true) {
+        await finishRun(owner, wallet, leaseId, 'HOLD: canonical wallet accounts require a current owner setup observation.');
+        return;
+      }
       const s = await snapshot(owner, wallet);
       const at = await journal.withOwner(owner, wallet, tx => tx.now);
       const mandate = requireMandate(s, at);
@@ -551,17 +734,31 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
       return journal.withOwner(owner, wallet, async tx => {
         const s = await state(tx, wallet);
         const c = configuration();
+        const setup = setupObservation(s);
+        for (const actionId of await tx.openActions()) {
+          const pending = await tx.latestFor('action', 'actionId', actionId);
+          if (pending?.data.action === 'setup') {
+            if (setup.setupStatus === 'READY') setup.setupStatus = 'UNAVAILABLE';
+            setup.setupIssues = ['SETUP_ACTION_UNRESOLVED', ...setup.setupIssues];
+            break;
+          }
+        }
         const issues = [...c.issues];
         if (!s.wallet) issues.push('DEDICATED_WALLET_LINK_REQUIRED');
         if (!s.mandate) issues.push('OWNER_MANDATE_REQUIRED');
         if (!s.delegation || s.delegation.data.delegation.status !== 'ACTIVE') issues.push('CUSTOMER_DELEGATION_REQUIRED');
         if (!grantFor(owner, wallet, tx.now)) issues.push('FINITE_OPERATOR_REVIEW_GRANT_REQUIRED');
         if (!s.portfolio || s.portfolio.data.portfolio.status !== 'OBSERVED') issues.push('CURRENT_PORTFOLIO_REQUIRED');
+        if (setup.setupStatus !== 'READY') issues.push(setup.setupStatus === 'REQUIRED' ? 'OWNER_ACCOUNT_SETUP_REQUIRED' : 'ACCOUNT_SETUP_OBSERVATION_REQUIRED');
         return { schemaVersion: 1, domain: 'solana-lending-bot', chain: 'solana', network: 'mainnet-beta',
           status: issues.length ? 'SETUP_REQUIRED' : 'READY', configuration: c,
           walletLink: s.wallet ? { providerWalletId: s.wallet.data.link.providerWalletId, walletAddress: s.wallet.data.link.walletAddress } : null,
           mandate: s.mandate ? { id: s.mandate.id, data: s.mandate.data.mandate } : null,
           delegation: delegationDto(s.delegation), portfolio: s.portfolio?.data.portfolio ?? null,
+          setupQuote: setupQuoteDto(s.setupQuote), ...setup,
+          setupCosts: s.setupCost ? { knownCostUsdcBaseUnits: s.setupCost.data.knownCostUsdcBaseUnits,
+            hasUnpricedCost: s.setupCost.data.hasUnpricedCost, feeLamports: s.setupCost.data.feeLamports,
+            rentLamports: s.setupCost.data.rentLamports } : null,
           runner: runnerDto(s.run), actions: availableActions(await tx.list('action', 200)),
           accounting: accountingOverview(s.accounting?.data.state ?? null), issues };
       });
@@ -582,6 +779,56 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
         await control(tx, 'wallet', 'linkWallet', input, { wallet, link });
         return { walletLink: { providerWalletId: link.providerWalletId, walletAddress: wallet } };
       });
+    },
+    async quoteAccounts(owner, inputWallet, input) {
+      const wallet = ownerWallet(owner, inputWallet);
+      requestIdOnly(input);
+      const before = await journal.withOwner(owner, wallet, async tx => {
+        const old = await prior(tx, 'setup-quote', 'quoteAccounts', input);
+        if (old) return { old };
+        const s = await state(tx, wallet);
+        requireLink(s);
+        return { s };
+      });
+      if (before.old) return { setupQuote: setupQuoteDto(before.old) };
+      const quote = checkedSetupQuote(await adapter.quoteAccountSetup({ wallet }), wallet);
+      return journal.withOwner(owner, wallet, async tx => {
+        const old = await prior(tx, 'setup-quote', 'quoteAccounts', input);
+        if (old) return { setupQuote: setupQuoteDto(old) };
+        const current = await state(tx, wallet);
+        if (current.wallet?.id !== before.s.wallet.id) fail('CONFLICT', 'Wallet linkage changed while observing setup.');
+        const previous = current.setupQuote?.data.quote;
+        if (Number.isSafeInteger(quote.slot) && Number.isSafeInteger(previous?.slot) && quote.slot < previous.slot) {
+          fail('CONFLICT', 'A newer account setup observation is already retained.');
+        }
+        const record = await control(tx, 'setup-quote', 'quoteAccounts', input, { wallet, quote });
+        return { setupQuote: setupQuoteDto(record) };
+      });
+    },
+    async prepareAccounts(owner, inputWallet, supplied) {
+      const wallet = ownerWallet(owner, inputWallet);
+      const input = setupPrepareInput(supplied);
+      const old = await journal.withOwner(owner, wallet, tx => prior(tx, 'action', 'prepareAccounts', input));
+      if (old) return { ownerAction: { actionId: old.data.actionId, prepared: old.data.prepared } };
+      await retireExpiredOwnerAction(owner, wallet);
+      const before = await journal.withOwner(owner, wallet, async tx => {
+        await noOpen(tx);
+        const s = await state(tx, wallet);
+        const link = requireLink(s);
+        if (s.run.state === 'RUNNING') fail('CONFLICT', 'Pause before owner account setup.');
+        if (!s.setupQuote || s.setupQuote.id !== input.quoteId) fail('CONFLICT', 'Review the current retained setup quote first.');
+        const quote = s.setupQuote.data.quote;
+        if (quote.status === 'READY') fail('CONFLICT', 'Canonical accounts are already ready; no setup action is required.');
+        if (quote.status !== 'QUOTED' || Date.parse(quote.expiresAt) <= Date.parse(tx.now)) fail('CONFLICT', 'Account setup quote is unavailable or expired.');
+        if (units(quote.nativeBalanceLamports) < units(quote.feeLamports) + units(quote.rentLamports)) {
+          fail('CONFLICT', 'Fund SOL and obtain a fresh native setup balance quote before preparation.');
+        }
+        return { link, quote: setupQuoteDto(s.setupQuote) };
+      });
+      const currentLink = await walletProvider.verifyWalletLink({ walletAddress: wallet });
+      if (recordHash(currentLink) !== recordHash(before.link)) fail('UNAUTHORIZED', 'Current provider ownership no longer matches the dedicated wallet.');
+      const prepared = await adapter.prepareAccountSetup({ wallet, quote: before.quote });
+      return retainPrepared(owner, wallet, input, 'prepareAccounts', prepared, { setupQuoteId: input.quoteId });
     },
     async saveMandate(owner, inputWallet, input) {
       const wallet = ownerWallet(owner, inputWallet);
@@ -637,16 +884,40 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
     },
     async verifyDelegation(owner, inputWallet, input) {
       const wallet = ownerWallet(owner, inputWallet);
+      requestIdOnly(input);
       const s = await snapshot(owner, wallet);
       const at = await journal.withOwner(owner, wallet, tx => tx.now);
-      const verified = await verifyCurrentDelegation(s, at);
+      const mandate = requireMandate(s, at, true);
+      const link = requireLink(s);
+      if (!s.delegation || s.delegation.data.mandateId !== s.mandate.id) fail('CONFLICT', 'Install and verify delegation for the current mandate.');
+      let observed;
+      if (Date.parse(mandate.expiresAt) <= Date.parse(at)
+          || Date.parse(s.delegation.data.delegation.expiresAt) <= Date.parse(at)) {
+        observed = { status: 'EXPIRED', policyHash: s.delegation.data.delegation.policyHash ?? null,
+          reason: 'Accepted mandate or scope has expired; provider signer removal is not established.' };
+      } else {
+        try {
+          const rules = await adapter.policyRules({ wallet, mandate });
+          const verified = await walletProvider.verifyDelegation({ link, mandate, delegation: s.delegation.data.delegation, rules });
+          if (!verified || !['ACTIVE', 'REVOKED', 'EXPIRED', 'UNAVAILABLE'].includes(verified.status)
+              || (verified.policyHash !== null && typeof verified.policyHash !== 'string')
+              || (verified.reason !== null && typeof verified.reason !== 'string')
+              || (verified.status === 'ACTIVE' && verified.policyHash !== s.delegation.data.delegation.policyHash)) {
+            fail('PROVIDER_UNAVAILABLE', 'Delegation observation returned an invalid scope.');
+          }
+          observed = { status: verified.status, policyHash: verified.policyHash, reason: verified.reason };
+        } catch (error) {
+          observed = { status: 'UNAVAILABLE', policyHash: null, reason: reason(error) };
+        }
+      }
       return journal.withOwner(owner, wallet, async tx => {
         const old = await prior(tx, 'delegation', 'verifyDelegation', input);
         if (old) return { delegation: delegationDto(old) };
         const current = await state(tx, wallet);
-        if (current.mandate?.id !== s.mandate.id || current.delegation?.id !== s.delegation.id) fail('CONFLICT', 'Delegation changed during verification.');
+        if (current.wallet?.id !== s.wallet.id || current.mandate?.id !== s.mandate.id
+            || current.delegation?.id !== s.delegation.id) fail('CONFLICT', 'Delegation changed during verification.');
         const record = await control(tx, 'delegation', 'verifyDelegation', input, { ...s.delegation.data,
-          delegation: { ...s.delegation.data.delegation, ...verified.verified } });
+          delegation: { ...s.delegation.data.delegation, ...observed } });
         return { delegation: delegationDto(record) };
       });
     },
@@ -672,8 +943,9 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
         requireMandate(current, tx.now);
         if (current.runner?.id !== s.runner?.id || current.mandate?.id !== s.mandate?.id
             || current.delegation?.id !== s.delegation?.id) fail('CONFLICT', 'Runner, mandate or delegation changed before start.');
-        if (!current.portfolio || !fresh(current.portfolio.data.portfolio.observedAt, tx.now, current.mandate.data.mandate.maxEvidenceAgeSeconds)
-            || !current.accounting) fail('CONFLICT', 'Capture a current portfolio and initialize accounting first.');
+        if (!current.portfolio || current.portfolio.data.portfolio.accountSetupReady !== true
+            || !fresh(current.portfolio.data.portfolio.observedAt, tx.now, current.mandate.data.mandate.maxEvidenceAgeSeconds)
+            || !current.accounting) fail('CONFLICT', 'Capture current funds and ready canonical accounts, then initialize accounting first.');
         if (current.run.state === 'RUNNING') return { runner: runnerDto((await control(tx, 'runner', 'start', input, current.run)).data) };
         const next = runnerData(wallet, { ...current.run, state: 'RUNNING', nextRunAt: tx.now, lease: null, reason: null });
         return { runner: runnerDto((await control(tx, 'runner', 'start', input, next)).data) };

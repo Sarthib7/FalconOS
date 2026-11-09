@@ -255,8 +255,10 @@ function initialPositions(snapshot) {
   }));
 }
 
-export function createAccounting({ portfolio, feeBps, feeRecipient }) {
+export function createAccounting({ portfolio, feeBps, feeRecipient, setupCosts = null }) {
   const recipient = validateTerms(feeBps, feeRecipient);
+  const initialCost = setupCosts === null ? 0n : unsigned(setupCosts.knownCostUsdcBaseUnits, 'Known setup costs');
+  if (setupCosts !== null && typeof setupCosts.hasUnpricedCost !== 'boolean') invalid('Setup cost valuation status is required.');
   const snapshot = readPortfolio(portfolio);
   const positions = initialPositions(snapshot);
   const complete = snapshot.complete;
@@ -275,13 +277,13 @@ export function createAccounting({ portfolio, feeBps, feeRecipient }) {
     cashflowUnavailableReason: snapshot.cash === null ? snapshot.reason ?? 'missing_cash_balance' : null,
     externalDepositsBaseUnits: '0',
     externalWithdrawalsBaseUnits: '0',
-    transactionCostsBaseUnits: '0',
+    transactionCostsBaseUnits: initialCost.toString(),
     highWaterMarkBaseUnits: complete ? enrolledCapital : null,
     feeEarnedBaseUnits: '0',
     feePaidBaseUnits: '0',
     realizedGainsBaseUnits: '0',
     realizedLossesBaseUnits: '0',
-    feeUnavailableReason: snapshot.reason,
+    feeUnavailableReason: snapshot.reason ?? (setupCosts?.hasUnpricedCost ? 'unpriced_setup_cost' : null),
     lastSequence: 0,
     lastActionId: null,
     lastReceiptFingerprint: null,
@@ -341,14 +343,25 @@ function validateAction(state, action) {
   if (!action || typeof action !== 'object' || Array.isArray(action)) invalid('A retained financial action is required.');
   if (typeof action.actionId !== 'string' || action.actionId.length === 0 || action.actionId.length > 256) invalid('Action identifier is invalid.');
   if (!Number.isSafeInteger(action.sequence) || action.sequence <= 0) invalid('Action sequence must be a positive safe integer.');
-  if (!['supply', 'redeem', 'fee'].includes(action.action)) invalid('Unsupported lending accounting action.');
+  if (!['supply', 'redeem', 'fee', 'setup'].includes(action.action)) invalid('Unsupported lending accounting action.');
   const amount = unsigned(action.amountBaseUnits, 'Action amount', { u64: true });
-  if (amount === 0n) invalid('Action amount must be positive.');
+  if (amount === 0n && action.action !== 'setup') invalid('Action amount must be positive.');
   if (!action.prepared || typeof action.prepared !== 'object' || Array.isArray(action.prepared)) invalid('Prepared action evidence is required.');
   if (action.prepared.action !== action.action || action.prepared.amountBaseUnits !== action.amountBaseUnits) {
     conflict('Prepared action does not match its retained action.');
   }
   validatePreparedAmounts(action.prepared);
+  if (action.action === 'setup') {
+    const wallet = canonicalWalletAddress(action.wallet);
+    if (action.mode !== 'OWNER' || amount !== 0n || action.reserveAddress !== null
+        || action.prepared.reserveAddress !== null || action.prepared.wallet !== wallet
+        || action.prepared.recipient !== wallet || action.amountUnit !== 'usdc-base-units'
+        || action.prepared.amountUnit !== 'usdc-base-units'
+        || RECEIPT_AMOUNT_KEYS.slice(0, 4).some(key => action.prepared.expectedEffects[key] !== '0')) {
+      conflict('Account setup must be owner-approved with zero token-principal effects.');
+    }
+    return;
+  }
   if (action.action === 'fee') {
     if (action.mode !== 'OWNER' || action.prepared.recipient !== state.feeRecipient) conflict('Fee payment must be owner-approved for the trusted recipient.');
     if (action.prepared.reserveAddress !== null) conflict('Fee payment cannot target a lending reserve.');
@@ -402,6 +415,10 @@ function validateFinalizedActionEffect(action, effect, status) {
   } else if (action.action === 'redeem') {
     if (effect.receiptDebit !== BigInt(action.amountBaseUnits) || effect.usdcDebit !== 0n
         || effect.receiptCredit !== 0n) return 'receipt_action_effect_mismatch';
+  } else if (action.action === 'setup') {
+    if (effect.usdcDebit !== 0n || effect.usdcCredit !== 0n || effect.receiptDebit !== 0n || effect.receiptCredit !== 0n) {
+      conflict('Finalized account setup cannot contain token-principal effects.');
+    }
   } else if (effect.usdcDebit !== BigInt(action.amountBaseUnits) || effect.usdcCredit !== 0n
       || effect.receiptDebit !== 0n || effect.receiptCredit !== 0n) {
     conflict('Finalized fee transfer does not match the owner-approved amount.');
@@ -410,7 +427,7 @@ function validateFinalizedActionEffect(action, effect, status) {
 }
 
 function adjustPositionBasis(state, action, effects, cost) {
-  if (action.action === 'fee' || effects === null) return null;
+  if (action.action === 'fee' || action.action === 'setup' || effects === null) return null;
   const index = state.positions.findIndex(position => position.reserveAddress === action.reserveAddress);
   if (index < 0) {
     failReason(state, 'receipt_baseline_unavailable');
@@ -471,7 +488,7 @@ function applyReceiptBalancesWithoutPortfolio(state, action, effects, effectsKno
       } else state.cashBaseUnits = predictedCash.toString();
     }
   }
-  if (updatePositions && action.action !== 'fee') {
+  if (updatePositions && action.action !== 'fee' && action.action !== 'setup') {
     const index = state.positions.findIndex(position => position.reserveAddress === action.reserveAddress);
     if (index >= 0) {
       const position = state.positions[index];

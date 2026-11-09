@@ -78,6 +78,16 @@ async fn mesh(
             },
             "ownerId": PRIVATE_CUSTOMER,
             "walletLink": {"providerWalletId": PRIVATE_CUSTOMER, "walletAddress": PRIVATE_CUSTOMER},
+            "setupStatus": "REQUIRED",
+            "setupIssues": ["CANONICAL_ACCOUNTS_MISSING"],
+            "setupQuote": {
+                "quoteId": ACTION_ID,
+                "accounts": [{"address": PRIVATE_CUSTOMER, "mint": "private-owner-setup-mint"}]
+            },
+            "setupCosts": {
+                "knownCostUsdcBaseUnits": "105", "hasUnpricedCost": false,
+                "feeLamports": "5000", "rentLamports": "6000000"
+            },
             "delegation": {
                 "status": "ACTIVE",
                 "policyIds": ["policy-id-public"],
@@ -89,6 +99,8 @@ async fn mesh(
                 "status": "OBSERVED",
                 "wallet": PRIVATE_CUSTOMER,
                 "cashBaseUnits": "1230000",
+                "nativeLamports": "80000000",
+                "associatedAccountRentLamports": "2000000",
                 "history": [{
                     "signedTransactionBase64": PRIVATE_SIGNED,
                     "signatureBase64": PRIVATE_SIGNED,
@@ -126,6 +138,7 @@ async fn mesh(
                     "reserveAddress": RESERVE,
                     "amountBaseUnits": "1000000",
                     "amountUnit": "receipt-base-units",
+                    "associatedAccountRentLamports": "12345",
                     "signature": null,
                     "transactionBase64": UNSIGNED_WITHDRAW,
                     "signedTransactionBase64": PRIVATE_SIGNED,
@@ -291,7 +304,7 @@ async fn funded_lending_tools_are_fixed_and_reject_identity_or_authority_injecti
 }
 
 #[tokio::test]
-async fn funded_lending_limits_model_output_and_preserves_owner_transaction_review() {
+async fn v229_funded_lending_limits_model_output_and_preserves_owner_transaction_review() {
     let (url, fake) = stack(FakeMesh::default()).await;
     let client = reqwest::Client::new();
     let calls = [
@@ -324,9 +337,26 @@ async fn funded_lending_limits_model_output_and_preserves_owner_transaction_revi
     assert_eq!(outputs[0]["accounting"]["depositsBaseUnits"], "2000000");
     assert_eq!(outputs[0]["delegation"]["policyHash"], "policy-hash-public");
     assert!(outputs[0]["delegation"].get("rawPolicyBody").is_none());
+    assert_eq!(outputs[0]["setupStatus"], "REQUIRED");
+    assert_eq!(
+        outputs[0]["setupIssues"],
+        json!(["CANONICAL_ACCOUNTS_MISSING"])
+    );
+    assert!(outputs[0].get("setupQuote").is_none());
+    assert!(outputs[0].get("setupCosts").is_none());
+    assert!(outputs[0]["portfolio"].get("nativeLamports").is_none());
+    assert!(
+        outputs[0]["portfolio"]
+            .get("associatedAccountRentLamports")
+            .is_none()
+    );
     assert_eq!(
         outputs[4]["ownerAction"]["prepared"]["transactionBase64"],
         UNSIGNED_WITHDRAW
+    );
+    assert_eq!(
+        outputs[4]["ownerAction"]["prepared"]["associatedAccountRentLamports"],
+        "12345"
     );
     assert_eq!(
         outputs[6]["ownerAction"]["prepared"]["transactionBase64"],

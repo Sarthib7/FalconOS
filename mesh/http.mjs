@@ -15,6 +15,8 @@ const LENDING_BOT_TRANSACTION_BYTES_LIMIT = 1232;
 const LENDING_BOT_TRANSACTION_BASE64_LIMIT = 4 * Math.ceil(LENDING_BOT_TRANSACTION_BYTES_LIMIT / 3);
 const LENDING_BOT_ROUTES = {
   '/v1/lending-bot/wallet-link': ['linkWallet', ['requestId']],
+  '/v1/lending-bot/accounts/quote': ['quoteAccounts', ['requestId']],
+  '/v1/lending-bot/accounts/prepare': ['prepareAccounts', ['requestId', 'quoteId']],
   '/v1/lending-bot/mandate': ['saveMandate', ['requestId', 'mandate']],
   '/v1/lending-bot/delegation/prepare': ['prepareDelegation', ['requestId']],
   '/v1/lending-bot/delegation': ['verifyDelegation', ['requestId']],
@@ -41,6 +43,7 @@ function validateLendingBotInput(input, route) {
   keys(input, route[1]);
   normalizeResearchUuid(input.requestId);
   if (Object.hasOwn(input, 'actionId')) normalizeResearchUuid(input.actionId);
+  if (Object.hasOwn(input, 'quoteId')) normalizeResearchUuid(input.quoteId);
   if (Object.hasOwn(input, 'mandate')) {
     const mandate = input.mandate;
     keys(mandate, LENDING_BOT_MANDATE_KEYS);
