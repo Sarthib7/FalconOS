@@ -622,3 +622,120 @@
     text-align: left;
   }
 }
+
+.lending-setup-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.lending-setup-metrics > div {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 13px;
+  border: 1px solid var(--lending-line);
+  background: var(--lending-deep);
+}
+
+.lending-setup-metrics dt,
+.lending-setup-account-details dt {
+  color: var(--lending-muted);
+  font: 10px/1.45 var(--mono, ui-monospace, monospace);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.lending-setup-metrics dd,
+.lending-setup-account-details dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--lending-text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.lending-setup-metrics small {
+  display: block;
+  color: var(--lending-muted);
+  font-size: 12px;
+}
+
+.lending-setup-costs {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--lending-line);
+}
+
+.lending-setup-costs h4 {
+  margin: 0;
+  color: var(--lending-text);
+  font: 450 17px/1.2 var(--body, system-ui, sans-serif);
+}
+
+.lending-setup-account-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--lending-line);
+  list-style: none;
+}
+
+.lending-setup-account-list > li {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--lending-line);
+}
+
+.lending-setup-account-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--lending-text);
+}
+
+.lending-setup-account-heading span {
+  color: var(--lending-muted);
+  font-size: 12px;
+}
+
+.lending-setup-account-details {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+}
+
+.lending-setup-account-details > div {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.lending-setup-account-details code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 860px) {
+  .lending-setup-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .lending-setup-metrics,
+  .lending-setup-account-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
