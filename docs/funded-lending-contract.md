@@ -94,6 +94,8 @@ Frontend starts with current verified session's wallet. Explicit embedded-wallet
 
 ## Executed checks and limits
 
+[VERIFIED CI-ONLY APPROVAL, 2026-11-09] The user selected `Approve 35-minute job budget`. Only `jobs.verify.timeout-minutes` changes from20 to35 on affected draft heads. Assertions, per-operation deadlines, private dependency copies, runtime pins and financial authority stay unchanged. This extends the global CI resource bound; fresh exact-head checks must complete before merge. The choice grants no merge, deployment or live financial action.
+
 [VERIFIED LOCAL R1.3 BACKEND] Node24.19.0 ran the eight focused bot files with disposable PostgreSQL17: `tests87,pass87,fail0,skipped0`. The set includes actual SDK/crypto, HTTP/auth, private journal, accounting and runner behavior. Provider, chain and model transports were controlled.
 
 [VERIFIED LOCAL PROGRAMS] Actual client/API programs returned `SETUP_TREASURY_API_SMOKE_PASS` and `SCHEDULED_ROTATION_API_SMOKE_PASS`. The first completed quote, setup finality, funding, reviewed supply and pause. The second used production `startScheduler`, actual due-owner SQL and real elapsed cooldown, without manual ticks or a time rewrite. It finalized a150000000-base-unit exit before a separately reviewed entry, then retained cash100000000, receipts50000000/150000000, costs30 and earned fee0. Market, signing, provider and chain data remained fixtures; no live financial signature or paid model call occurred.
