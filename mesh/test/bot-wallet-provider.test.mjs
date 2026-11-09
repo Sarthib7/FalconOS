@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, verify as cryptoVerify } from 'node:crypto';
 import test from 'node:test';
-import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { createWalletProvider, WalletProviderError } from '../cfo/wallet-provider.mjs';
 
 const APP_ID = 'falcon_lending_test_app';
@@ -62,7 +61,6 @@ function jsonResponse(value, status = 200) {
 const walletKeypair = generateKeyPairSync('ed25519');
 const walletAddress = walletKeypair.publicKey.export({ format: 'der', type: 'spki' }).subarray(-32);
 const WALLET_ADDRESS = encodeBase58(walletAddress);
-const jwtKeysPromise = generateKeyPair('ES256');
 
 const IDL = {
   address: KLEND_PROGRAM_ID,
@@ -200,14 +198,7 @@ async function makeFixture({
   walletAddressInProvider = WALLET_ADDRESS,
   installedSigners = [],
 } = {}) {
-  const [{ publicKey: jwtPublicKey, privateKey: jwtPrivateKey }, backendPair] = await Promise.all([
-    jwtKeysPromise,
-    Promise.resolve(generateKeyPairSync('ec', { namedCurve: 'prime256v1' })),
-  ]);
-  const jwk = await exportJWK(jwtPublicKey);
-  jwk.kid = 'privy-access-key';
-  jwk.use = 'sig';
-  jwk.alg = 'ES256';
+  const backendPair = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
   const backendPrivateKey = backendPair.privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64');
   const backendPublicKey = backendPair.publicKey.export({ format: 'der', type: 'spki' }).toString('base64');
   const mandate = makeMandate();
@@ -235,7 +226,6 @@ async function makeFixture({
     key_quorum_ids: [],
   };
   const state = {
-    userId,
     wallet: {
       id: WALLET_ID,
       address: walletAddressInProvider,
@@ -257,6 +247,8 @@ async function makeFixture({
         chain_type: 'solana',
         connector_type: 'embedded',
         wallet_client: 'privy',
+        wallet_client_type: 'privy',
+        imported: false,
         type: 'wallet',
         user_can_sign: true,
       }],
@@ -276,8 +268,6 @@ async function makeFixture({
     rpcCalls: [],
     signedTransaction: Buffer.alloc(110, 0x7a).toString('base64'),
   };
-  state.wallet.owner_id = walletOwnerId;
-  state.user.id = userId;
   if (policyOwnerId === WORKER_OWNER_ID) state.quorums.set(WORKER_OWNER_ID, workerOwnerQ);
 
   const fetchImpl = async (input, init = {}) => {
@@ -287,15 +277,17 @@ async function makeFixture({
     const headers = new Headers(init.headers);
     state.requests.push({ method, path: decodeURIComponent(url.pathname), body, headers });
     if (url.origin !== 'https://api.privy.io' || init.redirect === 'follow') return jsonResponse({ error: 'unexpected request' }, 400);
-    if (url.pathname === `/v1/apps/${APP_ID}/jwks.json`) return jsonResponse({ keys: [jwk] });
     if (!headers.has('authorization') || headers.get('authorization') !== `Basic ${Buffer.from(`${APP_ID}:${APP_SECRET}`).toString('base64')}`) {
       return jsonResponse({ error: 'bad app authentication' }, 401);
     }
     const path = decodeURIComponent(url.pathname);
-    if (method === 'GET' && path === `/v1/users/${userId}`) return jsonResponse(state.user);
+    if (method === 'POST' && path === '/v1/users/wallet/address') {
+      if (!state.user.linked_accounts.some(account => account?.address === body?.address)) return jsonResponse({ error: 'not found' }, 404);
+      return jsonResponse(state.user);
+    }
     if (method === 'POST' && path === '/v1/wallets/address') {
       if (body?.address !== state.wallet.address) return jsonResponse({ error: 'not found' }, 404);
-      return jsonResponse(state.wallet);
+      return jsonResponse(state.addressWallet ?? state.wallet);
     }
     if (method === 'GET' && path === `/v1/wallets/${WALLET_ID}`) return jsonResponse(state.wallet);
     if (method === 'GET' && path.startsWith('/v1/key_quorums/')) {
@@ -333,16 +325,6 @@ async function makeFixture({
     return jsonResponse({ error: 'not found' }, 404);
   };
 
-  async function token({ subject = userId, audience = APP_ID, key = jwtPrivateKey } = {}) {
-    return new SignJWT({ sid: 'session_customer_01' })
-      .setProtectedHeader({ alg: 'ES256', typ: 'JWT', kid: jwk.kid })
-      .setIssuer('privy.io')
-      .setAudience(audience)
-      .setSubject(subject)
-      .setIssuedAt()
-      .setExpirationTime('1h')
-      .sign(key);
-  }
 
   let currentTime = NOW;
   const provider = createWalletProvider({
@@ -353,7 +335,7 @@ async function makeFixture({
     client: { fetch: fetchImpl },
     now: () => currentTime,
   });
-  return { provider, state, token, mandate, rules, userId, walletAddress: WALLET_ADDRESS, setNow(value) { currentTime = value; } };
+  return { provider, state, mandate, rules, walletAddress: WALLET_ADDRESS, setNow(value) { currentTime = value; } };
 }
 
 function code(expected) {
@@ -370,60 +352,120 @@ test('configuration reports missing runtime settings without exposing secrets', 
   assert.ok(config.issues.length > 0);
 });
 
-test('wallet link rejects wrong JWT audience before protected wallet reads', async () => {
+test('V226 derives wallet ownership from app-authenticated user-by-wallet and current resources without entity metadata', async () => {
   const fixture = await makeFixture();
-  const wrongAudience = await fixture.token({ audience: 'different_privy_app' });
-  await assert.rejects(fixture.provider.verifyWalletLink({ accessToken: wrongAudience, walletAddress: fixture.walletAddress }), code('AUTHENTICATION_FAILED'));
-  assert.equal(fixture.state.requests.some(request => request.path === `/v1/users/${USER_ID}`), false);
-  assert.equal(fixture.state.requests.some(request => request.path === '/v1/wallets/address'), false);
+  delete fixture.state.wallet.entity;
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+  assert.deepEqual(link, {
+    providerWalletId: WALLET_ID,
+    walletAddress: fixture.walletAddress,
+    userId: USER_ID,
+    ownerId: OWNER_QUORUM_ID,
+  });
+  const userLookup = fixture.state.requests.find(request => request.path === '/v1/users/wallet/address');
+  assert.equal(userLookup.method, 'POST');
+  assert.deepEqual(userLookup.body, { address: fixture.walletAddress });
+  assert.equal(userLookup.headers.get('authorization'), `Basic ${Buffer.from(`${APP_ID}:${APP_SECRET}`).toString('base64')}`);
+  assert.ok(fixture.state.requests.some(request => request.path === `/v1/wallets/${WALLET_ID}`));
+  assert.ok(fixture.state.requests.some(request => request.path === `/v1/key_quorums/${OWNER_QUORUM_ID}`));
 });
 
-test('wallet link rejects another JWT user and an unlinked address', async () => {
+test('V226 rejects mismatched user, linked/current wallet address, wallet id, owner, and optional entity metadata', async () => {
+  const userFixture = await makeFixture();
+  userFixture.state.user.id = OTHER_USER_ID;
+  delete userFixture.state.wallet.entity;
+  await assert.rejects(userFixture.provider.verifyWalletLink({ walletAddress: userFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+
+  const addressFixture = await makeFixture({ linkedAddress: address(35) });
+  await assert.rejects(addressFixture.provider.verifyWalletLink({ walletAddress: addressFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+  assert.equal(addressFixture.state.requests.some(request => request.path === '/v1/wallets/address'), false);
+
+  const currentAddressFixture = await makeFixture({ walletAddressInProvider: address(36) });
+  await assert.rejects(currentAddressFixture.provider.verifyWalletLink({ walletAddress: currentAddressFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+  assert.ok(currentAddressFixture.state.requests.some(request => request.path === '/v1/wallets/address'));
+
+  const walletIdFixture = await makeFixture();
+  walletIdFixture.state.user.linked_accounts[0].id = 'different_wallet_id';
+  await assert.rejects(walletIdFixture.provider.verifyWalletLink({ walletAddress: walletIdFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+  assert.equal(walletIdFixture.state.requests.some(request => request.path === `/v1/wallets/${WALLET_ID}`), false);
+
+  const ownerFixture = await makeFixture();
+  ownerFixture.state.addressWallet = { ...ownerFixture.state.wallet, owner_id: 'different_customer_owner' };
+  await assert.rejects(ownerFixture.provider.verifyWalletLink({ walletAddress: ownerFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+
+  const entityFixture = await makeFixture();
+  entityFixture.state.wallet.entity = { type: 'user', id: OTHER_USER_ID };
+  await assert.rejects(entityFixture.provider.verifyWalletLink({ walletAddress: entityFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+});
+
+test('V226 refuses imported wallets and shared customer owner quorums', async () => {
+  const importedFixture = await makeFixture();
+  importedFixture.state.user.linked_accounts[0].imported = true;
+  await assert.rejects(importedFixture.provider.verifyWalletLink({ walletAddress: importedFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+  assert.equal(importedFixture.state.requests.some(request => request.path === '/v1/wallets/address'), false);
+
+  const sharedFixture = await makeFixture({ walletOwnerUserIds: [USER_ID, OTHER_USER_ID] });
+  await assert.rejects(sharedFixture.provider.verifyWalletLink({ walletAddress: sharedFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+});
+
+test('V226 rejects obsolete owner credential fields on all provider DTOs', async () => {
   const fixture = await makeFixture();
-  const otherUserToken = await fixture.token({ subject: OTHER_USER_ID });
+  const credential = 'never-forward-this-owner-token';
+  await assert.rejects(fixture.provider.verifyWalletLink({
+    walletAddress: fixture.walletAddress,
+    accessToken: credential,
+    userJwt: credential,
+    mfaToken: credential,
+    authorizationKey: credential,
+  }), code('INVALID_INPUT'));
+  assert.equal(fixture.state.requests.length, 0);
+
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+  const delegation = await fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: fixture.rules });
+  const requestsBefore = fixture.state.requests.length;
   await assert.rejects(fixture.provider.prepareDelegation({
-    accessToken: otherUserToken,
-    link: { providerWalletId: WALLET_ID, walletAddress: fixture.walletAddress, userId: USER_ID, ownerId: OWNER_QUORUM_ID },
+    link, mandate: fixture.mandate, rules: fixture.rules, accessToken: credential,
+  }), code('INVALID_INPUT'));
+  await assert.rejects(fixture.provider.verifyDelegation({
+    link, mandate: fixture.mandate, delegation, rules: fixture.rules, accessToken: credential,
+  }), code('INVALID_INPUT'));
+  await assert.rejects(fixture.provider.signTransaction({
+    link,
     mandate: fixture.mandate,
+    delegation,
     rules: fixture.rules,
-  }), code('WALLET_LINK_INVALID'));
-  const otherAddress = encodeBase58(Buffer.alloc(32, 21));
-  const token = await fixture.token();
-  await assert.rejects(fixture.provider.verifyWalletLink({ accessToken: token, walletAddress: otherAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
-  assert.equal(fixture.state.requests.some(request => request.path === '/v1/wallets/address'), false);
-});
-
-test('wallet link rejects provider address or owner mismatches', async () => {
-  const tokenFixture = await makeFixture({ walletAddressInProvider: address(35) });
-  const token = await tokenFixture.token();
-  await assert.rejects(tokenFixture.provider.verifyWalletLink({ accessToken: token, walletAddress: tokenFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
-  const ownerFixture = await makeFixture({ walletOwnerId: 'worker_owned_wallet', walletOwnerUserIds: [] });
-  const ownerToken = await ownerFixture.token();
-  await assert.rejects(ownerFixture.provider.verifyWalletLink({ accessToken: ownerToken, walletAddress: ownerFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+    transactionBase64: Buffer.alloc(120, 0x31).toString('base64'),
+    accessToken: credential,
+  }), code('INVALID_INPUT'));
+  await assert.rejects(fixture.provider.prepareRevocation({
+    link, delegation, accessToken: credential,
+  }), code('INVALID_INPUT'));
+  await assert.rejects(fixture.provider.revokeDelegation({
+    link, delegation, accessToken: credential,
+  }), code('INVALID_INPUT'));
+  assert.equal(fixture.state.requests.length, requestsBefore);
 });
 
 test('prepareDelegation rejects wildcard and sign-and-send policy encodings before create', async () => {
   const fixture = await makeFixture();
-  const accessToken = await fixture.token();
-  const link = await fixture.provider.verifyWalletLink({ accessToken, walletAddress: fixture.walletAddress });
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
   const wildcard = structuredClone(fixture.rules);
   wildcard[0].conditions[0].value = '*';
-  await assert.rejects(fixture.provider.prepareDelegation({ accessToken, link, mandate: fixture.mandate, rules: wildcard }), code('POLICY_SCOPE_INVALID'));
+  await assert.rejects(fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: wildcard }), code('POLICY_SCOPE_INVALID'));
   const signAndSend = structuredClone(fixture.rules);
   signAndSend[1].method = 'signAndSendTransaction';
-  await assert.rejects(fixture.provider.prepareDelegation({ accessToken, link, mandate: fixture.mandate, rules: signAndSend }), code('POLICY_SCOPE_INVALID'));
+  await assert.rejects(fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: signAndSend }), code('POLICY_SCOPE_INVALID'));
   assert.equal(fixture.state.createPolicyCalls, 0);
 });
 
-test('prepareDelegation creates a customer-owned policy and binds the real provider wallet', async () => {
+test('prepareDelegation creates a customer-owned six-rule policy for the resource-derived wallet', async () => {
   const fixture = await makeFixture();
-  const accessToken = await fixture.token();
-  const link = await fixture.provider.verifyWalletLink({ accessToken, walletAddress: fixture.walletAddress });
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
   assert.equal(link.providerWalletId, WALLET_ID);
   assert.equal(link.walletAddress, fixture.walletAddress);
   assert.equal(link.userId, USER_ID);
   assert.equal(link.ownerId, OWNER_QUORUM_ID);
-  const delegation = await fixture.provider.prepareDelegation({ accessToken, link, mandate: fixture.mandate, rules: fixture.rules });
+  const delegation = await fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: fixture.rules });
   assert.equal(delegation.signerId, WORKER_SIGNER_ID);
   assert.deepEqual(delegation.policyIds, [POLICY_ID]);
   assert.match(delegation.policyHash, /^[a-f0-9]{64}$/);
@@ -431,17 +473,15 @@ test('prepareDelegation creates a customer-owned policy and binds the real provi
   assert.equal(fixture.state.createPolicyCalls, 1);
   const createRequest = fixture.state.requests.find(request => request.method === 'POST' && request.path === '/v1/policies');
   assert.deepEqual(createRequest.body.owner, { user_id: USER_ID });
+  assert.equal(createRequest.body.rules.length, 6);
   assert.equal(createRequest.headers.has('privy-authorization-signature'), false);
-  assert.equal(JSON.stringify(createRequest.body).includes(accessToken), false);
   assert.equal(JSON.stringify(createRequest.body).includes(fixture.state.policy.owner_id), false);
 });
 
 test('prepareDelegation rejects a policy resource owned by the worker', async () => {
   const fixture = await makeFixture({ policyOwnerId: WORKER_OWNER_ID });
-  const accessToken = await fixture.token();
-  const link = await fixture.provider.verifyWalletLink({ accessToken, walletAddress: fixture.walletAddress });
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
   await assert.rejects(fixture.provider.prepareDelegation({
-    accessToken,
     link,
     mandate: fixture.mandate,
     rules: fixture.rules,
@@ -450,25 +490,35 @@ test('prepareDelegation rejects a policy resource owned by the worker', async ()
   assert.equal(fixture.state.wallet.additional_signers.length, 0);
 });
 
-test('verifyDelegation re-reads provider policy scope and rejects digest changes', async () => {
+test('V226 verifies current wallet, signer and policy resources before using a delegation', async () => {
   const fixture = await makeFixture();
-  const accessToken = await fixture.token();
-  const link = await fixture.provider.verifyWalletLink({ accessToken, walletAddress: fixture.walletAddress });
-  const delegation = await fixture.provider.prepareDelegation({ accessToken, link, mandate: fixture.mandate, rules: fixture.rules });
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+  const delegation = await fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: fixture.rules });
   fixture.state.wallet.additional_signers = [{ signer_id: WORKER_SIGNER_ID, override_policy_ids: [POLICY_ID] }];
+  const readsBefore = fixture.state.requests.length;
   assert.equal((await fixture.provider.verifyDelegation({ link, mandate: fixture.mandate, delegation, rules: fixture.rules })).status, 'ACTIVE');
+  const currentReads = fixture.state.requests.slice(readsBefore);
+  assert.ok(currentReads.some(request => request.path === '/v1/users/wallet/address'));
+  assert.ok(currentReads.some(request => request.path === `/v1/wallets/${WALLET_ID}`));
+  assert.ok(currentReads.some(request => request.path === `/v1/key_quorums/${WORKER_SIGNER_ID}`));
+  assert.ok(currentReads.some(request => request.path === `/v1/policies/${POLICY_ID}`));
+
+  fixture.state.wallet.additional_signers[0].override_policy_ids = ['different_policy'];
+  const changedSigner = await fixture.provider.verifyDelegation({ link, mandate: fixture.mandate, delegation, rules: fixture.rules });
+  assert.equal(changedSigner.status, 'UNAVAILABLE');
+  assert.equal(changedSigner.reason, 'POLICY_SCOPE_CHANGED');
+  fixture.state.wallet.additional_signers[0].override_policy_ids = [POLICY_ID];
   const amount = fixture.state.policy.rules[0].conditions.find(condition => condition.field.endsWith('.args.liquidityAmount'));
   amount.value = '999999999';
-  const changed = await fixture.provider.verifyDelegation({ link, mandate: fixture.mandate, delegation, rules: fixture.rules });
-  assert.equal(changed.status, 'UNAVAILABLE');
-  assert.equal(changed.reason, 'POLICY_SCOPE_CHANGED');
+  const changedPolicy = await fixture.provider.verifyDelegation({ link, mandate: fixture.mandate, delegation, rules: fixture.rules });
+  assert.equal(changedPolicy.status, 'UNAVAILABLE');
+  assert.equal(changedPolicy.reason, 'POLICY_SCOPE_CHANGED');
 });
 
-test('verifyDelegation denies changed local digest, owner and expiry', async () => {
+test('verifyDelegation denies changed digest, owner and expiry', async () => {
   const fixture = await makeFixture();
-  const accessToken = await fixture.token();
-  const link = await fixture.provider.verifyWalletLink({ accessToken, walletAddress: fixture.walletAddress });
-  const delegation = await fixture.provider.prepareDelegation({ accessToken, link, mandate: fixture.mandate, rules: fixture.rules });
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+  const delegation = await fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: fixture.rules });
   fixture.state.wallet.additional_signers = [{ signer_id: WORKER_SIGNER_ID, override_policy_ids: [POLICY_ID] }];
   const changed = await fixture.provider.verifyDelegation({ link, mandate: fixture.mandate, delegation: { ...delegation, policyHash: 'a'.repeat(64) }, rules: fixture.rules });
   assert.equal(changed.status, 'UNAVAILABLE');
@@ -487,41 +537,39 @@ test('verifyDelegation denies changed local digest, owner and expiry', async () 
   assert.equal(ownerChanged.status, 'UNAVAILABLE');
 });
 
-test('prepareRevocation exposes the authoritative all-signer scope and revoke refuses partial removal', async () => {
+test('prepareRevocation and revokeDelegation use current owner proof and verify all-signer removal', async () => {
   const fixture = await makeFixture();
-  const accessToken = await fixture.token();
-  const link = await fixture.provider.verifyWalletLink({ accessToken, walletAddress: fixture.walletAddress });
-  const delegation = await fixture.provider.prepareDelegation({ accessToken, link, mandate: fixture.mandate, rules: fixture.rules });
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+  const delegation = await fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: fixture.rules });
   fixture.state.wallet.additional_signers = [
     { signer_id: WORKER_SIGNER_ID, override_policy_ids: [POLICY_ID] },
     { signer_id: 'another_customer_signer', override_policy_ids: [] },
   ];
-  const preview = await fixture.provider.prepareRevocation({ accessToken, link });
+  const preview = await fixture.provider.prepareRevocation({ link, delegation });
   assert.equal(preview.scope, 'ALL_DELEGATED_SIGNERS');
   assert.deepEqual(preview.signerIds, [WORKER_SIGNER_ID, 'another_customer_signer']);
-  await assert.rejects(fixture.provider.revokeDelegation({ accessToken, link, delegation }), code('REVOCATION_INCOMPLETE'));
+  await assert.rejects(fixture.provider.revokeDelegation({ link, delegation }), code('REVOCATION_INCOMPLETE'));
   assert.equal(fixture.state.requests.some(request => ['PATCH', 'DELETE'].includes(request.method)), false);
   fixture.state.wallet.additional_signers = [];
-  assert.deepEqual(await fixture.provider.revokeDelegation({ accessToken, link, delegation }), {
+  assert.deepEqual(await fixture.provider.revokeDelegation({ link, delegation }), {
     status: 'REVOKED', policyHash: delegation.policyHash, reason: null,
   });
+  assert.ok(fixture.state.requests.filter(request => request.path === '/v1/users/wallet/address').length >= 4);
 });
 
-test('revokeDelegation rejects an owner change even after all signers disappear', async () => {
+test('revokeDelegation rejects an owner change after all additional signers disappear', async () => {
   const fixture = await makeFixture();
-  const accessToken = await fixture.token();
-  const link = await fixture.provider.verifyWalletLink({ accessToken, walletAddress: fixture.walletAddress });
-  const delegation = await fixture.provider.prepareDelegation({ accessToken, link, mandate: fixture.mandate, rules: fixture.rules });
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+  const delegation = await fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: fixture.rules });
   fixture.state.wallet.additional_signers = [];
   fixture.state.wallet.owner_id = 'changed_customer_owner';
-  await assert.rejects(fixture.provider.revokeDelegation({ accessToken, link, delegation }), code('WALLET_OWNERSHIP_MISMATCH'));
+  await assert.rejects(fixture.provider.revokeDelegation({ link, delegation }), code('WALLET_OWNERSHIP_MISMATCH'));
 });
 
 test('worker signing is sign-only, scope-bound, bounded, and request-authorized by the scoped key', async () => {
   const fixture = await makeFixture();
-  const accessToken = await fixture.token();
-  const link = await fixture.provider.verifyWalletLink({ accessToken, walletAddress: fixture.walletAddress });
-  const delegation = await fixture.provider.prepareDelegation({ accessToken, link, mandate: fixture.mandate, rules: fixture.rules });
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+  const delegation = await fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: fixture.rules });
   fixture.state.wallet.additional_signers = [{ signer_id: WORKER_SIGNER_ID, override_policy_ids: [POLICY_ID] }];
   const transactionBase64 = Buffer.alloc(120, 0x31).toString('base64');
   const result = await fixture.provider.signTransaction({ link, mandate: fixture.mandate, delegation, rules: fixture.rules, transactionBase64 });

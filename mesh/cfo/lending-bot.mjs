@@ -11,7 +11,14 @@ const add = (at, ms) => new Date(Date.parse(at) + ms).toISOString();
 const fail = (code, message) => { throw lifecycleError(code, message); };
 const reason = error => /^[A-Z][A-Z0-9_]{0,63}$/.test(error?.code || '') ? error.code : 'PROVIDER_UNAVAILABLE';
 const meta = (operation, input) => ({ operation, hash: recordHash(Object.fromEntries(Object.entries(input)
-  .filter(([key]) => !['requestId', 'accessToken'].includes(key)))) });
+  .filter(([key]) => key !== 'requestId'))) });
+function requestIdOnly(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)
+      || Object.keys(input).length !== 1 || !Object.hasOwn(input, 'requestId')) {
+    fail('INVALID_INPUT', 'Request fields do not match the owner control.');
+  }
+  requestId(input.requestId);
+}
 function runnerData(wallet, value = {}) {
   return { wallet, state: 'STOPPED', nextRunAt: null, reason: null, lease: null, lastActionAt: null,
     rotation: null, mandateId: null, reviewCallsUsed: 0, ...value };
@@ -561,10 +568,10 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
     },
     async linkWallet(owner, inputWallet, input) {
       const wallet = ownerWallet(owner, inputWallet);
-      requestId(input.requestId);
+      requestIdOnly(input);
       const before = await snapshot(owner, wallet);
       if (before.run.state === 'RUNNING') fail('CONFLICT', 'Pause the bot before changing wallet linkage.');
-      const link = await walletProvider.verifyWalletLink({ accessToken: input.accessToken, walletAddress: wallet });
+      const link = await walletProvider.verifyWalletLink({ walletAddress: wallet });
       if (link.walletAddress !== wallet || !link.providerWalletId || !link.userId || !link.ownerId) fail('UNAUTHORIZED', 'Provider wallet ownership does not match this Falcon session.');
       return journal.withOwner(owner, wallet, async tx => {
         const old = await prior(tx, 'wallet', 'linkWallet', input);
@@ -598,6 +605,7 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
     },
     async prepareDelegation(owner, inputWallet, input) {
       const wallet = ownerWallet(owner, inputWallet);
+      requestIdOnly(input);
       return journal.exclusive(owner, wallet, async locked => {
         const setup = await locked.withOwner(owner, wallet, async tx => {
           const old = await prior(tx, 'delegation', 'prepareDelegation', input);
@@ -615,7 +623,7 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
         const mandate = s.mandate.data.mandate;
         try {
           const rules = await adapter.policyRules({ wallet, mandate });
-          const prepared = await walletProvider.prepareDelegation({ accessToken: input.accessToken, link: s.wallet.data.link, mandate, rules });
+          const prepared = await walletProvider.prepareDelegation({ link: s.wallet.data.link, mandate, rules });
           return locked.withOwner(owner, wallet, async tx => {
             const next = await transition(tx, pending, { delegation: { ...prepared, status: 'PREPARED', reason: null } });
             return { delegation: delegationDto(next) };
@@ -674,19 +682,19 @@ export function createLendingBotService({ journal, adapter, walletProvider, revi
     async pause(owner, inputWallet, input) { return stop(owner, ownerWallet(owner, inputWallet), input); },
     async prepareRevocation(owner, inputWallet, input) {
       const wallet = ownerWallet(owner, inputWallet);
-      requestId(input.requestId);
+      requestIdOnly(input);
       await stop(owner, wallet, { requestId: randomUUID() });
       const s = await snapshot(owner, wallet);
-      const revocation = await walletProvider.prepareRevocation({ accessToken: input.accessToken, link: requireLink(s), delegation: s.delegation?.data.delegation });
+      const revocation = await walletProvider.prepareRevocation({ link: requireLink(s), delegation: s.delegation?.data.delegation });
       if (revocation.walletAddress !== wallet || revocation.scope !== 'ALL_DELEGATED_SIGNERS') fail('PROVIDER_UNAVAILABLE', 'Revocation preview has an invalid wallet or scope.');
       return { revocation };
     },
     async revoke(owner, inputWallet, input) {
       const wallet = ownerWallet(owner, inputWallet);
-      requestId(input.requestId);
+      requestIdOnly(input);
       await stop(owner, wallet, { requestId: randomUUID() });
       const s = await snapshot(owner, wallet);
-      const verified = await walletProvider.revokeDelegation({ accessToken: input.accessToken, link: requireLink(s), delegation: s.delegation?.data.delegation });
+      const verified = await walletProvider.revokeDelegation({ link: requireLink(s), delegation: s.delegation?.data.delegation });
       if (verified.status !== 'REVOKED') fail('CONFLICT', 'Delegated signers remain or provider revocation is unverified.');
       return journal.withOwner(owner, wallet, async tx => {
         const current = await state(tx, wallet);

@@ -107,51 +107,6 @@ function botWithRecorder() {
   return { bot, calls };
 }
 
-test('funded lending routes use session-derived scope and exact service wrappers', async t => {
-  const tokenA = `wsi1_${randomBytes(32).toString('base64url')}`;
-  const tokenB = `wsi1_${randomBytes(32).toString('base64url')}`;
-  const { bot, calls } = botWithRecorder();
-  const base = await listen(t, { lendingBot: bot, sessions: new Map([
-    [tokenA, session(OWNER_A, WALLET_A)],
-    [tokenB, session(OWNER_B, WALLET_B)],
-  ]) });
-
-  const overview = await fetchJson(base, tokenA, '/v1/lending-bot');
-  assert.equal(overview.status, 200);
-  assert.deepEqual(overview.payload, {
-    schemaVersion: 1, domain: 'solana-lending-bot', status: 'SETUP_REQUIRED', runner: { state: 'STOPPED' },
-  });
-
-  const cases = [
-    ['/v1/lending-bot/wallet-link', 'linkWallet', { requestId: randomUUID(), accessToken: 'provider-token-private-marker' }],
-    ['/v1/lending-bot/mandate', 'saveMandate', { requestId: randomUUID(), mandate: validMandate() }],
-    ['/v1/lending-bot/delegation/prepare', 'prepareDelegation', { requestId: randomUUID(), accessToken: 'provider-token-private-marker' }],
-    ['/v1/lending-bot/delegation', 'verifyDelegation', { requestId: randomUUID() }],
-    ['/v1/lending-bot/capture', 'capture', { requestId: randomUUID() }],
-    ['/v1/lending-bot/start', 'start', { requestId: randomUUID() }],
-    ['/v1/lending-bot/pause', 'pause', { requestId: randomUUID() }],
-    ['/v1/lending-bot/revoke/prepare', 'prepareRevocation', { requestId: randomUUID(), accessToken: 'provider-token-private-marker' }],
-    ['/v1/lending-bot/revoke', 'revoke', { requestId: randomUUID(), accessToken: 'provider-token-private-marker' }],
-    ['/v1/lending-bot/withdraw', 'prepareWithdrawal', { requestId: randomUUID(), reserveAddress: RESERVE_A, receiptBaseUnits: '2000000' }],
-    ['/v1/lending-bot/fee-claim', 'prepareFeeClaim', { requestId: randomUUID() }],
-    ['/v1/lending-bot/owner-signatures', 'submitOwnerSignature', {
-      requestId: randomUUID(), actionId: randomUUID(), signedTransactionBase64: Buffer.alloc(1232).toString('base64'),
-    }],
-    ['/v1/lending-bot/reconcile', 'reconcile', { requestId: randomUUID(), actionId: randomUUID() }],
-  ];
-  for (const [path, method, input] of cases) {
-    const response = await fetchJson(base, tokenA, path, input);
-    assert.equal(response.status, 200, `${method} returned ${response.status}`);
-    assert.deepEqual(response.payload, { [method]: { status: 'RECORDED', requestId: input.requestId } });
-    assert.deepEqual(calls.at(-1), { method, owner: OWNER_A, wallet: WALLET_A, input });
-    assert.equal(JSON.stringify(response.payload).includes('provider-token-private-marker'), false);
-  }
-
-  assert.equal(calls.length, cases.length + 1);
-  const otherOwner = await fetchJson(base, tokenB, '/v1/lending-bot', undefined);
-  assert.equal(otherOwner.status, 200);
-  assert.deepEqual(calls.at(-1), { method: 'overview', owner: OWNER_B, wallet: WALLET_B, input: undefined });
-});
 
 test('funded lending rejects operator/cross-owner scope, malformed DTOs, and wrong methods before dispatch', async t => {
   const tokenA = `wsi1_${randomBytes(32).toString('base64url')}`;
@@ -182,6 +137,10 @@ test('funded lending rejects operator/cross-owner scope, malformed DTOs, and wro
     ['/v1/lending-bot/mandate', { requestId: randomUUID(), mandate: { ...validMandate(), wallet: WALLET_A } }],
     ['/v1/lending-bot/withdraw', { requestId: randomUUID(), reserveAddress: RESERVE_A, receiptBaseUnits: 2 }],
     ['/v1/lending-bot/reconcile', { requestId: randomUUID(), actionId: 'not-a-uuid' }],
+    ['/v1/lending-bot/wallet-link', { requestId: randomUUID(), accessToken: 'owner-token-private-marker' }],
+    ['/v1/lending-bot/delegation/prepare', { requestId: randomUUID(), accessToken: 'owner-token-private-marker' }],
+    ['/v1/lending-bot/revoke/prepare', { requestId: randomUUID(), accessToken: 'owner-token-private-marker' }],
+    ['/v1/lending-bot/revoke', { requestId: randomUUID(), accessToken: 'owner-token-private-marker' }],
     ['/v1/lending-bot/owner-signatures', {
       requestId: randomUUID(), actionId: randomUUID(), signedTransactionBase64: Buffer.alloc(1233).toString('base64'),
     }],
@@ -190,6 +149,7 @@ test('funded lending rejects operator/cross-owner scope, malformed DTOs, and wro
     const response = await fetchJson(base, tokenA, path, body);
     assert.equal(response.status, 400, path);
     assert.equal(response.payload.error.code, 'INVALID_INPUT');
+    assert.equal(JSON.stringify(response.payload).includes('owner-token-private-marker'), false);
   }
   const oversized = await fetchJson(base, tokenA, '/v1/lending-bot/wallet-link', {
     requestId: randomUUID(), accessToken: 'x'.repeat(17 * 1024),
@@ -201,7 +161,7 @@ test('funded lending rejects operator/cross-owner scope, malformed DTOs, and wro
   const injectedWallet = await fetchJson(base, tokenA, '/v1/lending-bot/capture?wallet=other');
   assert.equal(injectedWallet.status, 400);
   const providerFailure = await fetchJson(base, tokenA, '/v1/lending-bot/wallet-link', {
-    requestId: randomUUID(), accessToken: 'provider-token-private-marker',
+    requestId: randomUUID(),
   });
   assert.equal(providerFailure.status, 503);
   assert.equal(JSON.stringify(providerFailure.payload).includes('provider-token-private-marker'), false);

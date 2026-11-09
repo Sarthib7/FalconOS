@@ -41,6 +41,27 @@ const isRecord = value => Boolean(value) && typeof value === 'object' && !Array.
 const isUnsignedText = value => typeof value === 'string' && INTEGER_TEXT.test(value);
 const text = value => typeof value === 'string' ? value : '';
 
+const REQUEST_ID_ONLY_PATHS = new Set([
+  '/wallet-link',
+  '/delegation/prepare',
+  '/delegation',
+  '/revoke/prepare',
+  '/revoke',
+]);
+
+export function createLendingMeshRequest(request = meshRequest) {
+  return (token, path, body) => {
+    if (REQUEST_ID_ONLY_PATHS.has(path)
+      && (!isRecord(body) || Object.keys(body).length !== 1
+        || !Object.prototype.hasOwnProperty.call(body, 'requestId') || typeof body.requestId !== 'string')) {
+      throw new Error(`The ${path} lending request accepts only a requestId.`);
+    }
+    return request(token, `${ROOT}${path}`, body);
+  };
+}
+
+const lendingMeshRequest = createLendingMeshRequest();
+
 function sameIdentity(left, right) {
   return Boolean(left && right)
     && left.session === right.session
@@ -69,6 +90,14 @@ export function createLendingRequestScope() {
     },
     invalidate() { generation += 1; },
   };
+}
+
+/** Keeps owner SDK effects bound to the exact Falcon session and selected wallet across awaits. */
+export async function performIdentityBoundOwnerSdkAction(requestScope, ticket, identityRef, action) {
+  if (!requestScope.accepts(ticket, identityRef.current)) return { accepted: false };
+  const result = await action();
+  if (!requestScope.accepts(ticket, identityRef.current)) return { accepted: false };
+  return { accepted: true, result };
 }
 
 /** Converts ordinary decimal text to exact canonical base units without floating-point math. */
@@ -346,7 +375,7 @@ export function canPerformLendingOperation(operation, context = {}) {
   switch (operation) {
     case 'refresh': return Boolean(context.sessionToken);
     case 'link-wallet': return Boolean(sessionWallet && walletAddress === sessionWallet
-      && context.walletReady && context.walletAuthenticated && context.getAccessToken
+      && context.walletReady && context.walletAuthenticated
       && config?.walletProviderConfigured === true
       && overview?.walletLink?.walletAddress !== sessionWallet);
     case 'save-mandate': return linked && config?.walletProviderConfigured === true && feesConfigured && context.mandateValid === true;
@@ -372,7 +401,7 @@ export function canPerformLendingOperation(operation, context = {}) {
       && ['STOPPED', 'PAUSED'].includes(overview?.runner?.state);
     case 'pause': return Boolean(sessionWallet && overview?.runner?.state === 'RUNNING');
     case 'prepare-revocation': return linked && ['ACTIVE', 'EXPIRED'].includes(overview?.delegation?.status)
-      && Boolean(context.getAccessToken) && Boolean(context.removeAllDelegatedSigners)
+      && Boolean(context.removeAllDelegatedSigners)
       && !context.revocationPreview;
     case 'remove-all-signers': return linked && context.revocationConfirmed === true
       && validRevocationPreview(context.revocationPreview, overview, walletAddress)
@@ -521,7 +550,7 @@ export default function LendingBot({ session, wallet }) {
     const version = overviewVersion.current;
     updateStore(previous => ({ ...previous, load: { status: previous.overview ? 'refreshing' : 'loading', error: null } }));
     try {
-      const response = await meshRequest(current.session.token, ROOT);
+      const response = await lendingMeshRequest(current.session.token, '', undefined);
       if (!requestScope.accepts(ticket, identityRef.current) || overviewVersion.current !== version
         || overviewReadGeneration.current !== readGeneration) return null;
       if (!validOverview(response)) throw new Error('The lending service returned an invalid overview. No balances or readiness are shown.');
@@ -560,7 +589,6 @@ export default function LendingBot({ session, wallet }) {
       walletAddress: current.walletAddress,
       walletAuthenticated: wallet?.authenticated === true,
       walletReady: wallet?.ready === true,
-      getAccessToken: wallet?.getAccessToken,
       addSigners: wallet?.addSigners,
       removeAllDelegatedSigners: wallet?.removeAllDelegatedSigners,
       signTransaction: wallet?.signTransaction,
@@ -613,24 +641,18 @@ export default function LendingBot({ session, wallet }) {
     updateStore(previous => ({ ...previous, busy: null, ...(update ?? {}) }));
   }, [requestScope, updateStore]);
 
-  const post = useCallback(async (operationName, path, body, onSuccess, { accessToken = false, allowedOperation = operationName, actionId = null } = {}) => {
+  const post = useCallback(async (operationName, path, body, onSuccess, { allowedOperation = operationName, actionId = null } = {}) => {
     const operation = beginOperation(operationName, allowedOperation);
     if (!operation) return null;
     let requestSent = false;
     try {
-      let supplied = body;
-      if (accessToken) {
-        const token = await wallet?.getAccessToken?.();
-        if (!requestScope.accepts(operation.ticket, identityRef.current)) return null;
-        if (typeof token !== 'string' || !token) throw new Error('Privy did not provide an access token for the selected customer wallet.');
-        supplied = { ...body, accessToken: token };
-      }
       if (!requestScope.accepts(operation.ticket, identityRef.current)) return null;
-      requestSent = true;
-      const response = await meshRequest(operation.current.session.token, `${ROOT}${path}`, {
+      const pendingRequest = lendingMeshRequest(operation.current.session.token, path, {
         requestId: operation.requestId,
-        ...supplied,
+        ...body,
       });
+      requestSent = true;
+      const response = await pendingRequest;
       if (!requestScope.accepts(operation.ticket, identityRef.current)) return null;
       const patch = onSuccess(response);
       if (!patch) throw new Error('The lending service response did not match the required operation contract. Do not repeat this request; refresh retained state first.');
@@ -653,7 +675,7 @@ export default function LendingBot({ session, wallet }) {
         updateStore(previous => previous.busy === operationName ? { ...previous, busy: null } : previous);
       }
     }
-  }, [beginOperation, finishOperation, requestScope, updateStore, wallet]);
+  }, [beginOperation, finishOperation, requestScope, updateStore]);
 
   const overview = state.overview;
   const configuration = overview?.configuration;
@@ -697,7 +719,7 @@ export default function LendingBot({ session, wallet }) {
         overview: { ...overview, walletLink: response.walletLink },
         notice: `Privy wallet linked to the verified Falcon session for ${response.walletLink.walletAddress}.`,
       };
-    }, { accessToken: true });
+    });
   }
 
   function prepareDelegation() {
@@ -717,7 +739,7 @@ export default function LendingBot({ session, wallet }) {
         delegationCheckRequired: false,
         notice: 'Policy preview prepared. No signer was installed and no financial action was authorized.',
       };
-    }, { accessToken: true });
+    });
   }
 
   function verifyDelegation() {
@@ -760,9 +782,14 @@ export default function LendingBot({ session, wallet }) {
     try {
       const preview = operation.activeStore.delegationPreview;
       signerRequestAttempted = true;
-      await wallet.addSigners([{ signerId: preview.signerId, policyIds: [...preview.policyIds] }]);
-      if (!requestScope.accepts(operation.ticket, identityRef.current)) return;
-      const response = await meshRequest(operation.current.session.token, `${ROOT}/delegation`, { requestId: operation.requestId });
+      const signerChange = await performIdentityBoundOwnerSdkAction(
+        requestScope,
+        operation.ticket,
+        identityRef,
+        () => wallet.addSigners([{ signerId: preview.signerId, policyIds: [...preview.policyIds] }]),
+      );
+      if (!signerChange.accepted) return;
+      const response = await lendingMeshRequest(operation.current.session.token, '/delegation', { requestId: operation.requestId });
       if (!requestScope.accepts(operation.ticket, identityRef.current)) return;
       const delegation = response?.delegation;
       if (!isRecord(delegation) || !['ACTIVE', 'REVOKED', 'EXPIRED', 'UNAVAILABLE'].includes(delegation.status)) {
@@ -841,7 +868,7 @@ export default function LendingBot({ session, wallet }) {
         revocationVerifyRequired: false,
         notice: 'The worker is paused. This preview lists every additional signer that will be removed from this dedicated Falcon wallet.',
       };
-    }, { accessToken: true, allowedOperation: 'prepare-revocation' });
+    }, { allowedOperation: 'prepare-revocation' });
   }
 
   async function removeAllDelegatedSigners() {
@@ -853,15 +880,16 @@ export default function LendingBot({ session, wallet }) {
     let removalReturned = false;
     try {
       removalAttempted = true;
-      await wallet.removeAllDelegatedSigners();
-      if (!requestScope.accepts(operation.ticket, identityRef.current)) return;
+      const signerRemoval = await performIdentityBoundOwnerSdkAction(
+        requestScope,
+        operation.ticket,
+        identityRef,
+        () => wallet.removeAllDelegatedSigners(),
+      );
+      if (!signerRemoval.accepted) return;
       removalReturned = true;
-      const accessToken = await wallet.getAccessToken();
-      if (!requestScope.accepts(operation.ticket, identityRef.current)) return;
-      if (!accessToken) throw new Error('Privy no longer provides an access token. The worker remains paused; server verification is incomplete.');
-      const response = await meshRequest(operation.current.session.token, `${ROOT}/revoke`, {
+      const response = await lendingMeshRequest(operation.current.session.token, '/revoke', {
         requestId: operation.requestId,
-        accessToken,
       });
       if (!requestScope.accepts(operation.ticket, identityRef.current)) return;
       if (!isRecord(response?.runner) || !isRecord(response?.delegation)
@@ -926,7 +954,7 @@ export default function LendingBot({ session, wallet }) {
             ? 'Falcon still observes an active delegation. The worker remains paused; prepare a fresh authoritative revocation preview before any further signer change.'
             : `Falcon could not verify revocation (${response.delegation.status}). Keep the worker paused and retry only this verification.`,
       };
-    }, { accessToken: true, allowedOperation: 'verify-revocation' });
+    }, { allowedOperation: 'verify-revocation' });
   }
 
 
@@ -984,11 +1012,17 @@ export default function LendingBot({ session, wallet }) {
     if (!operation) return;
     let signatureObtained = false;
     try {
-      const signed = await wallet.signTransaction(bytes);
-      if (!requestScope.accepts(operation.ticket, identityRef.current)) return;
+      const signedResult = await performIdentityBoundOwnerSdkAction(
+        requestScope,
+        operation.ticket,
+        identityRef,
+        () => wallet.signTransaction(bytes),
+      );
+      if (!signedResult.accepted) return;
+      const signed = signedResult.result;
       if (!(signed instanceof Uint8Array) || signed.length <= 64) throw new Error('The wallet did not return complete signed transaction bytes. No submission was registered.');
       signatureObtained = true;
-      const response = await meshRequest(operation.current.session.token, `${ROOT}/owner-signatures`, {
+      const response = await lendingMeshRequest(operation.current.session.token, '/owner-signatures', {
         requestId: operation.requestId,
         actionId: action.actionId,
         signedTransactionBase64: bytesToBase64(signed),

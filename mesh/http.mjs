@@ -14,15 +14,15 @@ const LENDING_BOT_BODY_LIMIT = 16 * 1024;
 const LENDING_BOT_TRANSACTION_BYTES_LIMIT = 1232;
 const LENDING_BOT_TRANSACTION_BASE64_LIMIT = 4 * Math.ceil(LENDING_BOT_TRANSACTION_BYTES_LIMIT / 3);
 const LENDING_BOT_ROUTES = {
-  '/v1/lending-bot/wallet-link': ['linkWallet', ['requestId', 'accessToken']],
+  '/v1/lending-bot/wallet-link': ['linkWallet', ['requestId']],
   '/v1/lending-bot/mandate': ['saveMandate', ['requestId', 'mandate']],
-  '/v1/lending-bot/delegation/prepare': ['prepareDelegation', ['requestId', 'accessToken']],
+  '/v1/lending-bot/delegation/prepare': ['prepareDelegation', ['requestId']],
   '/v1/lending-bot/delegation': ['verifyDelegation', ['requestId']],
   '/v1/lending-bot/capture': ['capture', ['requestId']],
   '/v1/lending-bot/start': ['start', ['requestId']],
   '/v1/lending-bot/pause': ['pause', ['requestId']],
-  '/v1/lending-bot/revoke/prepare': ['prepareRevocation', ['requestId', 'accessToken']],
-  '/v1/lending-bot/revoke': ['revoke', ['requestId', 'accessToken']],
+  '/v1/lending-bot/revoke/prepare': ['prepareRevocation', ['requestId']],
+  '/v1/lending-bot/revoke': ['revoke', ['requestId']],
   '/v1/lending-bot/withdraw': ['prepareWithdrawal', ['requestId', 'reserveAddress', 'receiptBaseUnits']],
   '/v1/lending-bot/fee-claim': ['prepareFeeClaim', ['requestId']],
   '/v1/lending-bot/owner-signatures': ['submitOwnerSignature', ['requestId', 'actionId', 'signedTransactionBase64']],
@@ -41,10 +41,6 @@ function validateLendingBotInput(input, route) {
   keys(input, route[1]);
   normalizeResearchUuid(input.requestId);
   if (Object.hasOwn(input, 'actionId')) normalizeResearchUuid(input.actionId);
-  if (Object.hasOwn(input, 'accessToken')
-      && (typeof input.accessToken !== 'string' || !input.accessToken)) {
-    throw new MeshError('INVALID_INPUT', 'accessToken must be a non-empty string.');
-  }
   if (Object.hasOwn(input, 'mandate')) {
     const mandate = input.mandate;
     keys(mandate, LENDING_BOT_MANDATE_KEYS);

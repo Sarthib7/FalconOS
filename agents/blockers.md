@@ -90,3 +90,13 @@ Evidence: The selected client is OMP 18.12.5, and the current native command has
 Next owner action: Export any active REA evidence before making the change. In this OMP session, run `/mcp add falconos --scope user --url https://mcp.falconos.markets/mcp --transport http`. This writes the server entry at the active profile's user scope and triggers a global MCP reload; it can briefly reconnect Cloudflare, Vercel, and REA. No client restart is required. Then use `/mcp list` and invoke `falcon_self_test({})` and `falcon_public_graph({})` through OMP's mounted native tools. Use the graph call for the public read. These initial public-research calls grant no wallet, model, or funds authority. The advertised 30-tool server is not restricted by this configuration to read-only tools.
 
 Exit evidence: Owner-observed `/mcp list` output showing the active-profile server and its tools, plus a `falcon_public_graph({})` response produced through a mounted native OMP tool. Record the version and returned status; do not infer that every advertised tool is usable or read-only. `falcon_self_test` is metadata-only and does not probe Mesh or wallets. No restart, provider/model readiness, wallet readiness, or funds authority is claimed. [`mcp-rust/README.md#public-graph-contract`; `mcp-rust/README.md`, "Capability discovery (0.7.0 source)"]
+
+## BLK-2026-11-09-01: Web verification fixture job bound
+
+Date: 2026-11-09. Owner: release. Severity: Medium. Status: Blocked.
+
+[VERIFIED] At head9017d24, main CI run42560507646 passed. Verify web run42560507535 was cancelled during release-boundary cases after web tests reported `tests340,pass340,fail0`. The workflow declares `timeout-minutes:20`; its log reaches cancellation at04:32:42 after setup at04:12:31. The completed website fixture cases each took about72-78seconds. `scripts/test/release-boundaries.test.mjs:24-40` privately copies the full web dependency tree for each website fixture. The expanded SDK tree therefore increases repeated fixture work; exact copy-versus-build attribution is not yet measured.
+
+Proposed resolution, owner architect: preserve private dependency isolation and every guard. Measure the fixture boundary, then review a safe fixture-cost change or a separately approved workflow bound. Do not skip tests, share writable source dependencies, or label cancellation as a pass. This blocks an all-green web check, not local owner-proof or setup implementation.
+
+Evidence: https://github.com/Sarthib7/FalconOS/actions/runs/42560507535 ; https://github.com/Sarthib7/FalconOS/actions/runs/42560507646 ; `.github/workflows/verify-web.yml:19,44-45`; `scripts/test/release-boundaries.test.mjs:24-40`.

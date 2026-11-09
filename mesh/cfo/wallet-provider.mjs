@@ -1,8 +1,6 @@
 import { createHash, createPrivateKey, createPublicKey, sign as cryptoSign } from 'node:crypto';
-import { createRemoteJWKSet, customFetch, errors as joseErrors, jwtVerify } from 'jose';
 
 const PRIVY_ORIGIN = 'https://api.privy.io';
-const PRIVY_ISSUER = 'privy.io';
 const KLEND_PROGRAM_ID = 'KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD';
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const RESERVES = Object.freeze({
@@ -39,7 +37,6 @@ const P256_ORDER = BigInt('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b
 const P256_HALF_ORDER = P256_ORDER >> 1n;
 const MAX_REQUEST_BYTES = 4 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
-const MAX_JWKS_BYTES = 64 * 1024;
 const MAX_POLICY_BYTES = 32 * 1024;
 const MAX_SOLANA_TRANSACTION_BYTES = 1232;
 const MAX_SIGNERS = 16;
@@ -447,7 +444,6 @@ export function createWalletProvider({
   if (typeof now !== 'function') issues.push('The clock provider is unavailable.');
   const configured = issues.length === 0;
   const basicAuthorization = configured ? `Basic ${Buffer.from(`${id}:${secret}`).toString('base64')}` : null;
-  let jwks = null;
 
   function requireConfigured() {
     if (!configured) fail('PROVIDER_UNAVAILABLE', 'Privy wallet provider is not configured.');
@@ -505,66 +501,6 @@ export function createWalletProvider({
     return bytes;
   }
 
-  function safeJWKSFetch(resource, options) {
-    return (async () => {
-      const url = assertFixedUrl(resource);
-      if (url.pathname !== `/v1/apps/${encodeURIComponent(id)}/jwks.json` || url.search) fail('PROVIDER_URL_INVALID');
-      let response;
-      try {
-        response = await transport(url, { ...options, redirect: 'manual', signal: makeTimeoutSignal(options?.signal) });
-      } catch {
-        fail('PROVIDER_UNAVAILABLE', 'Privy authentication verification is unavailable.');
-      }
-      if (!response || typeof response.status !== 'number') fail('PROVIDER_RESPONSE_INVALID');
-      const responseUrl = response.url;
-      if (responseUrl) assertFixedUrl(responseUrl);
-      const bytes = await readBoundedBody(response, MAX_JWKS_BYTES);
-      return new Response(bytes, { status: response.status, headers: response.headers });
-    })();
-  }
-
-  function getJWKS() {
-    if (!jwks) {
-      const url = new URL(`${PRIVY_ORIGIN}/v1/apps/${encodeURIComponent(id)}/jwks.json`);
-      jwks = createRemoteJWKSet(url, {
-        [customFetch]: safeJWKSFetch,
-        cacheMaxAge: 60 * 60 * 1000,
-        cooldownDuration: 10 * 60 * 1000,
-        timeoutDuration: TIMEOUT_MS,
-      });
-    }
-    return jwks;
-  }
-
-  async function verifyAccessToken(accessToken) {
-    requireConfigured();
-    if (typeof accessToken !== 'string' || !accessToken.length || accessToken.length > 16 * 1024
-        || /[\r\n]/.test(accessToken) || accessToken.split('.').length !== 3) fail('AUTHENTICATION_FAILED');
-    let payload;
-    try {
-      const verified = await jwtVerify(accessToken, getJWKS(), {
-        typ: 'JWT',
-        algorithms: ['ES256'],
-        issuer: PRIVY_ISSUER,
-        audience: id,
-      });
-      payload = verified.payload;
-    } catch (error) {
-      if (error instanceof WalletProviderError) throw error;
-      if (error instanceof joseErrors.JWTExpired || error instanceof joseErrors.JWTClaimValidationFailed
-          || error instanceof joseErrors.JWTInvalid || error instanceof joseErrors.JWKSNoMatchingKey) {
-        fail('AUTHENTICATION_FAILED');
-      }
-      fail('PROVIDER_UNAVAILABLE', 'Privy authentication verification is unavailable.');
-    }
-    if (!payload || payload.iss !== PRIVY_ISSUER || payload.aud !== id || typeof payload.sub !== 'string'
-        || typeof payload.sid !== 'string' || payload.sid.length === 0
-        || typeof payload.iat !== 'number' || payload.iat <= 0
-        || typeof payload.exp !== 'number' || payload.exp <= 0) {
-      fail('AUTHENTICATION_FAILED');
-    }
-    return { userId: assertUserId(payload.sub) };
-  }
 
   function apiURL(path) {
     if (typeof path !== 'string' || !path.startsWith('/v1/') || path.includes('?') || path.includes('#')) fail('PROVIDER_URL_INVALID');
@@ -641,17 +577,32 @@ export function createWalletProvider({
     return p256DerSignature(rawSignature).toString('base64');
   }
 
-  async function getUser(userId) {
-    const user = await requestJSON('GET', `/v1/users/${encodeURIComponent(assertUserId(userId))}`);
+  async function getUserByWalletAddress(walletAddress) {
+    let user;
+    try {
+      user = await requestJSON('POST', '/v1/users/wallet/address', { body: { address: walletAddress } });
+    } catch (error) {
+      if (error instanceof WalletProviderError && error.code === 'PROVIDER_RESOURCE_NOT_FOUND') fail('WALLET_OWNERSHIP_MISMATCH');
+      throw error;
+    }
     assertRecord(user, 'PROVIDER_RESPONSE_INVALID');
-    if (user.id !== userId || !Array.isArray(user.linked_accounts)) fail('WALLET_LINK_INVALID');
+    if (!Array.isArray(user.linked_accounts)) fail('WALLET_LINK_INVALID');
+    assertUserId(user.id);
     return user;
   }
 
   function findLinkedSolanaWallet(user, walletAddress) {
     return user.linked_accounts.find(account => account?.type === 'wallet' && account.chain_type === 'solana'
       && account.address === walletAddress && account.connector_type === 'embedded'
-      && account.wallet_client === 'privy' && account.user_can_sign === true) ?? null;
+      && account.wallet_client === 'privy' && account.wallet_client_type === 'privy'
+      && account.imported === false && account.user_can_sign === true) ?? null;
+  }
+
+  function assertOptionalWalletEntity(resource, userId) {
+    if (resource.entity === undefined || resource.entity === null) return;
+    if (!isRecord(resource.entity) || resource.entity.type !== 'user' || resource.entity.id !== userId) {
+      fail('WALLET_OWNERSHIP_MISMATCH');
+    }
   }
 
   async function getWalletByAddress(walletAddress) {
@@ -703,40 +654,36 @@ export function createWalletProvider({
     return quorum;
   }
 
-  async function verifyWallet(link, expectedUserId = null) {
-    requireConfigured();
-    assertRecord(link, 'WALLET_LINK_INVALID');
-    const userId = assertUserId(link.userId);
-    const walletAddress = link.walletAddress;
-    const providerWalletId = assertResourceId(link.providerWalletId);
-    const ownerId = assertResourceId(link.ownerId);
-    if (expectedUserId !== null && userId !== expectedUserId) fail('WALLET_LINK_INVALID');
+  async function readWalletOwnership(walletAddress, expectedLink = null) {
     if (!isSolanaAddress(walletAddress)) fail('WALLET_LINK_INVALID');
-    const user = await getUser(userId);
+    const user = await getUserByWalletAddress(walletAddress);
+    const userId = assertUserId(user.id);
     const linkedWallet = findLinkedSolanaWallet(user, walletAddress);
-    if (!linkedWallet || (linkedWallet.id !== null && linkedWallet.id !== providerWalletId)) fail('WALLET_OWNERSHIP_MISMATCH');
+    if (!linkedWallet) fail('WALLET_OWNERSHIP_MISMATCH');
     const addressLookup = await getWalletByAddress(walletAddress);
-    if (addressLookup.id !== providerWalletId || addressLookup.address !== walletAddress || addressLookup.chain_type !== 'solana') {
-      fail('WALLET_OWNERSHIP_MISMATCH');
-    }
+    if (addressLookup.address !== walletAddress || addressLookup.chain_type !== 'solana'
+        || addressLookup.archived_at != null) fail('WALLET_OWNERSHIP_MISMATCH');
+    const providerWalletId = assertResourceId(addressLookup.id);
+    if (linkedWallet.id !== null && linkedWallet.id !== providerWalletId) fail('WALLET_OWNERSHIP_MISMATCH');
     const wallet = await getWalletById(providerWalletId);
-    if (!isRecord(wallet) || wallet.id !== providerWalletId || wallet.address !== walletAddress || wallet.chain_type !== 'solana'
-        || wallet.owner_id !== ownerId || addressLookup.owner_id !== ownerId
-        || wallet.archived_at != null || addressLookup.archived_at != null
-        || wallet.entity?.type !== 'user' || wallet.entity.id !== userId
-        || addressLookup.entity?.type !== 'user' || addressLookup.entity.id !== userId
-        || !Array.isArray(wallet.additional_signers)) {
+    if (!isRecord(wallet)) fail('WALLET_OWNERSHIP_MISMATCH');
+    const ownerId = assertResourceId(wallet.owner_id);
+    if (wallet.id !== providerWalletId || wallet.address !== walletAddress || wallet.chain_type !== 'solana'
+        || addressLookup.owner_id !== ownerId || wallet.archived_at != null || !Array.isArray(wallet.additional_signers)) {
       fail('WALLET_OWNERSHIP_MISMATCH');
     }
+    assertOptionalWalletEntity(addressLookup, userId);
+    assertOptionalWalletEntity(wallet, userId);
+    if (expectedLink && (expectedLink.providerWalletId !== providerWalletId
+        || expectedLink.walletAddress !== walletAddress || expectedLink.userId !== userId
+        || expectedLink.ownerId !== ownerId)) fail('WALLET_OWNERSHIP_MISMATCH');
     await assertCustomerOwner(ownerId, userId);
     return { userId, walletAddress, providerWalletId, ownerId, wallet, user, linkedWallet };
   }
 
-  async function verifyTokenAndWallet(accessToken, link) {
-    const claims = await verifyAccessToken(accessToken);
-    if (!isRecord(link) || link.userId !== claims.userId) fail('WALLET_LINK_INVALID');
-    const state = await verifyWallet(link, claims.userId);
-    return state;
+  async function verifyWallet(link) {
+    assertExactKeys(link, ['providerWalletId', 'walletAddress', 'userId', 'ownerId'], 'WALLET_LINK_INVALID');
+    return readWalletOwnership(link.walletAddress, link);
   }
 
   function assertDelegationEnvelope(delegation) {
@@ -799,32 +746,23 @@ export function createWalletProvider({
     return { status: 'ACTIVE', policyHash: actualHash, reason: null, walletState, policies };
   }
 
-  async function verifyWalletLink({ accessToken, walletAddress } = {}) {
+  async function verifyWalletLink(input = {}) {
+    assertExactKeys(input, ['walletAddress']);
     requireConfigured();
-    if (!isSolanaAddress(walletAddress)) fail('WALLET_LINK_INVALID');
-    const claims = await verifyAccessToken(accessToken);
-    const user = await getUser(claims.userId);
-    const linkedWallet = findLinkedSolanaWallet(user, walletAddress);
-    if (!linkedWallet) fail('WALLET_OWNERSHIP_MISMATCH');
-    const addressLookup = await getWalletByAddress(walletAddress);
-    if (addressLookup.address !== walletAddress || addressLookup.chain_type !== 'solana') fail('WALLET_OWNERSHIP_MISMATCH');
-    const providerWalletId = assertResourceId(addressLookup.id);
-    if (linkedWallet.id !== null && linkedWallet.id !== providerWalletId) fail('WALLET_OWNERSHIP_MISMATCH');
-    const wallet = await getWalletById(providerWalletId);
-    if (!isRecord(wallet) || wallet.id !== providerWalletId || wallet.address !== walletAddress || wallet.chain_type !== 'solana'
-        || addressLookup.owner_id !== wallet.owner_id || wallet.archived_at != null || addressLookup.archived_at != null
-        || wallet.entity?.type !== 'user' || wallet.entity.id !== claims.userId
-        || addressLookup.entity?.type !== 'user' || addressLookup.entity.id !== claims.userId
-        || !Array.isArray(wallet.additional_signers) || typeof wallet.owner_id !== 'string') {
-      fail('WALLET_OWNERSHIP_MISMATCH');
-    }
-    const ownerId = assertResourceId(wallet.owner_id);
-    await assertCustomerOwner(ownerId, claims.userId);
-    return { providerWalletId, walletAddress, userId: claims.userId, ownerId };
+    const { walletAddress } = input;
+    const state = await readWalletOwnership(walletAddress);
+    return {
+      providerWalletId: state.providerWalletId,
+      walletAddress: state.walletAddress,
+      userId: state.userId,
+      ownerId: state.ownerId,
+    };
   }
 
-  async function prepareDelegation({ accessToken, link, mandate, rules } = {}) {
-    const state = await verifyTokenAndWallet(accessToken, link);
+  async function prepareDelegation(input = {}) {
+    assertExactKeys(input, ['link', 'mandate', 'rules']);
+    const { link, mandate, rules } = input;
+    const state = await verifyWallet(link);
     await assertWorkerSignerKey();
     const scope = assertPolicyRules(rules, { walletAddress: state.walletAddress, mandate });
     if (Date.parse(scope.expiresAt) <= currentTimeMs()) fail('DELEGATION_EXPIRED');
@@ -859,7 +797,9 @@ export function createWalletProvider({
     };
   }
 
-  async function verifyDelegation({ link, mandate, delegation, rules } = {}) {
+  async function verifyDelegation(input = {}) {
+    assertExactKeys(input, ['link', 'mandate', 'delegation', 'rules']);
+    const { link, mandate, delegation, rules } = input;
     try {
       const { status, policyHash, reason } = await verifyDelegationState({ link, mandate, delegation, rules });
       return { status, policyHash, reason };
@@ -871,7 +811,9 @@ export function createWalletProvider({
     }
   }
 
-  async function signTransaction({ link, mandate, delegation, rules, transactionBase64 } = {}) {
+  async function signTransaction(input = {}) {
+    assertExactKeys(input, ['link', 'mandate', 'delegation', 'rules', 'transactionBase64']);
+    const { link, mandate, delegation, rules, transactionBase64 } = input;
     const envelope = assertDelegationEnvelope(delegation);
     const verification = await verifyDelegationState({ link, mandate, delegation, rules });
     if (verification.status !== 'ACTIVE') {
@@ -901,8 +843,11 @@ export function createWalletProvider({
     return { signedTransactionBase64: signedTransaction.toString('base64') };
   }
 
-  async function prepareRevocation({ accessToken, link } = {}) {
-    const state = await verifyTokenAndWallet(accessToken, link);
+  async function prepareRevocation(input = {}) {
+    assertExactKeys(input, ['link', 'delegation']);
+    const { link, delegation } = input;
+    const envelope = assertDelegationEnvelope(delegation);
+    const state = await verifyWallet(link);
     await assertWorkerSignerKey();
     const signers = state.wallet.additional_signers;
     if (!Array.isArray(signers) || signers.length > MAX_SIGNERS) fail('WALLET_RESOURCE_INVALID');
@@ -910,7 +855,10 @@ export function createWalletProvider({
       if (!isRecord(item) || typeof item.signer_id !== 'string') fail('WALLET_RESOURCE_INVALID');
       return assertResourceId(item.signer_id);
     });
+    const policyIds = signerPolicyIds(getSigner(state.wallet));
     if (new Set(signerIds).size !== signerIds.length || !signerIds.includes(signerId)) fail('DELEGATION_NOT_INSTALLED');
+    if (!policyIds || policyIds.length !== envelope.policyIds.length
+        || policyIds.some((value, index) => value !== envelope.policyIds[index])) fail('POLICY_SCOPE_CHANGED');
     return {
       walletAddress: state.walletAddress,
       signerIds,
@@ -919,11 +867,12 @@ export function createWalletProvider({
     };
   }
 
-  async function revokeDelegation({ accessToken, link, delegation } = {}) {
+  async function revokeDelegation(input = {}) {
+    assertExactKeys(input, ['link', 'delegation']);
+    const { link, delegation } = input;
     const envelope = assertDelegationEnvelope(delegation);
-    const state = await verifyTokenAndWallet(accessToken, link);
+    const state = await verifyWallet(link);
     await assertWorkerSignerKey();
-    if (state.wallet.owner_id !== link.ownerId) fail('WALLET_OWNERSHIP_MISMATCH');
     if (state.wallet.additional_signers.length !== 0) fail('REVOCATION_INCOMPLETE');
     return { status: 'REVOKED', policyHash: envelope.policyHash, reason: null };
   }

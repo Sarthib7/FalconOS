@@ -1,5 +1,21 @@
 # Status
 
+## Funded treasury R1.3 local implementation: 2026-11-09
+
+Owner: coordinator. Status: In Progress. Live financial acceptance remains Blocked.
+
+[VERIFIED USER APPROVAL] The user selected “Yes, apply test-only fix” and “Yes, implement R1.3 locally” after the visual/source review. The user selected “Leave caches untouched”. No live provider/wallet resource, delegation, funding, financial signature, broadcast, fee collection, paid Council, merge or deployment is authorized.
+
+[VERIFIED CHECKPOINT] Draft PRs130-136 passed all checks at their inspected exact heads. PR137's approved correction selects NEAR at both NEAR scenario entries; actual production-built Brave/PostgreSQL smoke returned `passed:32,total:32,exceptions:[]`, with inspected desktop/mobile captures. On pushed head9017d24, main CI run42560507646 passed. Verify web run42560507535 was cancelled at its20-minute job bound during release fixtures after `tests340,pass340,fail0` in web tests. That cancelled check is not green; see BLK-2026-11-09-01. No live financial/provider/model operation was used.
+
+[VERIFIED LOCAL OWNER-PROOF SLICE, OWNER coordinator] The frozen first slice passed backend24/24, composed real HTTP/auth/provider/journal1/1 and client10/10. Actual client/API smoke returned OWNER_PROOF_API_SMOKE_PASS with one authentication message signature, one retained wallet row, four controlled provider reads, four rejected credential routes and zero chain/financial-signature calls. Removing the quorum/HTTP guards failed2/2 selected cases; reintroducing the obsolete service argument failed the new composition case503vs200. Canonical source was unchanged by mutations. Controlled resources do not prove live provider acceptance.
+
+[IN PROGRESS OWNERSHIP] R13ProviderBoundary and R13ClientCutover completed their assigned source; the coordinator verified their first-slice union. R13SetupAdapter owns the pending SDK setup/receipt work. Parent-owned setup costs, journal kinds and MCP privacy remain excluded from the owner-proof commit. Independent owner/client reviews inspect its frozen source. The coordinator owns contracts, integration, all validation, status and publication; no worker runs checks or commits.
+
+[BLOCKED LIVE GATES, OWNER release] Customer provider configuration and ownership acceptance, separately approved live resource/signing/funding actions, finite real model budget and funded settlement remain open. Local implementation and passing fixtures do not settle those gates. No user cache cleanup will run.
+
+[NEXT LOCAL SLICE, OWNER coordinator] Complete quote-before-SOL, exact owner-signed canonical ATA setup, retained pre-mandate native costs, finalized reconciliation and the full customer setup/funding controls. SPEC I23/V226-V229 and `docs/interfaces.md#funded-treasury-r13-owner-boundary-and-first-run-contract` define the accepted scope. Local implementation continues without granting live authority.
+
 ## R5 consumer acceptance: 2026-11-04
 
 Owner: orchestrator. Status: Verified locally and at exact consumer head3c01355 in CI. Consumer and funded launches remain Blocked.
