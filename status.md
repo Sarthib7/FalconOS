@@ -2,7 +2,7 @@
 
 ## Funded treasury R1.3 local implementation: 2026-11-09
 
-Owner: coordinator. Status: Local implementation verified and both drafts published; approved CI-only budget applied, fresh-head checks pending. Live financial acceptance remains Blocked.
+Owner: coordinator. Status: Implementation and recorded code-head CI verified; both drafts await review. The latest PR head must pass before any merge. Live financial acceptance remains Blocked.
 
 [VERIFIED USER APPROVAL] The user selected “Yes, apply test-only fix” and “Yes, implement R1.3 locally” after the visual/source review. The user selected “Leave caches untouched”. No live provider/wallet resource, delegation, funding, financial signature, broadcast, fee collection, paid Council, merge or deployment is authorized.
 
@@ -24,9 +24,11 @@ Owner: coordinator. Status: Local implementation verified and both drafts publis
 
 [VERIFIED CI-ONLY USER APPROVAL] The user then selected `Approve 35-minute job budget`. The affected draft heads change only the outer Verify web job limit from20 to35, plus records of that approval. Runtime pins, assertions, private copies, per-operation deadlines and product/financial code are unchanged. The backend follow-up is4f8d312; fresh exact-head checks remain required. No PR or branch was merged.
 
+[VERIFIED RECORDED CODE-HEAD CI] All five checks passed at backend4f8d31230fd3c062a05458e241fa62017a124aa4 and UI6593e49724872f378dd9e1a816d3eaf9172e9f05. Backend runs42595022939/42595012524/42595022920 and UI runs42595917008/42595908592/42595917010 completed SUCCESS. The approved outer limit let the existing full web workflows finish; no test, private-copy rule or runtime pin changed. This record-only follow-up does not grant new product or financial authority.
+
 [BLOCKED LIVE GATES, OWNER release] Configured customer resources and SDK/MFA, real policy admission, explicit live signing/funding, a finite paid model budget and actual settlement remain open. Signed-unknown liveness also needs an owner-approved policy; absence is not non-execution. Local fixtures do not settle these gates. Existing user caches stay untouched.
 
-[NEXT VERIFICATION, OWNER coordinator] Inspect fresh exact-head CI for drafts139 and140 after the approved budget change. Do not treat a cancelled run as green. No merge, deployment, provider resource, financial signature, funding or paid Council call is authorized by the CI approval. SPEC I23/V226-V229 remains the product scope.
+[NEXT OWNER STEP] Review drafts139 and140. Require the latest PR head to pass CI before a separately authorized merge. Configured provider/SDK/MFA, policy admission, signed-unknown liveness and funded settlement remain explicit live gates. No deployment, provider resource, financial signature, funding or paid Council call follows from this record.
 
 ## R5 consumer acceptance: 2026-11-04
 

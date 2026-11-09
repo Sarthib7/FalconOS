@@ -93,7 +93,7 @@ Exit evidence: Owner-observed `/mcp list` output showing the active-profile serv
 
 ## BLK-2026-11-09-01: Web verification fixture job bound
 
-Date: 2026-11-09. Owner: release. Severity: Medium. Status: Approved CI-only budget remediation applied; fresh exact-head checks pending.
+Date: 2026-11-09. Owner: release. Severity: Medium. Status: Resolved at recorded backend4f8d312/UI6593e49 code heads; retain future runtime monitoring.
 
 [VERIFIED] At head9017d24, main CI run42560507646 passed. Verify web run42560507535 was cancelled during release-boundary cases after web tests reported `tests340,pass340,fail0`. The workflow declares `timeout-minutes:20`; its log reaches cancellation at04:32:42 after setup at04:12:31. The completed website fixture cases each took about72-78seconds. `scripts/test/release-boundaries.test.mjs:24-40` privately copies the full web dependency tree for each website fixture. The expanded SDK tree therefore increases repeated fixture work; exact copy-versus-build attribution is not yet measured.
 
@@ -108,6 +108,10 @@ Current-head evidence: https://github.com/Sarthib7/FalconOS/pull/138 ; https://g
 Evidence: https://github.com/Sarthib7/FalconOS/actions/runs/42583292766 ; https://github.com/Sarthib7/FalconOS/actions/runs/42583292652/job/129046949320 .
 
 [VERIFIED APPROVAL AND REMEDIATION] Backend attempt two also reached the original bound after345 web cases passed. UI code head0658400 completed all five checks, including the unchanged web job in14m12s, so timing varies by inspected surface/run. The user selected `Approve 35-minute job budget`. Only the outer Verify web limit changes to35; private copy semantics, assertions, runtime pins and per-operation deadlines remain. This is not a copy-speed claim or a pass guarantee. Fresh checks must complete at both affected draft heads. The earlier cancellations remain part of the record.
+
+[VERIFIED RESOLUTION] With the approved35-minute outer limit, backend Verify web42595022920 and UI Verify web42595917010 completed SUCCESS at4f8d31230fd3c062a05458e241fa62017a124aa4 and6593e49724872f378dd9e1a816d3eaf9172e9f05. All five checks passed on each code head. No private copy, assertion, runtime pin or per-operation deadline changed. This resolves the inspected CI gate, not a measured copy bottleneck or a worst-case runtime guarantee. Any later record-only PR head must pass its own checks before merge.
+
+Evidence: https://github.com/Sarthib7/FalconOS/actions/runs/42595022920 ; https://github.com/Sarthib7/FalconOS/actions/runs/42595917010 ; draft PRs139 and140.
 
 ## BLK-2026-11-09-02: Signed-action liveness before a funded pilot
 
