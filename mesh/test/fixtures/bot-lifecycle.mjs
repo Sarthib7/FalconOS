@@ -127,14 +127,14 @@ export function lifecycleFixture(pool, { blockLead = null, grantMaxCalls = 8, ma
     reviewTransport: transport, config, reserves }); }
   const service = makeService();
   async function setup() {
-    await service.linkWallet(owner, wallet, { requestId: randomUUID(), accessToken: 'fixture-customer-jwt' });
+    await service.linkWallet(owner, wallet, { requestId: randomUUID() });
     await service.saveMandate(owner, wallet, { requestId: randomUUID(), mandate: { schemaVersion: 1,
       capitalCapBaseUnits: '1000000000', reserveFloorBaseUnits: '100000000', maxActionBaseUnits: '200000000',
       maxPositionBps: 5000, maxFeeLamports: '100', maxEvidenceAgeSeconds: 300, minHoldingSeconds: 31536000,
       minNetBenefitBaseUnits: '1000', cooldownSeconds: 60, feeBps: 1000, feeRecipient: recipient,
       reserves: reserves.map(reserve => reserve.reserveAddress), expiresAt: new Date(Date.now() + 3600000).toISOString(),
       monitorIntervalSeconds: 15, maxReviewCalls: mandateMaxCalls } });
-    await service.prepareDelegation(owner, wallet, { requestId: randomUUID(), accessToken: 'fixture-customer-jwt' });
+    await service.prepareDelegation(owner, wallet, { requestId: randomUUID() });
     await service.verifyDelegation(owner, wallet, { requestId: randomUUID() });
     await service.capture(owner, wallet, { requestId: randomUUID() });
   }

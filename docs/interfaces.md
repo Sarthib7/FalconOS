@@ -485,3 +485,55 @@ Consumers: authenticated owner dashboard and existing thin MCP
 1. [INFERRED maintenance risk] Action-head selection depends on the overview retaining its inspected newest-first owner sequence. A producer-order change needs a contract and consumer-test update; timestamp or UUID ordering is not a substitute.
 2. [UNKNOWN] Browser fixtures can prove consumer transitions but cannot prove live provider, market or capital readiness. The operator gates remain explicit.
 
+
+## Funded treasury R1.3 owner boundary and first-run contract
+
+Interface ID: I23-R13. Owner: architect/coordinator. Status: In Progress.
+Provider: Mesh lending service, wallet-provider adapter and Solana adapter.
+Consumers: the existing owner dashboard and thin Rust MCP projection.
+
+[VERIFIED USER APPROVAL, 2026-11-09] The user approved the source-cited R1.3 product flow and local implementation. This replaces the earlier product hold. No live wallet resource, grant, funding, signing, broadcast, fee collection, paid model, merge or deployment is authorized. The user declined cache cleanup.
+
+### Ownership and integration order
+
+[IMPLEMENTATION CONTRACT] R13ProviderBoundary owns `mesh/cfo/wallet-provider.mjs` and `mesh/test/bot-wallet-provider.test.mjs`. R13ClientCutover owns the credential cutover in `web/dashboard/EmbeddedWallet.jsx`, `LendingBot.jsx` and `web/test/lending-bot.test.mjs`. These form the first end-to-end owner-proof slice. R13SetupAdapter owns `mesh/cfo/solana-lending.mjs` and `mesh/test/bot-solana-lending.test.mjs`; its setup work stays out of the owner-proof commit. The coordinator owns service, HTTP, journal, accounting, MCP projection, dependencies, contracts, verification and integration. Workers do not run tests, builds or formatters and never commit or publish.
+
+### Credential cutover
+
+[APPROVED CONTRACT] `verifyWalletLink({walletAddress})` derives provider user and wallet IDs from app-authenticated resources for the independently verified Falcon session address. User-by-wallet, linked embedded Solana account, current wallet and customer-only owner quorum must agree. Imported wallets, contradictory optional entity metadata and shared/worker ownership fail closed. Optional entity metadata may be absent only when the independent resources establish ownership.
+
+[APPROVED CONTRACT] Provider `prepareDelegation({link,mandate,rules})`, `prepareRevocation({link,delegation})` and `revokeDelegation({link,delegation})` accept no owner token. Preserve authoritative current ownership/signer/policy rereads, exact policies and sign-only execution. Remove obsolete JWT/JWKS verification and migrate every caller. The client performs owner-authorized SDK mutations; a Falcon wallet proof does not attest Privy MFA freshness.
+
+[APPROVED HTTP CONTRACT] Wallet-link, delegation prepare, revoke preview and revoke verification accept exactly `{requestId}`. Unknown credential fields are rejected without echo or retention. Service calls derive owner/address from the existing verified Falcon session. No compatibility alias or ignored legacy credential parameter.
+
+### Setup adapter and quote data
+
+[IMPLEMENTATION CONTRACT] The adapter adds `quoteAccountSetup({wallet})` and `prepareAccountSetup({wallet,quote})`. Quote performs no financial action. It returns a plain version1 object with `status` QUOTED, READY or NO_DATA; `wallet`, `chain`, `network`, `observedAt`, `slot`, `expiresAt`; `nativeBalanceLamports`; `accounts`; `feeLamports`, `rentLamports`, `maxFeeLamports`, `maxTotalCostUsdcBaseUnits`; bounded existing-style `costEvidence`; and typed `reasons`.
+
+[IMPLEMENTATION CONTRACT] `accounts` contains exactly the canonical native-USDC ATA and the two admitted reserve receipt ATAs. Each item contains `address`, `mint`, `owner`, `tokenProgram`, `exists` and `balanceBaseUnits`. Proven account absence may report zero; RPC failure, wrong mint/owner/program or malformed data never does. Quote must work before SOL funding. Native fee and rent evidence must be known for QUOTED; missing USD valuation stays null. READY means no account-creation action is needed, not that trading is authorized. No invented fee buffer.
+
+[IMPLEMENTATION CONTRACT] Mesh retains the quote under the verified owner and exposes `{setupQuote}` with `quoteId` equal to its retained immutable record ID. GET overview exposes only retained `setupQuote`, `setupStatus` and `setupIssues`. It never observes RPC or starts setup. The service passes the current retained quote, including server-derived `quoteId`, to the adapter. Caller-provided quote contents are never accepted.
+
+### Owner-only setup action
+
+[APPROVED HTTP CONTRACT] `POST /v1/lending-bot/accounts/quote {requestId}` calls service `quoteAccounts`. `POST /v1/lending-bot/accounts/prepare {requestId,quoteId}` calls `prepareAccounts` and returns the existing `{ownerAction:{actionId,prepared}}` envelope. Quote IDs and request IDs use the existing UUID validation. Preparation rejects missing/stale/contradictory quotes, insufficient freshly observed SOL and an already-ready account set. Setup requires the verified dedicated link, not a mandate or worker permit.
+
+[IMPLEMENTATION CONTRACT] Prepared setup reuses the current transaction proof shape: `action=setup`, `reserveAddress=null`, `amountBaseUnits=0`, `amountUnit=usdc-base-units`, `recipient=wallet`, and all four expected token-principal deltas zero. Existing version/network/wallet, message hash, blockhash/height, observation/expiry, native cost and source-provenance fields remain required. Add `accountSetup:{quoteId,accounts}`; each account includes its canonical identity and `wasMissing`. Only missing canonical ATA creations are admitted. No arbitrary payer, mint, account, recipient, program or delegated setup entry point.
+
+[APPROVED LIFECYCLE] Reuse the common owner action, exclusive reservation, signature uniqueness and durable SUBMISSION_UNKNOWN before bounded RPC send. Finalized setup verifies exact message/signature, actual owner native debit, fee/rent bounds and zero transaction-local token-principal effects. A subsequent valid account read must have context at least the finalized receipt slot and verify account program, initialization, mint and owner. Later external funding is not a setup principal effect. Unverified reads/effects retain uncertainty; no blind replacement or optimistic ready state.
+
+### Costs, existing execution and privacy
+
+[IMPLEMENTATION CONTRACT] Retain finalized native setup costs exactly once even before a mandate exists. A latest cumulative private setup-cost record may carry known USDC-valued costs and an unpriced-cost flag; do not enumerate a capped history as a complete ledger. Accounting initialization includes those costs; an unpriced setup cost makes fee entitlement unavailable. Setup after initialization uses the same exact-once action receipt boundary. Setup has no USDC debit/credit, is never a deposit or gain, and cannot deny owner recovery.
+
+[APPROVED CONTRACT] Preserve the six-rule delegated lending allowlist. No delegated ATA, System, token transfer or fee-payment authority. Strategy, independent same-snapshot Lead/Risk, finite review budget, current evidence, exact signed bytes and confirmed-effects requirements remain in force. NEAR remains a separate owner-approved workflow.
+
+[IMPLEMENTATION CONTRACT] Existing MCP tools disclose setup readiness through the same backend, but no setup/signing/owner-credential tool is added. Remove private setup quote/account details from model output; retain public readiness and typed refusal reasons. The client shows costs before SOL funding, exact owner setup review, finalized reconciliation before USDC funding, then mandate and permit. Session/wallet changes invalidate pending client work.
+
+### Verification and least confident decisions
+
+[PLANNED VERIFICATION] New behavior cases cite V226-V229. Parent verifies valid/mismatched provider ownership, forbidden credential DTOs, quote-before-funding, missing versus unavailable accounts, wrong setup messages, stale receipt context, exact native costs, replay, unknown submission, pre-mandate accounting and unchanged worker scope. Use actual SDK/crypto/HTTP/PostgreSQL code with controlled external transports; run actual UI/API smoke. Fixtures do not establish funded or hosted readiness.
+
+1. [UNKNOWN LIVE ACCEPTANCE] Actual configured Privy ownership resources, owner SDK session/MFA behavior and policy admission remain untested. They must fail closed rather than use a fallback owner proof.
+2. [INFERRED IMPLEMENTATION RISK] Setup may have a known native cost but no trustworthy USD valuation. Preserve that distinction through later accounting and model/UI projections.
+

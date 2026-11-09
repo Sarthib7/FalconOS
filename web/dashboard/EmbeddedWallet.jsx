@@ -15,9 +15,6 @@ const EMPTY_WALLET = Object.freeze({
   walletAddress: null,
   walletAccount: null,
   wallet: null,
-  walletSession: null,
-  getAccessToken: null,
-  signMessage: null,
   signTransaction: null,
   addSigners: null,
   removeAllDelegatedSigners: null,
@@ -42,6 +39,17 @@ function assertWalletIdentity(current, expected) {
   }
 }
 
+export function matchesFalconWalletSession(session, walletAddress) {
+  return typeof session?.walletAddress === 'string' && session.walletAddress === walletAddress;
+}
+
+export async function performSelectedWalletAction(identityRef, expected, action) {
+  assertWalletIdentity(identityRef.current, expected);
+  const result = await action();
+  assertWalletIdentity(identityRef.current, expected);
+  return result;
+}
+
 export default function EmbeddedWallet({ enabled, session, onSignIn, children }) {
   if (!enabled) {
     return <section className="embedded-wallet owner-card" aria-labelledby="embedded-wallet-title">
@@ -57,7 +65,7 @@ export default function EmbeddedWallet({ enabled, session, onSignIn, children })
 }
 
 function PrivyEmbeddedWallet({ session, onSignIn, children }) {
-  const { ready: privyReady, authenticated, user, login, getAccessToken, error: privyError } = usePrivy();
+  const { ready: privyReady, authenticated, user, login, error: privyError } = usePrivy();
   const { ready: walletsReady, wallets } = useWallets();
   const { createWallet } = useCreateWallet();
   const { signMessage: signPrivyMessage } = useSignMessage();
@@ -78,28 +86,18 @@ function PrivyEmbeddedWallet({ session, onSignIn, children }) {
   const userId = typeof user?.id === 'string' ? user.id : null;
   const createdAddress = createdWallet?.userId === userId ? createdWallet.address : '';
   const walletAddress = walletAccount?.address ?? (selectedAddress && (eligibleWallets.some(account => account.address === selectedAddress) || selectedAddress === createdAddress) ? selectedAddress : null);
+  const matchesFalconSession = matchesFalconWalletSession(session, walletAddress);
   const selectedIdentity = { authenticated, userId, walletAddress, wallet };
   identityRef.current = selectedIdentity;
-
-  async function accessTokenForSelectedWallet() {
-    const expected = { userId, walletAddress, wallet };
-    assertWalletIdentity(identityRef.current, expected);
-    const token = await getAccessToken();
-    assertWalletIdentity(identityRef.current, expected);
-    if (typeof token !== 'string' || !token) throw new Error('Log in to your Privy account before authorizing this wallet.');
-    return token;
-  }
 
   async function signMessageForSelectedWallet(message) {
     if (!(message instanceof Uint8Array) || !message.length) throw new Error('A non-empty Falcon sign-in challenge is required.');
     const expected = { userId, walletAddress, wallet };
-    assertWalletIdentity(identityRef.current, expected);
-    const result = await signPrivyMessage({
+    const result = await performSelectedWalletAction(identityRef, expected, () => signPrivyMessage({
       message: message.slice(),
       wallet,
       options: { uiOptions: { title: 'Sign in to FalconOS' } },
-    });
-    assertWalletIdentity(identityRef.current, expected);
+    }));
     if (!(result?.signature instanceof Uint8Array) || result.signature.length !== 64) {
       throw new Error('Privy returned an invalid Solana message signature.');
     }
@@ -109,14 +107,12 @@ function PrivyEmbeddedWallet({ session, onSignIn, children }) {
   async function signTransactionForSelectedWallet(transaction) {
     if (!(transaction instanceof Uint8Array) || transaction.length <= 64) throw new Error('The prepared Solana transaction bytes are invalid.');
     const expected = { userId, walletAddress, wallet };
-    assertWalletIdentity(identityRef.current, expected);
-    const result = await signPrivyTransaction({
+    const result = await performSelectedWalletAction(identityRef, expected, () => signPrivyTransaction({
       transaction: transaction.slice(),
       wallet,
       chain: 'solana:mainnet',
       options: { uiOptions: { title: 'Review and sign this exact Solana transaction' } },
-    });
-    assertWalletIdentity(identityRef.current, expected);
+    }));
     if (!(result?.signedTransaction instanceof Uint8Array) || result.signedTransaction.length <= 64) {
       throw new Error('Privy did not return the complete signed transaction. No transaction was submitted by this wallet action.');
     }
@@ -126,18 +122,12 @@ function PrivyEmbeddedWallet({ session, onSignIn, children }) {
   async function addSignerForSelectedWallet(signers) {
     if (!Array.isArray(signers) || !signers.length) throw new Error('The reviewed signer and policy scope is missing.');
     const expected = { userId, walletAddress, wallet };
-    assertWalletIdentity(identityRef.current, expected);
-    const result = await addSigners({ address: walletAddress, signers });
-    assertWalletIdentity(identityRef.current, expected);
-    return result;
+    return performSelectedWalletAction(identityRef, expected, () => addSigners({ address: walletAddress, signers }));
   }
 
   async function removeAllSignersFromSelectedWallet() {
     const expected = { userId, walletAddress, wallet };
-    assertWalletIdentity(identityRef.current, expected);
-    const result = await removeSigners({ address: walletAddress });
-    assertWalletIdentity(identityRef.current, expected);
-    return result;
+    return performSelectedWalletAction(identityRef, expected, () => removeSigners({ address: walletAddress }));
   }
 
   const walletSession = walletAddress && wallet ? {
@@ -158,9 +148,6 @@ function PrivyEmbeddedWallet({ session, onSignIn, children }) {
     walletAddress,
     walletAccount,
     wallet,
-    walletSession,
-    getAccessToken: walletSession ? accessTokenForSelectedWallet : null,
-    signMessage: walletSession ? signMessageForSelectedWallet : null,
     signTransaction: walletSession ? signTransactionForSelectedWallet : null,
     addSigners: walletSession ? addSignerForSelectedWallet : null,
     removeAllDelegatedSigners: walletSession ? removeAllSignersFromSelectedWallet : null,

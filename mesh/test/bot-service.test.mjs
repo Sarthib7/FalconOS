@@ -80,12 +80,12 @@ test('V224 [fixture]: pause cancels an unsigned reserved run before a blocked re
 test('V224 [fixture]: failed revocation stays paused; revoked signer and expired mandate do not deny owner recovery', { skip: !databaseUrl }, async t => {
   const f = await harness(t);
   await runAndConfirm(f);
-  await assert.rejects(f.service.revoke(f.owner, f.wallet, request({ accessToken: 'fixture-customer-jwt' })), code('CONFLICT'));
+  await assert.rejects(f.service.revoke(f.owner, f.wallet, request()), code('CONFLICT'));
   const paused = await f.service.overview(f.owner, f.wallet);
   assert.equal(paused.runner.state, 'PAUSED');
   assert.equal(paused.delegation.status, 'ACTIVE', 'a failed provider check cannot report revoked');
   f.removeSigners();
-  const removed = await f.service.revoke(f.owner, f.wallet, request({ accessToken: 'fixture-customer-jwt' }));
+  const removed = await f.service.revoke(f.owner, f.wallet, request());
   assert.equal(removed.runner.state, 'REVOKED');
   assert.equal(removed.delegation.status, 'REVOKED');
   await f.journal.withOwner(f.owner, f.wallet, async tx => {
@@ -181,6 +181,25 @@ test('V220 [fixture]: an unresolved legacy NEAR reservation blocks bot model and
   const current = await f.service.overview(f.owner, f.wallet);
   assert.match(current.runner.reason, /Another financial domain reserves/);
   assert.deepEqual(f.calls.roles, []);
+  assert.equal(f.calls.sign, 0);
+  assert.equal(f.calls.submit, 0);
+});
+
+test('V226 [fixture]: obsolete owner credentials cannot mutate owner controls or enter the journal', { skip: !databaseUrl }, async t => {
+  const f = await harness(t);
+  await f.service.start(f.owner, f.wallet, request());
+  const before = await f.pool.query('SELECT count(*)::int AS count FROM falcon_mesh.analyses WHERE owner_id=$1', [f.owner]);
+  for (const method of ['linkWallet', 'prepareDelegation', 'prepareRevocation', 'revoke']) {
+    await assert.rejects(
+      f.service[method](f.owner, f.wallet, request({ accessToken: 'owner-token-private-marker' })),
+      code('INVALID_INPUT'),
+    );
+  }
+  const after = await f.pool.query('SELECT count(*)::int AS count FROM falcon_mesh.analyses WHERE owner_id=$1', [f.owner]);
+  const overview = await f.service.overview(f.owner, f.wallet);
+  assert.equal(after.rows[0].count, before.rows[0].count);
+  assert.equal(overview.runner.state, 'RUNNING');
+  assert.equal(JSON.stringify(overview).includes('owner-token-private-marker'), false);
   assert.equal(f.calls.sign, 0);
   assert.equal(f.calls.submit, 0);
 });

@@ -12,14 +12,31 @@ const vite = await createServer({
   server: { middlewareMode: true, hmr: false },
 });
 const lending = await vite.ssrLoadModule('/dashboard/LendingBot.jsx');
+const embeddedWallet = await vite.ssrLoadModule('/dashboard/EmbeddedWallet.jsx');
 const {
   buildMandateFromForm,
   canPerformLendingOperation,
+  createLendingMeshRequest,
   createLendingRequestScope,
   formatBaseUnits,
   parseTokenAmount,
+  performIdentityBoundOwnerSdkAction,
 } = lending;
+const { matchesFalconWalletSession, performSelectedWalletAction } = embeddedWallet;
 after(() => vite.close());
+
+test('V226 embedded wallet matching uses the verified session walletAddress', () => {
+  const walletAddress = 'Wallet11111111111111111111111111111111';
+  const session = {
+    token: 'verified-falcon-session',
+    walletAddress,
+    ownerId: 'owner-1',
+    expiresAt: '2026-11-10T00:00:00.000Z',
+  };
+  assert.equal(matchesFalconWalletSession(session, walletAddress), true);
+  assert.equal(matchesFalconWalletSession(session, 'Wallet22222222222222222222222222222222'), false);
+  assert.equal(matchesFalconWalletSession({ token: session.token }, walletAddress), false);
+});
 
 const form = () => ({
   capitalCap: '9007199254740993.000001',
@@ -110,6 +127,109 @@ test('late replies are rejected after the selected account changes', async () =>
   assert.equal(scope.accepts(ticket, currentIdentity), false);
 });
 
+test('V226 selected owner SDK actions reject stale Privy identities before and after asynchronous work', async () => {
+  const selected = {
+    authenticated: true,
+    userId: 'privy-user-a',
+    walletAddress: 'Wallet11111111111111111111111111111111',
+    wallet: { address: 'Wallet11111111111111111111111111111111' },
+  };
+
+  for (const changed of [
+    { ...selected, walletAddress: 'Wallet22222222222222222222222222222222', wallet: { address: 'Wallet22222222222222222222222222222222' } },
+    { ...selected, userId: 'privy-user-b' },
+  ]) {
+    const identityRef = { current: selected };
+    let resolveAction;
+    let calls = 0;
+    const action = performSelectedWalletAction(identityRef, selected, () => {
+      calls += 1;
+      return new Promise(resolve => { resolveAction = resolve; });
+    });
+    assert.equal(calls, 1);
+    identityRef.current = changed;
+    resolveAction('owner-sdk-result');
+    await assert.rejects(action, /Privy user or selected Solana wallet changed/);
+  }
+
+  const staleRef = { current: { ...selected, walletAddress: 'Wallet22222222222222222222222222222222' } };
+  let called = false;
+  await assert.rejects(
+    performSelectedWalletAction(staleRef, selected, () => { called = true; }),
+    /Privy user or selected Solana wallet changed/,
+  );
+  assert.equal(called, false);
+});
+
+test('V226 owner SDK outcomes are discarded after Falcon session or selected-wallet changes', async () => {
+  const walletAddress = 'Wallet11111111111111111111111111111111';
+  const original = {
+    session: { token: 'falcon-session-a', walletAddress },
+    sessionWallet: walletAddress,
+    walletAddress,
+    walletUserId: 'privy-user-a',
+  };
+
+  for (const changed of [
+    { ...original, session: { ...original.session } },
+    { ...original, walletAddress: 'Wallet22222222222222222222222222222222' },
+  ]) {
+    const requestScope = createLendingRequestScope();
+    requestScope.setIdentity(original);
+    const ticket = requestScope.capture();
+    const identityRef = { current: original };
+    let resolveAction;
+    let calls = 0;
+    const action = performIdentityBoundOwnerSdkAction(requestScope, ticket, identityRef, () => {
+      calls += 1;
+      return new Promise(resolve => { resolveAction = resolve; });
+    });
+    assert.equal(calls, 1);
+    identityRef.current = changed;
+    requestScope.setIdentity(changed);
+    resolveAction('owner-sdk-result');
+    assert.deepEqual(await action, { accepted: false });
+  }
+});
+
+test('V226 an owner credential cannot reach the Mesh request transport', () => {
+  const calls = [];
+  const request = createLendingMeshRequest((...args) => { calls.push(args); });
+  assert.throws(() => request('verified-falcon-session', '/wallet-link', {
+    requestId: '11111111-1111-4111-8111-111111111111',
+    accessToken: 'owner-token-private-marker',
+  }), Error);
+  assert.equal(calls.length, 0);
+});
+
+test('V226 owner capability gates require wallet actions, not an owner credential', () => {
+  const walletAddress = 'Wallet11111111111111111111111111111111';
+  const base = {
+    sessionToken: 'verified-falcon-session',
+    sessionWallet: walletAddress,
+    walletAddress,
+    walletReady: true,
+    walletAuthenticated: true,
+    removeAllDelegatedSigners() {},
+  };
+  const unlinkedOverview = {
+    configuration: { walletProviderConfigured: true },
+    walletLink: null,
+    delegation: { status: 'ACTIVE' },
+  };
+  const linkedOverview = {
+    ...unlinkedOverview,
+    walletLink: { walletAddress },
+  };
+
+  assert.equal(canPerformLendingOperation('link-wallet', { ...base, overview: unlinkedOverview }), true);
+  assert.equal(canPerformLendingOperation('link-wallet', { ...base, overview: unlinkedOverview, walletReady: false }), false);
+  assert.equal(canPerformLendingOperation('link-wallet', { ...base, overview: unlinkedOverview, walletAuthenticated: false }), false);
+  assert.equal(canPerformLendingOperation('link-wallet', { ...base, overview: unlinkedOverview, walletAddress: 'Wallet22222222222222222222222222222222' }), false);
+  assert.equal(canPerformLendingOperation('prepare-revocation', { ...base, overview: linkedOverview }), true);
+  assert.equal(canPerformLendingOperation('prepare-revocation', { ...base, overview: linkedOverview, removeAllDelegatedSigners: null }), false);
+});
+
 test('lending operation gates bind actions to the linked wallet and keep owner withdrawals independent', () => {
   const now = Date.parse('2026-11-08T00:30:00.000Z');
   const overview = {
@@ -130,7 +250,6 @@ test('lending operation gates bind actions to the linked wallet and keep owner w
     walletAddress: 'Wallet11111111111111111111111111111111',
     walletAuthenticated: true,
     walletReady: true,
-    getAccessToken() {},
     addSigners() {},
     removeAllDelegatedSigners() {},
     signTransaction() {},
