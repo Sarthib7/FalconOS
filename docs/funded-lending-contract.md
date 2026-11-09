@@ -94,6 +94,8 @@ Frontend starts with current verified session's wallet. Explicit embedded-wallet
 
 ## Executed checks and limits
 
+[VERIFIED CI-ONLY APPROVAL, 2026-11-09] The user selected `Approve 35-minute job budget`. Only `jobs.verify.timeout-minutes` changes from20 to35 on affected draft heads. Assertions, per-operation deadlines, private dependency copies, runtime pins and financial authority stay unchanged. This extends the global CI resource bound; fresh exact-head checks must complete before merge. The choice grants no merge, deployment or live financial action.
+
 [VERIFIED LOCAL UI] `npm test` built the site, MVP and agents targets and returned `tests351,pass351,fail0,skipped0`. The unchanged owner/NEAR browser returned `passed:32,total:32,exceptions:[]`. The production-built lending component separately exercised quote, owner review, unknown submission, pending/final reconciliation and USDC funding capture through actual HTTPS/PostgreSQL. It preserved unknown READY native balance/expiry and unpriced historical costs.
 
 [VERIFIED UI LIMIT] The corrected flow used enabled DOM clicks, as the existing browser CI does, after hidden-page native helpers failed. The owner SDK, provider and chain were controlled; this does not attest real gestures, configured Privy SDK/MFA or live revocation. The Reconcile handler failure was observed before correction, not inferred from helper tests. No source-text or forwarding test was added.

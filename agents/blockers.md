@@ -93,7 +93,7 @@ Exit evidence: Owner-observed `/mcp list` output showing the active-profile serv
 
 ## BLK-2026-11-09-01: Web verification fixture job bound
 
-Date: 2026-11-09. Owner: release. Severity: Medium. Status: Reopened at backend head96db98e; owner-proof head ad1b40d had passed.
+Date: 2026-11-09. Owner: release. Severity: Medium. Status: Approved CI-only budget remediation applied; fresh exact-head checks pending.
 
 [VERIFIED] At head9017d24, main CI run42560507646 passed. Verify web run42560507535 was cancelled during release-boundary cases after web tests reported `tests340,pass340,fail0`. The workflow declares `timeout-minutes:20`; its log reaches cancellation at04:32:42 after setup at04:12:31. The completed website fixture cases each took about72-78seconds. `scripts/test/release-boundaries.test.mjs:24-40` privately copies the full web dependency tree for each website fixture. The expanded SDK tree therefore increases repeated fixture work; exact copy-versus-build attribution is not yet measured.
 
@@ -106,6 +106,8 @@ Current-head evidence: https://github.com/Sarthib7/FalconOS/pull/138 ; https://g
 [VERIFIED NEW-HEAD CORRECTION] The earlier resolution applied only to ad1b40d, not a permanent fixture-cost fix. At backend head96db98eaf5a0c3e2addc6456dbbe1fba9f74c64e, PR CI42583292766 passed both jobs. Separate Verify web42583292652 passed345 web cases, then cancelled at its20-minute bound after repeated private website fixtures took about71-76seconds each. The final completed fixture logged08:24:03 and cancellation08:24:16. Preserve every guard and private copy. A fixture-cost change or job-budget change needs separate approval; no limit was raised.
 
 Evidence: https://github.com/Sarthib7/FalconOS/actions/runs/42583292766 ; https://github.com/Sarthib7/FalconOS/actions/runs/42583292652/job/129046949320 .
+
+[VERIFIED APPROVAL AND REMEDIATION] Backend attempt two also reached the original bound after345 web cases passed. UI code head0658400 completed all five checks, including the unchanged web job in14m12s, so timing varies by inspected surface/run. The user selected `Approve 35-minute job budget`. Only the outer Verify web limit changes to35; private copy semantics, assertions, runtime pins and per-operation deadlines remain. This is not a copy-speed claim or a pass guarantee. Fresh checks must complete at both affected draft heads. The earlier cancellations remain part of the record.
 
 ## BLK-2026-11-09-02: Signed-action liveness before a funded pilot
 

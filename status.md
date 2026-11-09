@@ -2,7 +2,7 @@
 
 ## Funded treasury R1.3 local implementation: 2026-11-09
 
-Owner: coordinator. Status: Local implementation verified; dependent draft publication and new-head CI continue. Live financial acceptance remains Blocked.
+Owner: coordinator. Status: Local implementation verified and both drafts published; approved CI-only budget applied, fresh-head checks pending. Live financial acceptance remains Blocked.
 
 [VERIFIED USER APPROVAL] The user selected “Yes, apply test-only fix” and “Yes, implement R1.3 locally” after the visual/source review. The user selected “Leave caches untouched”. No live provider/wallet resource, delegation, funding, financial signature, broadcast, fee collection, paid Council, merge or deployment is authorized.
 
@@ -20,11 +20,13 @@ Owner: coordinator. Status: Local implementation verified; dependent draft publi
 
 [VERIFIED UI SCENARIO] The production-built lending component completed zero-SOL quote, separate owner review/consent, UNKNOWN reservation, pending reconciliation, CONFIRMED/READY and subsequent USDC capture. READY preserved null native balance/expiry and separate unpriced historical costs. A real handler bug produced0reconcile POSTs before correction and2after. The controlled SDK/provider/chain path used enabled DOM clicks after hidden-page native helpers proved unreliable; real gestures and configured Privy SDK/MFA remain untested. Desktop and mobile390/375-width captures were inspected.
 
-[VERIFIED PUBLICATION AND CI] Backend draft PR139 is head96db98eaf5a0c3e2addc6456dbbe1fba9f74c64e. Its PR CI run42583292766 passed both jobs. Push CI42583221751 stopped at pinned Bun1.3.14 download after HTTP504 and was retried once after the same-head PR run passed. Separate Verify web42583292652 passed345 web tests, then hit its20-minute job bound during private release fixtures. No timeout, assertion or isolation rule was weakened. This is not an all-green check set.
+[VERIFIED PRE-APPROVAL CODE-HEAD CI] Backend PR139 code head96db98eaf5a0c3e2addc6456dbbe1fba9f74c64e passed PR CI42583292766 and push CI42583221751 after one Bun-download retry. Its separate web job42583292652 passed345 web cases but hit the20-minute bound twice. UI PR140 code head0658400347e70e9bd5fe8effe024bae7dee6f2e9 passed all five checks, including Verify web42588097160 in14m12s. Prototype PR137's unchanged web retry42560507535 also passed. These results did not prove the backend bound was reliable.
+
+[VERIFIED CI-ONLY USER APPROVAL] The user then selected `Approve 35-minute job budget`. The affected draft heads change only the outer Verify web job limit from20 to35, plus records of that approval. Runtime pins, assertions, private copies, per-operation deadlines and product/financial code are unchanged. The backend follow-up is4f8d312; fresh exact-head checks remain required. No PR or branch was merged.
 
 [BLOCKED LIVE GATES, OWNER release] Configured customer resources and SDK/MFA, real policy admission, explicit live signing/funding, a finite paid model budget and actual settlement remain open. Signed-unknown liveness also needs an owner-approved policy; absence is not non-execution. Local fixtures do not settle these gates. Existing user caches stay untouched.
 
-[NEXT APPROVAL, OWNER coordinator] Publish the dependent UI draft and inspect its exact-head CI. The separate web job needs an approved fixture-cost or job-budget decision if its current bound remains insufficient. Do not change versions or guards to obtain green. SPEC I23/V226-V229 remains the product scope; no live financial authority follows.
+[NEXT VERIFICATION, OWNER coordinator] Inspect fresh exact-head CI for drafts139 and140 after the approved budget change. Do not treat a cancelled run as green. No merge, deployment, provider resource, financial signature, funding or paid Council call is authorized by the CI approval. SPEC I23/V226-V229 remains the product scope.
 
 ## R5 consumer acceptance: 2026-11-04
 
