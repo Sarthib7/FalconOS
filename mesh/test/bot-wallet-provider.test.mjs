@@ -9,6 +9,7 @@ const USER_ID = 'did:privy:customer_01';
 const OTHER_USER_ID = 'did:privy:customer_02';
 const WALLET_ID = 'wallet_customer_01';
 const OWNER_QUORUM_ID = 'customer_owner_quorum';
+const POLICY_OWNER_QUORUM_ID = 'customer_policy_owner_quorum';
 const WORKER_SIGNER_ID = 'falcon_worker_signer';
 const POLICY_ID = 'customer_lending_policy';
 const WORKER_OWNER_ID = 'worker_owned_policy_quorum';
@@ -225,6 +226,10 @@ async function makeFixture({
     user_ids: null,
     key_quorum_ids: [],
   };
+  const policyOwnerQ = policyOwnerId === WORKER_OWNER_ID ? workerOwnerQ
+    : policyOwnerId === walletOwnerId ? walletOwnerQ
+      : policyOwnerId === OWNER_QUORUM_ID ? ownerQ
+        : { ...ownerQ, id: policyOwnerId };
   const state = {
     wallet: {
       id: WALLET_ID,
@@ -260,6 +265,7 @@ async function makeFixture({
       [WORKER_OWNER_ID, workerOwnerQ],
       [WORKER_SIGNER_ID, signerQ],
       [walletOwnerId, walletOwnerQ],
+      [policyOwnerId, policyOwnerQ],
     ]),
     rules,
     mandate,
@@ -268,7 +274,6 @@ async function makeFixture({
     rpcCalls: [],
     signedTransaction: Buffer.alloc(110, 0x7a).toString('base64'),
   };
-  if (policyOwnerId === WORKER_OWNER_ID) state.quorums.set(WORKER_OWNER_ID, workerOwnerQ);
 
   const fetchImpl = async (input, init = {}) => {
     const url = new URL(input);
@@ -398,6 +403,15 @@ test('V226 rejects mismatched user, linked/current wallet address, wallet id, ow
   await assert.rejects(entityFixture.provider.verifyWalletLink({ walletAddress: entityFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
 });
 
+test('V226 rejects contradictory entity metadata on the address-lookup wallet', async () => {
+  const fixture = await makeFixture();
+  fixture.state.addressWallet = {
+    ...fixture.state.wallet,
+    entity: { type: 'user', id: OTHER_USER_ID },
+  };
+  await assert.rejects(fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+});
+
 test('V226 refuses imported wallets and shared customer owner quorums', async () => {
   const importedFixture = await makeFixture();
   importedFixture.state.user.linked_accounts[0].imported = true;
@@ -406,6 +420,26 @@ test('V226 refuses imported wallets and shared customer owner quorums', async ()
 
   const sharedFixture = await makeFixture({ walletOwnerUserIds: [USER_ID, OTHER_USER_ID] });
   await assert.rejects(sharedFixture.provider.verifyWalletLink({ walletAddress: sharedFixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+});
+
+test('V226 customer owner quorum rejects authorization keys', async () => {
+  const fixture = await makeFixture();
+  fixture.state.quorums.get(OWNER_QUORUM_ID).authorization_keys = structuredClone(
+    fixture.state.quorums.get(WORKER_SIGNER_ID).authorization_keys,
+  );
+  await assert.rejects(fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+});
+
+test('V226 customer owner quorum rejects nested quorums', async () => {
+  const fixture = await makeFixture();
+  fixture.state.quorums.get(OWNER_QUORUM_ID).key_quorum_ids = [WORKER_SIGNER_ID];
+  await assert.rejects(fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
+});
+
+test('V226 customer owner quorum rejects an invalid authorization threshold', async () => {
+  const fixture = await makeFixture();
+  fixture.state.quorums.get(OWNER_QUORUM_ID).authorization_threshold = 2;
+  await assert.rejects(fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress }), code('WALLET_OWNERSHIP_MISMATCH'));
 });
 
 test('V226 rejects obsolete owner credential fields on all provider DTOs', async () => {
@@ -513,6 +547,41 @@ test('V226 verifies current wallet, signer and policy resources before using a d
   const changedPolicy = await fixture.provider.verifyDelegation({ link, mandate: fixture.mandate, delegation, rules: fixture.rules });
   assert.equal(changedPolicy.status, 'UNAVAILABLE');
   assert.equal(changedPolicy.reason, 'POLICY_SCOPE_CHANGED');
+});
+
+test('V226 rechecks the distinct policy-owner quorum while wallet ownership remains valid', async () => {
+  const fixture = await makeFixture({ policyOwnerId: POLICY_OWNER_QUORUM_ID });
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+  const delegation = await fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: fixture.rules });
+  fixture.state.wallet.additional_signers = [{ signer_id: WORKER_SIGNER_ID, override_policy_ids: [POLICY_ID] }];
+  fixture.state.quorums.get(POLICY_OWNER_QUORUM_ID).user_ids = [OTHER_USER_ID];
+  await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+
+  const verification = await fixture.provider.verifyDelegation({ link, mandate: fixture.mandate, delegation, rules: fixture.rules });
+  assert.equal(verification.status, 'UNAVAILABLE');
+  assert.equal(verification.reason, 'WALLET_OWNERSHIP_MISMATCH');
+});
+
+test('V226 rechecks a valid worker key before delegation verification and signing', async () => {
+  const fixture = await makeFixture();
+  const link = await fixture.provider.verifyWalletLink({ walletAddress: fixture.walletAddress });
+  const delegation = await fixture.provider.prepareDelegation({ link, mandate: fixture.mandate, rules: fixture.rules });
+  fixture.state.wallet.additional_signers = [{ signer_id: WORKER_SIGNER_ID, override_policy_ids: [POLICY_ID] }];
+  const replacementKey = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).publicKey
+    .export({ format: 'der', type: 'spki' }).toString('base64');
+  fixture.state.quorums.get(WORKER_SIGNER_ID).authorization_keys[0].public_key = replacementKey;
+
+  const verification = await fixture.provider.verifyDelegation({ link, mandate: fixture.mandate, delegation, rules: fixture.rules });
+  assert.equal(verification.status, 'UNAVAILABLE');
+  assert.equal(verification.reason, 'SIGNER_KEY_SCOPE_INVALID');
+  await assert.rejects(fixture.provider.signTransaction({
+    link,
+    mandate: fixture.mandate,
+    delegation,
+    rules: fixture.rules,
+    transactionBase64: Buffer.alloc(120, 0x31).toString('base64'),
+  }), code('SIGNER_KEY_SCOPE_INVALID'));
+  assert.equal(fixture.state.rpcCalls.length, 0);
 });
 
 test('verifyDelegation denies changed digest, owner and expiry', async () => {

@@ -95,6 +95,7 @@ function botWithRecorder() {
   const calls = [];
   const names = [
     'overview', 'linkWallet', 'saveMandate', 'prepareDelegation', 'verifyDelegation',
+    'quoteAccounts', 'prepareAccounts',
     'capture', 'start', 'pause', 'prepareRevocation', 'revoke', 'prepareWithdrawal',
     'prepareFeeClaim', 'submitOwnerSignature', 'reconcile',
   ];
@@ -141,6 +142,9 @@ test('funded lending rejects operator/cross-owner scope, malformed DTOs, and wro
     ['/v1/lending-bot/delegation/prepare', { requestId: randomUUID(), accessToken: 'owner-token-private-marker' }],
     ['/v1/lending-bot/revoke/prepare', { requestId: randomUUID(), accessToken: 'owner-token-private-marker' }],
     ['/v1/lending-bot/revoke', { requestId: randomUUID(), accessToken: 'owner-token-private-marker' }],
+    ['/v1/lending-bot/accounts/quote', { requestId: randomUUID(), accessToken: 'owner-token-private-marker' }],
+    ['/v1/lending-bot/accounts/prepare', { requestId: randomUUID(), quoteId: 'not-a-uuid' }],
+    ['/v1/lending-bot/accounts/prepare', { requestId: randomUUID(), quoteId: randomUUID(), quote: { wallet: WALLET_B } }],
     ['/v1/lending-bot/owner-signatures', {
       requestId: randomUUID(), actionId: randomUUID(), signedTransactionBase64: Buffer.alloc(1233).toString('base64'),
     }],

@@ -272,6 +272,20 @@ function tokenAccount(account, mint, owner, { allowAbsent = false } = {}) {
   return { amount: data.readBigUInt64LE(64), data };
 }
 
+function canonicalAssociatedTokenAddress(owner, mint) {
+  const [associated] = PublicKey.findProgramAddressSync([
+    new PublicKey(owner).toBuffer(),
+    new PublicKey(TOKEN_PROGRAM_ADDRESS.toString()).toBuffer(),
+    new PublicKey(mint).toBuffer(),
+  ], new PublicKey(ASSOCIATED_TOKEN_PROGRAM_ADDRESS.toString()));
+  return associated.toBase58();
+}
+
+function exactKeys(value, keys) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
+}
+
 function stableAddressList(values) {
   return [...new Set(values.map(value => canonicalAddress(String(value))))].map(value => address(value));
 }
@@ -412,7 +426,7 @@ function canonicalTransaction(value) {
 }
 
 function decodeSignedTransaction(prepared, signedTransactionBase64) {
-  if (!prepared || typeof prepared !== 'object' || !['supply', 'redeem', 'fee'].includes(prepared.action)
+  if (!prepared || typeof prepared !== 'object' || !['supply', 'redeem', 'fee', 'setup'].includes(prepared.action)
       || prepared.schemaVersion !== 1 || prepared.chain !== 'solana' || prepared.network !== NETWORK
       || prepared.source?.adapterVersion !== ADAPTER_VERSION || prepared.source?.programId !== PROGRAM_ID.toString()
       || !Number.isSafeInteger(prepared.source?.slot) || prepared.source.slot <= 0
@@ -458,6 +472,7 @@ function decodeSignedTransaction(prepared, signedTransactionBase64) {
     fail('INVALID_PREPARED_ACTION', 'Prepared wallet signing identity is invalid.');
   }
   if (!verify(null, message, publicKey, signatureBytes)) fail('INVALID_SIGNED_TRANSACTION', 'Wallet signature does not verify.');
+  if (prepared.action === 'setup') validatePreparedAccountSetup(prepared, transaction);
   return {
     signature: encodeSignature(signatureBytes),
     signedTransactionBase64: bytes.toString('base64'),
@@ -468,6 +483,86 @@ function decodeSignedTransaction(prepared, signedTransactionBase64) {
 
 
 
+function validatePreparedAccountSetup(prepared, transaction) {
+  const invalid = () => fail('INVALID_PREPARED_ACTION', 'Prepared account-setup evidence is invalid.');
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  const accountKeys = ['address', 'mint', 'owner', 'tokenProgram', 'wasMissing'];
+  const setup = prepared.accountSetup;
+  if (prepared.reserveAddress !== null || prepared.amountBaseUnits !== '0'
+      || prepared.amountUnit !== 'usdc-base-units' || prepared.recipient !== prepared.wallet
+      || prepared.sourceTokenAccount !== null || prepared.destinationTokenAccount !== null
+      || prepared.receiptMint !== null || prepared.feeRecipient !== null
+      || !setup || typeof setup.quoteId !== 'string' || !uuid.test(setup.quoteId)
+      || !Array.isArray(setup.accounts) || setup.accounts.length !== 3
+      || !exactKeys(setup, ['quoteId', 'accounts'])
+      || !exactKeys(prepared.costEvidence, [
+        'maxFeeLamports', 'associatedAccountRentLamports', 'actualQuotedFeeLamports', 'walletLamports',
+        'nativePriceUsdMicros', 'usdcPriceUsdMicros', 'nativePriceObservedAt', 'usdcPriceObservedAt',
+        'priceMaxAgeSeconds', 'sourceSlot', 'feeQuoteSlot', 'rentPerAccountLamports',
+      ])
+      || !exactKeys(prepared.expectedEffects, [
+        'usdcDebitBaseUnits', 'usdcCreditBaseUnits', 'receiptDebitBaseUnits', 'receiptCreditBaseUnits',
+      ])) invalid();
+  const accounts = setup.accounts;
+  const wallet = prepared.wallet;
+  let fee;
+  let rent;
+  let maxFee;
+  let rentPerAccount;
+  let walletLamports;
+  try {
+    fee = canonicalAmount(prepared.feeLamports, 'Prepared setup fee').toString();
+    rent = canonicalAmount(prepared.rentLamports, 'Prepared setup rent').toString();
+    maxFee = canonicalAmount(prepared.costEvidence.maxFeeLamports, 'Prepared setup fee cap').toString();
+    rentPerAccount = canonicalAmount(prepared.costEvidence.rentPerAccountLamports, 'Prepared setup account rent').toString();
+    walletLamports = canonicalAmount(prepared.costEvidence.walletLamports, 'Prepared setup wallet balance').toString();
+  } catch { invalid(); }
+  const missing = [];
+  for (let index = 0; index < accounts.length; index += 1) {
+    const account = accounts[index];
+    let canonicalAta;
+    try { canonicalAta = canonicalAssociatedTokenAddress(wallet, account?.mint); }
+    catch { invalid(); }
+    if (!exactKeys(account, accountKeys)
+        || account.owner !== wallet || account.tokenProgram !== TOKEN_PROGRAM_ADDRESS.toString()
+        || typeof account.wasMissing !== 'boolean'
+        || (index === 0 ? account.mint !== USDC_MINT : account.mint === USDC_MINT)
+        || accounts.slice(0, index).some(previous => previous.address === account.address || previous.mint === account.mint)
+        || canonicalAta !== account.address) invalid();
+    if (account.wasMissing) missing.push(account);
+  }
+  if (missing.length === 0 || fee !== maxFee || fee !== prepared.costEvidence.actualQuotedFeeLamports
+      || rent !== prepared.costEvidence.associatedAccountRentLamports
+      || rent !== (BigInt(rentPerAccount) * BigInt(missing.length)).toString()
+      || prepared.associatedAccountRentLamports !== rent
+      || prepared.maxTotalCostUsdcBaseUnits !== null
+      || prepared.nativePriceUsdMicros !== null || prepared.usdcPriceUsdMicros !== null
+      || prepared.nativePriceObservedAt !== null || prepared.nativePriceSourceReserveAddress !== null
+      || prepared.nativePriceSlot !== null || prepared.usdcPriceObservedAt !== null
+      || prepared.usdcPriceSourceReserveAddress !== null || prepared.usdcPriceSlot !== null
+      || prepared.costEvidence.priceMaxAgeSeconds !== null
+      || prepared.costEvidence.nativePriceUsdMicros !== null || prepared.costEvidence.usdcPriceUsdMicros !== null
+      || prepared.costEvidence.nativePriceObservedAt !== null || prepared.costEvidence.usdcPriceObservedAt !== null
+      || !Number.isSafeInteger(prepared.costEvidence.sourceSlot) || prepared.costEvidence.sourceSlot !== prepared.source.slot
+      || !Number.isSafeInteger(prepared.costEvidence.feeQuoteSlot) || prepared.costEvidence.feeQuoteSlot < prepared.source.slot
+      || !Number.isSafeInteger(prepared.simulation?.slot) || prepared.simulation.slot < prepared.source.slot
+      || BigInt(walletLamports) < BigInt(fee) + BigInt(rent)
+      || prepared.expectedEffects.usdcDebitBaseUnits !== '0'
+      || prepared.expectedEffects.usdcCreditBaseUnits !== '0'
+      || prepared.expectedEffects.receiptDebitBaseUnits !== '0'
+      || prepared.expectedEffects.receiptCreditBaseUnits !== '0') invalid();
+  const instructions = transaction.message.compiledInstructions;
+  if (instructions.length !== missing.length) invalid();
+  for (let index = 0; index < missing.length; index += 1) {
+    const instruction = instructions[index];
+    const account = missing[index];
+    const keys = instruction.accountKeyIndexes.map(keyIndex => transaction.message.staticAccountKeys[keyIndex]?.toBase58() ?? null);
+    const expected = [wallet, account.address, wallet, account.mint, SYSTEM_PROGRAM, TOKEN_PROGRAM_ADDRESS.toString()];
+    if (transaction.message.staticAccountKeys[instruction.programIdIndex]?.toBase58() !== ASSOCIATED_TOKEN_PROGRAM_ADDRESS.toString()
+        || !Buffer.from(instruction.data).equals(Buffer.from([1]))
+        || keys.length !== expected.length || expected.some((value, keyIndex) => keys[keyIndex] !== value)) invalid();
+  }
+}
 function expectedReserves(reserves) {
   if (!Array.isArray(reserves) || reserves.length !== DEFAULT_LENDING_RESERVES.length) fail('INVALID_INPUT', 'Only the two reviewed Kamino USDC reserves are supported.');
   const requested = reserves.map(entry => {
@@ -547,6 +642,112 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
     if (genesis !== MAINNET_GENESIS) fail('SOLANA_NETWORK_MISMATCH', 'RPC does not report Solana mainnet-beta genesis.');
   }
 
+  async function readAccountSetupSnapshot(wallet) {
+    const owner = walletAddress(wallet);
+    await assertMainnet();
+    const initialSlot = asSlot(await rpc.getSlot({ commitment: 'confirmed' }).send());
+    const markets = [...new Set(supportedReserves.map(item => item.marketAddress))];
+    const firstAddresses = stableAddressList([
+      PROGRAM_ID.toString(), TOKEN_PROGRAM_ADDRESS.toString(), ASSOCIATED_TOKEN_PROGRAM_ADDRESS.toString(), SYSTEM_PROGRAM,
+      ...markets, ...supportedReserves.map(item => item.reserveAddress),
+    ]);
+    const firstResponse = await rpc.getMultipleAccounts(firstAddresses, {
+      commitment: 'confirmed', encoding: 'base64', minContextSlot: BigInt(initialSlot),
+    }).send();
+    const firstAccounts = mapAccounts(firstAddresses, firstResponse);
+    const firstSlot = asSlot(firstResponse.context?.slot);
+    if (firstSlot < initialSlot) fail('SOLANA_DATA_INVALID', 'Account-setup snapshot is older than its requested minimum slot.');
+    if (PROGRAM_ID.toString() !== MAINNET_KLEND_PROGRAM) fail('SOLANA_IDENTITY_MISMATCH', 'Pinned Kamino program does not match reviewed mainnet identity.');
+    verifyProgramAccount(firstAccounts.get(PROGRAM_ID.toString()), UPGRADEABLE_LOADER);
+    verifyProgramAccount(firstAccounts.get(TOKEN_PROGRAM_ADDRESS.toString()), UPGRADEABLE_LOADER);
+    verifyProgramAccount(firstAccounts.get(ASSOCIATED_TOKEN_PROGRAM_ADDRESS.toString()), BPF_LOADER);
+    verifyProgramAccount(firstAccounts.get(SYSTEM_PROGRAM), NATIVE_LOADER);
+
+    const marketStates = new Map();
+    for (const marketAddress of markets) {
+      const state = LendingMarket.decode(readAccountBytes(firstAccounts.get(marketAddress), PROGRAM_ID.toString(), LendingMarket.layout.span + 8));
+      if (!state) fail('SOLANA_IDENTITY_MISMATCH', 'Reviewed Kamino market account could not be decoded.');
+      marketStates.set(marketAddress, state);
+    }
+    const reserveStates = new Map();
+    const definitions = [{ mint: USDC_MINT, reserveAddress: null }];
+    for (const config of supportedReserves) {
+      const state = Reserve.decode(readAccountBytes(firstAccounts.get(config.reserveAddress), PROGRAM_ID.toString(), Reserve.layout.span + 8));
+      ensureFloatRate(state, config.marketAddress, USDC_MINT, 'Reviewed USDC');
+      if (state.liquidity.mintDecimals.toString() !== '6' || state.liquidity.tokenProgram !== TOKEN_PROGRAM_ADDRESS.toString()
+          || !state.collateral.mintPubkey || state.collateral.mintPubkey === USDC_MINT) {
+        fail('SOLANA_IDENTITY_MISMATCH', 'Reviewed reserve receipt mint or USDC token identity is invalid.');
+      }
+      reserveStates.set(config.reserveAddress, state);
+      definitions.push({ mint: state.collateral.mintPubkey, reserveAddress: config.reserveAddress });
+    }
+    const derived = [];
+    for (const definition of definitions) {
+      const sdkAddress = await getAssociatedTokenAddress(
+        address(definition.mint), address(owner), TOKEN_PROGRAM_ADDRESS, ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
+      );
+      const expected = canonicalAssociatedTokenAddress(owner, definition.mint);
+      if (sdkAddress.toString() !== expected) fail('SOLANA_IDENTITY_MISMATCH', 'SDK associated-token derivation differs from the canonical address.');
+      derived.push({
+        address: expected, mint: definition.mint, owner,
+        tokenProgram: TOKEN_PROGRAM_ADDRESS.toString(), reserveAddress: definition.reserveAddress,
+      });
+    }
+    if (new Set(derived.map(item => item.mint)).size !== 3 || new Set(derived.map(item => item.address)).size !== 3) {
+      fail('SOLANA_IDENTITY_MISMATCH', 'Reviewed account setup does not resolve to three distinct canonical token accounts.');
+    }
+    const addresses = stableAddressList([
+      ...firstAddresses.map(item => item.toString()), USDC_MINT, ...definitions.slice(1).map(item => item.mint),
+      owner, ...derived.map(item => item.address),
+    ]);
+    const response = await rpc.getMultipleAccounts(addresses, {
+      commitment: 'confirmed', encoding: 'base64', minContextSlot: BigInt(firstSlot),
+    }).send();
+    const accounts = mapAccounts(addresses, response);
+    const slot = asSlot(response.context?.slot);
+    if (slot < firstSlot) fail('SOLANA_DATA_INVALID', 'Final account-setup snapshot is older than reserve discovery.');
+    verifyProgramAccount(accounts.get(PROGRAM_ID.toString()), UPGRADEABLE_LOADER);
+    verifyProgramAccount(accounts.get(TOKEN_PROGRAM_ADDRESS.toString()), UPGRADEABLE_LOADER);
+    verifyProgramAccount(accounts.get(ASSOCIATED_TOKEN_PROGRAM_ADDRESS.toString()), BPF_LOADER);
+    verifyProgramAccount(accounts.get(SYSTEM_PROGRAM), NATIVE_LOADER);
+    for (const [marketAddress, initial] of marketStates) {
+      const latest = LendingMarket.decode(readAccountBytes(accounts.get(marketAddress), PROGRAM_ID.toString(), LendingMarket.layout.span + 8));
+      equalSdkState(initial, latest, 'Reviewed Kamino market');
+    }
+    for (const [reserveAddress, initial] of reserveStates) {
+      const latest = Reserve.decode(readAccountBytes(accounts.get(reserveAddress), PROGRAM_ID.toString(), Reserve.layout.span + 8));
+      equalSdkState(initial, latest, 'Reviewed Kamino reserve');
+      ensureFloatRate(latest, supportedReserves.find(item => item.reserveAddress === reserveAddress).marketAddress, USDC_MINT, 'Reviewed USDC');
+    }
+    verifyMint(accounts.get(USDC_MINT), USDC_MINT, 6);
+    for (const config of supportedReserves) {
+      const state = reserveStates.get(config.reserveAddress);
+      verifyMint(accounts.get(state.collateral.mintPubkey), state.collateral.mintPubkey, 6, BigInt(state.collateral.mintTotalSupply.toString()));
+    }
+    const walletAccount = accounts.get(owner);
+    let nativeBalanceLamports = 0n;
+    if (walletAccount !== null) {
+      if (walletAccount.owner !== SYSTEM_PROGRAM || walletAccount.executable !== false
+          || !Array.isArray(walletAccount.data) || decodeBase64(walletAccount.data[0]).length !== 0) {
+        fail('SOLANA_IDENTITY_MISMATCH', 'Wallet native account identity is invalid.');
+      }
+      nativeBalanceLamports = asBigInt(walletAccount.lamports, 'Wallet lamports');
+    }
+    const setupAccounts = derived.map(item => {
+      const info = tokenAccount(accounts.get(item.address), item.mint, owner, { allowAbsent: true });
+      return {
+        ...item,
+        exists: info !== null,
+        balanceBaseUnits: (info?.amount ?? 0n).toString(),
+      };
+    });
+    const observedAt = isoNow(now);
+    return {
+      wallet: owner, slot, observedAt, nativeBalanceLamports: nativeBalanceLamports.toString(),
+      walletLamports: nativeBalanceLamports.toString(), accounts: setupAccounts,
+    };
+  }
+
   async function readCurrent(wallet, { allowMissingWalletAccounts = false, additionalOwners = [] } = {}) {
     const owner = walletAddress(wallet);
     await assertMainnet();
@@ -620,6 +821,7 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
     const finalAddresses = stableAddressList([
       ...firstAddresses.map(item => item.toString()), USDC_MINT, WRAPPED_SOL_MINT, ...receiptMints.values(),
       ...supportedReserves.flatMap(config => [walletAtas.get(config.reserveAddress).usdc, walletAtas.get(config.reserveAddress).receipt]),
+      ...supportedReserves.map(config => reserveStates.get(config.reserveAddress).liquidity.supplyVault),
       ...recipientAtas.values(), owner, ...oracleAddresses,
     ]);
     const finalResponse = await rpc.getMultipleAccounts(finalAddresses, { commitment: 'confirmed', encoding: 'base64', minContextSlot: BigInt(firstSlot) }).send();
@@ -861,7 +1063,12 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
     }
   }
 
-  async function finishPreparation({ snapshot, wallet, action, reserveAddress, amount, amountUnit, recipient, instructions, sourceAccount, destinationAccount, sourceAddress, destinationAddress, maxFeeLamports, rentLamports, priceEvidence: prices, maxEvidenceAgeSeconds, receiptMint = null, feeRecipient = null }) {
+  async function finishPreparation({
+    snapshot, wallet, action, reserveAddress, amount, amountUnit, recipient, instructions,
+    sourceAccount, destinationAccount, sourceAddress, destinationAddress, maxFeeLamports, rentLamports,
+    priceEvidence: prices, maxEvidenceAgeSeconds, receiptMint = null, feeRecipient = null,
+    expectedSetupFeeLamports = null, setupQuoteExpiresAt = null, accountSetup = null, rentPerAccountLamports = null,
+  }) {
     const latest = await rpc.getLatestBlockhash({ commitment: 'confirmed', minContextSlot: BigInt(snapshot.slot) }).send();
     const blockhash = latest?.value?.blockhash;
     const lastValidBlockHeight = Number(latest?.value?.lastValidBlockHeight);
@@ -886,48 +1093,57 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
       fail('SOLANA_COST_UNAVAILABLE', 'Exact transaction fee quote is unavailable.');
     }
     const feeLamports = asBigInt(feeQuote.value, 'Transaction fee quote');
+    if (action === 'setup' && feeLamports !== expectedSetupFeeLamports) fail('SOLANA_SETUP_QUOTE_STALE', 'Exact setup fee changed after the retained quote.');
     const totalLamports = feeLamports + rentLamports;
     if (feeLamports > maxFeeLamports) fail('SOLANA_FEE_CAP_EXCEEDED', 'Exact transaction fee exceeds the authorized fee cap.');
     if (snapshot.walletLamports === null) fail('SOLANA_BALANCE_UNAVAILABLE', 'Wallet native balance is unavailable.');
     if (totalLamports > BigInt(snapshot.walletLamports)) fail('SOLANA_INSUFFICIENT_SOL', 'Wallet SOL balance cannot cover fee and rent.');
-
-    const simAddresses = [...new Set([sourceAddress, destinationAddress])];
-    const simulation = await rpc.simulateTransaction(transactionBase64, {
+    const simAddresses = action === 'setup' ? [] : [...new Set([sourceAddress, destinationAddress])];
+    const simulationConfig = {
       encoding: 'base64', commitment: 'confirmed', sigVerify: false, replaceRecentBlockhash: false,
       minContextSlot: BigInt(snapshot.slot),
-      accounts: { encoding: 'base64', addresses: simAddresses.map(value => address(value)) },
-    }).send();
-    if (asSlot(simulation?.context?.slot) < snapshot.slot || simulation?.value?.err !== null
-        || !Array.isArray(simulation?.value?.accounts) || simulation.value.accounts.length !== simAddresses.length) {
-      fail('SOLANA_SIMULATION_FAILED', 'Exact transaction simulation failed or returned incomplete account evidence.');
+    };
+    if (action !== 'setup') simulationConfig.accounts = { encoding: 'base64', addresses: simAddresses.map(value => address(value)) };
+    const simulation = await rpc.simulateTransaction(transactionBase64, simulationConfig).send();
+    if (asSlot(simulation?.context?.slot) < snapshot.slot || simulation?.value?.err !== null) {
+      fail('SOLANA_SIMULATION_FAILED', 'Exact transaction simulation failed or returned stale evidence.');
     }
-    const after = new Map(simAddresses.map((key, index) => [key, simulation.value.accounts[index]]));
-    const sourceMint = action === 'redeem' ? receiptMint : USDC_MINT;
-    const destinationMint = action === 'supply' ? receiptMint : USDC_MINT;
-    const destinationOwner = action === 'fee' ? feeRecipient : wallet;
-    const sourceAfter = tokenAccount(after.get(sourceAddress), sourceMint, wallet);
-    const destinationAfter = tokenAccount(after.get(destinationAddress), destinationMint, destinationOwner);
-    const sourceDelta = sourceAfter.amount - sourceAccount.amount;
-    const destinationDelta = destinationAfter.amount - (destinationAccount?.amount ?? 0n);
     let expectedEffects;
-    if (action === 'supply') {
-      if (sourceDelta !== -amount || destinationDelta <= 0n) fail('SOLANA_SIMULATION_MISMATCH', 'Simulated supply effects do not match the requested USDC amount.');
-      expectedEffects = { usdcDebitBaseUnits: amount.toString(), usdcCreditBaseUnits: '0', receiptDebitBaseUnits: '0', receiptCreditBaseUnits: destinationDelta.toString() };
-    } else if (action === 'redeem') {
-      if (sourceDelta !== -amount || destinationDelta <= 0n) fail('SOLANA_SIMULATION_MISMATCH', 'Simulated redeem effects do not match the requested receipt amount.');
-      expectedEffects = { usdcDebitBaseUnits: '0', usdcCreditBaseUnits: destinationDelta.toString(), receiptDebitBaseUnits: amount.toString(), receiptCreditBaseUnits: '0' };
+    if (action === 'setup') {
+      expectedEffects = { usdcDebitBaseUnits: '0', usdcCreditBaseUnits: '0', receiptDebitBaseUnits: '0', receiptCreditBaseUnits: '0' };
     } else {
-      if (sourceDelta !== -amount || destinationDelta !== amount) fail('SOLANA_SIMULATION_MISMATCH', 'Simulated owner-only USDC transfer does not match its exact amount.');
-      expectedEffects = { usdcDebitBaseUnits: amount.toString(), usdcCreditBaseUnits: '0', receiptDebitBaseUnits: '0', receiptCreditBaseUnits: '0' };
+      if (!Array.isArray(simulation?.value?.accounts) || simulation.value.accounts.length !== simAddresses.length) {
+        fail('SOLANA_SIMULATION_FAILED', 'Exact transaction simulation returned incomplete account evidence.');
+      }
+      const after = new Map(simAddresses.map((key, index) => [key, simulation.value.accounts[index]]));
+      const sourceMint = action === 'redeem' ? receiptMint : USDC_MINT;
+      const destinationMint = action === 'supply' ? receiptMint : USDC_MINT;
+      const destinationOwner = action === 'fee' ? feeRecipient : wallet;
+      const sourceAfter = tokenAccount(after.get(sourceAddress), sourceMint, wallet);
+      const destinationAfter = tokenAccount(after.get(destinationAddress), destinationMint, destinationOwner);
+      const sourceDelta = sourceAfter.amount - sourceAccount.amount;
+      const destinationDelta = destinationAfter.amount - (destinationAccount?.amount ?? 0n);
+      if (action === 'supply') {
+        if (sourceDelta !== -amount || destinationDelta <= 0n) fail('SOLANA_SIMULATION_MISMATCH', 'Simulated supply effects do not match the requested USDC amount.');
+        expectedEffects = { usdcDebitBaseUnits: amount.toString(), usdcCreditBaseUnits: '0', receiptDebitBaseUnits: '0', receiptCreditBaseUnits: destinationDelta.toString() };
+      } else if (action === 'redeem') {
+        if (sourceDelta !== -amount || destinationDelta <= 0n) fail('SOLANA_SIMULATION_MISMATCH', 'Simulated redeem effects do not match the requested receipt amount.');
+        expectedEffects = { usdcDebitBaseUnits: '0', usdcCreditBaseUnits: destinationDelta.toString(), receiptDebitBaseUnits: amount.toString(), receiptCreditBaseUnits: '0' };
+      } else {
+        if (sourceDelta !== -amount || destinationDelta !== amount) fail('SOLANA_SIMULATION_MISMATCH', 'Simulated owner-only USDC transfer does not match its exact amount.');
+        expectedEffects = { usdcDebitBaseUnits: amount.toString(), usdcCreditBaseUnits: '0', receiptDebitBaseUnits: '0', receiptCreditBaseUnits: '0' };
+      }
     }
     const currentHeightAfterSimulation = asBigInt(await rpc.getBlockHeight({ commitment: 'confirmed', minContextSlot: BigInt(snapshot.slot) }).send(), 'Current block height');
     if (currentHeightAfterSimulation > lastValidHeight) fail('SOLANA_BLOCKHASH_EXPIRED', 'Blockhash expired during transaction preflight.');
     const preparedAt = isoNow(now);
     const evidenceExpiry = Date.parse(preparedAt) + maxEvidenceAgeSeconds * 1000;
-    const heightExpiry = Date.parse(preparedAt) + Number(lastValidHeight - currentHeightAfterSimulation) * snapshot.recentSlotDurationMs;
-    const expiresAt = new Date(Math.min(evidenceExpiry, heightExpiry)).toISOString();
+    const heightExpiry = action === 'setup' ? Number.POSITIVE_INFINITY
+      : Date.parse(preparedAt) + Number(lastValidHeight - currentHeightAfterSimulation) * snapshot.recentSlotDurationMs;
+    const quoteExpiry = action === 'setup' ? Date.parse(setupQuoteExpiresAt) : Number.POSITIVE_INFINITY;
+    const expiresAt = new Date(Math.min(evidenceExpiry, heightExpiry, quoteExpiry)).toISOString();
     if (Date.parse(expiresAt) <= Date.parse(preparedAt)) fail('SOLANA_BLOCKHASH_EXPIRED', 'Prepared transaction has no remaining validity window.');
-    const costCap = costUsdcBaseUnits(maxFeeLamports + rentLamports, prices.nativePriceUsdMicros, prices.usdcPriceUsdMicros);
+    const costCap = prices ? costUsdcBaseUnits(maxFeeLamports + rentLamports, prices.nativePriceUsdMicros, prices.usdcPriceUsdMicros) : null;
     const unsigned = {
       schemaVersion: 1, chain: 'solana', network: NETWORK, wallet, action, reserveAddress,
       amountBaseUnits: amount.toString(), amountUnit, recipient,
@@ -936,15 +1152,15 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
       feeLamports: feeLamports.toString(), rentLamports: rentLamports.toString(), expectedEffects,
       source: { slot: snapshot.slot, programId: PROGRAM_ID.toString(), adapterVersion: ADAPTER_VERSION },
       maxTotalCostUsdcBaseUnits: costCap,
-      nativePriceUsdMicros: prices.nativePriceUsdMicros,
-      nativePriceObservedAt: prices.nativePriceObservedAt,
-      nativePriceSourceReserveAddress: prices.nativePriceSourceReserveAddress,
-      nativePriceSlot: snapshot.slot,
-      usdcPriceUsdMicros: prices.usdcPriceUsdMicros,
-      usdcPriceObservedAt: prices.usdcPriceObservedAt,
-      usdcPriceSourceReserveAddress: prices.usdcPriceSourceReserveAddress,
-      usdcPriceSlot: snapshot.slot,
-      associatedAccountRentLamports: snapshot.associatedAccountRentLamports,
+      nativePriceUsdMicros: prices?.nativePriceUsdMicros ?? null,
+      nativePriceObservedAt: prices?.nativePriceObservedAt ?? null,
+      nativePriceSourceReserveAddress: prices?.nativePriceSourceReserveAddress ?? null,
+      nativePriceSlot: prices ? snapshot.slot : null,
+      usdcPriceUsdMicros: prices?.usdcPriceUsdMicros ?? null,
+      usdcPriceObservedAt: prices?.usdcPriceObservedAt ?? null,
+      usdcPriceSourceReserveAddress: prices?.usdcPriceSourceReserveAddress ?? null,
+      usdcPriceSlot: prices ? snapshot.slot : null,
+      associatedAccountRentLamports: action === 'setup' ? rentLamports.toString() : snapshot.associatedAccountRentLamports,
       sourceTokenAccount: sourceAddress,
       destinationTokenAccount: destinationAddress,
       receiptMint,
@@ -954,14 +1170,16 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
         associatedAccountRentLamports: rentLamports.toString(),
         actualQuotedFeeLamports: feeLamports.toString(),
         walletLamports: snapshot.walletLamports,
-        nativePriceUsdMicros: prices.nativePriceUsdMicros,
-        usdcPriceUsdMicros: prices.usdcPriceUsdMicros,
-        nativePriceObservedAt: prices.nativePriceObservedAt,
-        usdcPriceObservedAt: prices.usdcPriceObservedAt,
-        priceMaxAgeSeconds: maxEvidenceAgeSeconds,
+        nativePriceUsdMicros: prices?.nativePriceUsdMicros ?? null,
+        usdcPriceUsdMicros: prices?.usdcPriceUsdMicros ?? null,
+        nativePriceObservedAt: prices?.nativePriceObservedAt ?? null,
+        usdcPriceObservedAt: prices?.usdcPriceObservedAt ?? null,
+        priceMaxAgeSeconds: prices ? maxEvidenceAgeSeconds : null,
         sourceSlot: snapshot.slot,
         feeQuoteSlot: asSlot(feeQuote.context.slot),
+        ...(action === 'setup' ? { rentPerAccountLamports: rentPerAccountLamports.toString() } : {}),
       },
+      ...(action === 'setup' ? { accountSetup } : {}),
       simulation: {
         slot: asSlot(simulation.context.slot),
         unitsConsumed: simulation.value.unitsConsumed === null || simulation.value.unitsConsumed === undefined
@@ -976,6 +1194,228 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
       fail('SOLANA_UNSUPPORTED_INSTRUCTION', 'Compiled transaction differs from its exact single-wallet message.');
     }
     return unsigned;
+  }
+
+  function validateSetupInstructions(instructions, wallet, accounts) {
+    const missing = accounts.filter(item => item.wasMissing);
+    if (instructions.length !== missing.length) fail('SOLANA_UNSUPPORTED_INSTRUCTION', 'Account setup contains an unexpected instruction count.');
+    for (let index = 0; index < missing.length; index += 1) {
+      const instruction = instructions[index];
+      const account = missing[index];
+      const actual = instruction.accounts.map(meta => meta.address.toString());
+      const expected = [wallet, account.address, wallet, account.mint, SYSTEM_PROGRAM, TOKEN_PROGRAM_ADDRESS.toString()];
+      if (instruction.programAddress.toString() !== ASSOCIATED_TOKEN_PROGRAM_ADDRESS.toString()
+          || !Buffer.from(instruction.data).equals(Buffer.from([1]))
+          || actual.length !== expected.length || expected.some((value, key) => actual[key] !== value)) {
+        fail('SOLANA_UNSUPPORTED_INSTRUCTION', 'Account setup instruction is not the exact idempotent create for a missing canonical ATA.');
+      }
+    }
+  }
+
+  async function setupInstructions(wallet, accounts) {
+    const payer = noopSigner(address(wallet));
+    const instructions = [];
+    for (const account of accounts) {
+      if (!account.wasMissing) continue;
+      const [derived, instruction] = await createAssociatedTokenAccountIdempotentInstruction(
+        payer, address(account.mint), address(wallet), TOKEN_PROGRAM_ADDRESS, address(account.address),
+      );
+      if (derived.toString() !== account.address) fail('SOLANA_IDENTITY_MISMATCH', 'Pinned SDK derived a different setup ATA.');
+      instructions.push(instruction);
+    }
+    validateSetupInstructions(instructions, wallet, accounts);
+    return instructions;
+  }
+
+  async function makeAccountSetupQuote(snapshot) {
+    const missing = snapshot.accounts.filter(item => !item.exists);
+    let feeLamports = 0n;
+    let rentPerAccountLamports = 0n;
+    let feeQuoteSlot = null;
+    if (missing.length) {
+      rentPerAccountLamports = asBigInt(
+        await rpc.getMinimumBalanceForRentExemption(BigInt(TOKEN_ACCOUNT_SIZE), { commitment: 'confirmed' }).send(),
+        'Associated token account rent', { minimum: 1n },
+      );
+      const rentLamports = rentPerAccountLamports * BigInt(missing.length);
+      const setupAccounts = snapshot.accounts.map(item => ({ ...item, wasMissing: !item.exists }));
+      const instructions = await setupInstructions(snapshot.wallet, setupAccounts);
+      const latest = await rpc.getLatestBlockhash({ commitment: 'confirmed', minContextSlot: BigInt(snapshot.slot) }).send();
+      const blockhash = latest?.value?.blockhash;
+      const lastValidBlockHeight = Number(latest?.value?.lastValidBlockHeight);
+      const latestSlot = asSlot(latest?.context?.slot);
+      if (latestSlot < snapshot.slot || typeof blockhash !== 'string'
+          || !Number.isSafeInteger(lastValidBlockHeight) || lastValidBlockHeight <= 0) {
+        fail('SOLANA_DATA_INVALID', 'Current setup blockhash evidence is invalid.');
+      }
+      const currentHeight = asBigInt(await rpc.getBlockHeight({ commitment: 'confirmed', minContextSlot: BigInt(latestSlot) }).send(), 'Current block height');
+      if (currentHeight > BigInt(lastValidBlockHeight)) fail('SOLANA_BLOCKHASH_EXPIRED', 'Current setup blockhash has expired.');
+      const compiled = compileTransaction(createUnsignedMessage(snapshot.wallet, blockhash, lastValidBlockHeight, instructions));
+      const signers = Object.keys(compiled.signatures);
+      if (signers.length !== 1 || signers[0] !== snapshot.wallet) fail('SOLANA_UNSUPPORTED_INSTRUCTION', 'Setup quote requires a non-wallet signer.');
+      const wire = decodeBase64(getBase64EncodedWireTransaction(compiled), MAX_TRANSACTION_BYTES);
+      if (wire.length > MAX_TRANSACTION_BYTES) fail('SOLANA_TRANSACTION_TOO_LARGE', 'Quoted setup transaction exceeds Solana packet size.');
+      const feeQuote = await rpc.getFeeForMessage(Buffer.from(compiled.messageBytes).toString('base64'), { commitment: 'confirmed' }).send();
+      feeQuoteSlot = asSlot(feeQuote?.context?.slot);
+      if (feeQuoteSlot < snapshot.slot || feeQuote?.value === null || feeQuote?.value === undefined) {
+        fail('SOLANA_COST_UNAVAILABLE', 'Exact account-setup fee quote is unavailable.');
+      }
+      feeLamports = asBigInt(feeQuote.value, 'Account-setup fee quote');
+      return makeQuoteResult(snapshot, missing.length, feeLamports, rentPerAccountLamports, rentLamports, feeQuoteSlot);
+    }
+    return makeQuoteResult(snapshot, 0, feeLamports, rentPerAccountLamports, 0n, feeQuoteSlot);
+  }
+
+  function makeQuoteResult(snapshot, missingCount, feeLamports, rentPerAccountLamports, rentLamports, feeQuoteSlot) {
+    const status = missingCount ? 'QUOTED' : 'READY';
+    const costEvidence = {
+      maxFeeLamports: feeLamports.toString(),
+      associatedAccountRentLamports: rentLamports.toString(),
+      actualQuotedFeeLamports: feeLamports.toString(),
+      walletLamports: snapshot.nativeBalanceLamports,
+      nativePriceUsdMicros: null,
+      usdcPriceUsdMicros: null,
+      nativePriceObservedAt: null,
+      usdcPriceObservedAt: null,
+      priceMaxAgeSeconds: null,
+      sourceSlot: snapshot.slot,
+      feeQuoteSlot,
+      rentPerAccountLamports: rentPerAccountLamports.toString(),
+      missingAccountCount: missingCount,
+    };
+    return {
+      schemaVersion: 1,
+      status,
+      wallet: snapshot.wallet,
+      chain: 'solana',
+      network: NETWORK,
+      observedAt: snapshot.observedAt,
+      slot: snapshot.slot,
+      expiresAt: new Date(Date.parse(snapshot.observedAt) + COST_PRICE_MAX_AGE_SECONDS * 1000).toISOString(),
+      nativeBalanceLamports: snapshot.nativeBalanceLamports,
+      accounts: snapshot.accounts.map(item => ({
+        address: item.address, mint: item.mint, owner: item.owner, tokenProgram: item.tokenProgram,
+        exists: item.exists, balanceBaseUnits: item.balanceBaseUnits,
+      })),
+      feeLamports: feeLamports.toString(),
+      rentLamports: rentLamports.toString(),
+      maxFeeLamports: feeLamports.toString(),
+      maxTotalCostUsdcBaseUnits: null,
+      costEvidence,
+      reasons: [],
+    };
+  }
+
+  function validateSetupQuote(quote, wallet, fresh) {
+    const stale = () => fail('SOLANA_SETUP_QUOTE_STALE', 'Retained account-setup quote is missing, stale, or inconsistent.');
+    const quoteKeys = [
+      'schemaVersion', 'status', 'wallet', 'chain', 'network', 'observedAt', 'slot', 'expiresAt',
+      'nativeBalanceLamports', 'accounts', 'feeLamports', 'rentLamports', 'maxFeeLamports',
+      'maxTotalCostUsdcBaseUnits', 'costEvidence', 'reasons', 'quoteId',
+    ];
+    const costKeys = [
+      'maxFeeLamports', 'associatedAccountRentLamports', 'actualQuotedFeeLamports', 'walletLamports',
+      'nativePriceUsdMicros', 'usdcPriceUsdMicros', 'nativePriceObservedAt', 'usdcPriceObservedAt',
+      'priceMaxAgeSeconds', 'sourceSlot', 'feeQuoteSlot', 'rentPerAccountLamports', 'missingAccountCount',
+    ];
+    const accountKeys = ['address', 'mint', 'owner', 'tokenProgram', 'exists', 'balanceBaseUnits'];
+    if (!exactKeys(quote, quoteKeys) || quote.schemaVersion !== 1 || quote.status !== 'QUOTED'
+        || quote.wallet !== wallet || quote.chain !== 'solana' || quote.network !== NETWORK
+        || typeof quote.quoteId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(quote.quoteId)
+        || !Number.isSafeInteger(quote.slot) || quote.slot <= 0
+        || typeof quote.observedAt !== 'string' || !Number.isFinite(Date.parse(quote.observedAt))
+        || new Date(quote.observedAt).toISOString() !== quote.observedAt
+        || typeof quote.expiresAt !== 'string' || !Number.isFinite(Date.parse(quote.expiresAt))
+        || new Date(quote.expiresAt).toISOString() !== quote.expiresAt
+        || Date.parse(quote.expiresAt) <= Date.parse(isoNow(now))
+        || !exactKeys(quote.costEvidence, costKeys) || !Array.isArray(quote.accounts) || quote.accounts.length !== 3
+        || quote.accounts.some(item => !exactKeys(item, accountKeys))
+        || !Array.isArray(quote.reasons) || quote.reasons.length !== 0
+        || quote.maxTotalCostUsdcBaseUnits !== null
+        || quote.costEvidence.nativePriceUsdMicros !== null || quote.costEvidence.usdcPriceUsdMicros !== null
+        || quote.costEvidence.nativePriceObservedAt !== null || quote.costEvidence.usdcPriceObservedAt !== null
+        || quote.costEvidence.priceMaxAgeSeconds !== null) stale();
+    if (Date.parse(quote.observedAt) > Date.parse(isoNow(now))
+        || quote.expiresAt !== new Date(Date.parse(quote.observedAt) + COST_PRICE_MAX_AGE_SECONDS * 1000).toISOString()) stale();
+    let fee;
+    let rent;
+    let rentPerAccount;
+    let walletLamports;
+    try {
+      fee = canonicalAmount(quote.feeLamports, 'Quoted setup fee');
+      rent = canonicalAmount(quote.rentLamports, 'Quoted setup rent');
+      rentPerAccount = canonicalAmount(quote.costEvidence.rentPerAccountLamports, 'Quoted per-account rent', { positive: true });
+      walletLamports = canonicalAmount(quote.nativeBalanceLamports, 'Quoted native balance');
+    } catch { stale(); }
+    const missingCount = quote.accounts.filter(item => item.exists === false).length;
+    if (missingCount === 0 || quote.maxFeeLamports !== fee.toString()
+        || quote.costEvidence.maxFeeLamports !== fee.toString()
+        || quote.costEvidence.actualQuotedFeeLamports !== fee.toString()
+        || quote.costEvidence.associatedAccountRentLamports !== rent.toString()
+        || quote.costEvidence.walletLamports !== walletLamports.toString()
+        || quote.costEvidence.missingAccountCount !== missingCount
+        || rent !== rentPerAccount * BigInt(missingCount)
+        || quote.costEvidence.sourceSlot !== quote.slot
+        || !Number.isSafeInteger(quote.costEvidence.feeQuoteSlot) || quote.costEvidence.feeQuoteSlot < quote.slot
+        || quote.slot > fresh.slot || fresh.status !== 'QUOTED'
+        || JSON.stringify(quote.accounts) !== JSON.stringify(fresh.accounts)
+        || quote.feeLamports !== fresh.feeLamports || quote.rentLamports !== fresh.rentLamports
+        || quote.maxFeeLamports !== fresh.maxFeeLamports
+        || quote.costEvidence.rentPerAccountLamports !== fresh.costEvidence.rentPerAccountLamports
+        || quote.costEvidence.missingAccountCount !== fresh.costEvidence.missingAccountCount) {
+      if (fresh.status === 'READY') fail('SOLANA_SETUP_ALREADY_READY', 'All canonical setup accounts are already ready.');
+      stale();
+    }
+  }
+
+  async function quoteAccountSetup({ wallet }) {
+    let owner;
+    try { owner = walletAddress(wallet); }
+    catch { return noDataAccountSetup(typeof wallet === 'string' ? wallet : '', ['INVALID_WALLET']); }
+    try {
+      const snapshot = await readAccountSetupSnapshot(owner);
+      return await makeAccountSetupQuote(snapshot);
+    } catch (error) {
+      return noDataAccountSetup(owner, [normalizeError(error).code]);
+    }
+  }
+
+  async function prepareAccountSetup({ wallet, quote }) {
+    try {
+      const owner = walletAddress(wallet);
+      if (quote?.status === 'READY') fail('SOLANA_SETUP_ALREADY_READY', 'All canonical setup accounts are already ready.');
+      if (!quote || quote.status !== 'QUOTED') fail('SOLANA_SETUP_QUOTE_STALE', 'A retained account-setup quote is required.');
+      if (quote.wallet !== owner || typeof quote.expiresAt !== 'string'
+          || !Number.isFinite(Date.parse(quote.expiresAt)) || Date.parse(quote.expiresAt) <= Date.parse(isoNow(now))) {
+        fail('SOLANA_SETUP_QUOTE_STALE', 'Retained account-setup quote is stale or belongs to another wallet.');
+      }
+      const snapshot = await readAccountSetupSnapshot(owner);
+      const freshQuote = await makeAccountSetupQuote(snapshot);
+      if (freshQuote.status === 'READY') fail('SOLANA_SETUP_ALREADY_READY', 'All canonical setup accounts are already ready.');
+      validateSetupQuote(quote, owner, freshQuote);
+      const accountSetupAccounts = freshQuote.accounts.map(item => ({
+        address: item.address,
+        mint: item.mint,
+        owner: item.owner,
+        tokenProgram: item.tokenProgram,
+        wasMissing: !item.exists,
+      }));
+      const instructions = await setupInstructions(owner, accountSetupAccounts);
+      const rentLamports = BigInt(freshQuote.rentLamports);
+      const feeLamports = BigInt(freshQuote.feeLamports);
+      return await finishPreparation({
+        snapshot: { ...snapshot, walletLamports: snapshot.nativeBalanceLamports },
+        wallet: owner, action: 'setup', reserveAddress: null, amount: 0n, amountUnit: 'usdc-base-units',
+        recipient: owner, instructions, sourceAccount: null, destinationAccount: null,
+        sourceAddress: null, destinationAddress: null, maxFeeLamports: feeLamports, rentLamports,
+        priceEvidence: null, maxEvidenceAgeSeconds: COST_PRICE_MAX_AGE_SECONDS,
+        expectedSetupFeeLamports: feeLamports, setupQuoteExpiresAt: quote.expiresAt,
+        accountSetup: { quoteId: quote.quoteId, accounts: accountSetupAccounts },
+        rentPerAccountLamports: BigInt(freshQuote.costEvidence.rentPerAccountLamports),
+      });
+    } catch (error) {
+      throw normalizeError(error);
+    }
   }
 
   function receiptAmount(reserve, receiptBaseUnits) {
@@ -1000,18 +1440,28 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
     try { owner = walletAddress(wallet); }
     catch { return noDataPortfolio(typeof wallet === 'string' ? wallet : '', capturedAt, ['INVALID_WALLET']); }
     const result = noDataPortfolio(owner, capturedAt, []);
+    let setupObservation = null;
     try {
       const snapshot = await readCurrent(owner, { allowMissingWalletAccounts: true });
+      const accountSets = supportedReserves.map(config => snapshot.walletTokenAccounts.get(config.reserveAddress));
+      if (accountSets.some(accounts => !accounts || accounts.usdc === undefined || accounts.receipt === undefined)) {
+        fail('SOLANA_TOKEN_ACCOUNT_UNAVAILABLE', 'Wallet token-account evidence is incomplete.');
+      }
+      setupObservation = {
+        ready: accountSets.every(accounts => accounts.usdc !== null && accounts.receipt !== null),
+        observedAt: snapshot.observedAt,
+        slot: snapshot.slot,
+      };
       const prices = priceEvidence(snapshot, COST_PRICE_MAX_AGE_SECONDS);
-      if (snapshot.walletLamports === null) fail('SOLANA_DATA_UNAVAILABLE', 'Wallet native balance account is absent.');
       const cashAccount = snapshot.walletTokenAccounts.get(supportedReserves[0].reserveAddress)?.usdc;
-      if (!cashAccount) fail('SOLANA_TOKEN_ACCOUNT_UNAVAILABLE', 'Wallet native USDC associated token account is absent.');
+      if (cashAccount === undefined) fail('SOLANA_TOKEN_ACCOUNT_UNAVAILABLE', 'Wallet native USDC associated token evidence is unavailable.');
       const positions = [];
       for (const config of supportedReserves) {
         const accounts = snapshot.walletTokenAccounts.get(config.reserveAddress);
         const reserve = snapshot.kaminoReserves.get(config.reserveAddress);
-        if (!accounts?.receipt || !reserve) fail('SOLANA_TOKEN_ACCOUNT_UNAVAILABLE', 'Wallet Kamino receipt account is absent.');
-        const converted = receiptAmount(reserve, accounts.receipt.amount);
+        if (!accounts || accounts.receipt === undefined || !reserve) fail('SOLANA_TOKEN_ACCOUNT_UNAVAILABLE', 'Wallet Kamino receipt account evidence is unavailable.');
+        const receiptBaseUnits = accounts.receipt?.amount ?? 0n;
+        const converted = receiptAmount(reserve, receiptBaseUnits);
         const apy = reserve.totalSupplyAPY(snapshot.ledgerInstant);
         if (!Number.isFinite(apy) || apy < 0 || apy * 10_000 > Number.MAX_SAFE_INTEGER) fail('SOLANA_DATA_INVALID', 'Current Kamino supply rate is unavailable.');
         const lastUpdateSlot = asBigInt(reserve.state.lastUpdate.slot, 'Reserve last-update slot');
@@ -1020,7 +1470,7 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
           marketAddress: config.marketAddress,
           receiptMint: snapshot.receiptMints.get(config.reserveAddress),
           receiptDecimals: snapshot.receiptMintInfo.get(config.reserveAddress).decimals,
-          receiptBaseUnits: accounts.receipt.amount.toString(),
+          receiptBaseUnits: receiptBaseUnits.toString(),
           usdcValueBaseUnits: converted.usdcValueBaseUnits,
           redeemableBaseUnits: converted.redeemableBaseUnits,
           availableLiquidityBaseUnits: reserve.state.liquidity.totalAvailableAmount.toString(),
@@ -1037,7 +1487,10 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
       return {
         schemaVersion: 1, chain: 'solana', network: NETWORK, wallet: owner, status: 'OBSERVED',
         capturedAt: snapshot.capturedAt, observedAt: snapshot.observedAt, slot: snapshot.slot,
-        nativeLamports: snapshot.walletLamports, cashBaseUnits: cashAccount.amount.toString(), positions,
+        nativeLamports: snapshot.walletLamports ?? '0', cashBaseUnits: (cashAccount?.amount ?? 0n).toString(),
+        accountSetupReady: setupObservation.ready,
+        accountSetupObservedAt: setupObservation.observedAt,
+        accountSetupSlot: setupObservation.slot,
         nativePriceUsdMicros: prices.nativePriceUsdMicros,
         usdcPriceUsdMicros: prices.usdcPriceUsdMicros,
         nativePriceObservedAt: prices.nativePriceObservedAt,
@@ -1049,9 +1502,24 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
         usdcPriceAgeSeconds: usdcAge,
         nativePriceSlot: snapshot.slot,
         usdcPriceSlot: snapshot.slot,
-        issues: ['REDEEMABILITY_IS_AN_ESTIMATE; SIMULATION_REQUIRED'],
+        positions,
+        issues: [],
+        warnings: ['REDEEMABILITY_IS_AN_ESTIMATE; SIMULATION_REQUIRED'],
       };
     } catch (error) {
+      if (setupObservation === null) {
+        try {
+          const setupSnapshot = await readAccountSetupSnapshot(owner);
+          setupObservation = {
+            ready: setupSnapshot.accounts.every(account => account.exists),
+            observedAt: setupSnapshot.observedAt,
+            slot: setupSnapshot.slot,
+          };
+        } catch {}
+      }
+      result.accountSetupReady = setupObservation?.ready ?? null;
+      result.accountSetupObservedAt = setupObservation?.observedAt ?? null;
+      result.accountSetupSlot = setupObservation?.slot ?? null;
       result.issues = [normalizeError(error).code];
       return result;
     }
@@ -1281,8 +1749,77 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
     return height > BigInt(prepared.lastValidBlockHeight);
   }
 
+  async function refreshPreparedSetupIdentity(prepared) {
+    const snapshot = await readAccountSetupSnapshot(prepared.wallet);
+    const saved = prepared.accountSetup.accounts;
+    for (let index = 0; index < saved.length; index += 1) {
+      const expected = saved[index];
+      const current = snapshot.accounts[index];
+      const expectedReserve = index === 0 ? null : DEFAULT_LENDING_RESERVES[index - 1].reserveAddress;
+      if (current.address !== expected.address || current.mint !== expected.mint
+          || current.owner !== expected.owner || current.tokenProgram !== expected.tokenProgram
+          || current.reserveAddress !== expectedReserve || (!expected.wasMissing && !current.exists)) {
+        fail('SOLANA_SETUP_QUOTE_STALE', 'Canonical setup account identity changed after preparation.');
+      }
+    }
+    if (snapshot.accounts.every(item => item.exists)) fail('SOLANA_SETUP_ALREADY_READY', 'All canonical setup accounts are already ready.');
+  }
+
+  async function verifySetupReceiptAccounts(prepared, receiptSlot) {
+    const setupAccounts = prepared.accountSetup.accounts;
+    const reserveAddresses = DEFAULT_LENDING_RESERVES.map(item => item.reserveAddress);
+    const addresses = stableAddressList([
+      ...reserveAddresses, ...setupAccounts.map(item => item.mint), ...setupAccounts.map(item => item.address),
+    ]);
+    const response = await rpc.getMultipleAccounts(addresses, {
+      commitment: 'finalized', encoding: 'base64', minContextSlot: BigInt(receiptSlot),
+    }).send();
+    const accounts = mapAccounts(addresses, response);
+    const slot = asSlot(response.context?.slot);
+    if (slot < receiptSlot) fail('SOLANA_DATA_INVALID', 'Post-setup account context predates the finalized receipt.');
+    verifyMint(accounts.get(USDC_MINT), USDC_MINT, 6);
+    const reserves = new Map();
+    for (const config of DEFAULT_LENDING_RESERVES) {
+      const state = Reserve.decode(readAccountBytes(accounts.get(config.reserveAddress), PROGRAM_ID.toString(), Reserve.layout.span + 8));
+      ensureFloatRate(state, config.marketAddress, USDC_MINT, 'Reviewed USDC');
+      if (state.liquidity.mintDecimals.toString() !== '6' || state.liquidity.tokenProgram !== TOKEN_PROGRAM_ADDRESS.toString()) {
+        fail('SOLANA_IDENTITY_MISMATCH', 'Post-setup reviewed reserve token identity is invalid.');
+      }
+      verifyMint(accounts.get(state.collateral.mintPubkey), state.collateral.mintPubkey, 6, BigInt(state.collateral.mintTotalSupply.toString()));
+      reserves.set(config.reserveAddress, state);
+    }
+    const verifiedAccounts = [];
+    for (let index = 0; index < setupAccounts.length; index += 1) {
+      const item = setupAccounts[index];
+      if (canonicalAssociatedTokenAddress(item.owner, item.mint) !== item.address
+          || item.owner !== prepared.wallet || item.tokenProgram !== TOKEN_PROGRAM_ADDRESS.toString()) {
+        fail('SOLANA_IDENTITY_MISMATCH', 'Post-setup account is not the canonical owner ATA.');
+      }
+      if (index === 0) {
+        if (item.mint !== USDC_MINT) fail('SOLANA_IDENTITY_MISMATCH', 'Post-setup native USDC account mint changed.');
+      } else {
+        const reserveAddress = DEFAULT_LENDING_RESERVES[index - 1].reserveAddress;
+        if (reserves.get(reserveAddress)?.collateral.mintPubkey !== item.mint) {
+          fail('SOLANA_IDENTITY_MISMATCH', 'Post-setup receipt account no longer matches its reviewed reserve.');
+        }
+      }
+      const token = tokenAccount(accounts.get(item.address), item.mint, prepared.wallet);
+      verifiedAccounts.push({
+        address: item.address, mint: item.mint, owner: item.owner, tokenProgram: item.tokenProgram,
+        exists: true, balanceBaseUnits: token.amount.toString(),
+      });
+    }
+    return {
+      quoteId: prepared.accountSetup.quoteId,
+      accounts: verifiedAccounts,
+      slot,
+      observedAt: isoNow(now),
+    };
+  }
+
   async function verifySigned({ prepared, signedTransactionBase64 }) {
     const signed = decodeSignedTransaction(prepared, signedTransactionBase64);
+    if (prepared.action === 'setup') await refreshPreparedSetupIdentity(prepared);
     if (Date.parse(prepared.expiresAt) <= Date.parse(isoNow(now)) || await isExpired({ prepared })) {
       fail('SOLANA_BLOCKHASH_EXPIRED', 'Prepared transaction evidence or blockhash has expired.');
     }
@@ -1291,6 +1828,7 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
 
   async function submit({ prepared, signedTransactionBase64 }) {
     const signed = decodeSignedTransaction(prepared, signedTransactionBase64);
+    if (prepared.action === 'setup') await refreshPreparedSetupIdentity(prepared);
     if (Date.parse(prepared.expiresAt) <= Date.parse(isoNow(now)) || await isExpired({ prepared })) {
       fail('SOLANA_BLOCKHASH_EXPIRED', 'Prepared transaction evidence or blockhash has expired.');
     }
@@ -1314,12 +1852,31 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
 
   async function reconcile({ prepared, signature }) {
     const result = { status: 'UNVERIFIED', signature, slot: null, amounts: null, reason: null };
+    let setupAccountEvidence = null;
     try {
       if (typeof signature !== 'string' || !BASE58_SIGNATURE_RE.test(signature)) fail('SOLANA_RECEIPT_MISMATCH', 'Transaction signature format is invalid.');
-      if (!prepared || prepared.schemaVersion !== 1 || prepared.chain !== 'solana' || prepared.network !== NETWORK
+      if (!prepared || !['supply', 'redeem', 'fee', 'setup'].includes(prepared.action)
+          || prepared.schemaVersion !== 1 || prepared.chain !== 'solana' || prepared.network !== NETWORK
           || prepared.source?.adapterVersion !== ADAPTER_VERSION || prepared.source?.programId !== PROGRAM_ID.toString()
-          || !SHA256_RE.test(prepared.messageSha256) || !Number.isSafeInteger(prepared.lastValidBlockHeight)) {
+          || !Number.isSafeInteger(prepared.source?.slot) || prepared.source.slot <= 0
+          || !SHA256_RE.test(prepared.messageSha256) || !Number.isSafeInteger(prepared.lastValidBlockHeight)
+          || prepared.lastValidBlockHeight <= 0) {
         fail('INVALID_PREPARED_ACTION', 'Prepared transaction evidence is invalid.');
+      }
+      if (prepared.action === 'setup') {
+        let unsigned;
+        try { unsigned = VersionedTransaction.deserialize(canonicalTransaction(prepared.transactionBase64)); }
+        catch { fail('INVALID_PREPARED_ACTION', 'Prepared setup transaction encoding is invalid.'); }
+        validatePreparedAccountSetup(prepared, unsigned);
+        const unsignedMessage = Buffer.from(unsigned.message.serialize());
+        if (unsigned.message.version !== 0 || unsigned.message.addressTableLookups.length !== 0
+            || unsigned.message.header.numRequiredSignatures !== 1 || unsigned.signatures.length !== 1
+            || !unsigned.signatures[0].every(byte => byte === 0)
+            || unsigned.message.staticAccountKeys[0]?.toBase58() !== prepared.wallet
+            || unsigned.message.recentBlockhash !== prepared.blockhash
+            || sha256(unsignedMessage) !== prepared.messageSha256) {
+          fail('INVALID_PREPARED_ACTION', 'Prepared setup message does not match its exact owner proof.');
+        }
       }
       await assertMainnet();
       const receipt = await rpc.getTransaction(signature, { encoding: 'base64', commitment: 'finalized', maxSupportedTransactionVersion: 0 }).send();
@@ -1346,6 +1903,10 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
           result.reason = 'Finalized transaction failed and token effects were rolled back, but exact network fee evidence is unavailable.';
           return result;
         }
+        if (prepared.action === 'setup' && (failedFee > BigInt(prepared.costEvidence.maxFeeLamports)
+          || walletLamportDebit(prepared.wallet, signed.transaction, meta) !== failedFee)) {
+          fail('SOLANA_RECEIPT_MISMATCH', 'Finalized failed setup native effects do not match its bounded network fee.');
+        }
         const cost = receiptCost(prepared, receipt, failedFee, 0n);
         result.amounts = {
           usdcDebitBaseUnits: '0', usdcCreditBaseUnits: '0', receiptDebitBaseUnits: '0', receiptCreditBaseUnits: '0',
@@ -1363,18 +1924,25 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
         if (recipientCredit !== BigInt(prepared.amountBaseUnits)) fail('SOLANA_RECEIPT_MISMATCH', 'Finalized fee recipient credit differs from the exact transfer amount.');
       }
       validateFinalEffects(prepared, effects);
+      if (prepared.action === 'setup') setupAccountEvidence = await verifySetupReceiptAccounts(prepared, result.slot);
       const nativeDebit = walletLamportDebit(prepared.wallet, signed.transaction, meta);
       if (nativeDebit < fee) fail('SOLANA_RECEIPT_MISMATCH', 'Finalized wallet balance delta is smaller than the network fee.');
       const rent = nativeDebit - fee;
-      if (rent !== BigInt(prepared.rentLamports) || fee > BigInt(prepared.costEvidence.maxFeeLamports)) {
-        fail('SOLANA_RECEIPT_MISMATCH', 'Finalized fee or rent exceeds prepared cost evidence.');
+      const rentWithinQuote = prepared.action === 'setup'
+        ? rent <= BigInt(prepared.rentLamports) && rent === setupRentCredit(prepared, signed.transaction, meta)
+        : rent === BigInt(prepared.rentLamports);
+      if (!rentWithinQuote || fee > BigInt(prepared.costEvidence.maxFeeLamports)) {
+        fail('SOLANA_RECEIPT_MISMATCH', 'Finalized fee or actual rent exceeds prepared cost evidence.');
       }
       const cost = receiptCost(prepared, receipt, fee, rent);
       result.status = 'CONFIRMED';
+      if (prepared.action === 'setup') result.accountSetup = setupAccountEvidence;
       result.amounts = { ...effects, feeLamports: fee.toString(), rentLamports: rent.toString(), costUsdcBaseUnits: cost };
-      result.reason = cost === null
-        ? 'Exact finalized transaction and owner-local token effects verified; native cost valuation is unavailable.'
-        : 'Exact finalized transaction, owner-local token effects, and actual native costs verified.';
+      result.reason = prepared.action === 'setup'
+        ? 'Exact finalized setup message, zero transaction-local token principal, actual native costs within quote, and valid canonical accounts verified.'
+        : cost === null
+          ? 'Exact finalized transaction and owner-local token effects verified; native cost valuation is unavailable.'
+          : 'Exact finalized transaction, owner-local token effects, and actual native costs verified.';
       return result;
     } catch (error) {
       result.status = 'UNVERIFIED';
@@ -1384,7 +1952,7 @@ export function createSolanaLendingAdapter({ rpcUrl, reserves = DEFAULT_LENDING_
     }
   }
 
-  return Object.freeze({ capture, prepare, prepareFeeTransfer, verifySigned, submit, reconcile, policyRules, isExpired });
+  return Object.freeze({ capture, quoteAccountSetup, prepareAccountSetup, prepare, prepareFeeTransfer, verifySigned, submit, reconcile, policyRules, isExpired });
 }
 
 
@@ -1411,6 +1979,22 @@ function tokenBalanceDelta(meta, transaction, account, mint, owner, allowMissing
 }
 
 function ownerTokenDeltas(prepared, transaction, meta) {
+  if (prepared.action === 'setup') {
+    for (const account of prepared.accountSetup.accounts) {
+      const accountIndex = transaction.message.staticAccountKeys.findIndex(key => key.toBase58() === account.address);
+      if (accountIndex < 0) {
+        if (account.wasMissing) fail('SOLANA_RECEIPT_MISMATCH', 'Missing setup ATA is absent from the finalized transaction.');
+        continue;
+      }
+      const before = tokenBalance(meta.preTokenBalances, transaction, account.address, account.mint, prepared.wallet, account.wasMissing);
+      const after = tokenBalance(meta.postTokenBalances, transaction, account.address, account.mint, prepared.wallet);
+      if (after !== before) fail('SOLANA_RECEIPT_MISMATCH', 'Account setup changed transaction-local token principal.');
+    }
+    return {
+      usdcDebitBaseUnits: '0', usdcCreditBaseUnits: '0',
+      receiptDebitBaseUnits: '0', receiptCreditBaseUnits: '0',
+    };
+  }
   const usdcAccount = prepared.action === 'supply' ? prepared.sourceTokenAccount
     : prepared.action === 'redeem' ? prepared.destinationTokenAccount : prepared.sourceTokenAccount;
   const usdcDelta = tokenBalanceDelta(meta, transaction, usdcAccount, USDC_MINT, prepared.wallet);
@@ -1426,6 +2010,13 @@ function ownerTokenDeltas(prepared, transaction, meta) {
 }
 
 function validateFinalEffects(prepared, effects) {
+  if (prepared.action === 'setup') {
+    if (effects.usdcDebitBaseUnits !== '0' || effects.usdcCreditBaseUnits !== '0'
+        || effects.receiptDebitBaseUnits !== '0' || effects.receiptCreditBaseUnits !== '0') {
+      fail('SOLANA_RECEIPT_MISMATCH', 'Finalized account setup token-principal effects are nonzero.');
+    }
+    return;
+  }
   const amount = BigInt(prepared.amountBaseUnits);
   if (prepared.action === 'supply') {
     if (effects.usdcDebitBaseUnits !== amount.toString() || effects.usdcCreditBaseUnits !== '0'
@@ -1455,6 +2046,28 @@ function walletLamportDebit(wallet, transaction, meta) {
   return before - after;
 }
 
+function setupRentCredit(prepared, transaction, meta) {
+  if (!Array.isArray(meta.preBalances) || !Array.isArray(meta.postBalances)
+      || meta.preBalances.length !== meta.postBalances.length) {
+    fail('SOLANA_RECEIPT_UNVERIFIED', 'Finalized setup lamport effects are unavailable.');
+  }
+  const perAccountQuote = canonicalAmount(prepared.costEvidence.rentPerAccountLamports, 'Quoted setup account rent');
+  let total = 0n;
+  for (const account of prepared.accountSetup.accounts) {
+    if (!account.wasMissing) continue;
+    const index = transaction.message.staticAccountKeys.findIndex(key => key.toBase58() === account.address);
+    if (index < 0 || index >= meta.preBalances.length) fail('SOLANA_RECEIPT_MISMATCH', 'Quoted setup ATA is absent from finalized native balances.');
+    const before = asBigInt(meta.preBalances[index], 'Setup ATA pre-transaction lamports');
+    const after = asBigInt(meta.postBalances[index], 'Setup ATA post-transaction lamports');
+    if (after < before || after - before > perAccountQuote) {
+      fail('SOLANA_RECEIPT_MISMATCH', 'Actual setup rent exceeds its per-account quote.');
+    }
+    total += after - before;
+  }
+  if (total > BigInt(prepared.rentLamports)) fail('SOLANA_RECEIPT_MISMATCH', 'Actual setup rent exceeds its retained quote.');
+  return total;
+}
+
 function receiptCost(prepared, receipt, fee, rent) {
   if (!prepared.nativePriceUsdMicros || !prepared.usdcPriceUsdMicros
       || !prepared.nativePriceObservedAt || !prepared.usdcPriceObservedAt
@@ -1472,9 +2085,19 @@ function noDataPortfolio(wallet, capturedAt, issues) {
   return {
     schemaVersion: 1, chain: 'solana', network: NETWORK, wallet, status: 'NO_DATA', capturedAt,
     observedAt: null, slot: null, nativeLamports: null, cashBaseUnits: null, positions: [], issues,
+    accountSetupReady: null, accountSetupObservedAt: null, accountSetupSlot: null,
     nativePriceUsdMicros: null, usdcPriceUsdMicros: null,
     nativePriceObservedAt: null, usdcPriceObservedAt: null,
     associatedAccountRentLamports: null,
+  };
+}
+
+function noDataAccountSetup(wallet, reasons) {
+  return {
+    schemaVersion: 1, status: 'NO_DATA', wallet, chain: 'solana', network: NETWORK,
+    observedAt: null, slot: null, expiresAt: null, nativeBalanceLamports: null, accounts: [],
+    feeLamports: null, rentLamports: null, maxFeeLamports: null, maxTotalCostUsdcBaseUnits: null,
+    costEvidence: null, reasons: reasons.slice(0, 32),
   };
 }
 

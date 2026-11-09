@@ -87,3 +87,14 @@ test('V217/V223: mandate accepts only supported reserves, finite budget and disc
     assert.throws(() => validateBotMandate({ ...mandate(), ...patch }, options), error => error.code === 'INVALID_INPUT');
   }
 });
+
+test('V222: a profitable stablecoin proposal stays on HOLD without native network-fee funds', () => {
+  const unfunded = portfolio();
+  unfunded.nativeLamports = '0';
+  const held = choose(unfunded);
+  assert.equal(held.status, 'HOLD');
+  assert.equal(held.action, null);
+  const funded = choose(portfolio());
+  assert.equal(funded.status, 'REVIEW');
+  assert.equal(funded.action.action, 'supply');
+});

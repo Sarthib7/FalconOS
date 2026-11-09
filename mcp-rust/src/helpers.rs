@@ -590,6 +590,10 @@ pub(super) fn lending_bot_public_response(
             .any(|field| normalized_eq(name, field))
             || normalized_starts_with(name, "provider")
             || normalized_eq(name, "identity")
+            || normalized_eq(name, "setupquote")
+            || normalized_eq(name, "setupcosts")
+            || normalized_eq(name, "nativelamports")
+            || (!allow_unsigned_transaction && normalized_eq(name, "associatedaccountrentlamports"))
             || ["email", "emailaddress", "phonenumber"]
                 .iter()
                 .any(|field| normalized_eq(name, field))

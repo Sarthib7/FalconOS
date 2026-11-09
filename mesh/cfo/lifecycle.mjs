@@ -5,7 +5,7 @@ import { canonicalBytes, sha256, stableStringify } from '../council/evidence.ts'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const OWNER = /^wallet_[0-9a-f]{56}$/;
-const KINDS = new Set(['wallet', 'mandate', 'delegation', 'portfolio', 'runner', 'action', 'accounting', 'review']);
+const KINDS = new Set(['wallet', 'mandate', 'delegation', 'portfolio', 'runner', 'action', 'accounting', 'review', 'setup-quote', 'setup-cost']);
 const TERMINAL = new Set(['CONFIRMED', 'FAILED', 'REFUNDED']);
 const PRIVATE_KEYS = new Set(['accesstoken', 'appsecret', 'authorizationprivatekey', 'privatekey', 'seedphrase', 'userjwt']);
 const MAX_BYTES = 192 * 1024;
