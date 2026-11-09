@@ -21,6 +21,8 @@ const {
   formatBaseUnits,
   parseTokenAmount,
   performIdentityBoundOwnerSdkAction,
+  performIdentityBoundSetupRequest,
+  setupNativeDeficitLamports,
 } = lending;
 const { matchesFalconWalletSession, performSelectedWalletAction } = embeddedWallet;
 after(() => vite.close());
@@ -61,6 +63,165 @@ const configuration = () => ({
     { reserveAddress: 'Reserve22222222222222222222222222222222' },
   ],
 });
+
+const SETUP_WALLET = 'Wallet11111111111111111111111111111111';
+const SETUP_QUOTE_ID = '22222222-2222-4222-8222-222222222222';
+
+function setupQuote({
+  status = 'QUOTED',
+  quoteId = SETUP_QUOTE_ID,
+  wallet = SETUP_WALLET,
+  nativeBalanceLamports = '10000000',
+  observedAt = '2026-11-09T00:00:00.000Z',
+  slot = 200,
+  expiresAt = '2026-11-09T01:00:00.000Z',
+  accounts = null,
+} = {}) {
+  const quoteAccounts = accounts ?? Array.from({ length: 3 }, (_, index) => ({
+    address: `TokenAccount${index + 1}`,
+    mint: `TokenMint${index + 1}`,
+    owner: wallet,
+    tokenProgram: 'TokenProgram',
+    exists: status === 'READY',
+    balanceBaseUnits: '0',
+  }));
+  const missingAccountCount = quoteAccounts.filter(account => !account.exists).length;
+  const feeLamports = missingAccountCount ? '5000' : '0';
+  const rentPerAccountLamports = missingAccountCount ? '2000000' : '0';
+  const rentLamports = (BigInt(rentPerAccountLamports) * BigInt(missingAccountCount)).toString();
+  return {
+    schemaVersion: 1,
+    status,
+    quoteId,
+    wallet,
+    chain: 'solana',
+    network: 'mainnet-beta',
+    observedAt,
+    slot,
+    expiresAt,
+    nativeBalanceLamports,
+    accounts: quoteAccounts,
+    feeLamports,
+    rentLamports,
+    maxFeeLamports: feeLamports,
+    maxTotalCostUsdcBaseUnits: null,
+    costEvidence: {
+      maxFeeLamports: feeLamports,
+      associatedAccountRentLamports: rentLamports,
+      actualQuotedFeeLamports: feeLamports,
+      walletLamports: nativeBalanceLamports,
+      nativePriceUsdMicros: null,
+      usdcPriceUsdMicros: null,
+      nativePriceObservedAt: null,
+      usdcPriceObservedAt: null,
+      priceMaxAgeSeconds: null,
+      sourceSlot: slot,
+      feeQuoteSlot: missingAccountCount ? slot + 1 : null,
+      rentPerAccountLamports,
+      missingAccountCount,
+    },
+    reasons: [],
+  };
+}
+
+function setupOverview(quote = setupQuote()) {
+  return {
+    status: 'SETUP_REQUIRED',
+    configuration: { walletProviderConfigured: true, executionEnabled: false, feeRecipient: null, feeBps: null, availableReserves: [], issues: [] },
+    walletLink: { walletAddress: SETUP_WALLET, providerWalletId: 'provider-wallet' },
+    mandate: null,
+    delegation: null,
+    portfolio: null,
+    runner: { state: 'STOPPED' },
+    actions: [],
+    accounting: {},
+    setupQuote: quote,
+    setupStatus: quote?.status === 'READY' ? 'READY' : quote?.status === 'QUOTED' ? 'REQUIRED' : quote?.status === 'NO_DATA' ? 'UNAVAILABLE' : 'NOT_OBSERVED',
+    setupObservedAt: quote?.observedAt ?? null,
+    setupIssues: quote?.reasons ?? [],
+    issues: [],
+  };
+}
+
+function setupContext(quote = setupQuote(), overrides = {}) {
+  const overview = setupOverview(quote);
+  return {
+    overview,
+    sessionToken: 'verified-falcon-session',
+    sessionWallet: SETUP_WALLET,
+    walletAddress: SETUP_WALLET,
+    walletAuthenticated: true,
+    walletReady: true,
+    setupQuoteId: quote?.quoteId ?? null,
+    now: Date.parse('2026-11-09T00:30:00.000Z'),
+    signTransaction() {},
+    ...overrides,
+  };
+}
+
+function setupOwnerAction(quote, preparedOverrides = {}) {
+  const sourceSlot = quote.slot + 1;
+  const prepared = {
+    schemaVersion: 1,
+    chain: 'solana',
+    network: 'mainnet-beta',
+    wallet: quote.wallet,
+    action: 'setup',
+    reserveAddress: null,
+    amountBaseUnits: '0',
+    amountUnit: 'usdc-base-units',
+    recipient: quote.wallet,
+    transactionBase64: 'AQID',
+    messageSha256: 'a'.repeat(64),
+    signature: null,
+    blockhash: 'setup-blockhash',
+    lastValidBlockHeight: 1000,
+    observedAt: '2026-11-09T00:01:00.000Z',
+    expiresAt: quote.expiresAt,
+    feeLamports: quote.feeLamports,
+    rentLamports: quote.rentLamports,
+    associatedAccountRentLamports: quote.rentLamports,
+    sourceTokenAccount: null,
+    destinationTokenAccount: null,
+    receiptMint: null,
+    feeRecipient: null,
+    expectedEffects: {
+      usdcDebitBaseUnits: '0',
+      usdcCreditBaseUnits: '0',
+      receiptDebitBaseUnits: '0',
+      receiptCreditBaseUnits: '0',
+    },
+    source: { slot: sourceSlot, programId: 'AssociatedTokenProgram', adapterVersion: '1.0.0' },
+    maxTotalCostUsdcBaseUnits: null,
+    nativePriceUsdMicros: null,
+    usdcPriceUsdMicros: null,
+    costEvidence: {
+      maxFeeLamports: quote.maxFeeLamports,
+      associatedAccountRentLamports: quote.rentLamports,
+      actualQuotedFeeLamports: quote.feeLamports,
+      walletLamports: quote.nativeBalanceLamports,
+      nativePriceUsdMicros: null,
+      usdcPriceUsdMicros: null,
+      nativePriceObservedAt: null,
+      usdcPriceObservedAt: null,
+      priceMaxAgeSeconds: null,
+      sourceSlot,
+      feeQuoteSlot: sourceSlot + 1,
+      rentPerAccountLamports: quote.costEvidence.rentPerAccountLamports,
+    },
+    accountSetup: {
+      quoteId: quote.quoteId,
+      accounts: quote.accounts.map(account => ({
+        address: account.address,
+        mint: account.mint,
+        owner: account.owner,
+        tokenProgram: account.tokenProgram,
+        wasMissing: !account.exists,
+      })),
+    },
+  };
+  return { actionId: '33333333-3333-4333-8333-333333333333', prepared: { ...prepared, ...preparedOverrides } };
+}
 
 test('exact token amount parsing preserves large values and precision boundaries', () => {
   assert.equal(parseTokenAmount('0', 6), '0');
@@ -202,6 +363,7 @@ test('V226 an owner credential cannot reach the Mesh request transport', () => {
   assert.equal(calls.length, 0);
 });
 
+
 test('V226 owner capability gates require wallet actions, not an owner credential', () => {
   const walletAddress = 'Wallet11111111111111111111111111111111';
   const base = {
@@ -241,6 +403,10 @@ test('lending operation gates bind actions to the linked wallet and keep owner w
     portfolio: { status: 'OBSERVED', capturedAt: '2026-11-08T00:00:00.000Z', positions: [{ reserveAddress: 'Reserve11111111111111111111111111111111', redeemableBaseUnits: '1000', receiptDecimals: 6 }] },
     runner: { state: 'PAUSED' },
     accounting: { earnedFeeBaseUnits: '0' },
+    setupQuote: setupQuote({ status: 'READY', observedAt: '2026-11-08T00:00:00.000Z', expiresAt: '2026-11-08T01:00:00.000Z' }),
+    setupStatus: 'READY',
+    setupObservedAt: '2026-11-08T00:00:00.000Z',
+    setupIssues: [],
   };
   const context = {
     overview,
@@ -310,4 +476,181 @@ test('all-signer revocation requires the reviewed dedicated-wallet scope and exp
     revocationConfirmed: true,
     revocationPreview: { ...base.revocationPreview, walletAddress: 'Wallet22222222222222222222222222222222' },
   }), false);
+});
+
+test('V227 setup SOL shortfall uses exact BigInt lamports and leaves missing evidence unavailable', () => {
+  assert.equal(setupNativeDeficitLamports({
+    status: 'QUOTED',
+    nativeBalanceLamports: '9007199254740993',
+    feeLamports: '9007199254740990',
+    rentLamports: '4',
+  }), '1');
+  assert.equal(setupNativeDeficitLamports({
+    status: 'QUOTED',
+    nativeBalanceLamports: '9007199254740994',
+    feeLamports: '9007199254740990',
+    rentLamports: '4',
+  }), '0');
+  assert.equal(setupNativeDeficitLamports({
+    status: 'NO_DATA',
+    nativeBalanceLamports: null,
+    feeLamports: null,
+    rentLamports: null,
+  }), null);
+  const noActionReady = setupQuote({ status: 'READY', nativeBalanceLamports: null, expiresAt: null });
+  assert.equal(setupNativeDeficitLamports(noActionReady), null);
+  assert.equal(canPerformLendingOperation('capture', setupContext(noActionReady)), true);
+});
+
+test('V228/V229 finalized READY permits an unknown native balance and zero new cost, but not a new expense', () => {
+  const quote = setupQuote({ status: 'READY', nativeBalanceLamports: null, expiresAt: null });
+  quote.costEvidence = null;
+  quote.maxTotalCostUsdcBaseUnits = '0';
+  const context = setupContext(quote);
+  assert.equal(canPerformLendingOperation('capture', context), true);
+  assert.equal(canPerformLendingOperation('prepare-account-setup', context), false);
+  assert.equal(canPerformLendingOperation('capture', {
+    ...context, overview: { ...context.overview, setupQuote: { ...quote, maxTotalCostUsdcBaseUnits: '1' } },
+  }), false);
+  assert.equal(canPerformLendingOperation('capture', {
+    ...context, overview: { ...context.overview, actions: [{ action: 'setup', status: 'SUBMISSION_UNKNOWN' }] },
+  }), false);
+});
+
+test('V227/V228 setup quote remains explicit and preparation is independent of mandate, fees, and runner execution', () => {
+  const unobserved = setupContext(null);
+  assert.equal(canPerformLendingOperation('quote-account-setup', unobserved), true);
+
+  const quote = setupQuote();
+  const context = setupContext(quote);
+  assert.equal(canPerformLendingOperation('prepare-account-setup', context), true);
+  assert.equal(context.overview.mandate, null);
+  assert.equal(context.overview.configuration.executionEnabled, false);
+  assert.equal(context.overview.configuration.feeRecipient, null);
+  assert.equal(context.overview.configuration.feeBps, null);
+  const unconfiguredProvider = setupContext(null);
+  unconfiguredProvider.overview = {
+    ...unconfiguredProvider.overview,
+    configuration: { ...unconfiguredProvider.overview.configuration, walletProviderConfigured: false },
+  };
+  assert.equal(canPerformLendingOperation('quote-account-setup', unconfiguredProvider), false);
+  assert.equal(canPerformLendingOperation('prepare-account-setup', { ...context, signTransaction: null }), false);
+
+  assert.equal(canPerformLendingOperation('prepare-account-setup', setupContext(
+    setupQuote({ nativeBalanceLamports: '6004999' }),
+  )), false);
+  assert.equal(canPerformLendingOperation('prepare-account-setup', setupContext(
+    setupQuote({ expiresAt: '2026-11-09T00:10:00.000Z' }),
+  )), false);
+  assert.equal(canPerformLendingOperation('prepare-account-setup', setupContext(quote, {
+    setupQuoteId: '44444444-4444-4444-8444-444444444444',
+  })), false);
+  assert.equal(canPerformLendingOperation('prepare-account-setup', setupContext(quote, {
+    walletAddress: 'Wallet22222222222222222222222222222222',
+  })), false);
+
+  const unresolved = {
+    ...context,
+    overview: { ...context.overview, actions: [{ actionId: 'setup-action', action: 'setup', status: 'SUBMISSION_UNKNOWN' }] },
+  };
+  assert.equal(canPerformLendingOperation('prepare-account-setup', unresolved), false);
+
+  const readyQuote = setupQuote({ status: 'READY' });
+  assert.equal(canPerformLendingOperation('prepare-account-setup', setupContext(readyQuote)), false);
+  assert.equal(canPerformLendingOperation('capture', setupContext(quote)), false);
+  assert.equal(canPerformLendingOperation('capture', setupContext(readyQuote)), true);
+});
+
+test('V228 setup owner signatures require the current quote, exact account identities, and zero principal', () => {
+  const quote = setupQuote();
+  const action = setupOwnerAction(quote);
+  const context = setupContext(quote, {
+    ownerAction: action,
+    ownerApproval: true,
+  });
+  assert.equal(canPerformLendingOperation('sign-owner-action', context), true);
+  assert.equal(canPerformLendingOperation('sign-owner-action', { ...context, signedActionUnknown: action.actionId }), false);
+  assert.equal(canPerformLendingOperation('sign-owner-action', {
+    ...context,
+    overview: { ...context.overview, setupQuote: setupQuote({ quoteId: '44444444-4444-4444-8444-444444444444' }) },
+    setupQuoteId: '44444444-4444-4444-8444-444444444444',
+  }), false);
+
+  const nonzeroPrincipal = setupOwnerAction(quote, {
+    expectedEffects: { ...action.prepared.expectedEffects, usdcDebitBaseUnits: '1' },
+  });
+  assert.equal(canPerformLendingOperation('sign-owner-action', { ...context, ownerAction: nonzeroPrincipal }), false);
+
+  const insufficientPreparedBalance = setupOwnerAction(quote, {
+    costEvidence: { ...action.prepared.costEvidence, walletLamports: '1' },
+  });
+  assert.equal(canPerformLendingOperation('sign-owner-action', {
+    ...context,
+    ownerAction: insufficientPreparedBalance,
+  }), false);
+
+  const changedAccount = setupOwnerAction(quote, {
+    accountSetup: {
+      ...action.prepared.accountSetup,
+      accounts: action.prepared.accountSetup.accounts.map((account, index) => index === 0
+        ? { ...account, address: 'DifferentTokenAccount' } : account),
+    },
+  });
+  assert.equal(canPerformLendingOperation('sign-owner-action', { ...context, ownerAction: changedAccount }), false);
+});
+
+test('V228 setup responses are discarded when the Falcon identity or retained quote changes while awaiting', async () => {
+  const identity = {
+    session: { token: 'verified-falcon-session', walletAddress: SETUP_WALLET },
+    sessionWallet: SETUP_WALLET,
+    walletAddress: SETUP_WALLET,
+    walletUserId: 'privy-user-a',
+  };
+  const nextIdentity = { ...identity, session: { ...identity.session } };
+
+  for (const change of [
+    { identity: nextIdentity, quoteId: SETUP_QUOTE_ID },
+    { identity, quoteId: '44444444-4444-4444-8444-444444444444' },
+  ]) {
+    const requestScope = createLendingRequestScope();
+    requestScope.setIdentity(identity);
+    const ticket = requestScope.capture();
+    const identityRef = { current: identity };
+    const quoteIdRef = { current: SETUP_QUOTE_ID };
+    let resolveRequest;
+    const response = { ownerAction: { actionId: '33333333-3333-4333-8333-333333333333' } };
+    const pending = performIdentityBoundSetupRequest(
+      requestScope,
+      ticket,
+      identityRef,
+      quoteIdRef,
+      SETUP_QUOTE_ID,
+      () => new Promise(resolve => { resolveRequest = resolve; }),
+    );
+    identityRef.current = change.identity;
+    requestScope.setIdentity(change.identity);
+    quoteIdRef.current = change.quoteId;
+    resolveRequest(response);
+    assert.deepEqual(await pending, { accepted: false, sent: true, response });
+  }
+});
+
+test('V229 unresolved setup actions cannot be prepared again before reconciliation', () => {
+  const quote = setupQuote();
+  const context = setupContext(quote);
+  const unresolved = {
+    ...context,
+    overview: {
+      ...context.overview,
+      actions: [{ actionId: 'setup-action', action: 'setup', status: 'SUBMISSION_UNKNOWN' }],
+    },
+  };
+  assert.equal(canPerformLendingOperation('prepare-account-setup', unresolved), false);
+  const readyContext = setupContext(setupQuote({ status: 'READY' }));
+  readyContext.overview = {
+    ...readyContext.overview,
+    actions: [{ actionId: 'setup-action', action: 'setup', status: 'SUBMITTED' }],
+  };
+  assert.equal(canPerformLendingOperation('capture', readyContext), false);
+  assert.equal(canPerformLendingOperation('prepare-account-setup', context), true);
 });

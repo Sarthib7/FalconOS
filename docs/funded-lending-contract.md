@@ -4,14 +4,14 @@
 
 [VERIFIED USER APPROVAL, 2026-11-09] The user reviewed the product/source proposals and selected `Yes, apply test-only fix` and `Yes, implement R1.3 locally`. The earlier product-review hold is superseded for this scope. Small draft PR publication remains authorized. No merge, deployment, live provider resource, signer grant, funding, financial signature, broadcast, fee collection or paid model call is authorized. User caches stay untouched.
 
-[VERIFIED correction] The R1.1 JWT handoff did not establish a narrow backend credential boundary. R1.3 replaces it with Falcon wallet proof and authoritative app-authenticated provider resources. The local backend now supports quote-first owner setup, retained native costs and finalized readiness. The human setup UI is a separate dependent cutover. Neither source nor fixture checks establish funded readiness.
+[VERIFIED correction] The R1.1 JWT handoff did not establish a narrow backend credential boundary. R1.3 replaces it with Falcon wallet proof and authoritative app-authenticated provider resources. Backend draft PR139 contains quote-first setup, retained native costs and finalized readiness. The dependent local UI now completes the controlled human flow. Neither source nor fixture checks establish funded readiness.
 
 ## Ownership
 
 - Main session owns SPEC, common CFO lifecycle/store, HTTP/server/runner, Rust MCP, CI, backend package/lock, integration and all executed verification.
 - Wallet worker owns `mesh/cfo/wallet-provider.mjs` and `mesh/test/bot-wallet-provider.test.mjs` only.
 - Solana worker owns `mesh/cfo/solana-lending.mjs` and `mesh/test/bot-solana-lending.test.mjs` only.
-- R13ClientCutover owns `web/dashboard/EmbeddedWallet.jsx`, `LendingBot.jsx` and `web/test/lending-bot.test.mjs` for the credential migration. The coordinator owns later setup integration, styling and existing navigation. Preserve the NEAR Cfo component and wallet gate.
+- [VERIFIED SOURCE HANDOFF] R13ClientCutover completed credential migration and the setup controls in `LendingBot.jsx`, `lending-bot.css` and `web/test/lending-bot.test.mjs`. Phase B left `EmbeddedWallet.jsx` unchanged. The coordinator owns integration, executed proof and publication. Preserve NEAR Cfo and its wallet gate.
 - Workers MUST use the verified luna-builder model/maximum-effort configuration. No substitute, nested agents, tests/build/lint/format runs, signing, funding, paid requests, commits or external writes. Write behavior checks but parent runs them after integration. No speculative SDK fallbacks or no-op implementations.
 
 ## Product scope
@@ -90,9 +90,13 @@ Overview = `{schemaVersion:1,domain:'solana-lending-bot',chain:'solana',network:
 
 Frontend starts with current verified session's wallet. Explicit embedded-wallet create/login must be user-initiated. If that wallet differs, establish the existing Falcon ownership challenge/session for the embedded wallet; never link one wallet using another wallet's session. Add isolated provider integration, not a replacement of existing external-wallet sign-in. No funding transfer by app; show exact address/network and observe explicit capture. Grant installation, owner signing, pause/revoke and fee payment each have separate clear human actions. Preserve private/gated dashboard and no fictitious organization tenancy.
 
-[APPROVED R1.1] A focused funded treasury experience is the primary customer surface. Keep NEAR CFO as an explicit separate network/workflow in the same multi-chain product. Never combine balances or imply bridging, automated NEAR signing, or shared cross-chain authority. Only the dedicated customer-owned Falcon embedded wallet receives the revoke-all flow. Show the actual wallet and all signer IDs before confirmation.
+[APPROVED R1.1, CLARIFIED R1.3] A focused treasury experience is the primary customer surface. Keep NEAR CFO as a separate owner-approved workflow in the same multi-chain product. Never combine balances or imply bridging, automated NEAR signing or shared authority. Only the dedicated customer-owned Falcon wallet receives revoke-all. Show the last-read wallet/signer inventory. Consent removes ALL additional signers at removal time, including later-added signers; the preview is not an atomic signer set.
 
 ## Executed checks and limits
+
+[VERIFIED LOCAL UI] `npm test` built the site, MVP and agents targets and returned `tests351,pass351,fail0,skipped0`. The unchanged owner/NEAR browser returned `passed:32,total:32,exceptions:[]`. The production-built lending component separately exercised quote, owner review, unknown submission, pending/final reconciliation and USDC funding capture through actual HTTPS/PostgreSQL. It preserved unknown READY native balance/expiry and unpriced historical costs.
+
+[VERIFIED UI LIMIT] The corrected flow used enabled DOM clicks, as the existing browser CI does, after hidden-page native helpers failed. The owner SDK, provider and chain were controlled; this does not attest real gestures, configured Privy SDK/MFA or live revocation. The Reconcile handler failure was observed before correction, not inferred from helper tests. No source-text or forwarding test was added.
 
 [VERIFIED LOCAL R1.3 BACKEND] Node24.19.0 ran the eight focused bot files with disposable PostgreSQL17: `tests87,pass87,fail0,skipped0`. The set includes actual SDK/crypto, HTTP/auth, private journal, accounting and runner behavior. Provider, chain and model transports were controlled.
 
@@ -124,5 +128,6 @@ Frontend starts with current verified session's wallet. Explicit embedded-wallet
 
 ## Least confident decisions
 
-1. [INFERRED] The current Kamino SDK dependency graph may require a different compatible pinned release. Parent must prove the installed graph and real adapter behavior.
+1. [VERIFIED CORRECTION; UNKNOWN LIVE] The pinned graph and actual SDK22cases now exercise local runtime compatibility. They do not attest current deployed-program state, provider policy admission or live settlement.
 2. [INFERRED] Native-fee pricing and withdrawal liquidity may be unavailable at observation time. Strategy must HOLD rather than assume zero costs or executable liquidity.
+3. [REPORTED REVIEW; VERIFIED SOURCE] Signed-action liveness remains a funded-pilot gate. See BLK-2026-11-09-02; a null receipt or no Falcon send cannot authorize replacement.

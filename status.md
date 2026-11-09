@@ -2,7 +2,7 @@
 
 ## Funded treasury R1.3 local implementation: 2026-11-09
 
-Owner: coordinator. Status: In Progress. Live financial acceptance remains Blocked.
+Owner: coordinator. Status: Local implementation verified; dependent draft publication and new-head CI continue. Live financial acceptance remains Blocked.
 
 [VERIFIED USER APPROVAL] The user selected “Yes, apply test-only fix” and “Yes, implement R1.3 locally” after the visual/source review. The user selected “Leave caches untouched”. No live provider/wallet resource, delegation, funding, financial signature, broadcast, fee collection, paid Council, merge or deployment is authorized.
 
@@ -10,11 +10,21 @@ Owner: coordinator. Status: In Progress. Live financial acceptance remains Block
 
 [VERIFIED LOCAL OWNER-PROOF SLICE, OWNER coordinator] The frozen first slice passed backend24/24, composed real HTTP/auth/provider/journal1/1 and client10/10. Actual client/API smoke returned OWNER_PROOF_API_SMOKE_PASS with one authentication message signature, one retained wallet row, four controlled provider reads, four rejected credential routes and zero chain/financial-signature calls. Removing the quorum/HTTP guards failed2/2 selected cases; reintroducing the obsolete service argument failed the new composition case503vs200. Canonical source was unchanged by mutations. Controlled resources do not prove live provider acceptance.
 
-[IN PROGRESS OWNERSHIP] R13ProviderBoundary and R13ClientCutover completed their assigned source; the coordinator verified their first-slice union. R13SetupAdapter owns the pending SDK setup/receipt work. Parent-owned setup costs, journal kinds and MCP privacy remain excluded from the owner-proof commit. Independent owner/client reviews inspect its frozen source. The coordinator owns contracts, integration, all validation, status and publication; no worker runs checks or commits.
+[VERIFIED OWNER-HEAD CORRECTION, HISTORICAL] All five checks passed at owner-proof ad1b40db387ab5eba64ab6741a9307a25bb8ba4e in draft PR138: PR CI42565008706, push CI42564856794 and Verify web42565008689 returned SUCCESS. This resolved that head, not the fixture-cost risk. The backend head below reopened the separate web-budget gate; BLK-2026-11-09-01 retains both observations.
 
-[BLOCKED LIVE GATES, OWNER release] Customer provider configuration and ownership acceptance, separately approved live resource/signing/funding actions, finite real model budget and funded settlement remain open. Local implementation and passing fixtures do not settle those gates. No user cache cleanup will run.
+[VERIFIED SOURCE HANDOFF, OWNER coordinator] All assigned SDK, provider and client source is integrated. Parent ran87 focused backend cases,351 web cases and37 native cases, all passing locally. The actual built owner/NEAR browser kept32/32 checks with no uncaught exception. SDK/receipt and cost/lifecycle/privacy reviews were independent; no worker ran checks, commits or live actions.
 
-[NEXT LOCAL SLICE, OWNER coordinator] Complete quote-before-SOL, exact owner-signed canonical ATA setup, retained pre-mandate native costs, finalized reconciliation and the full customer setup/funding controls. SPEC I23/V226-V229 and `docs/interfaces.md#funded-treasury-r13-owner-boundary-and-first-run-contract` define the accepted scope. Local implementation continues without granting live authority.
+[VERIFIED LOCAL SETUP SCENARIO] The actual client/API/PostgreSQL/runner scenario returned `SETUP_TREASURY_API_SMOKE_PASS`: zero-SOL quote, rejection before funding, explicit fresh quote, setup finality, costs once, USDC funding, mandate, separate Lead/Risk review, confirmed supply and pause. Confirmed fixture cash was800000000 base units, receipt position200000000 and known costs120. Provider, chain, owner-signature and model transports were controlled; real financial signatures and paid model calls were0. This is not live settlement evidence.
+
+[VERIFIED AUTONOMOUS SCENARIO] `SCHEDULED_ROTATION_API_SMOKE_PASS` used production startScheduler, actual due-owner SQL and elapsed cooldown, without manual ticks or a time rewrite. It finalized a150000000-base-unit receipt exit before a separately reviewed150000000 entry. Fixture cash ended100000000, receipts50000000/150000000, costs30 and earned fee0; then the runner paused. Four controlled Lead/Risk responses and two scoped signer requests are not live model or settlement evidence.
+
+[VERIFIED UI SCENARIO] The production-built lending component completed zero-SOL quote, separate owner review/consent, UNKNOWN reservation, pending reconciliation, CONFIRMED/READY and subsequent USDC capture. READY preserved null native balance/expiry and separate unpriced historical costs. A real handler bug produced0reconcile POSTs before correction and2after. The controlled SDK/provider/chain path used enabled DOM clicks after hidden-page native helpers proved unreliable; real gestures and configured Privy SDK/MFA remain untested. Desktop and mobile390/375-width captures were inspected.
+
+[VERIFIED PUBLICATION AND CI] Backend draft PR139 is head96db98eaf5a0c3e2addc6456dbbe1fba9f74c64e. Its PR CI run42583292766 passed both jobs. Push CI42583221751 stopped at pinned Bun1.3.14 download after HTTP504 and was retried once after the same-head PR run passed. Separate Verify web42583292652 passed345 web tests, then hit its20-minute job bound during private release fixtures. No timeout, assertion or isolation rule was weakened. This is not an all-green check set.
+
+[BLOCKED LIVE GATES, OWNER release] Configured customer resources and SDK/MFA, real policy admission, explicit live signing/funding, a finite paid model budget and actual settlement remain open. Signed-unknown liveness also needs an owner-approved policy; absence is not non-execution. Local fixtures do not settle these gates. Existing user caches stay untouched.
+
+[NEXT APPROVAL, OWNER coordinator] Publish the dependent UI draft and inspect its exact-head CI. The separate web job needs an approved fixture-cost or job-budget decision if its current bound remains insufficient. Do not change versions or guards to obtain green. SPEC I23/V226-V229 remains the product scope; no live financial authority follows.
 
 ## R5 consumer acceptance: 2026-11-04
 

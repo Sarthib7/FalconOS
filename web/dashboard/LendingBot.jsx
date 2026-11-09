@@ -41,20 +41,22 @@ const isRecord = value => Boolean(value) && typeof value === 'object' && !Array.
 const isUnsignedText = value => typeof value === 'string' && INTEGER_TEXT.test(value);
 const text = value => typeof value === 'string' ? value : '';
 
-const REQUEST_ID_ONLY_PATHS = new Set([
-  '/wallet-link',
-  '/delegation/prepare',
-  '/delegation',
-  '/revoke/prepare',
-  '/revoke',
+const REQUEST_FIELDS_BY_PATH = new Map([
+  ['/wallet-link', ['requestId']],
+  ['/delegation/prepare', ['requestId']],
+  ['/delegation', ['requestId']],
+  ['/revoke/prepare', ['requestId']],
+  ['/revoke', ['requestId']],
+  ['/accounts/quote', ['requestId']],
+  ['/accounts/prepare', ['requestId', 'quoteId']],
 ]);
 
 export function createLendingMeshRequest(request = meshRequest) {
   return (token, path, body) => {
-    if (REQUEST_ID_ONLY_PATHS.has(path)
-      && (!isRecord(body) || Object.keys(body).length !== 1
-        || !Object.prototype.hasOwnProperty.call(body, 'requestId') || typeof body.requestId !== 'string')) {
-      throw new Error(`The ${path} lending request accepts only a requestId.`);
+    const expectedFields = REQUEST_FIELDS_BY_PATH.get(path);
+    if (expectedFields && (!isRecord(body) || Object.keys(body).length !== expectedFields.length
+      || expectedFields.some(field => !Object.prototype.hasOwnProperty.call(body, field) || typeof body[field] !== 'string'))) {
+      throw new Error(`The ${path} lending request has an invalid owner-control body.`);
     }
     return request(token, `${ROOT}${path}`, body);
   };
@@ -98,6 +100,18 @@ export async function performIdentityBoundOwnerSdkAction(requestScope, ticket, i
   const result = await action();
   if (!requestScope.accepts(ticket, identityRef.current)) return { accepted: false };
   return { accepted: true, result };
+}
+
+/** Prevents a delayed setup response from crossing either the session or retained quote boundary. */
+export async function performIdentityBoundSetupRequest(requestScope, ticket, identityRef, quoteIdRef, expectedQuoteId, request) {
+  if (!requestScope.accepts(ticket, identityRef.current) || quoteIdRef.current !== expectedQuoteId) {
+    return { accepted: false, sent: false };
+  }
+  const response = await request();
+  if (!requestScope.accepts(ticket, identityRef.current) || quoteIdRef.current !== expectedQuoteId) {
+    return { accepted: false, sent: true, response };
+  }
+  return { accepted: true, sent: true, response };
 }
 
 /** Converts ordinary decimal text to exact canonical base units without floating-point math. */
@@ -231,7 +245,9 @@ function validPortfolio(portfolio) {
     && portfolio.network === 'mainnet-beta'
     && ['OBSERVED', 'NO_DATA'].includes(portfolio.status)
     && Array.isArray(portfolio.positions)
-    && Array.isArray(portfolio.issues));
+    && Array.isArray(portfolio.issues)
+    && (portfolio.warnings === undefined || (Array.isArray(portfolio.warnings)
+      && portfolio.warnings.every(warning => typeof warning === 'string'))));
 }
 
 function validWalletLink(value) {
@@ -239,6 +255,130 @@ function validWalletLink(value) {
     && typeof value.walletAddress === 'string'
     && typeof value.providerWalletId === 'string'
     && value.providerWalletId.length > 0);
+}
+
+function validSetupAccount(account, wallet) {
+  return isRecord(account)
+    && typeof account.address === 'string' && account.address.length > 0
+    && typeof account.mint === 'string' && account.mint.length > 0
+    && account.owner === wallet
+    && typeof account.tokenProgram === 'string' && account.tokenProgram.length > 0
+    && typeof account.exists === 'boolean'
+    && isUnsignedText(account.balanceBaseUnits)
+    && (account.exists || account.balanceBaseUnits === '0');
+}
+
+function validSetupQuote(value) {
+  if (value === null) return true;
+  if (!isRecord(value) || value.schemaVersion !== 1
+    || !['QUOTED', 'READY', 'NO_DATA'].includes(value.status)
+    || typeof value.wallet !== 'string' || !value.wallet
+    || value.chain !== 'solana' || value.network !== 'mainnet-beta') return false;
+  if (value.status === 'NO_DATA') {
+    return (value.quoteId == null || UUID_TEXT.test(value.quoteId))
+      && value.observedAt === null && value.slot === null && value.expiresAt === null
+      && value.nativeBalanceLamports === null && Array.isArray(value.accounts) && value.accounts.length === 0
+      && value.feeLamports === null && value.rentLamports === null && value.maxFeeLamports === null
+      && value.maxTotalCostUsdcBaseUnits === null && value.costEvidence === null
+      && Array.isArray(value.reasons) && value.reasons.length > 0
+      && value.reasons.every(reason => typeof reason === 'string' && reason.length > 0);
+  }
+  if (!UUID_TEXT.test(value.quoteId)
+    || typeof value.observedAt !== 'string' || !Number.isFinite(Date.parse(value.observedAt))
+    || !Number.isSafeInteger(value.slot) || value.slot <= 0
+    || !Array.isArray(value.accounts) || value.accounts.length !== 3
+    || !value.accounts.every(account => validSetupAccount(account, value.wallet))
+    || new Set(value.accounts.map(account => account.address)).size !== 3
+    || new Set(value.accounts.map(account => account.mint)).size !== 3
+    || !Array.isArray(value.reasons) || value.reasons.length !== 0) return false;
+
+  const missing = value.accounts.filter(account => account.exists === false).length;
+  if (value.status === 'READY') {
+    const expiryValid = value.expiresAt === null
+      || (typeof value.expiresAt === 'string' && Number.isFinite(Date.parse(value.expiresAt))
+        && Date.parse(value.expiresAt) > Date.parse(value.observedAt));
+    if (!expiryValid || (value.nativeBalanceLamports !== null && !isUnsignedText(value.nativeBalanceLamports))
+      || missing !== 0 || !value.accounts.every(account => account.exists)
+      || value.feeLamports !== '0' || value.rentLamports !== '0' || value.maxFeeLamports !== '0'
+      || (value.maxTotalCostUsdcBaseUnits !== null && value.maxTotalCostUsdcBaseUnits !== '0')) return false;
+    if (value.costEvidence === null) return true;
+    const cost = value.costEvidence;
+    return isRecord(cost)
+      && cost.maxFeeLamports === '0'
+      && cost.associatedAccountRentLamports === '0'
+      && cost.actualQuotedFeeLamports === '0'
+      && cost.walletLamports === value.nativeBalanceLamports
+      && cost.sourceSlot === value.slot
+      && cost.feeQuoteSlot === null
+      && cost.rentPerAccountLamports === '0'
+      && cost.missingAccountCount === 0
+      && cost.nativePriceUsdMicros === null && cost.usdcPriceUsdMicros === null
+      && cost.nativePriceObservedAt === null && cost.usdcPriceObservedAt === null
+      && cost.priceMaxAgeSeconds === null;
+  }
+
+  if (typeof value.expiresAt !== 'string' || !Number.isFinite(Date.parse(value.expiresAt))
+    || Date.parse(value.expiresAt) <= Date.parse(value.observedAt)
+    || !isUnsignedText(value.nativeBalanceLamports)
+    || !isUnsignedText(value.feeLamports) || !isUnsignedText(value.rentLamports)
+    || !isUnsignedText(value.maxFeeLamports)
+    || (value.maxTotalCostUsdcBaseUnits !== null && !isUnsignedText(value.maxTotalCostUsdcBaseUnits))
+    || !isRecord(value.costEvidence)) return false;
+
+  const cost = value.costEvidence;
+  if (![cost.maxFeeLamports, cost.associatedAccountRentLamports, cost.actualQuotedFeeLamports,
+    cost.walletLamports, cost.rentPerAccountLamports].every(isUnsignedText)
+    || cost.maxFeeLamports !== value.maxFeeLamports
+    || cost.associatedAccountRentLamports !== value.rentLamports
+    || cost.actualQuotedFeeLamports !== value.feeLamports
+    || cost.walletLamports !== value.nativeBalanceLamports
+    || cost.sourceSlot !== value.slot
+    || cost.missingAccountCount !== missing
+    || (cost.feeQuoteSlot !== null && (!Number.isSafeInteger(cost.feeQuoteSlot) || cost.feeQuoteSlot < value.slot))
+    || (cost.nativePriceUsdMicros !== null && !isUnsignedText(cost.nativePriceUsdMicros))
+    || (cost.usdcPriceUsdMicros !== null && !isUnsignedText(cost.usdcPriceUsdMicros))
+    || (cost.nativePriceObservedAt !== null && (typeof cost.nativePriceObservedAt !== 'string' || !Number.isFinite(Date.parse(cost.nativePriceObservedAt))))
+    || (cost.usdcPriceObservedAt !== null && (typeof cost.usdcPriceObservedAt !== 'string' || !Number.isFinite(Date.parse(cost.usdcPriceObservedAt))))
+    || (cost.priceMaxAgeSeconds !== null && (!Number.isSafeInteger(cost.priceMaxAgeSeconds) || cost.priceMaxAgeSeconds <= 0))) return false;
+
+  const rentPerAccount = BigInt(cost.rentPerAccountLamports);
+  const rent = BigInt(value.rentLamports);
+  return value.status === 'QUOTED' && missing > 0 && rentPerAccount > 0n
+    && rent === rentPerAccount * BigInt(missing)
+    && cost.feeQuoteSlot !== null;
+}
+
+export function setupNativeDeficitLamports(quote) {
+  if (!isRecord(quote) || !['QUOTED', 'READY'].includes(quote.status)
+    || !isUnsignedText(quote.nativeBalanceLamports)
+    || !isUnsignedText(quote.feeLamports) || !isUnsignedText(quote.rentLamports)) return null;
+  const required = BigInt(quote.feeLamports) + BigInt(quote.rentLamports);
+  const available = BigInt(quote.nativeBalanceLamports);
+  return required > available ? (required - available).toString() : '0';
+}
+
+function isSetupReady(overview, walletAddress, now = Date.now(), retainedActions = []) {
+  const quote = overview?.setupQuote;
+  return overview?.setupStatus === 'READY'
+    && typeof walletAddress === 'string'
+    && validSetupQuote(quote)
+    && quote?.status === 'READY'
+    && quote.wallet === walletAddress
+    && quote.accounts.every(account => account.exists && account.owner === walletAddress)
+    && overview.setupObservedAt === quote.observedAt
+    && Number.isFinite(Date.parse(overview.setupObservedAt))
+    && Number.isFinite(now) && (quote.expiresAt === null || Date.parse(quote.expiresAt) > now)
+    && !hasUnresolvedSetupAction(overview, retainedActions);
+}
+
+
+
+function validSetupCosts(value) {
+  return value == null || (isRecord(value)
+    && (value.knownCostUsdcBaseUnits === null || isUnsignedText(value.knownCostUsdcBaseUnits))
+    && typeof value.hasUnpricedCost === 'boolean'
+    && isUnsignedText(value.feeLamports)
+    && isUnsignedText(value.rentLamports));
 }
 
 function validOverview(value) {
@@ -256,6 +396,8 @@ function validOverview(value) {
     && Array.isArray(value.configuration.availableReserves)
     && Array.isArray(value.configuration.issues)
     && validWalletLink(value.walletLink)
+    && validSetupQuote(value.setupQuote)
+    && validSetupCosts(value.setupCosts)
     && (value.mandate === null || (isRecord(value.mandate) && typeof value.mandate.id === 'string' && isRecord(value.mandate.data)))
     && (value.delegation === null || (isRecord(value.delegation) && typeof value.delegation.status === 'string'))
     && validPortfolio(value.portfolio)
@@ -263,7 +405,11 @@ function validOverview(value) {
     && ['STOPPED', 'RUNNING', 'PAUSED', 'REVOKED', 'BLOCKED'].includes(value.runner.state)
     && Array.isArray(value.actions)
     && isRecord(value.accounting)
-    && Array.isArray(value.issues);
+    && Array.isArray(value.issues)
+    && ['NOT_OBSERVED', 'REQUIRED', 'READY', 'UNAVAILABLE'].includes(value.setupStatus)
+    && (value.setupObservedAt === null || (typeof value.setupObservedAt === 'string' && Number.isFinite(Date.parse(value.setupObservedAt))))
+    && Array.isArray(value.setupIssues)
+    && value.setupIssues.every(issue => typeof issue === 'string');
 }
 
 function actionStatusNeedsReconcile(status) {
@@ -273,6 +419,11 @@ function actionStatusNeedsReconcile(status) {
 function hasUnresolvedActions(overview, retainedActions = []) {
   const actions = [...(Array.isArray(overview?.actions) ? overview.actions : []), ...(Array.isArray(retainedActions) ? retainedActions : [])];
   return actions.some(action => actionStatusNeedsReconcile(action?.status));
+}
+
+function hasUnresolvedSetupAction(overview, retainedActions = []) {
+  const actions = [...(Array.isArray(overview?.actions) ? overview.actions : []), ...(Array.isArray(retainedActions) ? retainedActions : [])];
+  return actions.some(action => action?.action === 'setup' && actionStatusNeedsReconcile(action?.status));
 }
 
 function isActiveDelegation(overview, now = Date.now()) {
@@ -318,14 +469,62 @@ function validRevocationPreview(preview, overview, walletAddress) {
     && preview.signerIds.includes(overview.delegation.signerId);
 }
 
+function setupOwnerActionMatches(prepared, effects, context) {
+  const overview = context.overview;
+  const quote = overview?.setupQuote;
+  const setup = prepared.accountSetup;
+  const cost = prepared.costEvidence;
+  const now = context.now ?? Date.now();
+  if (overview?.setupStatus !== 'REQUIRED' || !isRecord(quote) || !validSetupQuote(quote) || quote.status !== 'QUOTED'
+    || context.setupQuoteId !== quote.quoteId || overview.setupObservedAt !== quote.observedAt
+    || quote.wallet !== context.sessionWallet || Date.parse(quote.expiresAt) <= now
+    || prepared.amountBaseUnits !== '0' || prepared.amountUnit !== 'usdc-base-units'
+    || prepared.reserveAddress !== null || prepared.recipient !== context.sessionWallet
+    || !['usdcDebitBaseUnits', 'usdcCreditBaseUnits', 'receiptDebitBaseUnits', 'receiptCreditBaseUnits']
+      .every(field => effects[field] === '0')
+    || prepared.sourceTokenAccount !== null || prepared.destinationTokenAccount !== null
+    || prepared.receiptMint !== null || prepared.feeRecipient !== null
+    || prepared.source.slot < quote.slot
+    || Date.parse(prepared.observedAt) < Date.parse(quote.observedAt)
+    || Date.parse(prepared.expiresAt) <= now || Date.parse(prepared.expiresAt) > Date.parse(quote.expiresAt)
+    || prepared.feeLamports !== quote.feeLamports || prepared.rentLamports !== quote.rentLamports
+    || prepared.associatedAccountRentLamports !== quote.rentLamports
+    || prepared.maxTotalCostUsdcBaseUnits !== null || quote.maxTotalCostUsdcBaseUnits !== null
+    || prepared.nativePriceUsdMicros !== null || prepared.usdcPriceUsdMicros !== null
+    || !isRecord(cost)
+    || !isUnsignedText(cost.walletLamports)
+    || BigInt(cost.walletLamports) < BigInt(prepared.feeLamports) + BigInt(prepared.rentLamports)
+    || cost.maxFeeLamports !== quote.maxFeeLamports
+    || cost.associatedAccountRentLamports !== quote.rentLamports
+    || cost.actualQuotedFeeLamports !== quote.feeLamports
+    || cost.rentPerAccountLamports !== quote.costEvidence.rentPerAccountLamports
+    || cost.sourceSlot !== prepared.source.slot
+    || !Number.isSafeInteger(cost.feeQuoteSlot) || cost.feeQuoteSlot < prepared.source.slot
+    || cost.nativePriceUsdMicros !== null || cost.usdcPriceUsdMicros !== null
+    || cost.nativePriceObservedAt !== null || cost.usdcPriceObservedAt !== null || cost.priceMaxAgeSeconds !== null
+    || !isRecord(setup) || Object.keys(setup).length !== 2 || setup.quoteId !== quote.quoteId
+    || !Array.isArray(setup.accounts) || setup.accounts.length !== quote.accounts.length) return false;
+  return setup.accounts.every((account, index) => {
+    const expected = quote.accounts[index];
+    return isRecord(account) && Object.keys(account).length === 5
+      && account.address === expected.address
+      && account.mint === expected.mint
+      && account.owner === expected.owner
+      && account.tokenProgram === expected.tokenProgram
+      && account.wasMissing === !expected.exists;
+  });
+}
+
 function ownerActionMatches(action, context) {
   const prepared = action?.prepared;
   const effects = prepared?.expectedEffects;
   const source = prepared?.source;
   if (!isRecord(action) || typeof action.actionId !== 'string' || !isRecord(prepared)
     || prepared.schemaVersion !== 1 || prepared.chain !== 'solana' || prepared.network !== 'mainnet-beta'
-    || prepared.wallet !== context.sessionWallet || !['redeem', 'fee'].includes(prepared.action)
-    || !positiveBaseUnits(prepared.amountBaseUnits) || !isUnsignedText(prepared.feeLamports) || !isUnsignedText(prepared.rentLamports)
+    || prepared.wallet !== context.sessionWallet || !['redeem', 'fee', 'setup'].includes(prepared.action)
+    || !isUnsignedText(prepared.amountBaseUnits)
+    || (prepared.action !== 'setup' && !positiveBaseUnits(prepared.amountBaseUnits))
+    || !isUnsignedText(prepared.feeLamports) || !isUnsignedText(prepared.rentLamports)
     || typeof prepared.transactionBase64 !== 'string' || !prepared.transactionBase64.length
     || !/^[a-f0-9]{64}$/i.test(prepared.messageSha256 ?? '')
     || typeof prepared.blockhash !== 'string' || !prepared.blockhash
@@ -339,6 +538,7 @@ function ownerActionMatches(action, context) {
     || typeof source.programId !== 'string' || !source.programId
     || typeof source.adapterVersion !== 'string' || !source.adapterVersion
     || typeof prepared.recipient !== 'string' || !prepared.recipient) return false;
+  if (prepared.action === 'setup') return setupOwnerActionMatches(prepared, effects, context);
   if (prepared.action === 'redeem') {
     const position = context.overview?.portfolio?.positions?.find(item => item.reserveAddress === prepared.reserveAddress);
     return prepared.amountUnit === 'receipt-base-units'
@@ -359,7 +559,9 @@ export function canPerformLendingOperation(operation, context = {}) {
   const linked = matchesLinkedWallet(overview, context);
   const now = context.now ?? Date.now();
   const feesConfigured = validOperatorTerms(config);
+  const setupReady = isSetupReady(overview, sessionWallet, now, context.actionRecords);
   const executionReady = overview?.status === 'READY'
+    && setupReady
     && config?.walletProviderConfigured === true
     && config?.executionEnabled === true
     && feesConfigured
@@ -378,7 +580,24 @@ export function canPerformLendingOperation(operation, context = {}) {
       && context.walletReady && context.walletAuthenticated
       && config?.walletProviderConfigured === true
       && overview?.walletLink?.walletAddress !== sessionWallet);
-    case 'save-mandate': return linked && config?.walletProviderConfigured === true && feesConfigured && context.mandateValid === true;
+    case 'quote-account-setup': return Boolean(context.sessionToken && linked
+      && config?.walletProviderConfigured === true
+      && !hasUnresolvedSetupAction(overview, context.actionRecords)
+      && context.ownerAction?.prepared?.action !== 'setup');
+    case 'prepare-account-setup': {
+      const quote = overview?.setupQuote;
+      return Boolean(context.sessionToken && linked
+        && config?.walletProviderConfigured === true && Boolean(context.signTransaction)
+        && !unresolvedAction && !context.ownerAction
+        && overview?.setupStatus === 'REQUIRED'
+        && isRecord(quote) && validSetupQuote(quote) && quote.status === 'QUOTED'
+        && quote.wallet === sessionWallet
+        && context.setupQuoteId === quote.quoteId
+        && overview.setupObservedAt === quote.observedAt
+        && Date.parse(quote.expiresAt) > now
+        && setupNativeDeficitLamports(quote) === '0');
+    }
+    case 'save-mandate': return setupReady && linked && config?.walletProviderConfigured === true && feesConfigured && context.mandateValid === true;
     case 'prepare-delegation': return executionReady && hasCurrentMandate(overview, now)
       && overview?.delegation?.status !== 'ACTIVE' && !context.delegationPreview;
     case 'install-delegation': return executionReady && overview?.delegation?.status !== 'ACTIVE'
@@ -393,7 +612,7 @@ export function canPerformLendingOperation(operation, context = {}) {
       && Date.parse(context.delegationPreview.expiresAt) > Date.now()
       && context.delegationConfirmed === true && Boolean(context.addSigners);
     case 'verify-delegation': return Boolean(context.sessionToken && linked && (overview?.delegation || context.delegationCheckRequired));
-    case 'capture': return linked && config?.walletProviderConfigured === true;
+    case 'capture': return setupReady && linked && config?.walletProviderConfigured === true;
     case 'start': return executionReady && hasCurrentMandate(overview, now)
       && isActiveDelegation(overview, now)
       && hasFreshPortfolio(overview, now)
@@ -420,7 +639,7 @@ export function canPerformLendingOperation(operation, context = {}) {
     case 'sign-owner-action': return linked && context.ownerApproval === true
       && ownerActionMatches(context.ownerAction, context)
       && context.signedActionUnknown !== context.ownerAction.actionId
-      && Date.parse(context.ownerAction.prepared.expiresAt) > (context.now ?? Date.now())
+      && Date.parse(context.ownerAction.prepared.expiresAt) > now
       && Boolean(context.signTransaction);
     case 'reconcile': return Boolean(context.sessionToken && typeof context.actionId === 'string' && context.actionId.length > 0);
     case 'allow-after-review': return uncertain && context.uncertain?.refreshed === true && context.allowAfterReview === true;
@@ -487,6 +706,7 @@ function formFromMandate(data) {
 }
 
 function actionAmountText(action, overview) {
+  if (action?.action === 'setup') return 'Account setup · no USDC or receipt principal';
   if (!isUnsignedText(action?.amountBaseUnits)) return 'Unavailable';
   if (action.amountUnit === 'usdc-base-units') return displayMoney(action.amountBaseUnits);
   if (action.amountUnit === 'receipt-base-units') {
@@ -528,6 +748,8 @@ export default function LendingBot({ session, wallet }) {
   const [store, setStore] = useState(EMPTY_STORE);
   const storeMatches = sameIdentity(store.identity, identity);
   const state = storeMatches ? store : { ...EMPTY_STORE, identity };
+  const retainedSetupQuoteIdRef = useRef(null);
+  retainedSetupQuoteIdRef.current = state.overview?.setupQuote?.quoteId ?? null;
 
   const updateStore = useCallback(update => {
     setStore(previous => {
@@ -554,6 +776,7 @@ export default function LendingBot({ session, wallet }) {
       if (!requestScope.accepts(ticket, identityRef.current) || overviewVersion.current !== version
         || overviewReadGeneration.current !== readGeneration) return null;
       if (!validOverview(response)) throw new Error('The lending service returned an invalid overview. No balances or readiness are shown.');
+      retainedSetupQuoteIdRef.current = response.setupQuote?.quoteId ?? null;
       updateStore(previous => ({
         ...previous,
         overview: response,
@@ -584,6 +807,7 @@ export default function LendingBot({ session, wallet }) {
     const built = buildMandateFromForm(active.mandateForm, overview?.configuration);
     return {
       overview,
+      setupQuoteId: active.overview?.setupQuote?.quoteId ?? null,
       sessionToken: current.session?.token,
       sessionWallet: current.sessionWallet,
       walletAddress: current.walletAddress,
@@ -641,18 +865,57 @@ export default function LendingBot({ session, wallet }) {
     updateStore(previous => ({ ...previous, busy: null, ...(update ?? {}) }));
   }, [requestScope, updateStore]);
 
-  const post = useCallback(async (operationName, path, body, onSuccess, { allowedOperation = operationName, actionId = null } = {}) => {
-    const operation = beginOperation(operationName, allowedOperation);
+  const post = useCallback(async (operationName, path, body, onSuccess, {
+    allowedOperation = operationName,
+    actionId = null,
+    retainedSetupQuoteId = undefined,
+  } = {}) => {
+    const operation = beginOperation(operationName, allowedOperation, { actionId });
     if (!operation) return null;
     let requestSent = false;
     try {
-      if (!requestScope.accepts(operation.ticket, identityRef.current)) return null;
-      const pendingRequest = lendingMeshRequest(operation.current.session.token, path, {
-        requestId: operation.requestId,
-        ...body,
-      });
-      requestSent = true;
-      const response = await pendingRequest;
+      let response;
+      if (retainedSetupQuoteId !== undefined) {
+        const outcome = await performIdentityBoundSetupRequest(
+          requestScope,
+          operation.ticket,
+          identityRef,
+          retainedSetupQuoteIdRef,
+          retainedSetupQuoteId,
+          () => {
+            const pendingRequest = lendingMeshRequest(operation.current.session.token, path, {
+              requestId: operation.requestId,
+              ...body,
+            });
+            requestSent = true;
+            return pendingRequest;
+          },
+        );
+        if (!outcome.accepted) {
+          if (!requestScope.accepts(operation.ticket, identityRef.current)) return null;
+          const preparedActionId = typeof outcome.response?.ownerAction?.actionId === 'string'
+            ? outcome.response.ownerAction.actionId : null;
+          finishOperation(operation, {
+            error: outcome.sent
+              ? 'The retained setup quote changed while the request was in flight. Refresh retained state and reconcile any prepared action before continuing.'
+              : 'The retained setup quote changed before the request was sent. Read a current account setup quote before continuing.',
+            uncertain: outcome.sent && operationName === 'prepare-account-setup'
+              ? { operation: operationName, requestId: operation.requestId, actionId: preparedActionId ?? actionId }
+              : null,
+            allowAfterReview: false,
+          });
+          return null;
+        }
+        response = outcome.response;
+      } else {
+        if (!requestScope.accepts(operation.ticket, identityRef.current)) return null;
+        const pendingRequest = lendingMeshRequest(operation.current.session.token, path, {
+          requestId: operation.requestId,
+          ...body,
+        });
+        requestSent = true;
+        response = await pendingRequest;
+      }
       if (!requestScope.accepts(operation.ticket, identityRef.current)) return null;
       const patch = onSuccess(response);
       if (!patch) throw new Error('The lending service response did not match the required operation contract. Do not repeat this request; refresh retained state first.');
@@ -720,6 +983,48 @@ export default function LendingBot({ session, wallet }) {
         notice: `Privy wallet linked to the verified Falcon session for ${response.walletLink.walletAddress}.`,
       };
     });
+  }
+
+  function quoteAccountSetup() {
+    const retainedSetupQuoteId = retainedSetupQuoteIdRef.current;
+    void post('quote-account-setup', '/accounts/quote', {}, response => {
+      const quote = response?.setupQuote;
+      if (!isRecord(quote) || !validSetupQuote(quote)
+        || quote.wallet !== identityRef.current.sessionWallet) return null;
+      const setupStatus = quote.status === 'READY' ? 'READY' : quote.status === 'QUOTED' ? 'REQUIRED' : 'UNAVAILABLE';
+      retainedSetupQuoteIdRef.current = quote.quoteId ?? null;
+      return {
+        overview: {
+          ...overview,
+          setupQuote: quote,
+          setupStatus,
+          setupObservedAt: quote.observedAt,
+          setupIssues: quote.reasons,
+        },
+        notice: quote.status === 'QUOTED'
+          ? 'A current setup quote is retained. This read moved no funds.'
+          : quote.status === 'READY'
+            ? 'A current account read confirms that no setup transaction is needed.'
+            : `The account read is unavailable: ${quote.reasons.join(', ')}`,
+      };
+    }, { allowedOperation: 'quote-account-setup', retainedSetupQuoteId });
+  }
+
+  function prepareAccountSetup() {
+    const quote = overview?.setupQuote;
+    const freshContext = currentContext();
+    if (!canPerformLendingOperation('prepare-account-setup', freshContext)) return;
+    const quoteId = quote.quoteId;
+    void post('prepare-account-setup', '/accounts/prepare', { quoteId }, response => {
+      const ownerAction = response?.ownerAction;
+      if (!isRecord(ownerAction) || !ownerActionMatches(ownerAction, { ...freshContext, overview })) return null;
+      return {
+        ownerAction,
+        ownerApproval: false,
+        signedActionUnknown: null,
+        notice: 'Unsigned owner setup prepared. Review the exact wallet, accounts, native costs, expiry, and zero-principal effects before signing.',
+      };
+    }, { allowedOperation: 'prepare-account-setup', retainedSetupQuoteId: quoteId });
   }
 
   function prepareDelegation() {
@@ -1041,6 +1346,7 @@ export default function LendingBot({ session, wallet }) {
         uncertain: null,
         notice: `Owner signature registered. Current action state: ${response.action.status}. Any broadcast is handled by Falcon only after exact verification and persistence.`,
       });
+      if (action.prepared.action === 'setup' && response.action.status === 'CONFIRMED') void refreshOverview();
     } catch (error) {
       if (!requestScope.accepts(operation.ticket, identityRef.current)) return;
       finishOperation(operation, {
@@ -1060,20 +1366,27 @@ export default function LendingBot({ session, wallet }) {
     }
   }
 
-  function reconcileAction(actionId) {
-    void post('reconcile', '/reconcile', { actionId }, response => {
-      if (!isRecord(response?.action) || response.action.actionId !== actionId || typeof response.action.status !== 'string') return null;
-      const terminal = ['CONFIRMED', 'FAILED'].includes(response.action.status);
+  async function reconcileAction(actionId) {
+    const ownerAction = state.ownerAction?.actionId === actionId ? state.ownerAction : null;
+    const retainedActions = state.actionRecords.length ? state.actionRecords : overview?.actions;
+    const retainedAction = Array.isArray(retainedActions)
+      ? retainedActions.find(action => action?.actionId === actionId)
+      : null;
+    const isSetup = ownerAction?.prepared?.action === 'setup' || retainedAction?.action === 'setup';
+    const response = await post('reconcile', '/reconcile', { actionId }, result => {
+      if (!isRecord(result?.action) || result.action.actionId !== actionId || typeof result.action.status !== 'string') return null;
+      const terminal = ['CONFIRMED', 'FAILED'].includes(result.action.status);
       return {
-        overview: { ...overview, actions: updateActionRecords(overview?.actions, response.action) },
-        actionRecords: updateActionRecords(state.actionRecords.length ? state.actionRecords : overview?.actions, response.action),
+        overview: { ...overview, actions: updateActionRecords(overview?.actions, result.action) },
+        actionRecords: updateActionRecords(state.actionRecords.length ? state.actionRecords : overview?.actions, result.action),
         ownerAction: state.ownerAction?.actionId === actionId ? null : state.ownerAction,
         ownerApproval: state.ownerAction?.actionId === actionId ? false : state.ownerApproval,
         uncertain: terminal ? null : state.uncertain,
         signedActionUnknown: terminal && state.signedActionUnknown === actionId ? null : state.signedActionUnknown,
-        notice: `Action ${actionId} reconciliation: ${response.action.status}${response.action.reason ? ` · ${response.action.reason}` : ''}`,
+        notice: `Action ${actionId} reconciliation: ${result.action.status}${result.action.reason ? ` · ${result.action.reason}` : ''}`,
       };
     }, { allowedOperation: 'reconcile', actionId });
+    if (isSetup && response?.action?.status === 'CONFIRMED') await refreshOverview();
   }
 
   function clearUncertaintyAfterReview() {
@@ -1120,6 +1433,21 @@ export default function LendingBot({ session, wallet }) {
   const mandateCurrent = hasCurrentMandate(overview);
   const delegationCurrent = isActiveDelegation(overview);
   const portfolioEvidenceFresh = hasFreshPortfolio(overview);
+  const setupQuote = overview?.setupQuote;
+  const setupQuoteHasFacts = isRecord(setupQuote) && ['QUOTED', 'READY'].includes(setupQuote.status);
+  const setupQuoteForWallet = setupQuoteHasFacts
+    && setupQuote.wallet === identityRef.current.sessionWallet
+    && setupQuote.wallet === identityRef.current.walletAddress;
+  const setupQuoteExpired = setupQuoteForWallet && Date.parse(setupQuote.expiresAt) <= Date.now();
+  const setupDeficitLamports = setupQuoteForWallet ? setupNativeDeficitLamports(setupQuote) : null;
+  const setupReady = isSetupReady(overview, identityRef.current.sessionWallet, Date.now(), actionRecords)
+    && matchesLinkedWallet(overview, context);
+  const setupCosts = overview?.setupCosts ?? null;
+  const setupReasons = Array.from(new Set([
+    ...(Array.isArray(overview?.setupIssues) ? overview.setupIssues : []),
+    ...(Array.isArray(setupQuote?.reasons) ? setupQuote.reasons : []),
+  ]));
+  const nativeUsdcMint = availableReserves.find(item => typeof item?.mint === 'string')?.mint ?? null;
 
   return <section className="lending-bot" aria-labelledby="lending-bot-title">
     <header className="lending-bot-header">
@@ -1150,23 +1478,177 @@ export default function LendingBot({ session, wallet }) {
       <section className="lending-bot-panel" aria-labelledby="lending-account-title">
         <div className="lending-panel-heading">
           <div><p className="lending-bot-eyebrow">Account and funding</p><h3 id="lending-account-title">Your wallet, your funds</h3></div>
-          <span className={`owner-status-tag${overview.walletLink?.walletAddress === session?.walletAddress ? '' : ' owner-status-tag--caution'}`}>
-            {overview.walletLink?.walletAddress === session?.walletAddress ? 'Wallet linked' : 'Wallet not linked'}
+          <span className={`owner-status-tag${matchesLinkedWallet(overview, context) ? '' : ' owner-status-tag--caution'}`}>
+            {matchesLinkedWallet(overview, context) ? 'Wallet linked' : 'Wallet not linked'}
           </span>
         </div>
         <dl className="lending-account-grid">
           <div><dt>Verified customer wallet</dt><dd><code>{session?.walletAddress ?? 'Unavailable'}</code></dd></div>
           <div><dt>Funding network</dt><dd>Solana mainnet-beta</dd></div>
-          <div><dt>Native USDC mint</dt><dd><code>{availableReserves.find(item => typeof item?.mint === 'string')?.mint ?? 'Unavailable'}</code></dd></div>
+          <div><dt>Native USDC mint</dt><dd><code>{nativeUsdcMint ?? 'Unavailable'}</code></dd></div>
           <div><dt>Observed USDC cash</dt><dd>{displayMoney(overview.portfolio?.cashBaseUnits)}</dd></div>
           <div><dt>Observed SOL for network fees</dt><dd>{displayMoney(overview.portfolio?.nativeLamports, 9, 'SOL')}</dd></div>
           <div><dt>Last capture</dt><dd>{overview.portfolio?.capturedAt ? displayTime(overview.portfolio.capturedAt) : 'Not captured'}</dd></div>
         </dl>
-        <p className="lending-bot-note">No funding is initiated here. Transfer native USDC to the exact wallet address only through a wallet or service you choose; verify the network and mint before sending. Capture is a separate explicit read action.</p>
-        {overview.walletLink?.walletAddress !== session?.walletAddress && <button className="owner-button owner-button--primary" type="button" disabled={!can('link-wallet') || Boolean(state.busy)} onClick={linkWallet} aria-busy={state.busy === 'link-wallet'}>
+        <p className="lending-bot-note">No funding is initiated here. USDC funding and capture guidance appear only after current canonical accounts are verified READY.</p>
+        {!matchesLinkedWallet(overview, context) && overview.walletLink?.walletAddress !== session?.walletAddress && <button className="owner-button owner-button--primary" type="button" disabled={!can('link-wallet') || Boolean(state.busy)} onClick={linkWallet} aria-busy={state.busy === 'link-wallet'}>
           {state.busy === 'link-wallet' ? 'Verifying Privy ownership…' : 'Link this verified embedded wallet'}
         </button>}
         {overview.walletLink?.walletAddress && overview.walletLink.walletAddress !== session?.walletAddress && <p className="lending-bot-alert" role="alert">The service link belongs to a different wallet. No action is available until the exact embedded wallet signs in to FalconOS.</p>}
+      </section>
+
+      <section className="lending-bot-panel lending-setup-panel" aria-labelledby="lending-setup-title">
+        <div className="lending-panel-heading">
+          <h3 id="lending-setup-title">Canonical account setup</h3>
+          <span className={`owner-status-tag${setupReady ? '' : ' owner-status-tag--caution'}`}>{overview.setupStatus.replace(/_/g, ' ')}</span>
+        </div>
+        <p className="lending-bot-note">The setup quote covers only the exact fee and rent for missing canonical accounts, not future lending-worker transactions. After setup and any USDC transfer, capture again for a fresh SOL balance; review the runner’s current HOLD or refusal reason before starting. Falcon will not top up SOL automatically.</p>
+        {!matchesLinkedWallet(overview, context) && <p className="lending-bot-alert" role="status">Select and link this exact embedded wallet to the verified Falcon session before requesting a setup quote.</p>}
+        {configuration?.walletProviderConfigured !== true && <div className="lending-bot-alert" role="alert">
+          <strong>Provider account reads are not configured.</strong>
+          {configuration?.issues?.filter(issue => typeof issue === 'string').length > 0
+            ? <ul className="lending-issues">{configuration.issues.filter(issue => typeof issue === 'string').map((issue, index) => <li key={`${issue}-${index}`}>{issue}</li>)}</ul>
+            : <p>Fix the provider read configuration before observing setup accounts.</p>}
+        </div>}
+        {wallet?.ready && typeof wallet.signTransaction !== 'function' && <p className="lending-bot-alert" role="status">The selected owner wallet does not expose Solana transaction signing in this SDK session. Account setup preparation is unavailable.</p>}
+        {setupCosts && <div className="lending-setup-costs">
+          <h4>Finalized setup costs to date</h4>
+          <dl className="lending-setup-metrics">
+            <div><dt>Network fees paid</dt><dd>{displayMoney(setupCosts.feeLamports, 9, 'SOL')}</dd></div>
+            <div><dt>Account rent paid</dt><dd>{displayMoney(setupCosts.rentLamports, 9, 'SOL')}</dd></div>
+            <div><dt>Known USDC-valued cost</dt><dd>{setupCosts.knownCostUsdcBaseUnits === null ? 'Unknown' : displayMoney(setupCosts.knownCostUsdcBaseUnits)}</dd></div>
+          </dl>
+          <p className="lending-bot-note">{setupCosts.hasUnpricedCost
+            ? 'At least one finalized setup cost has no trusted USD valuation. The known USDC figure is a subtotal, not the complete cost.'
+            : setupCosts.knownCostUsdcBaseUnits === null
+              ? 'No trusted USD valuation is available for retained setup costs.'
+              : 'The known USDC value covers all retained finalized setup costs.'}</p>
+        </div>}
+        <div className="lending-actions">
+          <button className="owner-button owner-button--quiet" type="button" disabled={!can('quote-account-setup') || Boolean(state.busy) || Boolean(state.uncertain)} onClick={quoteAccountSetup} aria-busy={state.busy === 'quote-account-setup'}>
+            {state.busy === 'quote-account-setup' ? 'Reading canonical accounts…' : setupQuoteHasFacts ? 'Re-read account setup' : overview.setupStatus === 'UNAVAILABLE' ? 'Retry account setup read' : 'Read account setup'}
+          </button>
+          {setupQuote?.status === 'QUOTED' && <button className="owner-button owner-button--primary" type="button" disabled={!can('prepare-account-setup') || Boolean(state.busy) || Boolean(state.uncertain)} onClick={prepareAccountSetup} aria-busy={state.busy === 'prepare-account-setup'}>
+            {state.busy === 'prepare-account-setup' ? 'Preparing exact owner setup…' : 'Prepare owner setup'}
+          </button>}
+        </div>
+        {overview.setupStatus === 'NOT_OBSERVED' && !setupQuote && <p className="lending-empty" role="status">No setup observation is retained. Read the canonical accounts and exact costs before sending SOL.</p>}
+        {overview.setupStatus === 'REQUIRED' && !setupQuote && <p className="lending-bot-alert" role="status">Setup is required, but no current account quote is retained. Read setup accounts before funding or preparing a transaction.</p>}
+        {setupQuote?.status === 'NO_DATA' && <div className="lending-bot-alert" role="alert">
+          <strong>Canonical account setup is unavailable.</strong>
+          <p>No account balance or setup readiness is inferred from this observation.</p>
+        </div>}
+        {setupQuoteHasFacts && !setupQuoteForWallet && <p className="lending-bot-alert" role="alert">The retained setup quote belongs to a different wallet. No quoted amounts or account addresses are shown as current; re-read for the verified wallet.</p>}
+        {setupQuoteHasFacts && setupQuoteForWallet && <>
+          {setupQuoteExpired && <p className="lending-bot-alert" role="status">This account quote has expired. Its amounts are historical only; re-read before preparing setup or using its balance.</p>}
+          <dl className="lending-setup-metrics">
+            <div><dt>Quote status</dt><dd>{setupQuote.status}</dd></div>
+            <div><dt>Owner wallet</dt><dd><code>{setupQuote.wallet}</code></dd></div>
+            <div><dt>Native SOL observed</dt><dd>{displayMoney(setupQuote.nativeBalanceLamports, 9, 'SOL')}</dd></div>
+            <div><dt>Observed</dt><dd>{displayTime(setupQuote.observedAt)} · slot {setupQuote.slot}</dd></div>
+            {setupQuote.status === 'QUOTED' ? <>
+              <div><dt>Quoted network fee</dt><dd>{displayMoney(setupQuote.feeLamports, 9, 'SOL')}<small>Fee cap: {displayMoney(setupQuote.maxFeeLamports, 9, 'SOL')}</small></dd></div>
+              <div><dt>Quoted account rent</dt><dd>{displayMoney(setupQuote.rentLamports, 9, 'SOL')}</dd></div>
+              <div><dt>Exact SOL shortfall at quote</dt><dd>{setupDeficitLamports === null ? 'Unavailable' : displayMoney(setupDeficitLamports, 9, 'SOL')}</dd></div>
+              <div><dt>Cost valuation (USDC)</dt><dd>{setupQuote.maxTotalCostUsdcBaseUnits === null ? 'Unknown' : displayMoney(setupQuote.maxTotalCostUsdcBaseUnits)}</dd></div>
+              <div><dt>Quote expiry</dt><dd>{displayTime(setupQuote.expiresAt)}</dd></div>
+            </> : <>
+              <div><dt>Additional setup fee/rent</dt><dd>Not required for READY accounts</dd></div>
+              <div><dt>Historical setup costs</dt><dd>{setupCosts ? 'See finalized cost summary above' : 'Not summarized; no zero is inferred'}</dd></div>
+              <div><dt>Observation validity</dt><dd>{setupQuote.expiresAt === null ? 'No quote expiry' : displayTime(setupQuote.expiresAt)}</dd></div>
+            </>}
+          </dl>
+          {setupQuote.status === 'QUOTED' && setupQuote.maxTotalCostUsdcBaseUnits === null && <p className="lending-bot-note">No trusted USD valuation was available for this quote; native SOL fee and rent remain separate known amounts.</p>}
+          {setupQuote.status === 'READY' && <p className="lending-bot-note">READY means no new setup transaction is needed. A null native balance or USD valuation remains unknown; historical expenses are shown separately.</p>}
+          <h4>Canonical token-account observations</h4>
+          <p className="lending-bot-note">The wallet address is the owner. Each address below is a distinct token account controlled by that wallet.</p>
+          <ul className="lending-setup-account-list" aria-label="Canonical token-account observations">
+            {setupQuote.accounts.map(account => <li key={account.address}>
+              <div className="lending-setup-account-heading">
+                <strong>{nativeUsdcMint && account.mint === nativeUsdcMint ? 'Native USDC token account' : nativeUsdcMint ? 'Reserve receipt token account' : 'Token account'}</strong>
+                <span>{account.exists ? 'Present at observation' : 'Missing · verified absent'}</span>
+              </div>
+              <dl className="lending-setup-account-details">
+                <div><dt>Token-account address</dt><dd><code>{account.address}</code></dd></div>
+                <div><dt>Mint</dt><dd><code>{account.mint}</code></dd></div>
+                <div><dt>Owner wallet</dt><dd><code>{account.owner}</code></dd></div>
+                <div><dt>Token program</dt><dd><code>{account.tokenProgram}</code></dd></div>
+                <div><dt>Observed balance</dt><dd>{nativeUsdcMint && account.mint === nativeUsdcMint
+                  ? displayMoney(account.balanceBaseUnits, 6, 'USDC')
+                  : `${account.balanceBaseUnits} token base units`}</dd></div>
+              </dl>
+            </li>)}
+          </ul>
+          {setupQuote.status === 'QUOTED' && isRecord(setupQuote.costEvidence) && <details className="lending-technical-details"><summary>Quote cost evidence</summary>
+            <dl className="lending-setup-account-details">
+              <div><dt>Cost source slot</dt><dd>{setupQuote.costEvidence.sourceSlot}</dd></div>
+              <div><dt>Fee quote slot</dt><dd>{setupQuote.costEvidence.feeQuoteSlot}</dd></div>
+              <div><dt>Rent per account</dt><dd>{displayMoney(setupQuote.costEvidence.rentPerAccountLamports, 9, 'SOL')}</dd></div>
+              <div><dt>Accounts missing</dt><dd>{setupQuote.costEvidence.missingAccountCount}</dd></div>
+            </dl>
+          </details>}
+        </>}
+        {setupQuoteHasFacts && setupQuoteForWallet && setupQuote.status === 'QUOTED'
+          && !setupQuoteExpired && setupDeficitLamports !== null && BigInt(setupDeficitLamports) > 0n
+          && <p className="lending-bot-alert" role="status">At this quote, the exact shortfall is {displayMoney(setupDeficitLamports, 9, 'SOL')}. If you choose to fund SOL, do so externally to {setupQuote.wallet}, then re-read the quote. This is fee plus rent with no added buffer; the amount may change on re-observation.</p>}
+        {setupQuoteHasFacts && setupQuoteForWallet && setupQuote.status === 'QUOTED'
+          && !setupQuoteExpired && setupDeficitLamports === '0'
+          && <p className="lending-bot-note">At this observation the wallet covers the quoted fee and rent. Prepare is available only for this unexpired retained quote and its missing canonical accounts.</p>}
+        {setupReady && <p className="lending-bot-status" role="status">All three canonical accounts are verified READY at {displayTime(overview.setupObservedAt)}. You may now send native USDC externally to the displayed owner wallet after confirming Solana mainnet-beta and the native USDC mint. Falcon does not fund the wallet. After the transfer settles, use Capture current portfolio for a fresh read.</p>}
+        {(overview.setupStatus === 'READY' || setupQuote?.status === 'READY') && !setupReady && <p className="lending-bot-alert" role="status">
+          {overview.setupStatus === 'READY' && setupQuote?.status !== 'READY'
+            ? 'Service status is READY but the retained quote is not a matching READY account observation. A later capture may have changed setup status; explicitly re-read setup accounts before funding USDC.'
+            : 'The READY account observation does not match service status, the selected linked wallet, or current action history. Do not fund USDC; re-read setup accounts or reconcile the exact setup action first.'}
+        </p>}
+        {setupReasons.length > 0 && <ul className="lending-issues" aria-label="Account setup issues">{setupReasons.map((issue, index) => <li key={`${issue}-${index}`}><code>{issue}</code></li>)}</ul>}
+        {activePrepared?.prepared?.action === 'setup' && <div className="lending-review-card" aria-labelledby="lending-setup-review-title">
+          <h4 id="lending-setup-review-title">Review exact owner setup transaction</h4>
+          <p>This transaction creates only the missing canonical token accounts below. Your wallet pays the quoted SOL fee and rent. It transfers no USDC or receipt principal and does not fund the wallet.</p>
+          <dl className="lending-review-data">
+            <div><dt>Action ID</dt><dd><code>{activePrepared.actionId}</code></dd></div>
+            <div><dt>Quote ID</dt><dd><code>{prepared.accountSetup.quoteId}</code></dd></div>
+            <div><dt>Network</dt><dd>Solana mainnet-beta</dd></div>
+            <div><dt>Wallet owner</dt><dd><code>{prepared.wallet}</code></dd></div>
+            <div><dt>Recipient</dt><dd><code>{prepared.recipient}</code></dd></div>
+            <div><dt>Token principal</dt><dd>0 USDC / 0 receipt units</dd></div>
+            <div><dt>Network fee</dt><dd>{displayMoney(prepared.feeLamports, 9, 'SOL')}</dd></div>
+            <div><dt>Rent</dt><dd>{displayMoney(prepared.rentLamports, 9, 'SOL')}</dd></div>
+            <div><dt>SOL balance at preparation</dt><dd>{displayMoney(prepared.costEvidence.walletLamports, 9, 'SOL')}</dd></div>
+            <div><dt>Observed</dt><dd>{displayTime(prepared.observedAt)} · slot {prepared.source.slot}</dd></div>
+            <div><dt>Expiry</dt><dd>{displayTime(prepared.expiresAt)}</dd></div>
+            <div><dt>Blockhash</dt><dd><code>{prepared.blockhash}</code></dd></div>
+            <div><dt>Last valid block height</dt><dd>{prepared.lastValidBlockHeight}</dd></div>
+            <div><dt>Program</dt><dd><code>{prepared.source.programId}</code></dd></div>
+            <div><dt>Adapter version</dt><dd>{prepared.source.adapterVersion}</dd></div>
+            <div><dt>Message SHA-256</dt><dd><code>{prepared.messageSha256}</code></dd></div>
+          </dl>
+          <ul className="lending-setup-account-list" aria-label="Accounts in the exact setup action">
+            {prepared.accountSetup.accounts.map(account => <li key={account.address}>
+              <div className="lending-setup-account-heading">
+                <strong>{account.wasMissing ? 'Will create' : 'Already present · unchanged'}</strong>
+              </div>
+              <dl className="lending-setup-account-details">
+                <div><dt>Token-account address</dt><dd><code>{account.address}</code></dd></div>
+                <div><dt>Mint</dt><dd><code>{account.mint}</code></dd></div>
+                <div><dt>Owner wallet</dt><dd><code>{account.owner}</code></dd></div>
+                <div><dt>Token program</dt><dd><code>{account.tokenProgram}</code></dd></div>
+              </dl>
+            </li>)}
+          </ul>
+          <details className="lending-technical-details" open><summary>Exact unsigned bytes and expected effects</summary>
+            <code className="lending-transaction-bytes">{prepared.transactionBase64}</code>
+            <pre>{JSON.stringify(prepared.expectedEffects, null, 2)}</pre>
+          </details>
+          {state.signedActionUnknown === activePrepared.actionId && <p className="lending-bot-alert" role="alert">A signature may already be registered. Do not sign again; reconcile this exact setup action.</p>}
+          {state.uncertain?.actionId === activePrepared.actionId && <button className="owner-button owner-button--quiet" type="button" disabled={!canPerformLendingOperation('reconcile', { sessionToken: session?.token, actionId: activePrepared.actionId }) || Boolean(state.busy)} onClick={() => void reconcileAction(activePrepared.actionId)} aria-busy={state.busy === 'reconcile'}>Reconcile exact setup action</button>}
+          {!state.signedActionUnknown && <label className="lending-confirmation"><input type="checkbox" checked={state.ownerApproval} onChange={event => updateStore(previous => ({ ...previous, ownerApproval: event.target.checked }))} />
+            <span>I reviewed the exact wallet, canonical accounts, SOL costs, expiry, and transaction bytes. I authorize this owner signature only; it moves no USDC or receipt principal.</span>
+          </label>}
+          <button className="owner-button owner-button--primary" type="button" disabled={!currentActionCanSign || Boolean(state.busy) || Boolean(state.uncertain)} onClick={() => void signOwnerAction()} aria-busy={state.busy === 'sign-owner-action'}>
+            {state.busy === 'sign-owner-action' ? 'Waiting for owner signature and registration…' : 'Sign exact owner setup'}
+          </button>
+          <button className="owner-button owner-button--quiet" type="button" disabled={Boolean(state.busy)} onClick={() => updateStore(previous => ({ ...previous, ownerAction: null, ownerApproval: false }))}>Close unsigned review</button>
+        </div>}
       </section>
 
       <section className="lending-bot-panel" aria-labelledby="lending-positions-title">
@@ -1189,7 +1671,7 @@ export default function LendingBot({ session, wallet }) {
           </article>)}
         </div> : <div className="lending-empty" role="status">
           <strong>{overview.portfolio?.status === 'NO_DATA' ? 'Portfolio data is unavailable' : overview.portfolio?.status === 'OBSERVED' ? 'No supported reserve position is present in this observation' : 'No portfolio snapshot has been captured'}</strong>
-          <p>{overview.portfolio?.issues?.filter(item => typeof item === 'string').join(' ') || 'Use Capture current portfolio to request a real read-only observation. Missing evidence is not shown as zero.'}</p>
+          <p>{overview.portfolio?.issues?.filter(item => typeof item === 'string').join(' ') || (setupReady ? 'Use Capture current portfolio to request a real read-only observation. Missing data is not shown as zero.' : 'Portfolio capture is unavailable until current canonical account setup is verified READY.')}</p>
         </div>}
         <dl className="lending-fee-grid">
           <div><dt>Deposits recorded</dt><dd>{displayMoney(overview.accounting?.depositsBaseUnits)}</dd></div>
@@ -1202,6 +1684,7 @@ export default function LendingBot({ session, wallet }) {
         </dl>
         <p className="lending-bot-note">APY is an observed estimate, not a promised return. Receipt units are not cash equivalents; redemption and usable liquidity are confirmed only by the service's current account evidence.</p>
         {overview.portfolio?.issues?.length > 0 && <ul className="lending-issues">{overview.portfolio.issues.map((issue, index) => typeof issue === 'string' && <li key={`${issue}-${index}`}>{issue}</li>)}</ul>}
+        {overview.portfolio?.warnings?.length > 0 && <ul className="lending-issues">{overview.portfolio.warnings.map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul>}
       </section>
 
       <section className="lending-bot-panel" aria-labelledby="lending-mandate-title">
@@ -1214,6 +1697,7 @@ export default function LendingBot({ session, wallet }) {
           <div><span>Operator fee</span><strong>{operatorFeeText}</strong></div>
           <div><span>Recipient (read-only)</span><code>{typeof configuration.feeRecipient === 'string' && configuration.feeRecipient ? configuration.feeRecipient : 'Not configured'}</code></div>
         </div>
+        {!setupReady && <p className="lending-bot-alert" role="status">Save a mandate and prepare a delegated permit only after current canonical account setup is verified READY.</p>}
         {!operatorTermsReady && <p className="lending-bot-alert" role="alert">Trusted fee terms are not configured. Saving a new mandate and starting the runner are disabled; withdrawals and status recovery remain available.</p>}
         <form className="lending-form" noValidate onSubmit={saveMandate} aria-busy={state.busy === 'save-mandate'}>
           <label className="lending-field"><span>Capital cap (USDC)</span><input type="text" inputMode="decimal" autoComplete="off" value={state.mandateForm.capitalCap} onChange={event => setMandateField('capitalCap', event.target.value)} aria-invalid={Boolean(state.mandateErrors.capitalCap)} aria-describedby="lb-capital-hint lb-capital-error" /><small id="lb-capital-hint">Exact USDC amount; maximum capital subject to the policy.</small><small id="lb-capital-error" className="lending-field-error">{state.mandateErrors.capitalCap ?? ''}</small></label>
@@ -1277,11 +1761,11 @@ export default function LendingBot({ session, wallet }) {
         {state.revocationPreview && <div className="lending-review-card lending-review-card--danger" aria-labelledby="lending-revocation-review-title">
           <h4 id="lending-revocation-review-title">Revoke all additional signers on this dedicated wallet</h4>
           <p>{state.revocationPreview.warning}</p>
-          <dl className="lending-review-data"><div><dt>Wallet</dt><dd><code>{state.revocationPreview.walletAddress}</code></dd></div><div><dt>Scope</dt><dd>ALL_DELEGATED_SIGNERS</dd></div></dl>
-          <p>The worker is paused. The Privy action below removes every additional signer listed here from this wallet; it does not remove or replace the customer wallet owner. Do not continue if this wallet is shared with another signer use case.</p>
+          <p>The preview above is the latest observed signer inventory, not an atomic list. At the moment of your action, the Privy SDK removes ALL additional signers then on this dedicated wallet, including any added after the preview. The customer owner is not removed or replaced. Do not continue if this wallet is shared.</p>
+          <p>The worker is paused before preview. This action does not remove or replace the customer wallet owner. If this wallet is shared with another signer use case, do not continue.</p>
           <ul className="lending-signer-list">{state.revocationPreview.signerIds.map(id => <li key={id}><code>{id}</code></li>)}</ul>
           <label className="lending-confirmation"><input type="checkbox" checked={state.revocationConfirmed} onChange={event => updateStore(previous => ({ ...previous, revocationConfirmed: event.target.checked }))} />
-            <span>I confirm this dedicated Falcon wallet may have ALL additional signers shown above removed. The customer remains the wallet owner.</span>
+            <span>I confirm that ALL additional signers present on this dedicated wallet at action time may be removed, including any added after this preview. The displayed list is only the last-read inventory, not a closed signer set. The customer remains the wallet owner.</span>
           </label>
           <button className="owner-button owner-button--danger" type="button" disabled={!can('remove-all-signers') || Boolean(state.busy) || Boolean(state.uncertain)} onClick={() => void removeAllDelegatedSigners()} aria-busy={state.busy === 'remove-all-signers'}>
             {state.busy === 'remove-all-signers' ? 'Revoking and verifying…' : 'Confirm revoke all additional signers'}
@@ -1327,7 +1811,7 @@ export default function LendingBot({ session, wallet }) {
           </div>
         </div>
 
-        {activePrepared && <div className="lending-review-card" aria-labelledby="lending-owner-review-title">
+        {activePrepared && prepared?.action !== 'setup' && <div className="lending-review-card" aria-labelledby="lending-owner-review-title">
           <h4 id="lending-owner-review-title">Review exact unsigned transaction</h4>
           <p>{prepared.action === 'fee'
             ? 'This is an owner-only USDC transfer to the trusted operator fee recipient. It is not a delegated action.'
