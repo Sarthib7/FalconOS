@@ -506,6 +506,7 @@ try {
   check('V191: refresh reads retained activity without another signature', activityReads() === beforeRefresh + 1 && await evaluate('window.__ownerTestWallet.signCalls === 1'));
   await wait(`document.body.innerText.includes(${JSON.stringify(savedDecision.analysis.summary)})`);
   check('V191: the built view renders an actual retained domain decision', await evaluate(`document.body.innerText.includes(${JSON.stringify(savedDecision.analysis.summary)}) && !document.querySelector('.owner-load-error')`));
+  await click('NEAR · Intents');
   await wait(`Boolean(document.getElementById('cfo-title')) && document.body.innerText.includes('T82_PROOF_UNVERIFIED')`);
   check('V197: CFO loads retained state without a capture or financial signature', requests.filter(row => row.path.startsWith('/v1/cfo') && row.method === 'POST').length === 0 && await evaluate('window.__ownerTestWallet.signCalls === 1'));
   check('V200: actual CFO surface labels the mainnet signing boundary', await evaluate(`Boolean(document.getElementById('cfo-mainnet-warning')) && !document.querySelector('.cfo-payload')`));
@@ -544,6 +545,7 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1360, height: 950, deviceScaleFactor: 1, mobile: false });
   await evaluate('window.__ownerTestWallet.reject = false');
   const r5Session = await signIn();
+  await click('NEAR · Intents');
   const r5Identity = await walletAuth.getSession(r5Session);
   assert.ok(r5Identity);
   const r5SignCallsAtEntry = await evaluate('window.__ownerTestWallet.signCalls');

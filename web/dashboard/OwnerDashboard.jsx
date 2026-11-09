@@ -1,13 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { PrivyProvider } from '@privy-io/react-auth';
 import { meshRequest } from './api.mjs';
 import { createSignInWalletSession } from '../app/wallet-signin.mjs';
 import Cfo from './Cfo.jsx';
+import EmbeddedWallet from './EmbeddedWallet.jsx';
+import LendingBot from './LendingBot.jsx';
 import {
   clearWalletSession,
   createWalletSession,
   restoreWalletSession,
   revokeWalletSession,
+  WALLET_SESSION_KEY,
 } from '../bot/auth.mjs';
+
+const PRIVY_APP_ID = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_PRIVY_APP_ID?.trim() ?? '' : '';
+const PRIVY_CLIENT_ID = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_PRIVY_CLIENT_ID?.trim() ?? '' : '';
 
 const emptyActivity = () => ({ status: 'idle', data: null, error: null, refreshing: false });
 const isRecord = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -249,7 +256,8 @@ function LoadError({ error, onRetry }) {
   </section>;
 }
 
-function OwnerWorkspace({ session, walletSession, activity, onRefresh, onLogout, onRetry }) {
+function OwnerWorkspace({ session, walletSession, activity, onRefresh, onLogout, onRetry, privyConfigured, onEmbeddedSignIn, notice }) {
+  const [workflow, setWorkflow] = useState('solana');
   const data = activity.data;
   const loading = !data && (activity.status === 'idle' || activity.status === 'loading');
   return <section className="owner-workspace" aria-label="Verified owner dashboard">
@@ -264,7 +272,19 @@ function OwnerWorkspace({ session, walletSession, activity, onRefresh, onLogout,
         <button className="owner-button owner-button--quiet" type="button" onClick={onLogout}>Sign out</button>
       </div>
     </div>
-    <Cfo session={session} walletSession={walletSession} />
+    {notice && <p className="owner-gate-notice" role="status" aria-live="polite">{notice}</p>}
+    <nav className="owner-workflow-switch" aria-label="Falcon treasury network and workflow">
+      <div role="group" aria-label="Select a supported network workflow">
+        <button className="owner-workflow-choice" type="button" aria-pressed={workflow === 'solana'} onClick={() => setWorkflow('solana')}>Solana · Lending</button>
+        <button className="owner-workflow-choice" type="button" aria-pressed={workflow === 'near'} onClick={() => setWorkflow('near')}>NEAR · Intents</button>
+      </div>
+      <p className="owner-workflow-note">One Falcon treasury workspace with separate network adapters. Balances are never aggregated across chains, and no cross-chain transfer is available. Other networks remain unsupported / Soon.</p>
+    </nav>
+    {workflow === 'solana'
+      ? <EmbeddedWallet enabled={privyConfigured} session={session} onSignIn={onEmbeddedSignIn}>
+        {wallet => <LendingBot session={session} wallet={wallet} />}
+      </EmbeddedWallet>
+      : <Cfo session={session} walletSession={walletSession} />}
     {activity.error && data && <div className="owner-refresh-error" role="alert">
       <p>Couldn’t refresh your retained activity. {activity.error}</p>
       <button className="owner-button owner-button--quiet" type="button" onClick={onRetry}>Try again</button>
@@ -279,8 +299,8 @@ function OwnerWorkspace({ session, walletSession, activity, onRefresh, onLogout,
   </section>;
 }
 
-function OwnerGate({ auth, wallets, walletError, notice, pendingWallet, onSignIn, onRetryRestore }) {
-  const pendingWalletName = wallets.find(wallet => wallet.id === pendingWallet)?.name;
+function OwnerGate({ auth, wallets, walletError, notice, pendingWallet, onSignIn, onEmbeddedSignIn, onRetryRestore, privyConfigured }) {
+  const pendingWalletName = pendingWallet === 'embedded' ? 'your Privy embedded wallet' : wallets.find(wallet => wallet.id === pendingWallet)?.name;
   const busy = ['checking', 'signing-in', 'signing-out'].includes(auth.status);
   const canChooseWallet = auth.status === 'anonymous' || auth.status === 'restore-error';
   return <section className="owner-gate" aria-labelledby="owner-gate-title" aria-busy={busy}>
@@ -315,11 +335,12 @@ function OwnerGate({ auth, wallets, walletError, notice, pendingWallet, onSignIn
         </li>)}
       </ul> : <p className="owner-empty owner-wallet-empty">No Wallet Standard wallet is currently available. This dashboard requires a Solana account that can sign a message.</p>}
     </div>}
+    {canChooseWallet && <EmbeddedWallet enabled={privyConfigured} session={null} onSignIn={onEmbeddedSignIn} />}
     <p className="owner-coming-soon">Sign-up and organization workspaces are unavailable.</p>
   </section>;
 }
 
-export default function OwnerDashboard() {
+function OwnerDashboardContent({ privyConfigured }) {
   const [auth, setAuth] = useState({ status: 'checking', session: null, error: null });
   const [wallets, setWallets] = useState([]);
   const [walletError, setWalletError] = useState(null);
@@ -360,6 +381,7 @@ export default function OwnerDashboard() {
     if (currentSession.current !== session) return;
     currentSession.current = null;
     authGeneration.current += 1;
+    setPendingWallet(null);
     activityGeneration.current += 1;
     clearStoredSession();
     setActivity(emptyActivity());
@@ -398,6 +420,7 @@ export default function OwnerDashboard() {
 
   const restoreSavedSession = useCallback(async () => {
     const attempt = ++authGeneration.current;
+    setPendingWallet(null);
     currentSession.current = null;
     activityGeneration.current += 1;
     setActivity(emptyActivity());
@@ -470,12 +493,68 @@ export default function OwnerDashboard() {
       if (mounted.current && attempt === authGeneration.current) setPendingWallet(null);
     }
   }, [auth.status]);
+  const signInEmbeddedWallet = useCallback(async ({ walletAddress, walletSession }) => {
+    if (!walletSession || typeof walletAddress !== 'string' || !walletAddress
+      || !['anonymous', 'restore-error', 'authenticated'].includes(auth.status)) return;
+    const previousSession = currentSession.current;
+    const preservingCurrent = auth.status === 'authenticated' && Boolean(previousSession);
+    const attempt = ++authGeneration.current;
+    setNotice(null);
+    setPendingWallet('embedded');
+    if (!preservingCurrent) {
+      currentSession.current = null;
+      activityGeneration.current += 1;
+      setActivity(emptyActivity());
+      setAuth({ status: 'signing-in', session: null, error: null });
+    }
+    let stagedToken = null;
+    try {
+      const storage = { setItem(_key, value) { stagedToken = value; } };
+      const session = await createWalletSession(walletSession, { storage });
+      if (!mounted.current || attempt !== authGeneration.current) {
+        try { await meshRequest(session.token, '/v1/auth/wallet/logout', {}); } catch {}
+        return;
+      }
+      if (session.walletAddress !== walletAddress || walletSession.current()?.address !== walletAddress || stagedToken !== session.token) {
+        try { await meshRequest(session.token, '/v1/auth/wallet/logout', {}); } catch {}
+        throw new Error('Falcon verified a different wallet than the currently selected Privy embedded account.');
+      }
+      try {
+        globalThis.sessionStorage.setItem(WALLET_SESSION_KEY, session.token);
+      } catch {
+        try { await meshRequest(session.token, '/v1/auth/wallet/logout', {}); } catch {}
+        throw new Error('This browser could not store the verified wallet session. No new session was saved.');
+      }
+      currentSession.current = session;
+      activityGeneration.current += 1;
+      setActivity(emptyActivity());
+      setAuth({ status: 'authenticated', session, error: null });
+      if (previousSession && previousSession.token !== session.token) {
+        try {
+          const result = await meshRequest(previousSession.token, '/v1/auth/wallet/logout', {});
+          if (result?.revoked !== true) throw new Error('The previous Falcon session was not confirmed revoked.');
+          if (mounted.current && attempt === authGeneration.current) setNotice('The embedded wallet signed its own Falcon challenge. The previous wallet session was revoked.');
+        } catch {
+          if (mounted.current && attempt === authGeneration.current) setNotice('The embedded wallet signed its own Falcon challenge. Falcon could not confirm revocation of the previous session.');
+        }
+      } else if (mounted.current && attempt === authGeneration.current) {
+        setNotice('The embedded wallet signed its own Falcon challenge and now owns this Falcon session.');
+      }
+    } catch (error) {
+      if (!mounted.current || attempt !== authGeneration.current) return;
+      if (!preservingCurrent) setAuth({ status: 'anonymous', session: null, error: null });
+      setNotice(errorMessage(error));
+    } finally {
+      if (mounted.current && attempt === authGeneration.current) setPendingWallet(null);
+    }
+  }, [auth.status]);
 
   const logout = useCallback(async () => {
     if (auth.status !== 'authenticated' || !auth.session) return;
     const session = auth.session;
     const attempt = ++authGeneration.current;
     currentSession.current = null;
+    setPendingWallet(null);
     activityGeneration.current += 1;
     setActivity(emptyActivity());
     setNotice(null);
@@ -518,9 +597,19 @@ export default function OwnerDashboard() {
         <p className="owner-intro-copy">Research and risk advice.<br />Every financial action remains yours.</p>
       </div>
       {auth.status === 'authenticated'
-        ? <OwnerWorkspace session={auth.session} walletSession={walletSessionRef.current} activity={activity} onRefresh={retryActivity} onRetry={retryActivity} onLogout={logout} />
-        : <OwnerGate auth={auth} wallets={wallets} walletError={walletError} notice={notice} pendingWallet={pendingWallet} onSignIn={signIn} onRetryRestore={restoreSavedSession} />}
+        ? <OwnerWorkspace session={auth.session} walletSession={walletSessionRef.current} activity={activity} onRefresh={retryActivity} onRetry={retryActivity} onLogout={logout} privyConfigured={privyConfigured} onEmbeddedSignIn={signInEmbeddedWallet} notice={notice} />
+        : <OwnerGate auth={auth} wallets={wallets} walletError={walletError} notice={notice} pendingWallet={pendingWallet} onSignIn={signIn} onEmbeddedSignIn={signInEmbeddedWallet} onRetryRestore={restoreSavedSession} privyConfigured={privyConfigured} />}
     </main>
     <footer className="owner-footer">FALCON INVESTMENT COUNCIL / RESEARCH AND RISK ADVICE</footer>
   </div>;
+}
+export default function OwnerDashboard() {
+  if (!PRIVY_APP_ID) return <OwnerDashboardContent privyConfigured={false} />;
+  return <PrivyProvider
+    appId={PRIVY_APP_ID}
+    config={{ embeddedWallets: { solana: { createOnLogin: 'off' } } }}
+    {...(PRIVY_CLIENT_ID ? { clientId: PRIVY_CLIENT_ID } : {})}
+  >
+    <OwnerDashboardContent privyConfigured />
+  </PrivyProvider>;
 }

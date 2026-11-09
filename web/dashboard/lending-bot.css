@@ -1,0 +1,624 @@
+.owner-workflow-switch {
+  display: grid;
+  gap: 10px;
+  padding: clamp(16px, 2.5vw, 22px);
+  border: 1px solid var(--line);
+  background: var(--deep);
+}
+
+.owner-workflow-switch > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.owner-workflow-choice {
+  min-height: 44px;
+  padding: 9px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--fg);
+  background: var(--surface);
+  font: 500 14px/1.4 var(--body);
+}
+
+.owner-workflow-choice[aria-pressed="true"] {
+  border-color: var(--green);
+  color: var(--ink);
+  background: var(--green);
+}
+
+.owner-workflow-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.embedded-wallet,
+.lending-bot {
+  --lending-line: var(--line, #465348);
+  --lending-surface: var(--surface, #18201b);
+  --lending-deep: var(--deep, #121a15);
+  --lending-text: var(--fg, #edf0e7);
+  --lending-muted: var(--muted, #adb6aa);
+  --lending-accent: var(--green, #9cdaa1);
+  --lending-warning: var(--amber, #f0c98e);
+  --lending-danger: var(--red, #f3b3a7);
+  min-width: 0;
+}
+
+.embedded-wallet {
+  gap: 16px;
+}
+
+.embedded-wallet-step,
+.embedded-wallet-detail,
+.embedded-wallet-warning,
+.embedded-wallet-picker,
+.embedded-wallet-match,
+.lending-bot-panel,
+.lending-review-card,
+.lending-owner-action-card,
+.lending-empty,
+.lending-bot-alert,
+.lending-bot-status {
+  min-width: 0;
+  border: 1px solid var(--lending-line);
+  background: var(--lending-deep);
+}
+
+.embedded-wallet-step,
+.embedded-wallet-detail,
+.embedded-wallet-warning,
+.embedded-wallet-picker,
+.embedded-wallet-match,
+.lending-bot-panel,
+.lending-review-card,
+.lending-owner-action-card,
+.lending-empty,
+.lending-bot-alert,
+.lending-bot-status {
+  display: grid;
+  gap: 12px;
+  padding: clamp(15px, 2.5vw, 22px);
+}
+
+.embedded-wallet-step > p,
+.embedded-wallet-warning p,
+.lending-bot-note,
+.lending-position p,
+.lending-empty p,
+.lending-bot-alert p,
+.lending-bot-status p {
+  margin: 0;
+  color: var(--lending-muted);
+}
+
+.embedded-wallet-warning,
+.lending-bot-alert,
+.lending-review-card--danger {
+  border-left: 3px solid var(--lending-warning);
+}
+
+.embedded-wallet-warning strong,
+.lending-bot-alert strong {
+  color: var(--lending-warning);
+}
+
+.embedded-wallet-match,
+.lending-bot-status {
+  border-left: 3px solid var(--lending-accent);
+  color: var(--lending-text);
+}
+
+.embedded-wallet-match {
+  margin: 0;
+}
+
+.embedded-wallet-picker,
+.embedded-wallet-detail {
+  gap: 10px;
+}
+
+.embedded-wallet-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--lending-muted);
+  font: 11px/1.45 var(--mono, ui-monospace, monospace);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.embedded-wallet-detail > div,
+.embedded-wallet-list,
+.embedded-wallet-list li {
+  min-width: 0;
+}
+
+.embedded-wallet-detail code,
+.embedded-wallet-choice code,
+.lending-review-data code,
+.lending-position code,
+.lending-signer-list code,
+.lending-action-list code,
+.lending-account-grid code,
+.lending-trusted-terms code,
+.lending-reserve-list code,
+.lending-technical-details code,
+.lending-technical-details pre,
+.lending-transaction-bytes {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.embedded-wallet-list,
+.lending-signer-list,
+.lending-action-list,
+.lending-permission-list,
+.lending-reserve-list ul,
+.lending-issues {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.embedded-wallet-choice {
+  width: 100%;
+  min-height: 54px;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--lending-line);
+  color: var(--lending-text);
+  background: var(--lending-surface);
+  text-align: left;
+}
+
+.embedded-wallet-choice[aria-pressed="true"] {
+  border-color: var(--lending-accent);
+  box-shadow: inset 3px 0 var(--lending-accent);
+}
+
+.embedded-wallet-choice code {
+  font-size: 12px;
+}
+
+.lending-bot {
+  display: grid;
+  gap: 18px;
+  color: var(--lending-text);
+}
+
+.lending-bot-header,
+.lending-panel-heading,
+.lending-position-heading,
+.lending-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lending-bot-header {
+  align-items: flex-end;
+  padding: 4px 0 8px;
+}
+
+.lending-bot-header > div:first-child {
+  display: grid;
+  gap: 8px;
+  max-width: 72ch;
+}
+
+.lending-bot-header h2 {
+  margin: 0;
+  font: 500 clamp(26px, 3.2vw, 38px)/1.12 var(--body, system-ui, sans-serif);
+  letter-spacing: -.045em;
+}
+
+.lending-bot-header p:not(.lending-bot-eyebrow) {
+  margin: 0;
+  color: var(--lending-muted);
+}
+
+.lending-bot-eyebrow {
+  margin: 0;
+  color: var(--lending-accent);
+  font: 11px/1.45 var(--mono, ui-monospace, monospace);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.lending-bot-state-strip,
+.lending-account-grid,
+.lending-fee-grid,
+.lending-review-data,
+.lending-trusted-terms {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.lending-bot-state-strip > div,
+.lending-account-grid > div,
+.lending-fee-grid > div,
+.lending-review-data > div,
+.lending-trusted-terms > div {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 13px;
+  border: 1px solid var(--lending-line);
+  background: var(--lending-deep);
+}
+
+.lending-bot-state-strip span,
+.lending-account-grid dt,
+.lending-fee-grid dt,
+.lending-review-data dt,
+.lending-trusted-terms span {
+  color: var(--lending-muted);
+  font: 10px/1.45 var(--mono, ui-monospace, monospace);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.lending-bot-state-strip strong,
+.lending-account-grid dd,
+.lending-fee-grid dd,
+.lending-review-data dd,
+.lending-trusted-terms strong {
+  min-width: 0;
+  margin: 0;
+  color: var(--lending-text);
+  overflow-wrap: anywhere;
+}
+
+.lending-panel-heading {
+  align-items: center;
+}
+
+.lending-panel-heading h3,
+.lending-panel-heading h4,
+.lending-review-card h4,
+.lending-owner-action-card h4 {
+  margin: 0;
+  font: 450 clamp(18px, 2vw, 24px)/1.2 var(--body, system-ui, sans-serif);
+  letter-spacing: -.025em;
+}
+
+.lending-panel-heading h4,
+.lending-owner-action-card h4 {
+  font-size: 17px;
+}
+
+.lending-panel-heading > div {
+  display: grid;
+  gap: 6px;
+}
+
+.lending-bot-note {
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.lending-position-grid,
+.lending-owner-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lending-position,
+.lending-owner-action-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: clamp(15px, 2.3vw, 20px);
+  border: 1px solid var(--lending-line);
+  background: var(--lending-deep);
+}
+
+.lending-position-heading {
+  align-items: center;
+  color: var(--lending-text);
+}
+
+.lending-position-heading span {
+  color: var(--lending-accent);
+  font: 12px/1.4 var(--mono, ui-monospace, monospace);
+}
+
+.lending-position dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.lending-position dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--lending-line);
+}
+
+.lending-position dt {
+  color: var(--lending-muted);
+  font-size: 13px;
+}
+
+.lending-position dd {
+  margin: 0;
+  color: var(--lending-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.lending-fee-grid > div {
+  background: var(--lending-surface);
+}
+
+.lending-empty {
+  border-style: dashed;
+}
+
+.lending-empty strong {
+  color: var(--lending-text);
+}
+
+.lending-trusted-terms {
+  grid-template-columns: minmax(0, .6fr) minmax(0, 1.4fr);
+}
+
+.lending-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.lending-field {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: var(--lending-text);
+  font-size: 14px;
+}
+
+.lending-field > span {
+  font-weight: 500;
+}
+
+.lending-field input,
+.lending-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--lending-line);
+  border-radius: var(--radius, 0);
+  color: var(--lending-text);
+  background: var(--lending-deep);
+  font: 14px/1.4 var(--body, system-ui, sans-serif);
+}
+
+.lending-field input[aria-invalid="true"],
+.lending-field select[aria-invalid="true"] {
+  border-color: var(--lending-warning);
+}
+
+.lending-field input:focus-visible,
+.lending-field select:focus-visible,
+.lending-confirmation input:focus-visible {
+  outline: 3px solid var(--lending-warning);
+  outline-offset: 2px;
+}
+
+.lending-field small {
+  color: var(--lending-muted);
+  font-size: 12px;
+}
+
+.lending-field .lending-field-error {
+  color: var(--lending-warning);
+}
+
+.lending-form-wide {
+  grid-column: 1 / -1;
+}
+
+.lending-reserve-list ul {
+  margin-top: 4px;
+}
+
+.lending-reserve-list li,
+.lending-signer-list li,
+.lending-permission-list li,
+.lending-action-list li {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--lending-line);
+  background: var(--lending-deep);
+}
+
+.lending-reserve-list li small {
+  overflow-wrap: anywhere;
+}
+
+.lending-permission-list {
+  padding-left: 18px;
+  list-style: disc;
+}
+
+.lending-permission-list li {
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--lending-muted);
+}
+
+.lending-actions {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.lending-review-card > p {
+  margin: 0;
+  color: var(--lending-muted);
+}
+
+.lending-review-data {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lending-review-data dd {
+  display: grid;
+  gap: 4px;
+}
+
+.lending-confirmation {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  color: var(--lending-text);
+  line-height: 1.5;
+}
+
+.lending-confirmation input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--lending-accent);
+}
+
+.lending-technical-details {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--lending-line);
+  color: var(--lending-muted);
+  background: var(--lending-deep);
+}
+
+.lending-technical-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--lending-accent);
+}
+
+.lending-technical-details pre {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  color: var(--lending-text);
+  font: 12px/1.5 var(--mono, ui-monospace, monospace);
+  white-space: pre-wrap;
+}
+
+.lending-transaction-bytes {
+  max-height: 160px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--lending-line);
+  color: var(--lending-text);
+  font: 11px/1.5 var(--mono, ui-monospace, monospace);
+}
+
+.lending-action-list > li > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lending-action-list > li > p {
+  margin: 0;
+  color: var(--lending-muted);
+  font-size: 13px;
+}
+
+.lending-issues {
+  padding-left: 18px;
+  list-style: disc;
+  color: var(--lending-muted);
+  font-size: 13px;
+}
+
+.lending-bot :where(button, input, select, summary):focus-visible,
+.embedded-wallet :where(button, input, select, summary):focus-visible {
+  outline: 3px solid var(--lending-warning);
+  outline-offset: 3px;
+}
+
+.lending-bot button:disabled,
+.embedded-wallet button:disabled {
+  cursor: not-allowed;
+}
+
+@media (max-width: 860px) {
+  .lending-bot-state-strip,
+  .lending-account-grid,
+  .lending-fee-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lending-bot .owner-button--danger,
+.embedded-wallet .owner-button--danger {
+  border-color: var(--lending-danger);
+  color: var(--lending-danger);
+  background: var(--lending-deep);
+}
+
+@media (hover: hover) {
+  .lending-bot .owner-button--danger:hover:not(:disabled),
+  .embedded-wallet .owner-button--danger:hover:not(:disabled) {
+    border-color: var(--lending-danger);
+    color: var(--lending-text);
+    background: var(--lending-surface);
+  }
+}
+
+@media (max-width: 680px) {
+  .lending-bot-header {
+    display: grid;
+    align-items: start;
+  }
+
+  .lending-bot-header > button {
+    width: 100%;
+  }
+
+  .lending-position-grid,
+  .lending-owner-action-grid,
+  .lending-form,
+  .lending-trusted-terms,
+  .lending-review-data {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lending-panel-heading {
+    align-items: flex-start;
+  }
+
+  .lending-position dl > div {
+    display: grid;
+    gap: 3px;
+  }
+
+  .lending-position dd {
+    text-align: left;
+  }
+}
