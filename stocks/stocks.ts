@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { freezeDeep, isDeepFrozen, sha256, sha256Utf8, stableStringify } from '../mesh/council/evidence.ts';
 
 export const STOCKS_SCHEMA_VERSION = 1 as const;
 export const STOCK_VENUE = 'solana' as const;
@@ -71,30 +71,6 @@ function enumValue<T extends string>(value: unknown, allowed: readonly T[], name
   return value as T;
 }
 
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  const object = value as RecordValue;
-  return `{${Object.keys(object).sort().map(key => `${JSON.stringify(key)}:${stableStringify(object[key])}`).join(',')}}`;
-}
-
-function sha256Utf8(text: string): string {
-  return createHash('sha256').update(Buffer.from(text, 'utf8')).digest('hex');
-}
-
-function freezeDeep<T>(value: T): T {
-  if (typeof value !== 'object' || value === null) return value;
-  for (const child of Object.values(value as RecordValue)) freezeDeep(child);
-  return Object.freeze(value);
-}
-
-function isDeepFrozen(value: unknown, seen = new WeakSet<object>()): boolean {
-  if (typeof value !== 'object' || value === null) return true;
-  if (seen.has(value)) return true;
-  seen.add(value);
-  if (!Object.isFrozen(value)) return false;
-  return Object.values(value as RecordValue).every(child => isDeepFrozen(child, seen));
-}
 
 export interface StockLimits {
   minLiquidity: string;
@@ -340,7 +316,7 @@ function manifestEntry(assetId: string, capture: FieldCapture): RawManifestEntry
     sequence: capture.sequence,
     continuity: capture.continuity,
     rawBytesBase64: Buffer.from(bytes).toString('base64'),
-    rawSha256: createHash('sha256').update(bytes).digest('hex'),
+    rawSha256: sha256(bytes),
     normalizedValue: capture.normalizedValue,
     equivalenceValidated: capture.equivalenceValidated,
   };

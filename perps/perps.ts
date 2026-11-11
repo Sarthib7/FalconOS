@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { freezeDeep, isDeepFrozen, sha256, sha256Utf8, stableStringify } from '../mesh/council/evidence.ts';
 
 export const PERPS_SCHEMA_VERSION = 1 as const;
 export const PERPS_VENUES = ['phoenix', 'hyperliquid'] as const;
@@ -75,36 +75,11 @@ function provenance(value: unknown): DataProvenance {
   return value;
 }
 
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number') {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  const object = value as RecordValue;
-  return `{${Object.keys(object).sort().map(key => `${JSON.stringify(key)}:${stableStringify(object[key])}`).join(',')}}`;
-}
-
-function sha256(bytes: Uint8Array): string {
-  return createHash('sha256').update(bytes).digest('hex');
-}
 
 function rawBytes(value: string | Uint8Array): Uint8Array {
   return typeof value === 'string' ? Buffer.from(value, 'utf8') : new Uint8Array(value);
 }
 
-function freezeDeep<T>(value: T): T {
-  if (typeof value !== 'object' || value === null) return value;
-  for (const child of Object.values(value as RecordValue)) freezeDeep(child);
-  return Object.freeze(value);
-}
-
-function isDeepFrozen(value: unknown, seen = new WeakSet<object>()): boolean {
-  if (typeof value !== 'object' || value === null) return true;
-  if (seen.has(value)) return true;
-  seen.add(value);
-  if (!Object.isFrozen(value)) return false;
-  return Object.values(value as RecordValue).every(child => isDeepFrozen(child, seen));
-}
 
 function enumValue<T extends string>(value: unknown, allowed: readonly T[], name: string): T {
   if (typeof value !== 'string' || !allowed.includes(value as T)) throw new TypeError(`${name} is invalid`);
@@ -543,8 +518,8 @@ export function createCanonicalSnapshot(input: CanonicalSnapshotInput): Canonica
       return { field: capture.field, sourceId: capture.sourceId, sourceRole: capture.sourceRole, status: capture.status, capturedAt: capture.capturedAt, sequence: capture.sequence, continuity: capture.continuity, rawBytesBase64: Buffer.from(bytes).toString('base64'), rawSha256: sha256(bytes), normalizedValue: capture.normalizedValue, adapterVersion: capture.adapterVersion, semanticVersion: capture.semanticVersion, equivalenceValidated: capture.equivalenceValidated };
     });
   const rawManifest = { schemaVersion: PERPS_SCHEMA_VERSION as typeof PERPS_SCHEMA_VERSION, entries: rawEntries };
-  const rawManifestSha256 = sha256(Buffer.from(stableStringify(rawManifest), 'utf8'));
-  const normalizedProjectionSha256 = sha256(Buffer.from(stableStringify(normalized), 'utf8'));
+  const rawManifestSha256 = sha256Utf8(stableStringify(rawManifest));
+  const normalizedProjectionSha256 = sha256Utf8(stableStringify(normalized));
   const status: SnapshotStatus = missing.length === 0 && conflicts.length === 0 ? 'READY' : 'NO_DATA';
   const envelope: SnapshotEnvelope = {
     schemaVersion: PERPS_SCHEMA_VERSION,
@@ -572,7 +547,7 @@ export function createCanonicalSnapshot(input: CanonicalSnapshotInput): Canonica
     missing: [...new Set(missing)].sort(),
     conflicts: [...new Set(conflicts)].sort(),
     bytes,
-    hash: sha256(Buffer.from(bytes, 'utf8')),
+    hash: sha256Utf8(bytes),
     frozen: true,
   };
   return freezeDeep(result);
@@ -719,12 +694,12 @@ function validateCanonicalMarketSnapshot(value: unknown): CanonicalSnapshot {
   });
   const reconstructed = createCanonicalSnapshot({ registry, precedence, captures: reconstructedCaptures, capturedAt: envelope.capturedAt as string, coherenceCapMs: envelope.coherenceCapMs as number, provenance: envelope.provenance as DataProvenance });
   if (stableStringify(reconstructed.envelope) !== stableStringify(envelope) || stableStringify(reconstructed.rawManifest) !== stableStringify(rawManifest) || stableStringify(reconstructed.normalized) !== stableStringify(normalized) || stableStringify(reconstructed.sourceDecisions) !== stableStringify(object.sourceDecisions) || stableStringify(reconstructed.missing) !== stableStringify(object.missing) || stableStringify(reconstructed.conflicts) !== stableStringify(object.conflicts)) throw new TypeError('canonical market derived projection mismatch');
-  const rawManifestHash = sha256(Buffer.from(stableStringify(rawManifest), 'utf8'));
-  const normalizedHash = sha256(Buffer.from(stableStringify(normalized), 'utf8'));
+  const rawManifestHash = sha256Utf8(stableStringify(rawManifest));
+  const normalizedHash = sha256Utf8(stableStringify(normalized));
   if (object.frozen !== true) throw new TypeError('canonical market is not frozen');
   const payload = { envelope, registry: object.registry, sourcePrecedence: precedence, rawManifest, normalized, sourceDecisions: object.sourceDecisions, missing: object.missing, conflicts: object.conflicts };
   const bytes = stringValue(object.bytes, 'canonical market bytes');
-  if (bytes !== stableStringify(payload) || sha256(Buffer.from(bytes, 'utf8')) !== hashValue(object.hash, 'canonical market hash')) throw new TypeError('canonical market bundle hash mismatch');
+  if (bytes !== stableStringify(payload) || sha256Utf8(bytes) !== hashValue(object.hash, 'canonical market hash')) throw new TypeError('canonical market bundle hash mismatch');
   return object as unknown as CanonicalSnapshot;
 }
 export function createCanonicalSnapshotBundle(input: CanonicalSnapshotBundleInput): CanonicalSnapshotBundle {
@@ -771,8 +746,8 @@ export function createCanonicalSnapshotBundle(input: CanonicalSnapshotBundleInpu
   sourceDecisions.sort((a, b) => a.venue.localeCompare(b.venue) || a.field.localeCompare(b.field));
   const rawManifest = { schemaVersion: PERPS_SCHEMA_VERSION as typeof PERPS_SCHEMA_VERSION, entries: rawEntries };
   const normalized = { schemaVersion: PERPS_SCHEMA_VERSION as typeof PERPS_SCHEMA_VERSION, markets: normalizedMarkets };
-  const rawManifestSha256 = sha256(Buffer.from(stableStringify(rawManifest), 'utf8'));
-  const normalizedProjectionSha256 = sha256(Buffer.from(stableStringify(normalized), 'utf8'));
+  const rawManifestSha256 = sha256Utf8(stableStringify(rawManifest));
+  const normalizedProjectionSha256 = sha256Utf8(stableStringify(normalized));
   const status: SnapshotStatus = missing.length === 0 && conflicts.length === 0 ? 'READY' : 'NO_DATA';
   const envelope: CanonicalSnapshotBundleEnvelope = {
     schemaVersion: PERPS_SCHEMA_VERSION,
@@ -798,7 +773,7 @@ export function createCanonicalSnapshotBundle(input: CanonicalSnapshotBundleInpu
     missing: [...new Set(missing)].sort(),
     conflicts: [...new Set(conflicts)].sort(),
     bytes,
-    hash: sha256(Buffer.from(bytes, 'utf8')),
+    hash: sha256Utf8(bytes),
     frozen: true,
   });
 }
@@ -862,13 +837,13 @@ export function validateCanonicalSnapshotBundle(value: unknown): CanonicalSnapsh
   if (stableStringify(rawManifest) !== stableStringify({ schemaVersion: PERPS_SCHEMA_VERSION, entries: expectedRawEntries }) || stableStringify(normalized) !== stableStringify({ schemaVersion: PERPS_SCHEMA_VERSION, markets: expectedNormalizedMarkets }) || stableStringify(object.sourceDecisions) !== stableStringify(expectedSourceDecisions) || stableStringify(object.missing) !== stableStringify(expectedMissingList) || stableStringify(object.conflicts) !== stableStringify(expectedConflictsList)) throw new TypeError('canonical bundle projection binding mismatch');
   const expectedStatus: SnapshotStatus = expectedMissingList.length === 0 && expectedConflictsList.length === 0 ? 'READY' : 'NO_DATA';
   if (envelope.status !== expectedStatus) throw new TypeError('canonical bundle status binding mismatch');
-  const rawManifestHash = sha256(Buffer.from(stableStringify(rawManifest), 'utf8'));
-  const normalizedHash = sha256(Buffer.from(stableStringify(normalized), 'utf8'));
+  const rawManifestHash = sha256Utf8(stableStringify(rawManifest));
+  const normalizedHash = sha256Utf8(stableStringify(normalized));
   if (rawManifestHash !== envelope.rawManifestSha256 || normalizedHash !== envelope.normalizedProjectionSha256) throw new TypeError('canonical bundle content hash mismatch');
   if (object.frozen !== true) throw new TypeError('canonical bundle is not frozen');
   const payload = { envelope, registries: validatedRegistries, sourcePrecedence: validatedPrecedence, markets: validatedMarkets, rawManifest, normalized, sourceDecisions: object.sourceDecisions, missing: object.missing, conflicts: object.conflicts };
   const bytes = stringValue(object.bytes, 'canonical bundle bytes');
-  if (bytes !== stableStringify(payload) || sha256(Buffer.from(bytes, 'utf8')) !== hashValue(object.hash, 'canonical bundle hash')) throw new TypeError('canonical bundle hash mismatch');
+  if (bytes !== stableStringify(payload) || sha256Utf8(bytes) !== hashValue(object.hash, 'canonical bundle hash')) throw new TypeError('canonical bundle hash mismatch');
   return object as unknown as CanonicalSnapshotBundle;
 }
 
@@ -900,12 +875,12 @@ function validateAccount(value: AccountState): AccountState {
 export type TradeStance = 'LONG' | 'SHORT' | 'FLAT' | 'NO_DATA';
 
 function sourceDecisionsSha256(snapshot: CanonicalSnapshotBundle): string {
-  return sha256(Buffer.from(stableStringify(snapshot.sourceDecisions), 'utf8'));
+  return sha256Utf8(stableStringify(snapshot.sourceDecisions));
 }
 
 function selectedEvidenceSha256(snapshot: CanonicalSnapshotBundle): string {
   const selected = snapshot.sourceDecisions.map(decision => ({ venue: decision.venue, field: decision.field, selectedSourceId: decision.selectedSourceId, selectedRole: decision.selectedRole, selectedCapturedAt: decision.selectedCapturedAt, selectedValue: decision.selectedValue, outcome: decision.outcome }));
-  return sha256(Buffer.from(stableStringify(selected), 'utf8'));
+  return sha256Utf8(stableStringify(selected));
 }
 export interface TradeProposal {
   schemaVersion: typeof PERPS_SCHEMA_VERSION;
@@ -1003,7 +978,7 @@ export function createTradeProposal(input: TradeProposalInput): TradeProposal {
   return freezeDeep(proposal);
 }
 export function hashTradeProposal(proposal: TradeProposal | null): string | null {
-  return proposal === null ? null : sha256(Buffer.from(stableStringify(proposal), 'utf8'));
+  return proposal === null ? null : sha256Utf8(stableStringify(proposal));
 }
 
 
@@ -1152,7 +1127,7 @@ function validateBoundSnapshotEvidence(value: unknown): { evidence: SnapshotEvid
     const rebuildMarket = (market: RecordValue): RecordValue => {
       const payload = { envelope: market.envelope, registry: market.registry, sourcePrecedence: market.sourcePrecedence, rawManifest: market.rawManifest, normalized: market.normalized, sourceDecisions: market.sourceDecisions, missing: market.missing, conflicts: market.conflicts };
       const bytes = stableStringify(payload);
-      return { ...market, bytes, hash: sha256(Buffer.from(bytes, 'utf8')), frozen: true };
+      return { ...market, bytes, hash: sha256Utf8(bytes), frozen: true };
     };
     parsed = freezeDeep({ ...decoded, markets: { phoenix: rebuildMarket(decodedMarkets.phoenix as RecordValue), hyperliquid: rebuildMarket(decodedMarkets.hyperliquid as RecordValue) }, bytes: evidence.bytes, hash: evidence.snapshotHash, frozen: true });
   } catch {
@@ -1198,7 +1173,7 @@ function validateSnapshotEvidence(value: unknown): SnapshotEvidenceReference {
       hyperliquid: stringValue(markets.hyperliquid, 'snapshot evidence hyperliquid nativeMarketId'),
     },
   };
-  if (sha256(Buffer.from(evidence.bytes, 'utf8')) !== evidence.snapshotHash) throw new TypeError('snapshot evidence content hash mismatch');
+  if (sha256Utf8(evidence.bytes) !== evidence.snapshotHash) throw new TypeError('snapshot evidence content hash mismatch');
   return evidence;
 }
 function emptyAudit(evidence: SnapshotEvidenceReference | null, requestId: string, runId: string): CouncilAuditRecord {
